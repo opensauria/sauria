@@ -1,0 +1,41 @@
+{
+  "name": "openwind",
+  "version": "0.1.0",
+  "description": "Security-first persistent cognitive kernel — your world, always with you.",
+  "type": "module",
+  "bin": {
+    "openwind": "./dist/cli.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsdown src/cli.ts src/index.ts --format esm --dts",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint:security": "grep -rn 'child_process\\|.exec(\\|eval(' src/ && exit 1 || echo 'No banned patterns'"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.39.0",
+    "@huggingface/transformers": "3.4.1",
+    "@modelcontextprotocol/sdk": "1.26.0",
+    "better-sqlite3": "11.8.1",
+    "commander": "13.1.0",
+    "grammy": "1.35.0",
+    "json5": "2.2.3",
+    "nanoid": "5.1.5",
+    "openai": "4.85.0",
+    "zod": "3.24.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13",
+    "@types/node": "22.13.4",
+    "tsdown": "0.20.3",
+    "tsx": "4.19.3",
+    "typescript": "5.7.3",
+    "vitest": "3.0.5"
+  },
+  "license": "MIT"
+}
