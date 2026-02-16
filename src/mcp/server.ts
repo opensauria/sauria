@@ -38,24 +38,34 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
   }
 
   function auditToolCall(toolName: ToolName, params: unknown): void {
-    const hash = typeof params === 'object' && params !== null
-      ? audit.hashContent(JSON.stringify(params))
-      : undefined;
+    const hash =
+      typeof params === 'object' && params !== null
+        ? audit.hashContent(JSON.stringify(params))
+        : undefined;
     audit.logAction('mcp:tool_call', { tool: toolName }, { promptHash: hash });
   }
 
-  registerTool(server, 'openwind_query', TOOL_DEFS.openwind_query.description,
-    TOOL_DEFS.openwind_query.schema.shape, async (raw) => {
+  registerTool(
+    server,
+    'openwind_query',
+    TOOL_DEFS.openwind_query.description,
+    TOOL_DEFS.openwind_query.schema.shape,
+    async (raw) => {
       guardRateLimit('openwind_query');
       const { query } = validateToolInput('openwind_query', raw);
       auditToolCall('openwind_query', raw);
       const entities = searchEntities(db, query);
       const context = entities.map(formatEntity).join('\n\n');
       return textResult(await reasonAbout(router, context, query));
-    });
+    },
+  );
 
-  registerTool(server, 'openwind_get_entity', TOOL_DEFS.openwind_get_entity.description,
-    TOOL_DEFS.openwind_get_entity.schema.shape, async (raw) => {
+  registerTool(
+    server,
+    'openwind_get_entity',
+    TOOL_DEFS.openwind_get_entity.description,
+    TOOL_DEFS.openwind_get_entity.schema.shape,
+    async (raw) => {
       guardRateLimit('openwind_get_entity');
       const { name } = validateToolInput('openwind_get_entity', raw);
       auditToolCall('openwind_get_entity', raw);
@@ -72,35 +82,52 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
         formatEntity(entity),
         relations.length > 0 ? `\nRelations:\n${relLines.join('\n')}` : '',
         timeline.length > 0 ? `\nTimeline:\n${eventLines.join('\n')}` : '',
-      ].filter(Boolean).join('\n');
+      ]
+        .filter(Boolean)
+        .join('\n');
       return textResult(output);
-    });
+    },
+  );
 
-  registerTool(server, 'openwind_search', TOOL_DEFS.openwind_search.description,
-    TOOL_DEFS.openwind_search.schema.shape, async (raw) => {
+  registerTool(
+    server,
+    'openwind_search',
+    TOOL_DEFS.openwind_search.description,
+    TOOL_DEFS.openwind_search.schema.shape,
+    async (raw) => {
       guardRateLimit('openwind_search');
       const { query, limit } = validateToolInput('openwind_search', raw);
       auditToolCall('openwind_search', raw);
       const results = hybridSearch(db, query, null, limit);
       if (results.length === 0) return textResult('No results found.');
       return textResult(results.map((e, i) => `${i + 1}. ${formatEntity(e)}`).join('\n\n'));
-    });
+    },
+  );
 
-  registerTool(server, 'openwind_get_upcoming', TOOL_DEFS.openwind_get_upcoming.description,
-    TOOL_DEFS.openwind_get_upcoming.schema.shape, async (raw) => {
+  registerTool(
+    server,
+    'openwind_get_upcoming',
+    TOOL_DEFS.openwind_get_upcoming.description,
+    TOOL_DEFS.openwind_get_upcoming.schema.shape,
+    async (raw) => {
       guardRateLimit('openwind_get_upcoming');
       const { hours } = validateToolInput('openwind_get_upcoming', raw);
       auditToolCall('openwind_get_upcoming', raw);
       const events = getUpcomingDeadlines(db, hours);
       if (events.length === 0) return textResult(`No upcoming events in the next ${hours} hours.`);
-      const lines = events.map((e) =>
-        `[${e.timestamp}] ${e.eventType} (${e.source}) - importance: ${e.importance}`,
+      const lines = events.map(
+        (e) => `[${e.timestamp}] ${e.eventType} (${e.source}) - importance: ${e.importance}`,
       );
       return textResult(lines.join('\n'));
-    });
+    },
+  );
 
-  registerTool(server, 'openwind_get_insights', TOOL_DEFS.openwind_get_insights.description,
-    TOOL_DEFS.openwind_get_insights.schema.shape, async (raw) => {
+  registerTool(
+    server,
+    'openwind_get_insights',
+    TOOL_DEFS.openwind_get_insights.description,
+    TOOL_DEFS.openwind_get_insights.schema.shape,
+    async (raw) => {
       guardRateLimit('openwind_get_insights');
       const { entityName, limit } = validateToolInput('openwind_get_insights', raw);
       auditToolCall('openwind_get_insights', raw);
@@ -108,28 +135,42 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
       if (entityName) {
         const entity = getEntityByName(db, entityName);
         if (!entity) return textResult(`Entity "${entityName}" not found.`);
-        rows = db.prepare(
-          "SELECT o.* FROM observations o, json_each(o.entity_ids) j WHERE o.type = 'insight' AND j.value = ? ORDER BY o.created_at DESC LIMIT ?",
-        ).all(entity.id, limit);
+        rows = db
+          .prepare(
+            "SELECT o.* FROM observations o, json_each(o.entity_ids) j WHERE o.type = 'insight' AND j.value = ? ORDER BY o.created_at DESC LIMIT ?",
+          )
+          .all(entity.id, limit);
         if (rows.length === 0) {
-          rows = db.prepare(
-            "SELECT * FROM observations WHERE type = 'insight' ORDER BY created_at DESC LIMIT ?",
-          ).all(limit);
+          rows = db
+            .prepare(
+              "SELECT * FROM observations WHERE type = 'insight' ORDER BY created_at DESC LIMIT ?",
+            )
+            .all(limit);
         }
       } else {
-        rows = db.prepare(
-          "SELECT * FROM observations WHERE type = 'insight' ORDER BY created_at DESC LIMIT ?",
-        ).all(limit);
+        rows = db
+          .prepare(
+            "SELECT * FROM observations WHERE type = 'insight' ORDER BY created_at DESC LIMIT ?",
+          )
+          .all(limit);
       }
       if (rows.length === 0) return textResult('No insights generated yet.');
-      const lines = rows.filter(isObservationRow).map((r) =>
-        `[${String(r['created_at'])}] (confidence: ${String(r['confidence'])}) ${String(r['content'])}`,
-      );
+      const lines = rows
+        .filter(isObservationRow)
+        .map(
+          (r) =>
+            `[${String(r['created_at'])}] (confidence: ${String(r['confidence'])}) ${String(r['content'])}`,
+        );
       return textResult(lines.join('\n\n'));
-    });
+    },
+  );
 
-  registerTool(server, 'openwind_get_context_for', TOOL_DEFS.openwind_get_context_for.description,
-    TOOL_DEFS.openwind_get_context_for.schema.shape, async (raw) => {
+  registerTool(
+    server,
+    'openwind_get_context_for',
+    TOOL_DEFS.openwind_get_context_for.description,
+    TOOL_DEFS.openwind_get_context_for.schema.shape,
+    async (raw) => {
       guardRateLimit('openwind_get_context_for');
       const { topic } = validateToolInput('openwind_get_context_for', raw);
       auditToolCall('openwind_get_context_for', raw);
@@ -141,7 +182,9 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
         if (relations.length > 0) {
           sections.push('Relations:');
           for (const r of relations.slice(0, 10)) {
-            sections.push(`  [${r.type}] ${r.fromEntityId} -> ${r.toEntityId} (strength: ${r.strength})`);
+            sections.push(
+              `  [${r.type}] ${r.fromEntityId} -> ${r.toEntityId} (strength: ${r.strength})`,
+            );
           }
         }
         const timeline = getEntityTimeline(db, entity.id, 5);
@@ -155,10 +198,15 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
       }
       if (entities.length === 0) sections.push('No matching entities found.');
       return textResult(sections.join('\n'));
-    });
+    },
+  );
 
-  registerTool(server, 'openwind_add_event', TOOL_DEFS.openwind_add_event.description,
-    TOOL_DEFS.openwind_add_event.schema.shape, async (raw) => {
+  registerTool(
+    server,
+    'openwind_add_event',
+    TOOL_DEFS.openwind_add_event.description,
+    TOOL_DEFS.openwind_add_event.schema.shape,
+    async (raw) => {
       guardRateLimit('openwind_add_event');
       const input = validateToolInput('openwind_add_event', raw);
       auditToolCall('openwind_add_event', raw);
@@ -177,7 +225,8 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
         timestamp: input.timestamp ?? new Date().toISOString(),
       });
       return textResult(`Event recorded: ${eventId}`);
-    });
+    },
+  );
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

@@ -17,7 +17,7 @@ const ModelConfigSchema = z.object({
 });
 
 const AuthConfigSchema = z.object({
-  method: z.enum(['encrypted_file', 'env', 'none']),
+  method: z.enum(['encrypted_file', 'env', 'oauth', 'none']),
   envVar: z.string().optional(),
 });
 
@@ -81,9 +81,4 @@ export type ModelConfig = z.infer<typeof ModelConfigSchema>;
 export type AuthConfig = z.infer<typeof AuthConfigSchema>;
 export type McpServerConfig = z.infer<typeof McpServerConfigSchema>;
 
-export {
-  ModelConfigSchema,
-  AuthConfigSchema,
-  McpServerConfigSchema,
-  ChannelsConfigSchema,
-};
+export { ModelConfigSchema, AuthConfigSchema, McpServerConfigSchema, ChannelsConfigSchema };

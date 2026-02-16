@@ -54,10 +54,7 @@ export class McpClientManager {
       env: config.env ? { ...config.env } : undefined,
     });
 
-    const client = new Client(
-      { name: 'openwind', version: '0.1.0' },
-      { capabilities: {} },
-    );
+    const client = new Client({ name: 'openwind', version: '0.1.0' }, { capabilities: {} });
 
     await client.connect(transport);
 
@@ -94,22 +91,33 @@ export class McpClientManager {
     }
 
     const queryHash = this.audit.hashContent(JSON.stringify({ toolName, args }));
-    this.audit.logAction('mcp:client_tool_call', {
-      server: serverName,
-      tool: toolName,
-    }, { promptHash: queryHash });
+    this.audit.logAction(
+      'mcp:client_tool_call',
+      {
+        server: serverName,
+        tool: toolName,
+      },
+      { promptHash: queryHash },
+    );
 
     const result = await entry.client.callTool({ name: toolName, arguments: args });
     const record = result as Record<string, unknown>;
 
     if (record['isError'] === true) {
       const errorText = Array.isArray(record['content'])
-        ? (record['content'] as unknown[]).filter(isTextContent).map((c) => c.text).join('\n')
+        ? (record['content'] as unknown[])
+            .filter(isTextContent)
+            .map((c) => c.text)
+            .join('\n')
         : 'Unknown error';
-      this.audit.logAction('mcp:client_tool_error', {
-        server: serverName,
-        tool: toolName,
-      }, { success: false });
+      this.audit.logAction(
+        'mcp:client_tool_error',
+        {
+          server: serverName,
+          tool: toolName,
+        },
+        { success: false },
+      );
       throw new Error(`MCP tool "${toolName}" on "${serverName}" failed: ${errorText}`);
     }
 

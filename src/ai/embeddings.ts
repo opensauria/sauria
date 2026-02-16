@@ -27,9 +27,7 @@ export async function generateEmbedding(text: string): Promise<Float32Array> {
 
 export function cosineSimilarity(a: Float32Array, b: Float32Array): number {
   if (a.length !== b.length) {
-    throw new Error(
-      `Embedding dimension mismatch: ${a.length} vs ${b.length}`,
-    );
+    throw new Error(`Embedding dimension mismatch: ${a.length} vs ${b.length}`);
   }
 
   if (a.length === 0) {

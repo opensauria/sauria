@@ -40,9 +40,9 @@ export async function ingestManualInput(
       continue;
     }
 
-    const existing = db
-      .prepare('SELECT properties FROM entities WHERE id = ?')
-      .get(id) as { properties: string | null } | undefined;
+    const existing = db.prepare('SELECT properties FROM entities WHERE id = ?').get(id) as
+      | { properties: string | null }
+      | undefined;
 
     const existingProps = existing?.properties
       ? (JSON.parse(existing.properties) as Record<string, string>)

@@ -11,10 +11,7 @@ function toAnthropicMessages(messages: ChatMessage[]): MessageParam[] {
     }));
 }
 
-function extractSystemPrompt(
-  messages: ChatMessage[],
-  fallback?: string,
-): string | undefined {
+function extractSystemPrompt(messages: ChatMessage[], fallback?: string): string | undefined {
   const systemMessage = messages.find((m) => m.role === 'system');
   return systemMessage?.content ?? fallback;
 }
@@ -24,14 +21,15 @@ export class AnthropicProvider implements LLMProvider {
   readonly supportsStreaming = true;
   private readonly client: Anthropic;
 
-  constructor(apiKey: string) {
-    this.client = new Anthropic({ apiKey });
+  constructor(apiKey: string, authToken?: string) {
+    if (authToken) {
+      this.client = new Anthropic({ authToken });
+    } else {
+      this.client = new Anthropic({ apiKey });
+    }
   }
 
-  async *chat(
-    messages: ChatMessage[],
-    options: ChatOptions,
-  ): AsyncGenerator<StreamChunk> {
+  async *chat(messages: ChatMessage[], options: ChatOptions): AsyncGenerator<StreamChunk> {
     const systemPrompt = extractSystemPrompt(messages, options.systemPrompt);
     const anthropicMessages = toAnthropicMessages(messages);
 

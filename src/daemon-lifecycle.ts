@@ -8,6 +8,8 @@ import type { OpenWindConfig } from './config/schema.js';
 import { AuditLogger } from './security/audit.js';
 import { runSecurityChecks } from './security/startup-checks.js';
 import { ModelRouter } from './ai/router.js';
+import { resolveApiKey } from './auth/resolve.js';
+import { refreshOAuthTokenIfNeeded } from './auth/oauth.js';
 import { McpClientManager } from './mcp/client.js';
 import { ProactiveEngine } from './engine/proactive.js';
 import type { ProactiveAlert } from './engine/proactive.js';
@@ -25,24 +27,7 @@ export interface DaemonContext {
   readonly engine: ProactiveEngine;
   readonly telegram: TelegramChannel | null;
   readonly mcpServer: McpServer;
-}
-
-function getApiKey(providerName: string): string {
-  const envMap: Readonly<Record<string, string>> = {
-    anthropic: 'ANTHROPIC_API_KEY',
-    openai: 'OPENAI_API_KEY',
-    google: 'GOOGLE_API_KEY',
-    openrouter: 'OPENROUTER_API_KEY',
-    together: 'TOGETHER_API_KEY',
-    groq: 'GROQ_API_KEY',
-    mistral: 'MISTRAL_API_KEY',
-  };
-  const envVar = envMap[providerName] ?? `${providerName.toUpperCase()}_API_KEY`;
-  const value = process.env[envVar];
-  if (!value) {
-    throw new Error(`Missing API key: set ${envVar} environment variable`);
-  }
-  return value;
+  readonly refreshInterval: ReturnType<typeof setInterval>;
 }
 
 function handleAlert(alert: ProactiveAlert, telegram: TelegramChannel | null): void {
@@ -96,7 +81,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   logger.info('Config loaded');
 
   const audit = new AuditLogger(db);
-  const router = new ModelRouter(config, getApiKey);
+  const router = new ModelRouter(config, resolveApiKey);
 
   router.onCostIncurred((model, costUsd) => {
     recordSpend(db, costUsd, model);
@@ -126,9 +111,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     }
   }
 
-  const engine = new ProactiveEngine(db, router, (alert) =>
-    handleAlert(alert, telegram),
-  );
+  const engine = new ProactiveEngine(db, router, (alert) => handleAlert(alert, telegram));
   engine.start();
   logger.info('Proactive engine started');
 
@@ -140,15 +123,20 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   const mcpServer = await startMcpServer({ db, router, audit });
   logger.info('MCP server started on stdio');
 
+  const refreshInterval = setInterval(() => {
+    void refreshOAuthTokenIfNeeded('anthropic');
+  }, 1_800_000);
+
   audit.logAction('daemon:start', { mcpServers: Object.keys(config.mcp.servers) });
 
-  return { db, config, audit, router, mcpClients, engine, telegram, mcpServer };
+  return { db, config, audit, router, mcpClients, engine, telegram, mcpServer, refreshInterval };
 }
 
 export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
   const logger = getLogger();
   logger.info('Daemon shutting down');
 
+  clearInterval(ctx.refreshInterval);
   ctx.engine.stop();
   logger.info('Proactive engine stopped');
 

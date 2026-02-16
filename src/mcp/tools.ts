@@ -42,7 +42,8 @@ export const TOOL_DEFS = {
     schema: querySchema,
   },
   openwind_get_entity: {
-    description: 'Get detailed information about a specific entity including relations and timeline',
+    description:
+      'Get detailed information about a specific entity including relations and timeline',
     schema: getEntitySchema,
   },
   openwind_search: {

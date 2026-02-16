@@ -36,10 +36,7 @@ export class OpenAIProvider implements LLMProvider {
     });
   }
 
-  async *chat(
-    messages: ChatMessage[],
-    options: ChatOptions,
-  ): AsyncGenerator<StreamChunk> {
+  async *chat(messages: ChatMessage[], options: ChatOptions): AsyncGenerator<StreamChunk> {
     const openAIMessages = toOpenAIMessages(messages, options.systemPrompt);
 
     const stream = await this.client.chat.completions.create({

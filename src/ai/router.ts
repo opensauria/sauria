@@ -8,9 +8,10 @@ import { AnthropicProvider } from './providers/anthropic.js';
 import { OpenAIProvider } from './providers/openai.js';
 import { GoogleProvider } from './providers/google.js';
 import { OllamaProvider } from './providers/ollama.js';
+import { isOAuthToken } from '../auth/resolve.js';
 
 export type CostCallback = (model: string, costUsd: number) => void;
-export type ApiKeyGetter = (providerName: string) => string;
+export type ApiKeyGetter = (providerName: string) => string | Promise<string>;
 
 const PROVIDER_BASE_URLS: Readonly<Record<string, string>> = {
   openrouter: 'https://openrouter.ai/api/v1',
@@ -51,7 +52,7 @@ export class ModelRouter {
     }
 
     const modelConfig = this.config.models.extraction;
-    const provider = this.resolveProvider(modelConfig);
+    const provider = await this.resolveProvider(modelConfig);
 
     const messages: ChatMessage[] = [
       { role: 'system', content: EXTRACTION_SYSTEM_PROMPT },
@@ -72,7 +73,7 @@ export class ModelRouter {
 
   async *reason(messages: ChatMessage[]): AsyncGenerator<StreamChunk> {
     const modelConfig = this.config.models.reasoning;
-    const provider = this.resolveProvider(modelConfig);
+    const provider = await this.resolveProvider(modelConfig);
 
     const options: ChatOptions = {
       model: modelConfig.model,
@@ -89,7 +90,7 @@ export class ModelRouter {
     }
 
     const modelConfig = this.config.models.deep;
-    const provider = this.resolveProvider(modelConfig);
+    const provider = await this.resolveProvider(modelConfig);
 
     const options: ChatOptions = {
       model: modelConfig.model,
@@ -100,11 +101,7 @@ export class ModelRouter {
     yield* provider.chat(messages, options);
   }
 
-  getProvider(
-    providerName: string,
-    apiKey: string,
-    baseUrl?: string,
-  ): LLMProvider {
+  getProvider(providerName: string, apiKey: string, baseUrl?: string): LLMProvider {
     const cacheKey = `${providerName}:${baseUrl ?? 'default'}`;
     const cached = this.providers.get(cacheKey);
     if (cached) {
@@ -116,7 +113,7 @@ export class ModelRouter {
     return provider;
   }
 
-  private resolveProvider(modelConfig: ModelConfig): LLMProvider {
+  private async resolveProvider(modelConfig: ModelConfig): Promise<LLMProvider> {
     const { provider: providerName, baseUrl } = modelConfig;
     const cacheKey = `${providerName}:${baseUrl ?? 'default'}`;
 
@@ -125,11 +122,19 @@ export class ModelRouter {
       return cached;
     }
 
-    const apiKey = providerName === 'ollama' || providerName === 'local'
-      ? ''
-      : this.getApiKey(providerName);
+    const apiKey =
+      providerName === 'ollama' || providerName === 'local'
+        ? ''
+        : await this.getApiKey(providerName);
 
     const resolvedBaseUrl = baseUrl ?? PROVIDER_BASE_URLS[providerName];
+
+    if (providerName === 'anthropic' && isOAuthToken(apiKey)) {
+      const provider = new AnthropicProvider('', apiKey);
+      this.providers.set(cacheKey, provider);
+      return provider;
+    }
+
     const provider = createProvider(providerName, apiKey, resolvedBaseUrl);
     this.providers.set(cacheKey, provider);
     return provider;
@@ -144,11 +149,7 @@ export class ModelRouter {
   }
 }
 
-function createProvider(
-  providerName: string,
-  apiKey: string,
-  baseUrl?: string,
-): LLMProvider {
+function createProvider(providerName: string, apiKey: string, baseUrl?: string): LLMProvider {
   switch (providerName) {
     case 'anthropic':
       return new AnthropicProvider(apiKey);
@@ -169,9 +170,7 @@ function createProvider(
   }
 }
 
-async function collectStream(
-  stream: AsyncGenerator<StreamChunk>,
-): Promise<string> {
+async function collectStream(stream: AsyncGenerator<StreamChunk>): Promise<string> {
   let result = '';
   for await (const chunk of stream) {
     result += chunk.text;

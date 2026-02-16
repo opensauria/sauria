@@ -32,12 +32,7 @@ export function encryptData(
   return { iv, authTag, encrypted };
 }
 
-export function decryptData(
-  encrypted: Buffer,
-  key: Buffer,
-  iv: Buffer,
-  authTag: Buffer,
-): Buffer {
+export function decryptData(encrypted: Buffer, key: Buffer, iv: Buffer, authTag: Buffer): Buffer {
   const decipher = createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
   return Buffer.concat([decipher.update(encrypted), decipher.final()]);
@@ -47,11 +42,7 @@ function secretFilePath(name: string): string {
   return join(paths.vault, `${name}.enc`);
 }
 
-export async function storeSecret(
-  name: string,
-  value: string,
-  password: string,
-): Promise<void> {
+export async function storeSecret(name: string, value: string, password: string): Promise<void> {
   const salt = randomBytes(SALT_LENGTH);
   const key = deriveWrappingKey(password, salt);
   const { iv, authTag, encrypted } = encryptData(Buffer.from(value, 'utf-8'), key);
@@ -64,10 +55,7 @@ export async function storeSecret(
   await chmod(filePath, 0o600);
 }
 
-export async function getSecret(
-  name: string,
-  password: string,
-): Promise<string> {
+export async function getSecret(name: string, password: string): Promise<string> {
   const filePath = secretFilePath(name);
   const fileData = await safeReadFile(filePath);
 

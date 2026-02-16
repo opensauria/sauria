@@ -31,9 +31,7 @@ function toGeminiRole(role: string): string {
   return 'user';
 }
 
-function buildGeminiContents(
-  messages: ChatMessage[],
-): GeminiContent[] {
+function buildGeminiContents(messages: ChatMessage[]): GeminiContent[] {
   return messages
     .filter((m) => m.role !== 'system')
     .map((m) => ({
@@ -54,9 +52,7 @@ function extractSystemInstruction(
   return { parts: [{ text }] };
 }
 
-async function* parseSSEStream(
-  response: Response,
-): AsyncGenerator<GeminiStreamChunk> {
+async function* parseSSEStream(response: Response): AsyncGenerator<GeminiStreamChunk> {
   const body = response.body;
   if (!body) {
     return;
@@ -106,10 +102,7 @@ export class GoogleProvider implements LLMProvider {
 
   constructor(private readonly apiKey: string) {}
 
-  async *chat(
-    messages: ChatMessage[],
-    options: ChatOptions,
-  ): AsyncGenerator<StreamChunk> {
+  async *chat(messages: ChatMessage[], options: ChatOptions): AsyncGenerator<StreamChunk> {
     const url = `${GEMINI_BASE_URL}/${options.model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
 
     const contents = buildGeminiContents(messages);

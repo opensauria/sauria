@@ -8,12 +8,7 @@ export type EntityType =
   | 'place'
   | 'concept';
 
-export type ObservationType =
-  | 'pattern'
-  | 'insight'
-  | 'prediction'
-  | 'preference'
-  | 'fact';
+export type ObservationType = 'pattern' | 'insight' | 'prediction' | 'preference' | 'fact';
 
 export interface Entity {
   id: string;
@@ -126,18 +121,12 @@ export function isEntityRow(value: unknown): value is EntityRow {
 
 export function isRelationRow(value: unknown): value is RelationRow {
   if (!isRecord(value)) return false;
-  return (
-    typeof value['id'] === 'string' &&
-    typeof value['from_entity_id'] === 'string'
-  );
+  return typeof value['id'] === 'string' && typeof value['from_entity_id'] === 'string';
 }
 
 export function isEventRow(value: unknown): value is EventRow {
   if (!isRecord(value)) return false;
-  return (
-    typeof value['id'] === 'string' &&
-    typeof value['source'] === 'string'
-  );
+  return typeof value['id'] === 'string' && typeof value['source'] === 'string';
 }
 
 function parseJsonField<T>(raw: string | null): T | null {

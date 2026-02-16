@@ -62,39 +62,39 @@ openwind mcp-server
 
 ## CLI Commands
 
-| Command | Description |
-|---------|-------------|
-| `openwind onboard` | Interactive setup wizard |
-| `openwind daemon` | Start background daemon |
-| `openwind ask <question>` | Natural language query |
-| `openwind interactive` | Interactive REPL mode |
-| `openwind status` | System overview |
-| `openwind focus <entity>` | Deep dive on an entity |
-| `openwind entity <name>` | Look up entity details |
+| Command                     | Description                       |
+| --------------------------- | --------------------------------- |
+| `openwind onboard`          | Interactive setup wizard          |
+| `openwind daemon`           | Start background daemon           |
+| `openwind ask <question>`   | Natural language query            |
+| `openwind interactive`      | Interactive REPL mode             |
+| `openwind status`           | System overview                   |
+| `openwind focus <entity>`   | Deep dive on an entity            |
+| `openwind entity <name>`    | Look up entity details            |
 | `openwind upcoming [hours]` | Upcoming deadlines (default: 24h) |
-| `openwind insights` | AI-generated observations |
-| `openwind teach <fact>` | Add knowledge manually |
-| `openwind sources` | List configured data sources |
-| `openwind mcp-server` | Start MCP server (stdio) |
-| `openwind doctor` | Run health checks |
-| `openwind audit [count]` | Show audit log |
-| `openwind export` | Encrypted backup |
-| `openwind purge` | Secure delete all data |
-| `openwind config` | Show current config |
+| `openwind insights`         | AI-generated observations         |
+| `openwind teach <fact>`     | Add knowledge manually            |
+| `openwind sources`          | List configured data sources      |
+| `openwind mcp-server`       | Start MCP server (stdio)          |
+| `openwind doctor`           | Run health checks                 |
+| `openwind audit [count]`    | Show audit log                    |
+| `openwind export`           | Encrypted backup                  |
+| `openwind purge`            | Secure delete all data            |
+| `openwind config`           | Show current config               |
 
 ## MCP Server Tools
 
 When running as an MCP server, OpenWind exposes these tools to any connected agent:
 
-| Tool | Description |
-|------|-------------|
-| `openwind_query` | Natural language question answered from knowledge graph |
-| `openwind_get_entity` | Entity details + relations + timeline |
-| `openwind_search` | Hybrid semantic + keyword search |
-| `openwind_get_upcoming` | Deadlines, meetings in next N hours |
-| `openwind_get_insights` | AI-generated observations and patterns |
-| `openwind_get_context_for` | Full context dump for a topic |
-| `openwind_add_event` | Feed an event into world model |
+| Tool                       | Description                                             |
+| -------------------------- | ------------------------------------------------------- |
+| `openwind_query`           | Natural language question answered from knowledge graph |
+| `openwind_get_entity`      | Entity details + relations + timeline                   |
+| `openwind_search`          | Hybrid semantic + keyword search                        |
+| `openwind_get_upcoming`    | Deadlines, meetings in next N hours                     |
+| `openwind_get_insights`    | AI-generated observations and patterns                  |
+| `openwind_get_context_for` | Full context dump for a topic                           |
+| `openwind_add_event`       | Feed an event into world model                          |
 
 All inputs validated with Zod. Rate limited. Audit logged. Responses capped at 100KB.
 
@@ -105,19 +105,19 @@ Config lives at `~/.openwind/config.json5`:
 ```json5
 {
   models: {
-    extraction: { provider: "google", model: "gemini-2.5-flash" },
-    reasoning: { provider: "anthropic", model: "claude-sonnet-4-5" },
-    deep: { provider: "anthropic", model: "claude-opus-4-6" },
-    embeddings: { provider: "local", model: "all-MiniLM-L6-v2" }
+    extraction: { provider: 'google', model: 'gemini-2.5-flash' },
+    reasoning: { provider: 'anthropic', model: 'claude-sonnet-4-5' },
+    deep: { provider: 'anthropic', model: 'claude-opus-4-6' },
+    embeddings: { provider: 'local', model: 'all-MiniLM-L6-v2' },
   },
   auth: {
-    anthropic: { method: "encrypted_file" },
-    google: { method: "encrypted_file" }
+    anthropic: { method: 'encrypted_file' },
+    google: { method: 'encrypted_file' },
   },
   budget: {
-    dailyLimitUsd: 5.00,
-    warnAtUsd: 3.00
-  }
+    dailyLimitUsd: 5.0,
+    warnAtUsd: 3.0,
+  },
 }
 ```
 
@@ -182,20 +182,20 @@ OpenWind is security-first. This is non-negotiable.
 
 ### Defense in Depth
 
-| Layer | What | How |
-|-------|------|-----|
-| Input sanitization | Strip LLM control tokens, null bytes, unicode normalization | `sanitize.ts` |
-| Prompt injection | Content isolation, canary tokens, strict JSON parsing | `anti-injection.ts` |
-| AI response validation | Zod schema on every response, entity name caps, no URL following | `extract.ts` |
-| SQL injection | Parameterized queries only, zero string interpolation | `world-model.ts` |
-| Filesystem | All operations restricted to `~/.openwind/` | `fs-sandbox.ts` |
-| Network | Outbound-only, domain allowlist, 30s timeout | `url-allowlist.ts` |
-| PII | Scrub SSN, credit card, phone, email, API keys before AI calls | `pii-scrubber.ts` |
-| Rate limiting | Token bucket per subsystem (AI, ingestion, MCP, channels) | `rate-limiter.ts` |
-| Budget | Hard daily USD cap on AI calls | `budget.ts` |
-| Audit | Every action logged with SHA-256 hashes, never content | `audit.ts` |
-| Encryption | SQLite database encrypted at rest | `crypto.ts` |
-| Startup | Permission checks, ownership validation, Node version | `startup-checks.ts` |
+| Layer                  | What                                                             | How                 |
+| ---------------------- | ---------------------------------------------------------------- | ------------------- |
+| Input sanitization     | Strip LLM control tokens, null bytes, unicode normalization      | `sanitize.ts`       |
+| Prompt injection       | Content isolation, canary tokens, strict JSON parsing            | `anti-injection.ts` |
+| AI response validation | Zod schema on every response, entity name caps, no URL following | `extract.ts`        |
+| SQL injection          | Parameterized queries only, zero string interpolation            | `world-model.ts`    |
+| Filesystem             | All operations restricted to `~/.openwind/`                      | `fs-sandbox.ts`     |
+| Network                | Outbound-only, domain allowlist, 30s timeout                     | `url-allowlist.ts`  |
+| PII                    | Scrub SSN, credit card, phone, email, API keys before AI calls   | `pii-scrubber.ts`   |
+| Rate limiting          | Token bucket per subsystem (AI, ingestion, MCP, channels)        | `rate-limiter.ts`   |
+| Budget                 | Hard daily USD cap on AI calls                                   | `budget.ts`         |
+| Audit                  | Every action logged with SHA-256 hashes, never content           | `audit.ts`          |
+| Encryption             | SQLite database encrypted at rest                                | `crypto.ts`         |
+| Startup                | Permission checks, ownership validation, Node version            | `startup-checks.ts` |
 
 ### Data Protection
 
@@ -335,29 +335,29 @@ The Docker setup runs as non-root with a read-only root filesystem, all capabili
 
 ## Cross-Platform Support
 
-| Platform | Install | Daemon |
-|----------|---------|--------|
-| macOS (ARM/Intel) | curl / npm | launchd |
-| Linux x86_64/ARM64 | curl / npm | systemd |
-| Windows 10/11 | PowerShell / npm | Task Scheduler |
-| Docker | docker compose | Container |
+| Platform           | Install          | Daemon         |
+| ------------------ | ---------------- | -------------- |
+| macOS (ARM/Intel)  | curl / npm       | launchd        |
+| Linux x86_64/ARM64 | curl / npm       | systemd        |
+| Windows 10/11      | PowerShell / npm | Task Scheduler |
+| Docker             | docker compose   | Container      |
 
 ## Dependencies
 
 All versions pinned. No `^` or `~`. Lock file committed.
 
-| Package | Purpose |
-|---------|---------|
-| `better-sqlite3` | Encrypted SQLite database |
-| `@modelcontextprotocol/sdk` | MCP client + server |
-| `@anthropic-ai/sdk` | Anthropic Claude provider |
-| `openai` | OpenAI + compatible providers |
-| `@huggingface/transformers` | Local vector embeddings |
-| `grammy` | Telegram bot (long-polling) |
-| `commander` | CLI framework |
-| `zod` | Schema validation |
-| `nanoid` | ID generation |
-| `json5` | Config file parsing |
+| Package                     | Purpose                       |
+| --------------------------- | ----------------------------- |
+| `better-sqlite3`            | Encrypted SQLite database     |
+| `@modelcontextprotocol/sdk` | MCP client + server           |
+| `@anthropic-ai/sdk`         | Anthropic Claude provider     |
+| `openai`                    | OpenAI + compatible providers |
+| `@huggingface/transformers` | Local vector embeddings       |
+| `grammy`                    | Telegram bot (long-polling)   |
+| `commander`                 | CLI framework                 |
+| `zod`                       | Schema validation             |
+| `nanoid`                    | ID generation                 |
+| `json5`                     | Config file parsing           |
 
 ## License
 
