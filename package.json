@@ -25,7 +25,7 @@
     "security-first"
   ],
   "bin": {
-    "openwind": "./dist/index.js"
+    "openwind": "./dist/index.mjs"
   },
   "engines": {
     "node": ">=22"
@@ -36,7 +36,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsdown src/cli.ts src/index.ts --format esm --dts",
+    "build": "tsdown src/cli.ts src/index.ts --format esm --dts --define.OPENWIND_VERSION=\"'$npm_package_version'\"",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
