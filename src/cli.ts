@@ -6,6 +6,8 @@ import { AuditLogger } from './security/audit.js';
 import { runSecurityChecks } from './security/startup-checks.js';
 import { ModelRouter } from './ai/router.js';
 import { startInteractiveMode } from './channels/cli-interactive.js';
+import { startDaemon } from './daemon.js';
+import { startMcpServer } from './mcp/server.js';
 import type { AppContext } from './cli-actions.js';
 import {
   askAction, statusAction, focusAction, entityAction,
@@ -50,10 +52,10 @@ function withContext(fn: (ctx: AppContext) => Promise<void> | void): () => Promi
 program.name('openwind').description('Security-first persistent cognitive kernel').version('0.1.0');
 
 program.command('onboard').description('Interactive setup wizard')
-  .action(() => { w('Onboarding wizard is not yet implemented (Phase 10).'); });
+  .action(() => { w('Run: npx tsx scripts/onboard.ts'); });
 
 program.command('daemon').description('Start background daemon')
-  .action(() => { w('Daemon mode is not yet implemented (Phase 10).'); });
+  .action(() => startDaemon());
 
 program.command('ask <question>').description('Ask a natural language question')
   .action((question: string) => withContext((ctx) => askAction(ctx, question))());
@@ -83,7 +85,10 @@ program.command('sources').description('List configured data sources')
   .action(withContext((ctx) => { sourcesAction(ctx); }));
 
 program.command('mcp-server').description('Start MCP server (stdio)')
-  .action(() => { w('MCP server is not yet implemented (Phase 9).'); });
+  .action(withContext(async (ctx) => {
+    await startMcpServer({ db: ctx.db, router: ctx.router, audit: ctx.audit });
+    w('MCP server running on stdio.');
+  }));
 
 program.command('doctor').description('Run health checks').action(async () => {
   w('Running health checks...');
@@ -116,7 +121,5 @@ program.command('purge').description('Purge all data')
 program.command('config').description('Show current config').action(async () => {
   w(JSON.stringify(await loadConfig(), null, 2));
 });
-
-program.parse();
 
 export { program };
