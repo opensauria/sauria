@@ -1,0 +1,17 @@
+services:
+  openwind:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - "${HOME}/.openwind:/home/openwind/.openwind"
+    environment:
+      - NODE_ENV=production
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:noexec,nosuid,size=64m
+    restart: unless-stopped
