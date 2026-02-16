@@ -1,0 +1,5 @@
+# Every PR requires review from the project owner.
+# Combined with branch protection rules, this ensures
+# only @teobouancheau can approve and merge.
+
+* @teobouancheau

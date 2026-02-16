@@ -66,9 +66,11 @@ function parseInsightResponse(text: string): ParsedInsight | null {
 }
 
 function getDailyInsightCount(db: BetterSqlite3.Database): number {
-  const row: unknown = db.prepare(
-    "SELECT COUNT(*) AS count FROM observations WHERE type = 'insight' AND created_at >= datetime('now', '-1 day')",
-  ).get();
+  const row: unknown = db
+    .prepare(
+      "SELECT COUNT(*) AS count FROM observations WHERE type = 'insight' AND created_at >= datetime('now', '-1 day')",
+    )
+    .get();
   if (!isInsightCountRow(row)) return 0;
   return row.count;
 }

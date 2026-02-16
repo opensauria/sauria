@@ -54,9 +54,11 @@ export function buildAlertKey(alert: ProactiveAlert): string {
 }
 
 export function buildInsightContext(db: BetterSqlite3.Database): string {
-  const rows: unknown[] = db.prepare(
-    "SELECT * FROM events WHERE timestamp >= datetime('now', '-2 days') ORDER BY importance DESC LIMIT 20",
-  ).all();
+  const rows: unknown[] = db
+    .prepare(
+      "SELECT * FROM events WHERE timestamp >= datetime('now', '-2 days') ORDER BY importance DESC LIMIT 20",
+    )
+    .all();
   const events = rows.filter(isEventRow).map(toEvent);
 
   if (events.length === 0) return '';

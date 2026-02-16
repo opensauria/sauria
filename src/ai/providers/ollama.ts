@@ -43,9 +43,7 @@ function toOllamaMessages(
   return result;
 }
 
-async function* parseNDJSONStream(
-  response: Response,
-): AsyncGenerator<OllamaChatChunk> {
+async function* parseNDJSONStream(response: Response): AsyncGenerator<OllamaChatChunk> {
   const body = response.body;
   if (!body) {
     return;
@@ -92,10 +90,7 @@ export class OllamaProvider implements LLMProvider {
     this.baseUrl = baseUrl ?? DEFAULT_OLLAMA_URL;
   }
 
-  async *chat(
-    messages: ChatMessage[],
-    options: ChatOptions,
-  ): AsyncGenerator<StreamChunk> {
+  async *chat(messages: ChatMessage[], options: ChatOptions): AsyncGenerator<StreamChunk> {
     const url = `${this.baseUrl}/api/chat`;
     const ollamaMessages = toOllamaMessages(messages, options.systemPrompt);
 

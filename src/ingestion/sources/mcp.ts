@@ -14,10 +14,7 @@ export class McpSourceClient {
       args: config.args,
     });
 
-    const client = new Client(
-      { name: 'openwind', version: '0.1.0' },
-      { capabilities: {} },
-    );
+    const client = new Client({ name: 'openwind', version: '0.1.0' }, { capabilities: {} });
 
     await client.connect(transport);
 
@@ -29,10 +26,7 @@ export class McpSourceClient {
     return result.tools.map((tool) => tool.name);
   }
 
-  async callTool(
-    name: string,
-    args: Record<string, unknown>,
-  ): Promise<unknown> {
+  async callTool(name: string, args: Record<string, unknown>): Promise<unknown> {
     const result = await this.client.callTool({ name, arguments: args });
     const record = result as Record<string, unknown>;
 
@@ -89,8 +83,6 @@ function parseJsonSafe(text: string): unknown {
   }
 }
 
-export async function connectToMcpSource(
-  config: McpServerConfig,
-): Promise<McpSourceClient> {
+export async function connectToMcpSource(config: McpServerConfig): Promise<McpSourceClient> {
   return McpSourceClient.connect(config);
 }

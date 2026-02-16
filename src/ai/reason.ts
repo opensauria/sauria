@@ -7,10 +7,7 @@ Answer questions by synthesizing information from the context.
 Be precise, cite specific entities and relationships when relevant.
 If the context is insufficient, say so clearly.`;
 
-export function buildReasoningPrompt(
-  context: string,
-  query: string,
-): ChatMessage[] {
+export function buildReasoningPrompt(context: string, query: string): ChatMessage[] {
   return [
     {
       role: 'system',

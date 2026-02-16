@@ -47,9 +47,7 @@ async function collectTsFiles(dir: string): Promise<string[]> {
   return results;
 }
 
-export async function scanForBannedPatterns(
-  srcDir: string,
-): Promise<BannedPatternViolation[]> {
+export async function scanForBannedPatterns(srcDir: string): Promise<BannedPatternViolation[]> {
   const violations: BannedPatternViolation[] = [];
   const files = await collectTsFiles(srcDir);
 
@@ -86,11 +84,7 @@ export async function assertNoBannedPatterns(srcDir: string): Promise<void> {
     return;
   }
 
-  const summary = violations
-    .map((v) => `  ${v.file}:${v.line} - found "${v.pattern}"`)
-    .join('\n');
+  const summary = violations.map((v) => `  ${v.file}:${v.line} - found "${v.pattern}"`).join('\n');
 
-  throw new Error(
-    `Banned pattern violations found (${violations.length}):\n${summary}`,
-  );
+  throw new Error(`Banned pattern violations found (${violations.length}):\n${summary}`);
 }

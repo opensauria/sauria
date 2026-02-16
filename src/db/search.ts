@@ -72,9 +72,9 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
 function fetchEntitiesOrdered(db: BetterSqlite3.Database, ids: string[]): Entity[] {
   if (ids.length === 0) return [];
   const placeholders = ids.map(() => '?').join(',');
-  const rows: unknown[] = db.prepare(
-    `SELECT * FROM entities WHERE id IN (${placeholders})`,
-  ).all(...ids);
+  const rows: unknown[] = db
+    .prepare(`SELECT * FROM entities WHERE id IN (${placeholders})`)
+    .all(...ids);
   const entityMap = new Map<string, Entity>();
   for (const row of rows) {
     if (!isEntityRow(row)) continue;
@@ -92,9 +92,7 @@ function scoreEmbeddings(
   db: BetterSqlite3.Database,
   queryVector: Float32Array,
 ): Map<string, number> {
-  const rows: unknown[] = db.prepare(
-    'SELECT entity_id, vector, model FROM embeddings',
-  ).all();
+  const rows: unknown[] = db.prepare('SELECT entity_id, vector, model FROM embeddings').all();
   const result = new Map<string, number>();
   for (const row of rows) {
     if (!isEmbeddingRow(row)) continue;
@@ -183,8 +181,10 @@ export function storeEmbedding(
   model: string,
 ): void {
   const buffer = Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength);
-  db.prepare(`
+  db.prepare(
+    `
     INSERT OR REPLACE INTO embeddings (entity_id, vector, model, updated_at)
     VALUES (?, ?, ?, datetime('now'))
-  `).run(entityId, buffer, model);
+  `,
+  ).run(entityId, buffer, model);
 }

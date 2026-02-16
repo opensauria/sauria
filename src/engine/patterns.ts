@@ -119,6 +119,5 @@ export function detectPatterns(db: BetterSqlite3.Database): PatternAlert[] {
   const frequencyAlerts = buildFrequencyAlerts(db);
   const newConnectionAlerts = buildNewConnectionAlerts(db);
 
-  return [...frequencyAlerts, ...newConnectionAlerts]
-    .sort((a, b) => b.priority - a.priority);
+  return [...frequencyAlerts, ...newConnectionAlerts].sort((a, b) => b.priority - a.priority);
 }

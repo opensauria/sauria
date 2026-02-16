@@ -18,9 +18,6 @@ export interface StreamChunk {
 export interface LLMProvider {
   readonly name: string;
   readonly supportsStreaming: boolean;
-  chat(
-    messages: ChatMessage[],
-    options: ChatOptions,
-  ): AsyncGenerator<StreamChunk>;
+  chat(messages: ChatMessage[], options: ChatOptions): AsyncGenerator<StreamChunk>;
   embed?(text: string): Promise<number[]>;
 }

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+*.db
+*.enc
+*.log
+package-lock.json

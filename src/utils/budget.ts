@@ -25,9 +25,7 @@ function ensureBudgetTable(db: BetterSqlite3.Database): void {
       day TEXT NOT NULL DEFAULT (date('now'))
     )
   `);
-  db.exec(
-    'CREATE INDEX IF NOT EXISTS idx_budget_spend_day ON budget_spend(day)',
-  );
+  db.exec('CREATE INDEX IF NOT EXISTS idx_budget_spend_day ON budget_spend(day)');
 }
 
 function getTodayString(): string {
@@ -56,16 +54,16 @@ export function recordSpend(
   ensureBudgetTable(db);
   const today = getTodayString();
   const now = new Date().toISOString();
-  db.prepare(
-    'INSERT INTO budget_spend (amount, model, recorded_at, day) VALUES (?, ?, ?, ?)',
-  ).run(amount, model, now, today);
+  db.prepare('INSERT INTO budget_spend (amount, model, recorded_at, day) VALUES (?, ?, ?, ?)').run(
+    amount,
+    model,
+    now,
+    today,
+  );
   return { amount, model, recordedAt: now };
 }
 
-export function isOverBudget(
-  db: BetterSqlite3.Database,
-  limit: number,
-): boolean {
+export function isOverBudget(db: BetterSqlite3.Database, limit: number): boolean {
   const spent = getDailySpend(db);
   return spent >= limit;
 }

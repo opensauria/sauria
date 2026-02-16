@@ -117,11 +117,7 @@ export class Logger {
     this.log('fatal', message, context);
   }
 
-  private log(
-    level: LogLevel,
-    message: string,
-    context?: Record<string, unknown>,
-  ): void {
+  private log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
     if (LOG_LEVEL_PRIORITY[level] < this.minLevel) return;
 
     const now = new Date();

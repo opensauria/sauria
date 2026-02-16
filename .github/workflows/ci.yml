@@ -9,9 +9,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
-    name: Typecheck
+    name: Typecheck & Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +27,11 @@ jobs:
 
       - run: npm ci
 
-      - run: npx tsc --noEmit
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Format check
+        run: npx prettier --check .
 
   test:
     name: Test
@@ -41,15 +49,25 @@ jobs:
 
       - run: npx vitest run
 
-  security-scan:
-    name: Security Scan
+  security:
+    name: Security
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Scan for banned patterns
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Banned pattern scan
         run: |
-          BANNED_PATTERNS=(
+          BANNED=(
             "child_process"
             "eval("
             "Function("
@@ -57,19 +75,15 @@ jobs:
             "createServer"
             ".listen("
           )
-
           FOUND=0
-
-          for pattern in "${BANNED_PATTERNS[@]}"; do
+          for pattern in "${BANNED[@]}"; do
             if grep -rn --include="*.ts" --include="*.js" "$pattern" src/; then
               echo "::error::Banned pattern found: $pattern"
               FOUND=1
             fi
           done
-
           if [ "$FOUND" -eq 1 ]; then
-            echo "::error::Security scan failed. Remove banned patterns from src/."
+            echo "::error::Security scan failed."
             exit 1
           fi
-
-          echo "Security scan passed. No banned patterns found."
+          echo "Security scan passed."

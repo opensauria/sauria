@@ -99,9 +99,7 @@ export class AuditLogger {
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
-    this.selectRecentStmt = this.db.prepare(
-      'SELECT * FROM audit_log ORDER BY id DESC LIMIT ?',
-    );
+    this.selectRecentStmt = this.db.prepare('SELECT * FROM audit_log ORDER BY id DESC LIMIT ?');
 
     this.selectRecentByTypeStmt = this.db.prepare(
       'SELECT * FROM audit_log WHERE action = ? ORDER BY id DESC LIMIT ?',
@@ -124,11 +122,7 @@ export class AuditLogger {
     );
   }
 
-  logAction(
-    action: string,
-    details: Record<string, unknown>,
-    options?: LogActionOptions,
-  ): void {
+  logAction(action: string, details: Record<string, unknown>, options?: LogActionOptions): void {
     const { promptHash, responseHash, costUsd, clientId, success } = options ?? {};
 
     this.insertStmt.run(
@@ -161,9 +155,7 @@ export class AuditLogger {
   }
 
   getTotalCost(since?: string): number {
-    const row = since
-      ? this.selectTotalCostSinceStmt.get(since)
-      : this.selectTotalCostStmt.get();
+    const row = since ? this.selectTotalCostSinceStmt.get(since) : this.selectTotalCostStmt.get();
 
     if (!isCostRow(row)) {
       return 0;

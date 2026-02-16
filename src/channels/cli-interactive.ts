@@ -14,9 +14,7 @@ function writeOutput(text: string): void {
   process.stdout.write(`${text}\n`);
 }
 
-export async function startInteractiveMode(
-  deps: InteractiveDeps,
-): Promise<void> {
+export async function startInteractiveMode(deps: InteractiveDeps): Promise<void> {
   const { db, router } = deps;
 
   const rl = createInterface({
