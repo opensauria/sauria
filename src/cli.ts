@@ -9,6 +9,7 @@ import { resolveApiKey } from './auth/resolve.js';
 import { startInteractiveMode } from './channels/cli-interactive.js';
 import { startDaemon } from './daemon.js';
 import { startMcpServer } from './mcp/server.js';
+import { getVersion } from './utils/version.js';
 import type { AppContext } from './cli-actions.js';
 import {
   askAction,
@@ -50,7 +51,10 @@ function withContext(fn: (ctx: AppContext) => Promise<void> | void): () => Promi
   };
 }
 
-program.name('openwind').description('Security-first persistent cognitive kernel').version('0.1.0');
+program
+  .name('openwind')
+  .description('Security-first persistent cognitive kernel')
+  .version(getVersion());
 
 program
   .command('onboard')
