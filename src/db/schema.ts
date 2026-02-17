@@ -89,6 +89,63 @@ const SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
   CREATE INDEX IF NOT EXISTS idx_tasks_scheduled ON tasks(scheduled_for);
 
+  CREATE TABLE IF NOT EXISTS agent_messages (
+    id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL,
+    source_node_id TEXT NOT NULL,
+    sender_id TEXT NOT NULL,
+    sender_is_ceo INTEGER NOT NULL DEFAULT 0,
+    platform TEXT NOT NULL,
+    group_id TEXT,
+    content TEXT NOT NULL,
+    content_type TEXT NOT NULL DEFAULT 'text',
+    routing_decision JSON,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS agent_conversations (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT,
+    platform TEXT NOT NULL,
+    group_id TEXT,
+    participant_node_ids JSON NOT NULL DEFAULT '[]',
+    last_message_at TEXT NOT NULL DEFAULT (datetime('now')),
+    message_count INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS agent_tasks (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    assigned_to TEXT NOT NULL,
+    delegated_by TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low','normal','high','critical')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','completed','cancelled')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS agent_memory (
+    id TEXT PRIMARY KEY,
+    node_id TEXT NOT NULL,
+    workspace_id TEXT,
+    fact TEXT NOT NULL,
+    topics JSON NOT NULL DEFAULT '[]',
+    source TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_agent_messages_conversation ON agent_messages(conversation_id);
+  CREATE INDEX IF NOT EXISTS idx_agent_messages_source_node ON agent_messages(source_node_id);
+  CREATE INDEX IF NOT EXISTS idx_agent_messages_created ON agent_messages(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_agent_conversations_workspace ON agent_conversations(workspace_id);
+  CREATE INDEX IF NOT EXISTS idx_agent_tasks_workspace ON agent_tasks(workspace_id);
+  CREATE INDEX IF NOT EXISTS idx_agent_tasks_assigned ON agent_tasks(assigned_to);
+  CREATE INDEX IF NOT EXISTS idx_agent_tasks_status ON agent_tasks(status);
+  CREATE INDEX IF NOT EXISTS idx_agent_memory_node ON agent_memory(node_id);
+  CREATE INDEX IF NOT EXISTS idx_agent_memory_workspace ON agent_memory(workspace_id);
+
   CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(name, summary, content=entities, content_rowid=rowid);
 
   CREATE VIRTUAL TABLE IF NOT EXISTS observations_fts USING fts5(content, content=observations, content_rowid=rowid);
