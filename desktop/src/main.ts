@@ -952,9 +952,13 @@ interface CanvasNode {
   label: string;
   photo: string | null;
   position: { x: number; y: number };
-  status: 'connected' | 'disconnected' | 'error';
+  status: 'connected' | 'disconnected' | 'error' | 'setup';
   credentials: string;
   meta: Record<string, string>;
+  workspaceId?: string | null;
+  role?: 'lead' | 'specialist' | 'observer' | 'bridge' | 'assistant';
+  autonomy?: 'full' | 'supervised' | 'approval' | 'manual';
+  instructions?: string;
 }
 
 interface CanvasEdge {
@@ -962,6 +966,12 @@ interface CanvasEdge {
   from: string;
   to: string;
   label?: string;
+  edgeType?: 'intra_workspace' | 'cross_workspace' | 'manual';
+  rules?: Array<{
+    type: 'always' | 'keyword' | 'priority' | 'llm_decided';
+    condition?: string;
+    action: 'forward' | 'assign' | 'notify' | 'send_to_all';
+  }>;
 }
 
 interface CanvasWorkspace {
@@ -973,6 +983,17 @@ interface CanvasWorkspace {
   budget: number;
   position: { x: number; y: number };
   size: { w: number; h: number };
+  checkpoints?: Array<{
+    condition: 'between_teams' | 'high_cost' | 'external_action';
+    approverChannel: string;
+  }>;
+  groups?: Array<{
+    platform: string;
+    groupId: string;
+    name: string;
+    ceoMemberId: string;
+    autoCreated: boolean;
+  }>;
 }
 
 interface CanvasGraph {
@@ -1012,29 +1033,103 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
     return { parsed: true, type: 'unknown', target: null, message: trimmed };
   }
 
+  type ParsedCommand = {
+    parsed: boolean;
+    type: string;
+    target: string | null;
+    message: string;
+    ceoCommand?: Record<string, unknown>;
+  };
+
+  let result: ParsedCommand | null = null;
+
+  /* /promote @agent level */
+  const promoteMatch = trimmed.match(/^\/promote\s+@(\S+)\s+(full|supervised|approval|manual)$/i);
+  if (promoteMatch) {
+    const cmd = { type: 'promote', agentId: promoteMatch[1], newAutonomy: promoteMatch[2]?.toLowerCase() };
+    result = { parsed: true, type: 'promote', target: promoteMatch[1] ?? null, message: promoteMatch[2] ?? '', ceoCommand: cmd };
+  }
+
+  /* /reassign @agent #workspace */
+  if (!result) {
+    const reassignMatch = trimmed.match(/^\/reassign\s+@(\S+)\s+#(\S+)$/i);
+    if (reassignMatch) {
+      const cmd = { type: 'reassign', agentId: reassignMatch[1], newWorkspaceId: reassignMatch[2] };
+      result = { parsed: true, type: 'reassign', target: reassignMatch[1] ?? null, message: reassignMatch[2] ?? '', ceoCommand: cmd };
+    }
+  }
+
+  /* /pause #workspace */
+  if (!result) {
+    const pauseMatch = trimmed.match(/^\/pause\s+#(\S+)$/i);
+    if (pauseMatch) {
+      const cmd = { type: 'pause', workspaceId: pauseMatch[1] };
+      result = { parsed: true, type: 'pause', target: pauseMatch[1] ?? null, message: '', ceoCommand: cmd };
+    }
+  }
+
+  /* /review @agent */
+  if (!result) {
+    const reviewMatch = trimmed.match(/^\/review\s+@(\S+)$/i);
+    if (reviewMatch) {
+      const cmd = { type: 'review', agentId: reviewMatch[1] };
+      result = { parsed: true, type: 'review', target: reviewMatch[1] ?? null, message: '', ceoCommand: cmd };
+    }
+  }
+
+  /* /hire platform #workspace role */
+  if (!result) {
+    const hireMatch = trimmed.match(/^\/hire\s+(\S+)\s+#(\S+)\s+(\S+)$/i);
+    if (hireMatch) {
+      const cmd = { type: 'hire', platform: hireMatch[1], workspace: hireMatch[2], role: hireMatch[3] };
+      result = { parsed: true, type: 'hire', target: hireMatch[2] ?? null, message: `${hireMatch[1] ?? ''} ${hireMatch[3] ?? ''}`, ceoCommand: cmd };
+    }
+  }
+
+  /* /fire @agent */
+  if (!result) {
+    const fireMatch = trimmed.match(/^\/fire\s+@(\S+)$/i);
+    if (fireMatch) {
+      const cmd = { type: 'fire', agentId: fireMatch[1] };
+      result = { parsed: true, type: 'fire', target: fireMatch[1] ?? null, message: '', ceoCommand: cmd };
+    }
+  }
+
   /* @name rest → instruct agent */
-  const agentMatch = trimmed.match(/^@(\S+)\s*(.*)/s);
-  if (agentMatch) {
-    return {
-      parsed: true,
-      type: 'instruct',
-      target: agentMatch[1],
-      message: agentMatch[2] || '',
-    };
+  if (!result) {
+    const agentMatch = trimmed.match(/^@(\S+)\s*(.*)/s);
+    if (agentMatch) {
+      const cmd = { type: 'instruct', agentId: agentMatch[1], instruction: agentMatch[2] ?? '' };
+      result = { parsed: true, type: 'instruct', target: agentMatch[1] ?? null, message: agentMatch[2] ?? '', ceoCommand: cmd };
+    }
   }
 
   /* #name rest → broadcast to workspace */
-  const wsMatch = trimmed.match(/^#(\S+)\s*(.*)/s);
-  if (wsMatch) {
-    return {
-      parsed: true,
-      type: 'broadcast',
-      target: wsMatch[1],
-      message: wsMatch[2] || '',
-    };
+  if (!result) {
+    const wsMatch = trimmed.match(/^#(\S+)\s*(.*)/s);
+    if (wsMatch) {
+      const cmd = { type: 'broadcast', message: wsMatch[2] ?? '' };
+      result = { parsed: true, type: 'broadcast', target: wsMatch[1] ?? null, message: wsMatch[2] ?? '', ceoCommand: cmd };
+    }
   }
 
-  return { parsed: true, type: 'unknown', target: null, message: trimmed };
+  if (!result) {
+    return { parsed: true, type: 'unknown', target: null, message: trimmed };
+  }
+
+  // Write CEO command to JSONL file for daemon to pick up
+  if (result.ceoCommand && isDaemonRunning()) {
+    try {
+      const cmdLine = JSON.stringify(result.ceoCommand) + '\n';
+      const { appendFileSync } = require('fs') as typeof import('fs');
+      const cmdPath = join(OPENWIND_HOME, 'ceo-commands.jsonl');
+      appendFileSync(cmdPath, cmdLine, 'utf-8');
+    } catch {
+      // Best-effort — daemon may not be running
+    }
+  }
+
+  return result;
 });
 
 // ─── Generalized Channel Connection ────────────────────────────────────
@@ -1231,14 +1326,30 @@ ipcMain.handle(
           vaultStore(`channel_token_${waNodeId}`, accessToken);
         }
 
+        // Store webhook credentials for daemon
+        const appSecret = String(credentials['appSecret'] ?? '');
+        if (appSecret) {
+          vaultStore('whatsapp_app_secret', appSecret);
+          if (waNodeId) {
+            vaultStore(`whatsapp_app_secret_${waNodeId}`, appSecret);
+          }
+        }
+        const verifyToken = randomBytes(16).toString('hex');
+        vaultStore('whatsapp_verify_token', verifyToken);
+        if (waNodeId) {
+          vaultStore(`whatsapp_verify_token_${waNodeId}`, verifyToken);
+        }
+
         let config: Record<string, unknown> = {};
         if (existsSync(CONFIG_PATH)) {
           try { config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as Record<string, unknown>; } catch { config = {}; }
         }
         const channels = (config['channels'] ?? {}) as Record<string, unknown>;
+        const webhookPort = Number(credentials['webhookPort']) || 9090;
         channels['whatsapp'] = {
           enabled: true,
           phoneNumberId,
+          webhookPort,
         };
         config['channels'] = channels;
         writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');

@@ -48,6 +48,7 @@ const WhatsAppChannelSchema = z
   .object({
     enabled: z.boolean().default(false),
     phoneNumberId: z.string().optional(),
+    webhookPort: z.number().int().min(1024).max(65535).default(9090),
   })
   .default({});
 

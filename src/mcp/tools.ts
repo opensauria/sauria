@@ -47,6 +47,16 @@ const entityTypeEnum = z.enum([
   'concept',
 ]);
 
+const pendingApprovalsSchema = z.object({});
+
+const approveSchema = z.object({
+  approvalId: z.string().min(1).max(100),
+});
+
+const rejectSchema = z.object({
+  approvalId: z.string().min(1).max(100),
+});
+
 const rememberSchema = z.object({
   entities: z
     .array(
@@ -106,6 +116,18 @@ export const TOOL_DEFS = {
     description:
       'Store structured knowledge: entities (people, projects, companies, etc.) and their relations. Use this whenever you learn something new about the user or their world.',
     schema: rememberSchema,
+  },
+  openwind_pending_approvals: {
+    description: 'List all pending approval requests from agents that require CEO authorization',
+    schema: pendingApprovalsSchema,
+  },
+  openwind_approve: {
+    description: 'Approve a pending action by ID and execute the queued actions',
+    schema: approveSchema,
+  },
+  openwind_reject: {
+    description: 'Reject a pending action by ID, discarding the queued actions',
+    schema: rejectSchema,
   },
 } as const;
 
