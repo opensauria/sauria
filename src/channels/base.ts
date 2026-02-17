@@ -5,6 +5,8 @@ export interface Channel {
   start(): Promise<void>;
   stop(): Promise<void>;
   sendAlert(alert: ProactiveAlert): Promise<void>;
+  sendMessage(content: string, groupId: string | null): Promise<void>;
+  sendToGroup(groupId: string, content: string): Promise<void>;
 }
 
 const MAX_BODY_LENGTH = 500;
