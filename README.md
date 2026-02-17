@@ -101,15 +101,15 @@ openwind doctor             # Health checks
 
 When running as an MCP server, OpenWind exposes 7 tools to connected agents:
 
-| Tool                       | Description                                            |
-| -------------------------- | ------------------------------------------------------ |
+| Tool                       | Description                                             |
+| -------------------------- | ------------------------------------------------------- |
 | `openwind_query`           | Natural language question answered from knowledge graph |
-| `openwind_get_entity`      | Entity details + relations + timeline                  |
-| `openwind_search`          | Hybrid semantic + keyword search                       |
-| `openwind_get_upcoming`    | Deadlines and meetings in next N hours                 |
-| `openwind_get_insights`    | AI-generated observations and patterns                 |
-| `openwind_get_context_for` | Full context dump for a topic                          |
-| `openwind_add_event`       | Feed an event into the knowledge graph                 |
+| `openwind_get_entity`      | Entity details + relations + timeline                   |
+| `openwind_search`          | Hybrid semantic + keyword search                        |
+| `openwind_get_upcoming`    | Deadlines and meetings in next N hours                  |
+| `openwind_get_insights`    | AI-generated observations and patterns                  |
+| `openwind_get_context_for` | Full context dump for a topic                           |
+| `openwind_add_event`       | Feed an event into the knowledge graph                  |
 
 All inputs validated with Zod. Rate limited. Audit logged.
 

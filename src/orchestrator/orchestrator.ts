@@ -1,8 +1,14 @@
 import type BetterSqlite3 from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 import type {
-  CanvasGraph, InboundMessage, RoutingAction, CEOIdentity, CEOCommand,
-  Workspace, AgentNode, Platform,
+  CanvasGraph,
+  InboundMessage,
+  RoutingAction,
+  CEOIdentity,
+  CEOCommand,
+  Workspace,
+  AgentNode,
+  Platform,
 } from './types.js';
 import type { ChannelRegistry } from '../channels/registry.js';
 import type { LLMRoutingBrain, RoutingContext } from './llm-router.js';
@@ -82,11 +88,9 @@ export class AgentOrchestrator {
     // Record inbound message in agent memory
     let conversationId: string | null = null;
     if (this.agentMemory) {
-      conversationId = this.agentMemory.getOrCreateConversation(
-        message.platform,
-        message.groupId,
-        [message.sourceNodeId],
-      );
+      conversationId = this.agentMemory.getOrCreateConversation(message.platform, message.groupId, [
+        message.sourceNodeId,
+      ]);
       this.agentMemory.recordMessage({
         conversationId,
         sourceNodeId: message.sourceNodeId,
@@ -189,7 +193,10 @@ export class AgentOrchestrator {
           mutableNodes[idx] = { ...node, autonomy: command.newAutonomy };
           this.graph = { ...this.graph, nodes: mutableNodes };
         }
-        logger.info('CEO promote: autonomy updated', { agentId: node.id, autonomy: command.newAutonomy });
+        logger.info('CEO promote: autonomy updated', {
+          agentId: node.id,
+          autonomy: command.newAutonomy,
+        });
         break;
       }
 
@@ -238,7 +245,10 @@ export class AgentOrchestrator {
           }
         }
         this.graph = { ...this.graph, nodes: mutableNodes };
-        logger.info('CEO pause: workspace paused', { workspaceId: ws.id, nodeCount: wsNodes.length });
+        logger.info('CEO pause: workspace paused', {
+          workspaceId: ws.id,
+          nodeCount: wsNodes.length,
+        });
         break;
       }
 
@@ -298,9 +308,7 @@ export class AgentOrchestrator {
   }
 
   private findNodeByLabel(label: string): AgentNode | null {
-    return this.graph.nodes.find(
-      (n) => n.label.toLowerCase() === label.toLowerCase(),
-    ) ?? null;
+    return this.graph.nodes.find((n) => n.label.toLowerCase() === label.toLowerCase()) ?? null;
   }
 
   async executeApprovedActions(agentId: string, actions: RoutingAction[]): Promise<number> {
@@ -357,7 +365,14 @@ export class AgentOrchestrator {
               `INSERT INTO agent_tasks (id, workspace_id, assigned_to, delegated_by, title, priority)
                VALUES (?, ?, ?, ?, ?, ?)`,
             )
-            .run(nanoid(), workspace?.id ?? '', action.targetNodeId, source.sourceNodeId, action.task, action.priority);
+            .run(
+              nanoid(),
+              workspace?.id ?? '',
+              action.targetNodeId,
+              source.sourceNodeId,
+              action.task,
+              action.priority,
+            );
         }
         const group = this.findGroupForNode(action.targetNodeId);
         await this.registry.sendTo(action.targetNodeId, `[Task] ${action.task}`, group);

@@ -18,16 +18,13 @@ contextBridge.exposeInMainWorld('openwind', {
   hidePalette: () => ipcRenderer.invoke('hide-palette'),
   onCommandResult: (cb: (result: string) => void) =>
     ipcRenderer.on('command-result', (_event, result: string) => cb(result)),
-  onPaletteShow: (cb: () => void) =>
-    ipcRenderer.on('palette-show', () => cb()),
-  onPaletteReset: (cb: () => void) =>
-    ipcRenderer.on('palette-reset', () => cb()),
+  onPaletteShow: (cb: () => void) => ipcRenderer.on('palette-show', () => cb()),
+  onPaletteReset: (cb: () => void) => ipcRenderer.on('palette-reset', () => cb()),
   getTelegramStatus: () => ipcRenderer.invoke('get-telegram-status'),
   connectTelegram: (token: string, userId: number) =>
     ipcRenderer.invoke('connect-telegram', token, userId),
   disconnectTelegram: () => ipcRenderer.invoke('disconnect-telegram'),
-  onShowTelegramForm: (cb: () => void) =>
-    ipcRenderer.on('show-telegram-form', () => cb()),
+  onShowTelegramForm: (cb: () => void) => ipcRenderer.on('show-telegram-form', () => cb()),
 
   // CEO profile
   getCeoProfile: () => ipcRenderer.invoke('get-ceo-profile'),

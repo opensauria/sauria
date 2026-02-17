@@ -128,9 +128,7 @@ export class DiscordChannel implements Channel {
   private async resolveGuildTextChannels(guildId: string): Promise<string[]> {
     const { audit } = this.deps;
     try {
-      const response = await this.discordFetch<DiscordApiChannel[]>(
-        `/guilds/${guildId}/channels`,
-      );
+      const response = await this.discordFetch<DiscordApiChannel[]>(`/guilds/${guildId}/channels`);
       // Type 0 = text channel
       return response.filter((c) => c.type === 0).map((c) => c.id);
     } catch (error) {
@@ -172,9 +170,10 @@ export class DiscordChannel implements Channel {
     const afterId = this.latestMessageIds.get(channelId) ?? '0';
 
     try {
-      const url = afterId === '0'
-        ? `/channels/${channelId}/messages?limit=20`
-        : `/channels/${channelId}/messages?after=${afterId}&limit=20`;
+      const url =
+        afterId === '0'
+          ? `/channels/${channelId}/messages?limit=20`
+          : `/channels/${channelId}/messages?after=${afterId}&limit=20`;
 
       const messages = await this.discordFetch<DiscordMessage[]>(url);
       if (messages.length === 0) return;
@@ -201,10 +200,7 @@ export class DiscordChannel implements Channel {
     }
   }
 
-  private async processInboundMessage(
-    channelId: string,
-    message: DiscordMessage,
-  ): Promise<void> {
+  private async processInboundMessage(channelId: string, message: DiscordMessage): Promise<void> {
     const { audit, pipeline, onInbound, ceoUserId, nodeId } = this.deps;
     const rawText = message.content;
 
@@ -273,13 +269,10 @@ export class DiscordChannel implements Channel {
     const { audit } = this.deps;
 
     try {
-      await this.discordFetch<unknown>(
-        `/channels/${channelId}/messages`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ content: text }),
-        },
-      );
+      await this.discordFetch<unknown>(`/channels/${channelId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ content: text }),
+      });
 
       audit.logAction('discord:message_sent', {
         channelId,
@@ -304,7 +297,7 @@ export class DiscordChannel implements Channel {
     const response = await fetch(url, {
       method: init?.method ?? 'GET',
       headers: {
-        'Authorization': `Bot ${token}`,
+        Authorization: `Bot ${token}`,
         'Content-Type': 'application/json',
       },
       body: init?.body,

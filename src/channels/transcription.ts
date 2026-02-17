@@ -85,11 +85,7 @@ function mixToMono(channelData: Float32Array[]): Float32Array {
   return mono;
 }
 
-function downsample(
-  input: Float32Array,
-  inputRate: number,
-  outputRate: number,
-): Float32Array {
+function downsample(input: Float32Array, inputRate: number, outputRate: number): Float32Array {
   if (inputRate === outputRate) return input;
 
   const ratio = inputRate / outputRate;

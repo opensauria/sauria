@@ -29,7 +29,14 @@ import {
 
 const program = new Command();
 
-const SKIP_FIRST_RUN_CHECK = new Set(['onboard', 'setup', 'doctor', 'help', 'mcp-server', 'connect']);
+const SKIP_FIRST_RUN_CHECK = new Set([
+  'onboard',
+  'setup',
+  'doctor',
+  'help',
+  'mcp-server',
+  'connect',
+]);
 
 function w(text: string): void {
   process.stdout.write(`${text}\n`);

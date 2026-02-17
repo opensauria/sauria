@@ -94,9 +94,7 @@ describe('SlackChannel', () => {
     });
 
     it('logs error when API returns ok: false', async () => {
-      fetchSpy.mockResolvedValueOnce(
-        createSlackResponse(false, {}, 'channel_not_found'),
-      );
+      fetchSpy.mockResolvedValueOnce(createSlackResponse(false, {}, 'channel_not_found'));
 
       const deps = createDeps();
       const channel = new SlackChannel(deps);
@@ -223,9 +221,7 @@ describe('SlackChannel', () => {
       // Poll call - new message
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
-          messages: [
-            { ts: '1700000003.000000', user: 'U002', text: 'new message' },
-          ],
+          messages: [{ ts: '1700000003.000000', user: 'U002', text: 'new message' }],
         }),
       );
 
@@ -314,9 +310,7 @@ describe('SlackChannel', () => {
 
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
-          messages: [
-            { ts: '1700000003.000000', user: 'U002', text: 'hello world' },
-          ],
+          messages: [{ ts: '1700000003.000000', user: 'U002', text: 'hello world' }],
         }),
       );
 
@@ -348,9 +342,7 @@ describe('SlackChannel', () => {
 
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
-          messages: [
-            { ts: '1700000003.000000', user: 'U002', text: 'ingest me' },
-          ],
+          messages: [{ ts: '1700000003.000000', user: 'U002', text: 'ingest me' }],
         }),
       );
 
@@ -382,17 +374,13 @@ describe('SlackChannel', () => {
       // First poll: new message
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
-          messages: [
-            { ts: '1700000003.000000', user: 'U002', text: 'msg1' },
-          ],
+          messages: [{ ts: '1700000003.000000', user: 'U002', text: 'msg1' }],
         }),
       );
       await channel.pollOnce();
 
       // Second poll: should use updated timestamp
-      fetchSpy.mockResolvedValueOnce(
-        createSlackResponse(true, { messages: [] }),
-      );
+      fetchSpy.mockResolvedValueOnce(createSlackResponse(true, { messages: [] }));
       await channel.pollOnce();
 
       const secondCallBody = JSON.parse(
@@ -448,9 +436,7 @@ describe('SlackChannel', () => {
         text: `message ${String(i)}`,
       }));
 
-      fetchSpy.mockResolvedValueOnce(
-        createSlackResponse(true, { messages }),
-      );
+      fetchSpy.mockResolvedValueOnce(createSlackResponse(true, { messages }));
 
       await channel.pollOnce();
 
@@ -482,9 +468,7 @@ describe('SlackChannel', () => {
 
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
-          messages: [
-            { ts: '1700000003.000000', user: 'UCEO', text: 'do this now' },
-          ],
+          messages: [{ ts: '1700000003.000000', user: 'UCEO', text: 'do this now' }],
         }),
       );
 
@@ -512,9 +496,7 @@ describe('SlackChannel', () => {
 
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
-          messages: [
-            { ts: '1700000003.000000', user: 'U_REGULAR', text: 'just a user' },
-          ],
+          messages: [{ ts: '1700000003.000000', user: 'U_REGULAR', text: 'just a user' }],
         }),
       );
 
@@ -540,9 +522,7 @@ describe('SlackChannel', () => {
 
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
-          messages: [
-            { ts: '1700000003.000000', user: 'UCEO', text: 'CEO order' },
-          ],
+          messages: [{ ts: '1700000003.000000', user: 'UCEO', text: 'CEO order' }],
         }),
       );
 
@@ -560,9 +540,7 @@ describe('SlackChannel', () => {
 
   describe('start and stop', () => {
     it('logs start and stop actions', async () => {
-      fetchSpy.mockResolvedValueOnce(
-        createSlackResponse(true, { messages: [] }),
-      );
+      fetchSpy.mockResolvedValueOnce(createSlackResponse(true, { messages: [] }));
 
       const deps = createDeps();
       const channel = new SlackChannel(deps);
@@ -579,9 +557,7 @@ describe('SlackChannel', () => {
     });
 
     it('stops polling when stopped', async () => {
-      fetchSpy.mockResolvedValueOnce(
-        createSlackResponse(true, { messages: [] }),
-      );
+      fetchSpy.mockResolvedValueOnce(createSlackResponse(true, { messages: [] }));
 
       const deps = createDeps();
       const channel = new SlackChannel(deps);
@@ -662,9 +638,7 @@ describe('SlackChannel', () => {
 
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
-          messages: [
-            { ts: '1700000003.000000', user: 'U002', text: '   ' },
-          ],
+          messages: [{ ts: '1700000003.000000', user: 'U002', text: '   ' }],
         }),
       );
 

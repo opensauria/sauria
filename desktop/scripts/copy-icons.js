@@ -72,4 +72,6 @@ for (const name of lucideIcons) {
   }
 }
 
-console.log(`Copied ${Object.keys(brands).length + 2} brand icons and ${lucideIcons.length} UI icons to ${OUT}`);
+console.log(
+  `Copied ${Object.keys(brands).length + 2} brand icons and ${lucideIcons.length} UI icons to ${OUT}`,
+);

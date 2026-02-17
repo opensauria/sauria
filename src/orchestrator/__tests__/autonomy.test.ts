@@ -21,10 +21,7 @@ function createAgent(autonomy: AgentNode['autonomy']): AgentNode {
   };
 }
 
-function createWorkspace(
-  id: string,
-  overrides?: Partial<Workspace>,
-): Workspace {
+function createWorkspace(id: string, overrides?: Partial<Workspace>): Workspace {
   return {
     id,
     name: `Workspace ${id}`,
@@ -77,30 +74,21 @@ describe('AutonomyEnforcer', () => {
   describe('filterActions', () => {
     it('full autonomy: all actions are immediate', () => {
       const agent = createAgent('full');
-      const { immediate, pendingApproval } = enforcer.filterActions(
-        agent,
-        allActions,
-      );
+      const { immediate, pendingApproval } = enforcer.filterActions(agent, allActions);
       expect(immediate).toHaveLength(5);
       expect(pendingApproval).toHaveLength(0);
     });
 
     it('supervised autonomy: all actions are immediate', () => {
       const agent = createAgent('supervised');
-      const { immediate, pendingApproval } = enforcer.filterActions(
-        agent,
-        allActions,
-      );
+      const { immediate, pendingApproval } = enforcer.filterActions(agent, allActions);
       expect(immediate).toHaveLength(5);
       expect(pendingApproval).toHaveLength(0);
     });
 
     it('approval autonomy: reply is immediate, others pending', () => {
       const agent = createAgent('approval');
-      const { immediate, pendingApproval } = enforcer.filterActions(
-        agent,
-        allActions,
-      );
+      const { immediate, pendingApproval } = enforcer.filterActions(agent, allActions);
       expect(immediate).toHaveLength(1);
       expect(immediate[0]?.type).toBe('reply');
       expect(pendingApproval).toHaveLength(4);
@@ -108,10 +96,7 @@ describe('AutonomyEnforcer', () => {
 
     it('manual autonomy: all actions pending including reply', () => {
       const agent = createAgent('manual');
-      const { immediate, pendingApproval } = enforcer.filterActions(
-        agent,
-        allActions,
-      );
+      const { immediate, pendingApproval } = enforcer.filterActions(agent, allActions);
       expect(immediate).toHaveLength(0);
       expect(pendingApproval).toHaveLength(5);
     });
@@ -127,131 +112,89 @@ describe('AutonomyEnforcer', () => {
   describe('requiresCheckpoint', () => {
     it('between_teams: triggers when target workspace differs', () => {
       const source = createWorkspace('ws1', {
-        checkpoints: [
-          { condition: 'between_teams', approverChannel: 'ceo-chat' },
-        ],
+        checkpoints: [{ condition: 'between_teams', approverChannel: 'ceo-chat' }],
       });
       const target = createWorkspace('ws2');
 
-      expect(
-        enforcer.requiresCheckpoint(forwardAction, source, target),
-      ).toBe(true);
+      expect(enforcer.requiresCheckpoint(forwardAction, source, target)).toBe(true);
     });
 
     it('between_teams: does not trigger within same workspace', () => {
       const source = createWorkspace('ws1', {
-        checkpoints: [
-          { condition: 'between_teams', approverChannel: 'ceo-chat' },
-        ],
+        checkpoints: [{ condition: 'between_teams', approverChannel: 'ceo-chat' }],
       });
       const target = createWorkspace('ws1');
 
-      expect(
-        enforcer.requiresCheckpoint(forwardAction, source, target),
-      ).toBe(false);
+      expect(enforcer.requiresCheckpoint(forwardAction, source, target)).toBe(false);
     });
 
     it('between_teams: does not trigger for reply actions', () => {
       const source = createWorkspace('ws1', {
-        checkpoints: [
-          { condition: 'between_teams', approverChannel: 'ceo-chat' },
-        ],
+        checkpoints: [{ condition: 'between_teams', approverChannel: 'ceo-chat' }],
       });
       const target = createWorkspace('ws2');
 
-      expect(
-        enforcer.requiresCheckpoint(replyAction, source, target),
-      ).toBe(false);
+      expect(enforcer.requiresCheckpoint(replyAction, source, target)).toBe(false);
     });
 
     it('between_teams: does not trigger when source is null', () => {
       const target = createWorkspace('ws2');
 
-      expect(
-        enforcer.requiresCheckpoint(forwardAction, null, target),
-      ).toBe(false);
+      expect(enforcer.requiresCheckpoint(forwardAction, null, target)).toBe(false);
     });
 
     it('high_cost: triggers when workspace has deep model and action is forward/assign', () => {
       const source = createWorkspace('ws1', {
-        checkpoints: [
-          { condition: 'high_cost', approverChannel: 'ceo-chat' },
-        ],
+        checkpoints: [{ condition: 'high_cost', approverChannel: 'ceo-chat' }],
         models: { deep: 'claude-opus' },
       });
 
-      expect(
-        enforcer.requiresCheckpoint(forwardAction, source, null),
-      ).toBe(true);
-      expect(
-        enforcer.requiresCheckpoint(assignAction, source, null),
-      ).toBe(true);
+      expect(enforcer.requiresCheckpoint(forwardAction, source, null)).toBe(true);
+      expect(enforcer.requiresCheckpoint(assignAction, source, null)).toBe(true);
     });
 
     it('high_cost: does not trigger for reply', () => {
       const source = createWorkspace('ws1', {
-        checkpoints: [
-          { condition: 'high_cost', approverChannel: 'ceo-chat' },
-        ],
+        checkpoints: [{ condition: 'high_cost', approverChannel: 'ceo-chat' }],
         models: { deep: 'claude-opus' },
       });
 
-      expect(
-        enforcer.requiresCheckpoint(replyAction, source, null),
-      ).toBe(false);
+      expect(enforcer.requiresCheckpoint(replyAction, source, null)).toBe(false);
     });
 
     it('high_cost: does not trigger without deep model', () => {
       const source = createWorkspace('ws1', {
-        checkpoints: [
-          { condition: 'high_cost', approverChannel: 'ceo-chat' },
-        ],
+        checkpoints: [{ condition: 'high_cost', approverChannel: 'ceo-chat' }],
       });
 
-      expect(
-        enforcer.requiresCheckpoint(forwardAction, source, null),
-      ).toBe(false);
+      expect(enforcer.requiresCheckpoint(forwardAction, source, null)).toBe(false);
     });
 
     it('external_action: triggers for send_to_all, group_message, forward', () => {
       const source = createWorkspace('ws1', {
-        checkpoints: [
-          { condition: 'external_action', approverChannel: 'ceo-chat' },
-        ],
+        checkpoints: [{ condition: 'external_action', approverChannel: 'ceo-chat' }],
       });
 
-      expect(
-        enforcer.requiresCheckpoint(sendToAllAction, source, null),
-      ).toBe(true);
-      expect(
-        enforcer.requiresCheckpoint(forwardAction, source, null),
-      ).toBe(true);
+      expect(enforcer.requiresCheckpoint(sendToAllAction, source, null)).toBe(true);
+      expect(enforcer.requiresCheckpoint(forwardAction, source, null)).toBe(true);
     });
 
     it('external_action: does not trigger for reply', () => {
       const source = createWorkspace('ws1', {
-        checkpoints: [
-          { condition: 'external_action', approverChannel: 'ceo-chat' },
-        ],
+        checkpoints: [{ condition: 'external_action', approverChannel: 'ceo-chat' }],
       });
 
-      expect(
-        enforcer.requiresCheckpoint(replyAction, source, null),
-      ).toBe(false);
+      expect(enforcer.requiresCheckpoint(replyAction, source, null)).toBe(false);
     });
 
     it('no checkpoints configured: always returns false', () => {
       const source = createWorkspace('ws1');
 
-      expect(
-        enforcer.requiresCheckpoint(forwardAction, source, null),
-      ).toBe(false);
+      expect(enforcer.requiresCheckpoint(forwardAction, source, null)).toBe(false);
     });
 
     it('null source workspace: returns false', () => {
-      expect(
-        enforcer.requiresCheckpoint(forwardAction, null, null),
-      ).toBe(false);
+      expect(enforcer.requiresCheckpoint(forwardAction, null, null)).toBe(false);
     });
   });
 });

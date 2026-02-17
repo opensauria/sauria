@@ -129,9 +129,7 @@ export class LLMRoutingBrain {
 
   private async callLLM(messages: ChatMessage[], tier: ModelTier): Promise<RoutingDecision> {
     const stream =
-      tier === 'deep'
-        ? this.router.deepAnalyze(messages)
-        : this.router.reason(messages);
+      tier === 'deep' ? this.router.deepAnalyze(messages) : this.router.reason(messages);
 
     let result = '';
     for await (const chunk of stream) {
@@ -251,9 +249,10 @@ function normalizeAction(raw: RawLLMAction): RoutingAction | null {
         : null;
 
     case 'assign': {
-      const priority = raw.priority && VALID_PRIORITIES.has(raw.priority)
-        ? (raw.priority as 'low' | 'normal' | 'high')
-        : 'normal';
+      const priority =
+        raw.priority && VALID_PRIORITIES.has(raw.priority)
+          ? (raw.priority as 'low' | 'normal' | 'high')
+          : 'normal';
       return raw.targetNodeId && raw.task
         ? { type: 'assign', targetNodeId: raw.targetNodeId, task: raw.task, priority }
         : null;
@@ -270,9 +269,7 @@ function normalizeAction(raw: RawLLMAction): RoutingAction | null {
         : null;
 
     case 'learn':
-      return raw.fact
-        ? { type: 'learn', fact: raw.fact, topics: raw.topics ?? [] }
-        : null;
+      return raw.fact ? { type: 'learn', fact: raw.fact, topics: raw.topics ?? [] } : null;
 
     case 'group_message':
       return raw.workspaceId && raw.content

@@ -145,11 +145,20 @@ export interface InboundMessage {
 export type RoutingAction =
   | { readonly type: 'reply'; readonly content: string }
   | { readonly type: 'forward'; readonly targetNodeId: string; readonly content: string }
-  | { readonly type: 'assign'; readonly targetNodeId: string; readonly task: string; readonly priority: 'low' | 'normal' | 'high' }
+  | {
+      readonly type: 'assign';
+      readonly targetNodeId: string;
+      readonly task: string;
+      readonly priority: 'low' | 'normal' | 'high';
+    }
   | { readonly type: 'notify'; readonly targetNodeId: string; readonly summary: string }
   | { readonly type: 'send_to_all'; readonly workspaceId: string; readonly content: string }
   | { readonly type: 'learn'; readonly fact: string; readonly topics: readonly string[] }
-  | { readonly type: 'checkpoint'; readonly description: string; readonly pendingActions: readonly RoutingAction[] }
+  | {
+      readonly type: 'checkpoint';
+      readonly description: string;
+      readonly pendingActions: readonly RoutingAction[];
+    }
   | { readonly type: 'group_message'; readonly workspaceId: string; readonly content: string };
 
 export interface RoutingDecision {
@@ -181,7 +190,12 @@ export type CEOCommand =
   | { readonly type: 'pause'; readonly workspaceId: string }
   | { readonly type: 'broadcast'; readonly message: string }
   | { readonly type: 'review'; readonly agentId: string }
-  | { readonly type: 'hire'; readonly platform: Platform; readonly workspace: string; readonly role: AgentRole }
+  | {
+      readonly type: 'hire';
+      readonly platform: Platform;
+      readonly workspace: string;
+      readonly role: AgentRole;
+    }
   | { readonly type: 'fire'; readonly agentId: string };
 
 // ─── Default Factories ─────────────────────────────────────────────

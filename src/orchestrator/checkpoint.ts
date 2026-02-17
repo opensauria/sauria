@@ -64,54 +64,44 @@ export class CheckpointManager {
 
   getPending(): PendingApproval[] {
     const rows = this.db
-      .prepare(
-        `SELECT * FROM approvals WHERE status = 'pending' ORDER BY created_at ASC`,
-      )
+      .prepare(`SELECT * FROM approvals WHERE status = 'pending' ORDER BY created_at ASC`)
       .all() as ApprovalRow[];
 
     return rows.map(rowToApproval);
   }
 
   approve(approvalId: string): RoutingAction[] {
-    const row = this.db
-      .prepare(`SELECT * FROM approvals WHERE id = ?`)
-      .get(approvalId) as ApprovalRow | undefined;
+    const row = this.db.prepare(`SELECT * FROM approvals WHERE id = ?`).get(approvalId) as
+      | ApprovalRow
+      | undefined;
 
     if (!row) {
       throw new Error(`Approval ${approvalId} not found`);
     }
 
     if (row.status !== 'pending') {
-      throw new Error(
-        `Approval ${approvalId} is already ${row.status}`,
-      );
+      throw new Error(`Approval ${approvalId} is already ${row.status}`);
     }
 
-    this.db
-      .prepare(`UPDATE approvals SET status = 'approved' WHERE id = ?`)
-      .run(approvalId);
+    this.db.prepare(`UPDATE approvals SET status = 'approved' WHERE id = ?`).run(approvalId);
 
     return JSON.parse(row.actions_json) as RoutingAction[];
   }
 
   reject(approvalId: string): void {
-    const row = this.db
-      .prepare(`SELECT * FROM approvals WHERE id = ?`)
-      .get(approvalId) as ApprovalRow | undefined;
+    const row = this.db.prepare(`SELECT * FROM approvals WHERE id = ?`).get(approvalId) as
+      | ApprovalRow
+      | undefined;
 
     if (!row) {
       throw new Error(`Approval ${approvalId} not found`);
     }
 
     if (row.status !== 'pending') {
-      throw new Error(
-        `Approval ${approvalId} is already ${row.status}`,
-      );
+      throw new Error(`Approval ${approvalId} is already ${row.status}`);
     }
 
-    this.db
-      .prepare(`UPDATE approvals SET status = 'rejected' WHERE id = ?`)
-      .run(approvalId);
+    this.db.prepare(`UPDATE approvals SET status = 'rejected' WHERE id = ?`).run(approvalId);
   }
 
   getPendingCount(): number {

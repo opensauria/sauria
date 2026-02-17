@@ -50,7 +50,14 @@
       <div class="panel-header">
         <span class="panel-title">Agent Details</span>
         <button class="panel-close" id="agent-detail-close">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" fill="none">
+            <path
+              d="M18 6L6 18M6 6l12 12"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </svg>
         </button>
       </div>
       <div class="panel-body">
@@ -82,7 +89,11 @@
 
         <div class="detail-section">
           <span class="detail-section-label">Instructions</span>
-          <textarea class="detail-textarea" id="agent-instructions" placeholder="Standing orders for this agent..."></textarea>
+          <textarea
+            class="detail-textarea"
+            id="agent-instructions"
+            placeholder="Standing orders for this agent..."
+          ></textarea>
         </div>
 
         <div class="detail-section">
@@ -113,20 +124,32 @@
       <div class="panel-header">
         <span class="panel-title">Workspace Details</span>
         <button class="panel-close" id="workspace-detail-close">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" fill="none">
+            <path
+              d="M18 6L6 18M6 6l12 12"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </svg>
         </button>
       </div>
       <div class="panel-body">
         <div class="detail-section">
           <span class="detail-section-label">Name</span>
-          <input class="detail-input" id="ws-detail-name" type="text" placeholder="Workspace name" />
+          <input
+            class="detail-input"
+            id="ws-detail-name"
+            type="text"
+            placeholder="Workspace name"
+          />
         </div>
 
         <div class="detail-section">
           <span class="detail-section-label">Color</span>
           <div class="color-picker-row" id="ws-detail-colors">
             <div class="color-swatch" data-color="#7c6bf5" style="background: #7c6bf5"></div>
-            <div class="color-swatch" data-color="#27A7E7" style="background: #27A7E7"></div>
+            <div class="color-swatch" data-color="#27A7E7" style="background: #27a7e7"></div>
             <div class="color-swatch" data-color="#34d399" style="background: #34d399"></div>
             <div class="color-swatch" data-color="#f59e0b" style="background: #f59e0b"></div>
             <div class="color-swatch" data-color="#f87171" style="background: #f87171"></div>
@@ -136,7 +159,11 @@
 
         <div class="detail-section">
           <span class="detail-section-label">Purpose</span>
-          <textarea class="detail-textarea" id="ws-detail-purpose" placeholder="What this workspace is for..."></textarea>
+          <textarea
+            class="detail-textarea"
+            id="ws-detail-purpose"
+            placeholder="What this workspace is for..."
+          ></textarea>
         </div>
 
         <div class="detail-section">
@@ -148,7 +175,14 @@
 
         <div class="detail-section">
           <span class="detail-section-label">Daily Budget (USD)</span>
-          <input class="detail-input" id="ws-detail-budget" type="number" min="0" step="1" placeholder="0" />
+          <input
+            class="detail-input"
+            id="ws-detail-budget"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="0"
+          />
         </div>
       </div>
     </div>
@@ -159,13 +193,18 @@
         <h3>New Workspace</h3>
         <div class="cred-field">
           <label>Name</label>
-          <input class="detail-input" id="ws-create-name" type="text" placeholder="e.g. Marketing Team" />
+          <input
+            class="detail-input"
+            id="ws-create-name"
+            type="text"
+            placeholder="e.g. Marketing Team"
+          />
         </div>
         <div class="cred-field">
           <label>Color</label>
           <div class="color-picker-row" id="ws-create-colors">
             <div class="color-swatch active" data-color="#7c6bf5" style="background: #7c6bf5"></div>
-            <div class="color-swatch" data-color="#27A7E7" style="background: #27A7E7"></div>
+            <div class="color-swatch" data-color="#27A7E7" style="background: #27a7e7"></div>
             <div class="color-swatch" data-color="#34d399" style="background: #34d399"></div>
             <div class="color-swatch" data-color="#f59e0b" style="background: #f59e0b"></div>
             <div class="color-swatch" data-color="#f87171" style="background: #f87171"></div>
@@ -174,7 +213,11 @@
         </div>
         <div class="cred-field">
           <label>Purpose</label>
-          <textarea class="detail-textarea" id="ws-create-purpose" placeholder="What this workspace is for..."></textarea>
+          <textarea
+            class="detail-textarea"
+            id="ws-create-purpose"
+            placeholder="What this workspace is for..."
+          ></textarea>
         </div>
         <div class="panel-actions">
           <button class="panel-btn panel-btn-cancel" id="ws-create-cancel">Cancel</button>
@@ -205,24 +248,45 @@
       var detailWorkspaceId = null;
 
       /* viewport pan/zoom state */
-      var vpX = 0, vpY = 0, vpZoom = 1;
-      var isPanning = false, panStartX = 0, panStartY = 0, panStartVpX = 0, panStartVpY = 0;
+      var vpX = 0,
+        vpY = 0,
+        vpZoom = 1;
+      var isPanning = false,
+        panStartX = 0,
+        panStartY = 0,
+        panStartVpX = 0,
+        panStartVpY = 0;
 
       /* card drag state */
-      var isDragging = false, dragNodeId = null, dragStartX = 0, dragStartY = 0, dragStartNodeX = 0, dragStartNodeY = 0;
+      var isDragging = false,
+        dragNodeId = null,
+        dragStartX = 0,
+        dragStartY = 0,
+        dragStartNodeX = 0,
+        dragStartNodeY = 0;
 
       /* edge drag state */
-      var isEdgeDragging = false, edgeFromId = null, edgeTempLine = null;
+      var isEdgeDragging = false,
+        edgeFromId = null,
+        edgeTempLine = null;
 
       /* workspace resize state */
-      var isWsResizing = false, wsResizeId = null, wsResizeDir = null;
-      var wsResizeStartX = 0, wsResizeStartY = 0, wsResizeStartW = 0, wsResizeStartH = 0;
+      var isWsResizing = false,
+        wsResizeId = null,
+        wsResizeDir = null;
+      var wsResizeStartX = 0,
+        wsResizeStartY = 0,
+        wsResizeStartW = 0,
+        wsResizeStartH = 0;
 
       /* workspace drag state (magnetic: moves contained cards too) */
-      var isWsDragging = false, wsDragId = null;
-      var wsDragStartX = 0, wsDragStartY = 0, wsDragStartWsX = 0, wsDragStartWsY = 0;
+      var isWsDragging = false,
+        wsDragId = null;
+      var wsDragStartX = 0,
+        wsDragStartY = 0,
+        wsDragStartWsX = 0,
+        wsDragStartWsY = 0;
       var wsDragNodeStarts = [];
-
 
       /* DOM refs */
       var viewport = document.getElementById('viewport');
@@ -260,12 +324,16 @@
         vpZoom = graph.viewport.zoom;
 
         /* Auto-create CEO node if not present */
-        var hasCeo = graph.nodes.some(function (n) { return n.platform === 'ceo'; });
+        var hasCeo = graph.nodes.some(function (n) {
+          return n.platform === 'ceo';
+        });
         if (!hasCeo) {
           var ceoProfile = { fullName: 'CEO', customInstructions: '' };
           try {
             ceoProfile = await window.openwind.getCeoProfile();
-          } catch { /* fallback */ }
+          } catch {
+            /* fallback */
+          }
           var cx = (window.innerWidth / 2 - vpX) / vpZoom - 60;
           graph.nodes.unshift({
             id: 'ceo-' + generateId(),
@@ -306,7 +374,7 @@
            zoom also multiplies transform values, so divide translate by zoom
            to keep vpX/vpY in screen-pixel space: visual offset = (vpX/Z)*Z = vpX */
         world.style.zoom = vpZoom;
-        world.style.transform = 'translate(' + (vpX / vpZoom) + 'px, ' + (vpY / vpZoom) + 'px)';
+        world.style.transform = 'translate(' + vpX / vpZoom + 'px, ' + vpY / vpZoom + 'px)';
       }
 
       function updateEmptyState() {
@@ -319,7 +387,9 @@
 
       function renderWorkspaces() {
         /* Remove existing workspace frames */
-        world.querySelectorAll('.workspace-frame').forEach(function (el) { el.remove(); });
+        world.querySelectorAll('.workspace-frame').forEach(function (el) {
+          el.remove();
+        });
 
         graph.workspaces.forEach(function (ws) {
           var frame = document.createElement('div');
@@ -332,17 +402,33 @@
           frame.style.borderColor = ws.color;
           frame.style.background = hexToRgba(ws.color, 0.04);
 
-          var agentCount = graph.nodes.filter(function (n) { return n.workspaceId === ws.id; }).length;
+          var agentCount = graph.nodes.filter(function (n) {
+            return n.workspaceId === ws.id;
+          }).length;
 
           frame.innerHTML =
-            '<div class="workspace-header" data-workspace-id="' + ws.id + '">' +
-              '<span class="workspace-name">' + escapeHtml(ws.name) + '</span>' +
-              '<span class="workspace-count">' + agentCount + '</span>' +
-              (ws.purpose ? '<span class="workspace-purpose">' + escapeHtml(ws.purpose) + '</span>' : '') +
+            '<div class="workspace-header" data-workspace-id="' +
+            ws.id +
+            '">' +
+            '<span class="workspace-name">' +
+            escapeHtml(ws.name) +
+            '</span>' +
+            '<span class="workspace-count">' +
+            agentCount +
+            '</span>' +
+            (ws.purpose
+              ? '<span class="workspace-purpose">' + escapeHtml(ws.purpose) + '</span>'
+              : '') +
             '</div>' +
-            '<div class="workspace-resize workspace-resize-r" data-ws-id="' + ws.id + '" data-dir="r"></div>' +
-            '<div class="workspace-resize workspace-resize-b" data-ws-id="' + ws.id + '" data-dir="b"></div>' +
-            '<div class="workspace-resize workspace-resize-br" data-ws-id="' + ws.id + '" data-dir="br"></div>';
+            '<div class="workspace-resize workspace-resize-r" data-ws-id="' +
+            ws.id +
+            '" data-dir="r"></div>' +
+            '<div class="workspace-resize workspace-resize-b" data-ws-id="' +
+            ws.id +
+            '" data-dir="b"></div>' +
+            '<div class="workspace-resize workspace-resize-br" data-ws-id="' +
+            ws.id +
+            '" data-dir="br"></div>';
 
           world.appendChild(frame);
         });
@@ -351,28 +437,94 @@
       function getFieldsForPlatform(platform) {
         var fields = {
           telegram: [
-            { key: 'userId', label: 'Your User ID', type: 'text', placeholder: '123456789', hint: 'Get from @userinfobot on Telegram' },
-            { key: 'token', label: 'Bot Token', type: 'password', placeholder: '123456:ABC-DEF...', hint: 'Get from @BotFather on Telegram' },
+            {
+              key: 'userId',
+              label: 'Your User ID',
+              type: 'text',
+              placeholder: '123456789',
+              hint: 'Get from @userinfobot on Telegram',
+            },
+            {
+              key: 'token',
+              label: 'Bot Token',
+              type: 'password',
+              placeholder: '123456:ABC-DEF...',
+              hint: 'Get from @BotFather on Telegram',
+            },
           ],
           slack: [
-            { key: 'token', label: 'Bot Token', type: 'password', placeholder: 'xoxb-...', hint: 'From Slack App > OAuth & Permissions' },
-            { key: 'signingSecret', label: 'Signing Secret', type: 'password', placeholder: 'abc123...', hint: 'From Slack App > Basic Information' },
+            {
+              key: 'token',
+              label: 'Bot Token',
+              type: 'password',
+              placeholder: 'xoxb-...',
+              hint: 'From Slack App > OAuth & Permissions',
+            },
+            {
+              key: 'signingSecret',
+              label: 'Signing Secret',
+              type: 'password',
+              placeholder: 'abc123...',
+              hint: 'From Slack App > Basic Information',
+            },
           ],
           whatsapp: [
-            { key: 'phoneNumberId', label: 'Phone Number ID', type: 'text', placeholder: '1234567890', hint: 'From Meta Business > WhatsApp > API Setup' },
-            { key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'EAA...', hint: 'Permanent token from System Users' },
+            {
+              key: 'phoneNumberId',
+              label: 'Phone Number ID',
+              type: 'text',
+              placeholder: '1234567890',
+              hint: 'From Meta Business > WhatsApp > API Setup',
+            },
+            {
+              key: 'accessToken',
+              label: 'Access Token',
+              type: 'password',
+              placeholder: 'EAA...',
+              hint: 'Permanent token from System Users',
+            },
           ],
           discord: [
-            { key: 'token', label: 'Bot Token', type: 'password', placeholder: 'MTIz...', hint: 'From Discord Developer Portal > Bot > Token' },
+            {
+              key: 'token',
+              label: 'Bot Token',
+              type: 'password',
+              placeholder: 'MTIz...',
+              hint: 'From Discord Developer Portal > Bot > Token',
+            },
           ],
           gmail: [],
           email: [
-            { key: 'imapHost', label: 'IMAP Host', type: 'text', placeholder: 'imap.gmail.com', hint: '' },
+            {
+              key: 'imapHost',
+              label: 'IMAP Host',
+              type: 'text',
+              placeholder: 'imap.gmail.com',
+              hint: '',
+            },
             { key: 'imapPort', label: 'IMAP Port', type: 'number', placeholder: '993', hint: '' },
-            { key: 'smtpHost', label: 'SMTP Host', type: 'text', placeholder: 'smtp.gmail.com', hint: 'Leave empty to use IMAP host' },
+            {
+              key: 'smtpHost',
+              label: 'SMTP Host',
+              type: 'text',
+              placeholder: 'smtp.gmail.com',
+              hint: 'Leave empty to use IMAP host',
+            },
             { key: 'smtpPort', label: 'SMTP Port', type: 'number', placeholder: '587', hint: '' },
-            { key: 'username', label: 'Username / Email', type: 'text', placeholder: 'bot@example.com', hint: '' },
-            { key: 'password', label: 'Password', type: 'password', placeholder: 'App password', hint: 'Use an app password for Gmail / Outlook' },
+            {
+              key: 'username',
+              label: 'Username / Email',
+              type: 'text',
+              placeholder: 'bot@example.com',
+              hint: '',
+            },
+            {
+              key: 'password',
+              label: 'Password',
+              type: 'password',
+              placeholder: 'App password',
+              hint: 'Use an app password for Gmail / Outlook',
+            },
           ],
         };
         return fields[platform] || [];
@@ -381,10 +533,13 @@
       var GEAR_SVG = '<img src="icons/settings.svg" alt="Settings" />';
 
       function renderNodes() {
-        world.querySelectorAll('.agent-card').forEach(function (el) { el.remove(); });
+        world.querySelectorAll('.agent-card').forEach(function (el) {
+          el.remove();
+        });
         graph.nodes.forEach(function (node) {
           var card = document.createElement('div');
-          var isSetup = node.status === 'setup' || node.status === 'connecting' || node.status === 'error';
+          var isSetup =
+            node.status === 'setup' || node.status === 'connecting' || node.status === 'error';
           var isEditing = node._editing === true;
 
           card.dataset.nodeId = node.id;
@@ -393,28 +548,41 @@
 
           if (node.status === 'setup' || node.status === 'connecting') {
             var isConnecting = node.status === 'connecting';
-            card.className = 'agent-card ' + node.status + (node.id === selectedNodeId ? ' selected' : '');
+            card.className =
+              'agent-card ' + node.status + (node.id === selectedNodeId ? ' selected' : '');
 
             var statusHtml = '';
             if (isConnecting) {
-              statusHtml = '<div class="card-setup-status info"><span class="card-spinner"></span>Connecting...</div>';
+              statusHtml =
+                '<div class="card-setup-status info"><span class="card-spinner"></span>Connecting...</div>';
             } else if (node._statusMsg) {
-              statusHtml = '<div class="card-setup-status ' + (node._statusType || '') + '">' + escapeHtml(node._statusMsg) + '</div>';
+              statusHtml =
+                '<div class="card-setup-status ' +
+                (node._statusType || '') +
+                '">' +
+                escapeHtml(node._statusMsg) +
+                '</div>';
             }
 
             if (node.platform === 'gmail') {
               /* Gmail: OAuth-based, single button */
               card.innerHTML =
                 '<div class="card-setup-header">' +
-                  '<div class="cf-icon">' + (platformIcons.gmail || '') + '</div>' +
-                  '<span class="card-setup-title">Gmail</span>' +
-                  '<button class="card-setup-close" data-action="cancel">&times;</button>' +
+                '<div class="cf-icon">' +
+                (platformIcons.gmail || '') +
+                '</div>' +
+                '<span class="card-setup-title">Gmail</span>' +
+                '<button class="card-setup-close" data-action="cancel">&times;</button>' +
                 '</div>' +
                 '<div class="card-setup-field" style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;margin-bottom:8px;">Sign in securely with your Google account. No passwords stored.</div>' +
                 statusHtml +
                 '<div class="card-setup-actions">' +
-                  '<button class="btn-cancel" data-action="cancel"' + (isConnecting ? ' disabled' : '') + '>Cancel</button>' +
-                  '<button class="btn-connect" data-action="connect" style="background:#4285F4;"' + (isConnecting ? ' disabled' : '') + '>Sign in with Google</button>' +
+                '<button class="btn-cancel" data-action="cancel"' +
+                (isConnecting ? ' disabled' : '') +
+                '>Cancel</button>' +
+                '<button class="btn-connect" data-action="connect" style="background:#4285F4;"' +
+                (isConnecting ? ' disabled' : '') +
+                '>Sign in with Google</button>' +
                 '</div>';
             } else {
               var fieldsHtml = '';
@@ -423,53 +591,88 @@
                 var val = (node._formData && node._formData[f.key]) || '';
                 fieldsHtml +=
                   '<div class="card-setup-field">' +
-                    '<label>' + escapeHtml(f.label) + '</label>' +
-                    '<input type="' + f.type + '" data-field="' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="' + escapeHtml(String(val)) + '"' + (isConnecting ? ' disabled' : '') + ' />' +
-                    (f.hint ? '<div class="card-field-hint">' + escapeHtml(f.hint) + '</div>' : '') +
+                  '<label>' +
+                  escapeHtml(f.label) +
+                  '</label>' +
+                  '<input type="' +
+                  f.type +
+                  '" data-field="' +
+                  f.key +
+                  '" placeholder="' +
+                  escapeHtml(f.placeholder) +
+                  '" value="' +
+                  escapeHtml(String(val)) +
+                  '"' +
+                  (isConnecting ? ' disabled' : '') +
+                  ' />' +
+                  (f.hint ? '<div class="card-field-hint">' + escapeHtml(f.hint) + '</div>' : '') +
                   '</div>';
               });
 
               card.innerHTML =
                 '<div class="card-setup-header">' +
-                  '<div class="cf-icon">' + (platformIcons[node.platform] || '') + '</div>' +
-                  '<span class="card-setup-title">' + escapeHtml(capitalize(node.platform)) + '</span>' +
-                  '<button class="card-setup-close" data-action="cancel">&times;</button>' +
+                '<div class="cf-icon">' +
+                (platformIcons[node.platform] || '') +
+                '</div>' +
+                '<span class="card-setup-title">' +
+                escapeHtml(capitalize(node.platform)) +
+                '</span>' +
+                '<button class="card-setup-close" data-action="cancel">&times;</button>' +
                 '</div>' +
                 fieldsHtml +
                 statusHtml +
                 '<div class="card-setup-actions">' +
-                  '<button class="btn-cancel" data-action="cancel"' + (isConnecting ? ' disabled' : '') + '>Cancel</button>' +
-                  '<button class="btn-connect" data-action="connect"' + (isConnecting ? ' disabled' : '') + '>Connect</button>' +
+                '<button class="btn-cancel" data-action="cancel"' +
+                (isConnecting ? ' disabled' : '') +
+                '>Cancel</button>' +
+                '<button class="btn-connect" data-action="connect"' +
+                (isConnecting ? ' disabled' : '') +
+                '>Connect</button>' +
                 '</div>';
             }
-
           } else if (node.status === 'error') {
-            card.className = 'agent-card error-state' + (node.id === selectedNodeId ? ' selected' : '');
+            card.className =
+              'agent-card error-state' + (node.id === selectedNodeId ? ' selected' : '');
             var fieldsHtml = '';
             var platformFields = getFieldsForPlatform(node.platform);
             platformFields.forEach(function (f) {
               var val = (node._formData && node._formData[f.key]) || '';
               fieldsHtml +=
                 '<div class="card-setup-field">' +
-                  '<label>' + escapeHtml(f.label) + '</label>' +
-                  '<input type="' + f.type + '" data-field="' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="' + escapeHtml(String(val)) + '" />' +
-                  (f.hint ? '<div class="card-field-hint">' + escapeHtml(f.hint) + '</div>' : '') +
+                '<label>' +
+                escapeHtml(f.label) +
+                '</label>' +
+                '<input type="' +
+                f.type +
+                '" data-field="' +
+                f.key +
+                '" placeholder="' +
+                escapeHtml(f.placeholder) +
+                '" value="' +
+                escapeHtml(String(val)) +
+                '" />' +
+                (f.hint ? '<div class="card-field-hint">' + escapeHtml(f.hint) + '</div>' : '') +
                 '</div>';
             });
 
             card.innerHTML =
               '<div class="card-setup-header">' +
-                '<div class="cf-icon">' + (platformIcons[node.platform] || '') + '</div>' +
-                '<span class="card-setup-title">' + escapeHtml(capitalize(node.platform)) + '</span>' +
-                '<button class="card-setup-close" data-action="cancel">&times;</button>' +
+              '<div class="cf-icon">' +
+              (platformIcons[node.platform] || '') +
+              '</div>' +
+              '<span class="card-setup-title">' +
+              escapeHtml(capitalize(node.platform)) +
+              '</span>' +
+              '<button class="card-setup-close" data-action="cancel">&times;</button>' +
               '</div>' +
               fieldsHtml +
-              '<div class="card-setup-status error">' + escapeHtml(node._statusMsg || 'Connection failed') + '</div>' +
+              '<div class="card-setup-status error">' +
+              escapeHtml(node._statusMsg || 'Connection failed') +
+              '</div>' +
               '<div class="card-setup-actions">' +
-                '<button class="btn-cancel" data-action="cancel">Cancel</button>' +
-                '<button class="btn-connect" data-action="connect">Retry</button>' +
+              '<button class="btn-cancel" data-action="cancel">Cancel</button>' +
+              '<button class="btn-connect" data-action="connect">Retry</button>' +
               '</div>';
-
           } else if (isEditing) {
             card.className = 'agent-card setup' + (node.id === selectedNodeId ? ' selected' : '');
             var displayName = node.meta.firstName || node.label.replace(/^@/, '');
@@ -478,36 +681,51 @@
             platformFields.forEach(function (f) {
               fieldsHtml +=
                 '<div class="card-setup-field">' +
-                  '<label>' + escapeHtml(f.label) + '</label>' +
-                  '<input type="password" data-field="' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="********" disabled />' +
+                '<label>' +
+                escapeHtml(f.label) +
+                '</label>' +
+                '<input type="password" data-field="' +
+                f.key +
+                '" placeholder="' +
+                escapeHtml(f.placeholder) +
+                '" value="********" disabled />' +
                 '</div>';
             });
 
             card.innerHTML =
               '<div class="card-setup-header">' +
-                '<div class="cf-icon">' + (platformIcons[node.platform] || '') + '</div>' +
-                '<span class="card-setup-title">' + escapeHtml(displayName) + '</span>' +
-                '<button class="card-setup-close" data-action="close-edit">&times;</button>' +
+              '<div class="cf-icon">' +
+              (platformIcons[node.platform] || '') +
+              '</div>' +
+              '<span class="card-setup-title">' +
+              escapeHtml(displayName) +
+              '</span>' +
+              '<button class="card-setup-close" data-action="close-edit">&times;</button>' +
               '</div>' +
               fieldsHtml +
               '<div class="card-setup-actions">' +
-                '<button class="btn-cancel" data-action="disconnect">Disconnect</button>' +
-                '<button class="btn-connect" data-action="close-edit">Done</button>' +
+              '<button class="btn-cancel" data-action="disconnect">Disconnect</button>' +
+              '<button class="btn-connect" data-action="close-edit">Done</button>' +
               '</div>';
-
           } else if (node.platform === 'ceo') {
             /* CEO card */
-            card.className = 'agent-card ceo-card' + (node.id === selectedNodeId ? ' selected' : '');
+            card.className =
+              'agent-card ceo-card' + (node.id === selectedNodeId ? ' selected' : '');
 
             card.innerHTML =
-              '<button class="card-gear" data-action="gear" title="Settings">' + GEAR_SVG + '</button>' +
+              '<button class="card-gear" data-action="gear" title="Settings">' +
+              GEAR_SVG +
+              '</button>' +
               '<div class="agent-avatar ceo-avatar">' +
-                '<img src="icons/crown.svg" alt="CEO" />' +
+              '<img src="icons/crown.svg" alt="CEO" />' +
               '</div>' +
-              '<div class="agent-name">' + escapeHtml(node.label) + '</div>' +
+              '<div class="agent-name">' +
+              escapeHtml(node.label) +
+              '</div>' +
               '<span class="platform-badge ceo">CEO</span>' +
-              '<div class="port port-output" data-node-id="' + node.id + '" data-port="output"></div>';
-
+              '<div class="port port-output" data-node-id="' +
+              node.id +
+              '" data-port="output"></div>';
           } else {
             /* Connected portrait card */
             card.className = 'agent-card' + (node.id === selectedNodeId ? ' selected' : '');
@@ -518,16 +736,30 @@
             var handle = node.label.startsWith('@') ? node.label : '';
 
             card.innerHTML =
-              '<button class="card-gear" data-action="gear" title="Settings">' + GEAR_SVG + '</button>' +
+              '<button class="card-gear" data-action="gear" title="Settings">' +
+              GEAR_SVG +
+              '</button>' +
               '<div class="agent-avatar">' +
-                photoHtml +
-                '<span class="agent-status-dot ' + node.status + '"></span>' +
+              photoHtml +
+              '<span class="agent-status-dot ' +
+              node.status +
+              '"></span>' +
               '</div>' +
-              '<div class="agent-name">' + escapeHtml(displayName) + '</div>' +
+              '<div class="agent-name">' +
+              escapeHtml(displayName) +
+              '</div>' +
               (handle ? '<div class="agent-handle">' + escapeHtml(handle) + '</div>' : '') +
-              '<span class="platform-badge ' + node.platform + '">' + node.platform + '</span>' +
-              '<div class="port port-input" data-node-id="' + node.id + '" data-port="input"></div>' +
-              '<div class="port port-output" data-node-id="' + node.id + '" data-port="output"></div>';
+              '<span class="platform-badge ' +
+              node.platform +
+              '">' +
+              node.platform +
+              '</span>' +
+              '<div class="port port-input" data-node-id="' +
+              node.id +
+              '" data-port="input"></div>' +
+              '<div class="port port-output" data-node-id="' +
+              node.id +
+              '" data-port="output"></div>';
           }
 
           world.appendChild(card);
@@ -536,9 +768,13 @@
           if (node._animateIn) {
             card.classList.add('card-enter');
             delete node._animateIn;
-            card.addEventListener('animationend', function () {
-              card.classList.remove('card-enter');
-            }, { once: true });
+            card.addEventListener(
+              'animationend',
+              function () {
+                card.classList.remove('card-enter');
+              },
+              { once: true },
+            );
           }
         });
       }
@@ -548,15 +784,22 @@
         card.classList.add('card-flip');
         /* Swap content at the 50% mark (when card is edge-on) */
         setTimeout(callback, 200);
-        card.addEventListener('animationend', function () {
-          card.classList.remove('card-flip');
-        }, { once: true });
+        card.addEventListener(
+          'animationend',
+          function () {
+            card.classList.remove('card-flip');
+          },
+          { once: true },
+        );
       }
 
       /* Confetti-style delete: spawn particles from card center, then remove */
       function animateCardDelete(nodeId, callback) {
         var card = world.querySelector('[data-node-id="' + nodeId + '"]');
-        if (!card) { callback(); return; }
+        if (!card) {
+          callback();
+          return;
+        }
 
         var cardRect = card.getBoundingClientRect();
         var cx = cardRect.left + cardRect.width / 2;
@@ -572,9 +815,21 @@
           var size = 4 + Math.random() * 6;
           var hue = Math.random() * 360;
           p.style.cssText =
-            'position:fixed;left:' + cx + 'px;top:' + cy + 'px;width:' + size + 'px;height:' + size + 'px;' +
-            'border-radius:' + (Math.random() > 0.5 ? '50%' : '2px') + ';' +
-            'background:hsl(' + hue + ',70%,65%);pointer-events:none;z-index:1000;' +
+            'position:fixed;left:' +
+            cx +
+            'px;top:' +
+            cy +
+            'px;width:' +
+            size +
+            'px;height:' +
+            size +
+            'px;' +
+            'border-radius:' +
+            (Math.random() > 0.5 ? '50%' : '2px') +
+            ';' +
+            'background:hsl(' +
+            hue +
+            ',70%,65%);pointer-events:none;z-index:1000;' +
             'transition:all 0.55s cubic-bezier(0.25,0.46,0.45,0.94);' +
             'opacity:1;transform:translate(-50%,-50%) scale(1);';
           document.body.appendChild(p);
@@ -589,14 +844,23 @@
           particles.forEach(function (pt) {
             var dx = Math.cos(pt.angle) * pt.dist;
             var dy = Math.sin(pt.angle) * pt.dist - 30;
-            pt.el.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(0.2) rotate(' + (Math.random() * 360) + 'deg)';
+            pt.el.style.transform =
+              'translate(calc(-50% + ' +
+              dx +
+              'px), calc(-50% + ' +
+              dy +
+              'px)) scale(0.2) rotate(' +
+              Math.random() * 360 +
+              'deg)';
             pt.el.style.opacity = '0';
           });
         });
 
         /* Clean up after animation */
         setTimeout(function () {
-          particles.forEach(function (pt) { pt.el.remove(); });
+          particles.forEach(function (pt) {
+            pt.el.remove();
+          });
           callback();
         }, 550);
       }
@@ -610,8 +874,12 @@
 
         var paths = '';
         graph.edges.forEach(function (edge) {
-          var fromNode = graph.nodes.find(function (n) { return n.id === edge.from; });
-          var toNode = graph.nodes.find(function (n) { return n.id === edge.to; });
+          var fromNode = graph.nodes.find(function (n) {
+            return n.id === edge.from;
+          });
+          var toNode = graph.nodes.find(function (n) {
+            return n.id === edge.to;
+          });
           if (!fromNode || !toNode) return;
 
           /* Org chart: bottom-center of parent → top-center of child */
@@ -627,7 +895,23 @@
           var y2 = toNode.position.y;
 
           var dy = Math.abs(y2 - y1) * 0.4;
-          var d = 'M' + x1 + ',' + y1 + ' C' + x1 + ',' + (y1 + dy) + ' ' + x2 + ',' + (y2 - dy) + ' ' + x2 + ',' + y2;
+          var d =
+            'M' +
+            x1 +
+            ',' +
+            y1 +
+            ' C' +
+            x1 +
+            ',' +
+            (y1 + dy) +
+            ' ' +
+            x2 +
+            ',' +
+            (y2 - dy) +
+            ' ' +
+            x2 +
+            ',' +
+            y2;
 
           /* Hit-area path first (wide, invisible, interactive), then visible path */
           paths += '<path class="edge-hit" data-edge-id="' + edge.id + '" d="' + d + '" />';
@@ -641,7 +925,8 @@
          ═══════════════════════════════════════════════ */
 
       viewport.addEventListener('mousedown', function (e) {
-        if (e.target !== viewport && e.target !== world && !e.target.classList.contains('edge-svg')) return;
+        if (e.target !== viewport && e.target !== world && !e.target.classList.contains('edge-svg'))
+          return;
         if (e.button !== 0) return;
         /* Ignore if clicking in the dock area */
         var dockEl = document.getElementById('coverflow-dock');
@@ -668,7 +953,9 @@
           renderEdges();
         }
         if (isDragging && dragNodeId) {
-          var node = graph.nodes.find(function (n) { return n.id === dragNodeId; });
+          var node = graph.nodes.find(function (n) {
+            return n.id === dragNodeId;
+          });
           if (!node) return;
           node.position.x = dragStartNodeX + (e.clientX - dragStartX) / vpZoom;
           node.position.y = dragStartNodeY + (e.clientY - dragStartY) / vpZoom;
@@ -682,10 +969,15 @@
           var cardCx = node.position.x + 60;
           var cardCy = node.position.y + 75;
           world.querySelectorAll('.workspace-frame').forEach(function (frame) {
-            var ws = graph.workspaces.find(function (w) { return w.id === frame.dataset.workspaceId; });
+            var ws = graph.workspaces.find(function (w) {
+              return w.id === frame.dataset.workspaceId;
+            });
             if (!ws) return;
-            var isInside = cardCx >= ws.position.x && cardCx <= ws.position.x + ws.size.w &&
-                           cardCy >= ws.position.y && cardCy <= ws.position.y + ws.size.h;
+            var isInside =
+              cardCx >= ws.position.x &&
+              cardCx <= ws.position.x + ws.size.w &&
+              cardCy >= ws.position.y &&
+              cardCy <= ws.position.y + ws.size.h;
             if (isInside) {
               frame.classList.add('drop-target');
             } else {
@@ -698,15 +990,30 @@
           var mx = (e.clientX - rect.left - vpX) / vpZoom;
           var my = (e.clientY - rect.top - vpY) / vpZoom;
           var dy = Math.abs(my - edgeDragOrigin.y) * 0.4;
-          edgeTempLine.setAttribute('d',
-            'M' + edgeDragOrigin.x + ',' + edgeDragOrigin.y +
-            ' C' + edgeDragOrigin.x + ',' + (edgeDragOrigin.y + dy) +
-            ' ' + mx + ',' + (my - dy) +
-            ' ' + mx + ',' + my
+          edgeTempLine.setAttribute(
+            'd',
+            'M' +
+              edgeDragOrigin.x +
+              ',' +
+              edgeDragOrigin.y +
+              ' C' +
+              edgeDragOrigin.x +
+              ',' +
+              (edgeDragOrigin.y + dy) +
+              ' ' +
+              mx +
+              ',' +
+              (my - dy) +
+              ' ' +
+              mx +
+              ',' +
+              my,
           );
         }
         if (isWsDragging && wsDragId) {
-          var ws = graph.workspaces.find(function (w) { return w.id === wsDragId; });
+          var ws = graph.workspaces.find(function (w) {
+            return w.id === wsDragId;
+          });
           if (ws) {
             var dx = (e.clientX - wsDragStartX) / vpZoom;
             var dy = (e.clientY - wsDragStartY) / vpZoom;
@@ -715,7 +1022,9 @@
 
             /* Move magnetic cards with the workspace */
             wsDragNodeStarts.forEach(function (snap) {
-              var node = graph.nodes.find(function (n) { return n.id === snap.id; });
+              var node = graph.nodes.find(function (n) {
+                return n.id === snap.id;
+              });
               if (!node) return;
               node.position.x = snap.startX + dx;
               node.position.y = snap.startY + dy;
@@ -735,7 +1044,9 @@
           }
         }
         if (isWsResizing && wsResizeId) {
-          var ws = graph.workspaces.find(function (w) { return w.id === wsResizeId; });
+          var ws = graph.workspaces.find(function (w) {
+            return w.id === wsResizeId;
+          });
           if (!ws) return;
           var dx = (e.clientX - wsResizeStartX) / vpZoom;
           var dy = (e.clientY - wsResizeStartY) / vpZoom;
@@ -761,14 +1072,20 @@
         }
         if (isDragging) {
           /* Snap agent to workspace */
-          var node = graph.nodes.find(function (n) { return n.id === dragNodeId; });
+          var node = graph.nodes.find(function (n) {
+            return n.id === dragNodeId;
+          });
           if (node) {
             var cardCx = node.position.x + 60;
             var cardCy = node.position.y + 75;
             var snapped = false;
             graph.workspaces.forEach(function (ws) {
-              if (cardCx >= ws.position.x && cardCx <= ws.position.x + ws.size.w &&
-                  cardCy >= ws.position.y && cardCy <= ws.position.y + ws.size.h) {
+              if (
+                cardCx >= ws.position.x &&
+                cardCx <= ws.position.x + ws.size.w &&
+                cardCy >= ws.position.y &&
+                cardCy <= ws.position.y + ws.size.h
+              ) {
                 node.workspaceId = ws.id;
                 snapped = true;
               }
@@ -806,30 +1123,34 @@
         }
       });
 
-      viewport.addEventListener('wheel', function (e) {
-        /* Ignore if mouse is over the dock area */
-        var dockEl = document.getElementById('coverflow-dock');
-        if (dockEl) {
-          var dockRect = dockEl.getBoundingClientRect();
-          if (e.clientY >= dockRect.top) return;
-        }
-        e.preventDefault();
-        var rect = viewport.getBoundingClientRect();
-        var mx = e.clientX - rect.left;
-        var my = e.clientY - rect.top;
+      viewport.addEventListener(
+        'wheel',
+        function (e) {
+          /* Ignore if mouse is over the dock area */
+          var dockEl = document.getElementById('coverflow-dock');
+          if (dockEl) {
+            var dockRect = dockEl.getBoundingClientRect();
+            if (e.clientY >= dockRect.top) return;
+          }
+          e.preventDefault();
+          var rect = viewport.getBoundingClientRect();
+          var mx = e.clientX - rect.left;
+          var my = e.clientY - rect.top;
 
-        var delta = e.deltaY > 0 ? -0.1 : 0.1;
-        var newZoom = Math.max(0.25, Math.min(3, vpZoom + delta));
+          var delta = e.deltaY > 0 ? -0.1 : 0.1;
+          var newZoom = Math.max(0.25, Math.min(3, vpZoom + delta));
 
-        vpX = mx - (mx - vpX) * (newZoom / vpZoom);
-        vpY = my - (my - vpY) * (newZoom / vpZoom);
-        vpZoom = newZoom;
+          vpX = mx - (mx - vpX) * (newZoom / vpZoom);
+          vpY = my - (my - vpY) * (newZoom / vpZoom);
+          vpZoom = newZoom;
 
-        applyTransform();
-        renderEdges();
-        updateZoomDisplay();
-        saveViewport();
-      }, { passive: false });
+          applyTransform();
+          renderEdges();
+          updateZoomDisplay();
+          saveViewport();
+        },
+        { passive: false },
+      );
 
       /* ═══════════════════════════════════════════════
          Card Drag
@@ -850,7 +1171,9 @@
           wsResizeDir = resizeHandle.dataset.dir;
           wsResizeStartX = e.clientX;
           wsResizeStartY = e.clientY;
-          var ws = graph.workspaces.find(function (w) { return w.id === wsResizeId; });
+          var ws = graph.workspaces.find(function (w) {
+            return w.id === wsResizeId;
+          });
           if (ws) {
             wsResizeStartW = ws.size.w;
             wsResizeStartH = ws.size.h;
@@ -863,7 +1186,8 @@
         var card = e.target.closest('.agent-card');
         if (card && e.button === 0) {
           /* Don't start drag if clicking inputs/buttons inside setup cards */
-          if (e.target.closest('input') || e.target.closest('button') || e.target.closest('label')) return;
+          if (e.target.closest('input') || e.target.closest('button') || e.target.closest('label'))
+            return;
 
           var nodeId = card.dataset.nodeId;
           selectedNodeId = nodeId;
@@ -875,7 +1199,9 @@
           dragNodeId = nodeId;
           dragStartX = e.clientX;
           dragStartY = e.clientY;
-          var node = graph.nodes.find(function (n) { return n.id === nodeId; });
+          var node = graph.nodes.find(function (n) {
+            return n.id === nodeId;
+          });
           if (node) {
             dragStartNodeX = node.position.x;
             dragStartNodeY = node.position.y;
@@ -899,7 +1225,9 @@
           wsDragId = wsId;
           wsDragStartX = e.clientX;
           wsDragStartY = e.clientY;
-          var ws = graph.workspaces.find(function (w) { return w.id === wsId; });
+          var ws = graph.workspaces.find(function (w) {
+            return w.id === wsId;
+          });
           if (ws) {
             wsDragStartWsX = ws.position.x;
             wsDragStartWsY = ws.position.y;
@@ -929,7 +1257,9 @@
         isEdgeDragging = true;
         edgeFromId = port.dataset.nodeId;
 
-        var fromNode = graph.nodes.find(function (n) { return n.id === edgeFromId; });
+        var fromNode = graph.nodes.find(function (n) {
+          return n.id === edgeFromId;
+        });
         if (!fromNode) return;
 
         var fromCard = world.querySelector('[data-node-id="' + edgeFromId + '"]');
@@ -940,7 +1270,17 @@
 
         edgeTempLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         edgeTempLine.classList.add('edge-temp');
-        edgeTempLine.setAttribute('d', 'M' + edgeDragOrigin.x + ',' + edgeDragOrigin.y + ' L' + edgeDragOrigin.x + ',' + edgeDragOrigin.y);
+        edgeTempLine.setAttribute(
+          'd',
+          'M' +
+            edgeDragOrigin.x +
+            ',' +
+            edgeDragOrigin.y +
+            ' L' +
+            edgeDragOrigin.x +
+            ',' +
+            edgeDragOrigin.y,
+        );
         edgeSvg.appendChild(edgeTempLine);
 
         e.preventDefault();
@@ -1037,9 +1377,15 @@
           card.dataset.index = String(i);
 
           card.innerHTML =
-            '<div class="cf-icon">' + (platformIcons[p.id] || '') + '</div>' +
-            '<div class="cf-name">' + escapeHtml(p.name) + '</div>' +
-            '<div class="cf-hint">' + escapeHtml(p.hint) + '</div>';
+            '<div class="cf-icon">' +
+            (platformIcons[p.id] || '') +
+            '</div>' +
+            '<div class="cf-name">' +
+            escapeHtml(p.name) +
+            '</div>' +
+            '<div class="cf-hint">' +
+            escapeHtml(p.hint) +
+            '</div>';
 
           cfTrack.appendChild(card);
         });
@@ -1062,7 +1408,15 @@
           var zIndex = Math.max(0, 5 - Math.round(absOffset));
 
           card.style.transform =
-            'translateX(' + translateX + 'px) translateZ(' + translateZ + 'px) rotateY(' + rotateY + 'deg) scale(' + scale + ')';
+            'translateX(' +
+            translateX +
+            'px) translateZ(' +
+            translateZ +
+            'px) rotateY(' +
+            rotateY +
+            'deg) scale(' +
+            scale +
+            ')';
           card.style.opacity = String(opacity);
           card.style.zIndex = String(zIndex);
           card.style.pointerEvents = absOffset > 2.5 ? 'none' : 'auto';
@@ -1099,20 +1453,24 @@
       /* Scroll on dock to change active card (debounced for trackpad) */
       var cfScrollAccum = 0;
       var CF_SCROLL_THRESHOLD = 40;
-      cfDock.addEventListener('wheel', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        cfScrollAccum += e.deltaY;
-        if (Math.abs(cfScrollAccum) >= CF_SCROLL_THRESHOLD) {
-          if (cfScrollAccum > 0) {
-            cfActiveIndex = Math.min(cfActiveIndex + 1, cfPlatforms.length - 1);
-          } else {
-            cfActiveIndex = Math.max(cfActiveIndex - 1, 0);
+      cfDock.addEventListener(
+        'wheel',
+        function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          cfScrollAccum += e.deltaY;
+          if (Math.abs(cfScrollAccum) >= CF_SCROLL_THRESHOLD) {
+            if (cfScrollAccum > 0) {
+              cfActiveIndex = Math.min(cfActiveIndex + 1, cfPlatforms.length - 1);
+            } else {
+              cfActiveIndex = Math.max(cfActiveIndex - 1, 0);
+            }
+            cfScrollAccum = 0;
+            startCfAnimation();
           }
-          cfScrollAccum = 0;
-          startCfAnimation();
-        }
-      }, { passive: false });
+        },
+        { passive: false },
+      );
 
       /* Click non-center card to center it */
       cfTrack.addEventListener('click', function (e) {
@@ -1147,10 +1505,16 @@
       var edgeHideTimeout = null;
 
       function getEdgeMidpoint(edgeId) {
-        var edge = graph.edges.find(function (e) { return e.id === edgeId; });
+        var edge = graph.edges.find(function (e) {
+          return e.id === edgeId;
+        });
         if (!edge) return null;
-        var fromNode = graph.nodes.find(function (n) { return n.id === edge.from; });
-        var toNode = graph.nodes.find(function (n) { return n.id === edge.to; });
+        var fromNode = graph.nodes.find(function (n) {
+          return n.id === edge.from;
+        });
+        var toNode = graph.nodes.find(function (n) {
+          return n.id === edge.to;
+        });
         if (!fromNode || !toNode) return null;
         var fromCard = world.querySelector('[data-node-id="' + edge.from + '"]');
         var toCard = world.querySelector('[data-node-id="' + edge.to + '"]');
@@ -1203,7 +1567,9 @@
         e.preventDefault();
         var edgeId = edgeDeleteBtn.dataset.edgeId;
         if (!edgeId) return;
-        graph.edges = graph.edges.filter(function (edge) { return edge.id !== edgeId; });
+        graph.edges = graph.edges.filter(function (edge) {
+          return edge.id !== edgeId;
+        });
         edgeDeleteBtn.classList.remove('visible');
         hoveredEdgeId = null;
         renderEdges();
@@ -1230,17 +1596,21 @@
         cfGhost = document.createElement('div');
         cfGhost.className = 'coverflow-ghost';
         cfGhost.innerHTML =
-          '<div class="cf-icon">' + (platformIcons[cfDragPlatform] || '') + '</div>' +
-          '<div class="cf-name">' + escapeHtml(capitalize(cfDragPlatform)) + '</div>';
-        cfGhost.style.left = (e.clientX - 48) + 'px';
-        cfGhost.style.top = (e.clientY - 64) + 'px';
+          '<div class="cf-icon">' +
+          (platformIcons[cfDragPlatform] || '') +
+          '</div>' +
+          '<div class="cf-name">' +
+          escapeHtml(capitalize(cfDragPlatform)) +
+          '</div>';
+        cfGhost.style.left = e.clientX - 48 + 'px';
+        cfGhost.style.top = e.clientY - 64 + 'px';
         document.body.appendChild(cfGhost);
       });
 
       document.addEventListener('mousemove', function (e) {
         if (!cfIsDragging || !cfGhost) return;
-        cfGhost.style.left = (e.clientX - 48) + 'px';
-        cfGhost.style.top = (e.clientY - 64) + 'px';
+        cfGhost.style.left = e.clientX - 48 + 'px';
+        cfGhost.style.top = e.clientY - 64 + 'px';
 
         var dockRect = cfDock.getBoundingClientRect();
         if (e.clientY < dockRect.top) {
@@ -1314,13 +1684,19 @@
         var card = actionEl.closest('.agent-card');
         if (!card) return;
         var nodeId = card.dataset.nodeId;
-        var node = graph.nodes.find(function (n) { return n.id === nodeId; });
+        var node = graph.nodes.find(function (n) {
+          return n.id === nodeId;
+        });
         if (!node) return;
 
         if (action === 'cancel') {
           animateCardDelete(nodeId, function () {
-            graph.nodes = graph.nodes.filter(function (n) { return n.id !== nodeId; });
-            graph.edges = graph.edges.filter(function (edge) { return edge.from !== nodeId && edge.to !== nodeId; });
+            graph.nodes = graph.nodes.filter(function (n) {
+              return n.id !== nodeId;
+            });
+            graph.edges = graph.edges.filter(function (edge) {
+              return edge.from !== nodeId && edge.to !== nodeId;
+            });
             if (selectedNodeId === nodeId) selectedNodeId = null;
             renderAll();
             saveGraph();
@@ -1360,8 +1736,12 @@
         if (action === 'disconnect') {
           window.openwind.disconnectChannel(node.platform, nodeId);
           animateCardDelete(nodeId, function () {
-            graph.nodes = graph.nodes.filter(function (n) { return n.id !== nodeId; });
-            graph.edges = graph.edges.filter(function (edge) { return edge.from !== nodeId && edge.to !== nodeId; });
+            graph.nodes = graph.nodes.filter(function (n) {
+              return n.id !== nodeId;
+            });
+            graph.edges = graph.edges.filter(function (edge) {
+              return edge.from !== nodeId && edge.to !== nodeId;
+            });
             if (selectedNodeId === nodeId) selectedNodeId = null;
             renderAll();
             saveGraph();
@@ -1377,7 +1757,9 @@
         var card = e.target.closest('.agent-card');
         if (!card) return;
         var nodeId = card.dataset.nodeId;
-        var node = graph.nodes.find(function (n) { return n.id === nodeId; });
+        var node = graph.nodes.find(function (n) {
+          return n.id === nodeId;
+        });
         if (!node) return;
         if (!node._formData) node._formData = {};
         var fieldKey = e.target.dataset.field;
@@ -1396,7 +1778,9 @@
         var credentials = {};
 
         if (platform === 'telegram') {
-          var rawId = String(formData.userId || '').trim().replace(/\D/g, '');
+          var rawId = String(formData.userId || '')
+            .trim()
+            .replace(/\D/g, '');
           var parsedId = parseInt(rawId, 10);
           if (!rawId || isNaN(parsedId) || parsedId <= 0) {
             node._statusMsg = 'User ID must be a positive number';
@@ -1407,9 +1791,15 @@
           }
           credentials = { token: (formData.token || '').trim(), userId: parsedId };
         } else if (platform === 'slack') {
-          credentials = { token: (formData.token || '').trim(), signingSecret: (formData.signingSecret || '').trim() };
+          credentials = {
+            token: (formData.token || '').trim(),
+            signingSecret: (formData.signingSecret || '').trim(),
+          };
         } else if (platform === 'whatsapp') {
-          credentials = { phoneNumberId: (formData.phoneNumberId || '').trim(), accessToken: (formData.accessToken || '').trim() };
+          credentials = {
+            phoneNumberId: (formData.phoneNumberId || '').trim(),
+            accessToken: (formData.accessToken || '').trim(),
+          };
         } else if (platform === 'discord') {
           credentials = { token: (formData.token || '').trim() };
         } else if (platform === 'gmail') {
@@ -1442,7 +1832,11 @@
               node.label = '@' + (result.botUsername || 'TelegramBot');
               node.photo = result.photo || null;
               node.credentials = 'telegram_bot_token';
-              node.meta = { botId: String(result.botId || ''), userId: String(credentials.userId), firstName: result.firstName || result.botUsername || '' };
+              node.meta = {
+                botId: String(result.botId || ''),
+                userId: String(credentials.userId),
+                firstName: result.firstName || result.botUsername || '',
+              };
             } else if (platform === 'slack') {
               node.label = result.teamName || 'Slack Bot';
               node.credentials = 'slack_bot_token';
@@ -1534,7 +1928,8 @@
           setZoom(Math.max(0.25, vpZoom - 0.25));
         } else if (isMod && e.key === '0') {
           e.preventDefault();
-          vpX = 0; vpY = 0;
+          vpX = 0;
+          vpY = 0;
           setZoom(1);
         }
 
@@ -1554,14 +1949,20 @@
          ═══════════════════════════════════════════════ */
 
       function removeNode(nodeId) {
-        var node = graph.nodes.find(function (n) { return n.id === nodeId; });
+        var node = graph.nodes.find(function (n) {
+          return n.id === nodeId;
+        });
         if (!node) return;
         if (node.platform === 'ceo') return; /* CEO cannot be deleted */
         window.openwind.disconnectChannel(node.platform, nodeId);
 
         animateCardDelete(nodeId, function () {
-          graph.nodes = graph.nodes.filter(function (n) { return n.id !== nodeId; });
-          graph.edges = graph.edges.filter(function (e) { return e.from !== nodeId && e.to !== nodeId; });
+          graph.nodes = graph.nodes.filter(function (n) {
+            return n.id !== nodeId;
+          });
+          graph.edges = graph.edges.filter(function (e) {
+            return e.from !== nodeId && e.to !== nodeId;
+          });
           selectedNodeId = null;
           renderAll();
           saveGraph();
@@ -1607,7 +2008,6 @@
         return s.charAt(0).toUpperCase() + s.slice(1);
       }
 
-
       /* ═══════════════════════════════════════════════
          Listen for external updates
          ═══════════════════════════════════════════════ */
@@ -1644,7 +2044,9 @@
       });
 
       function openAgentDetail(nodeId) {
-        var node = graph.nodes.find(function (n) { return n.id === nodeId; });
+        var node = graph.nodes.find(function (n) {
+          return n.id === nodeId;
+        });
         if (!node) return;
         detailNodeId = nodeId;
 
@@ -1659,14 +2061,22 @@
           : node.photo
             ? '<img src="' + node.photo + '" alt="" />'
             : platformIcons[node.platform] || '';
-        var displayName = isCeo ? node.label : (node.meta.firstName || node.label.replace(/^@/, ''));
+        var displayName = isCeo ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
         var platformLabel = isCeo ? 'CEO — Organization Owner' : capitalize(node.platform);
         var avatarClass = isCeo ? 'detail-avatar ceo-avatar' : 'detail-avatar';
         identityEl.innerHTML =
-          '<div class="' + avatarClass + '">' + photoHtml + '</div>' +
+          '<div class="' +
+          avatarClass +
+          '">' +
+          photoHtml +
+          '</div>' +
           '<div>' +
-            '<div class="detail-agent-name">' + escapeHtml(displayName) + '</div>' +
-            '<div class="detail-agent-platform">' + escapeHtml(platformLabel) + '</div>' +
+          '<div class="detail-agent-name">' +
+          escapeHtml(displayName) +
+          '</div>' +
+          '<div class="detail-agent-platform">' +
+          escapeHtml(platformLabel) +
+          '</div>' +
           '</div>';
 
         /* Role pills */
@@ -1703,7 +2113,9 @@
       document.querySelectorAll('#agent-role-pills .role-pill').forEach(function (pill) {
         pill.addEventListener('click', function () {
           if (!detailNodeId) return;
-          var node = graph.nodes.find(function (n) { return n.id === detailNodeId; });
+          var node = graph.nodes.find(function (n) {
+            return n.id === detailNodeId;
+          });
           if (!node) return;
           node.role = pill.dataset.role;
           document.querySelectorAll('#agent-role-pills .role-pill').forEach(function (p) {
@@ -1716,7 +2128,9 @@
       /* Autonomy slider */
       document.getElementById('agent-autonomy').addEventListener('input', function () {
         if (!detailNodeId) return;
-        var node = graph.nodes.find(function (n) { return n.id === detailNodeId; });
+        var node = graph.nodes.find(function (n) {
+          return n.id === detailNodeId;
+        });
         if (!node) return;
         var val = parseInt(this.value, 10);
         node.autonomy = val;
@@ -1733,7 +2147,9 @@
       /* Instructions textarea */
       document.getElementById('agent-instructions').addEventListener('input', function () {
         if (!detailNodeId) return;
-        var node = graph.nodes.find(function (n) { return n.id === detailNodeId; });
+        var node = graph.nodes.find(function (n) {
+          return n.id === detailNodeId;
+        });
         if (!node) return;
         node.instructions = this.value;
         saveGraph();
@@ -1752,7 +2168,9 @@
       function bindToggle(id, key) {
         document.getElementById(id).addEventListener('click', function () {
           if (!detailNodeId) return;
-          var node = graph.nodes.find(function (n) { return n.id === detailNodeId; });
+          var node = graph.nodes.find(function (n) {
+            return n.id === detailNodeId;
+          });
           if (!node) return;
           if (!node.behavior) node.behavior = {};
           var isActive = this.classList.contains('active');
@@ -1771,7 +2189,9 @@
          ═══════════════════════════════════════════════ */
 
       function openWorkspaceDetail(wsId) {
-        var ws = graph.workspaces.find(function (w) { return w.id === wsId; });
+        var ws = graph.workspaces.find(function (w) {
+          return w.id === wsId;
+        });
         if (!ws) return;
         detailWorkspaceId = wsId;
 
@@ -1798,12 +2218,16 @@
         detailWorkspaceId = null;
       }
 
-      document.getElementById('workspace-detail-close').addEventListener('click', closeWorkspaceDetail);
+      document
+        .getElementById('workspace-detail-close')
+        .addEventListener('click', closeWorkspaceDetail);
 
       /* Workspace name */
       document.getElementById('ws-detail-name').addEventListener('input', function () {
         if (!detailWorkspaceId) return;
-        var ws = graph.workspaces.find(function (w) { return w.id === detailWorkspaceId; });
+        var ws = graph.workspaces.find(function (w) {
+          return w.id === detailWorkspaceId;
+        });
         if (!ws) return;
         ws.name = this.value;
         renderWorkspaces();
@@ -1814,7 +2238,9 @@
       document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (swatch) {
         swatch.addEventListener('click', function () {
           if (!detailWorkspaceId) return;
-          var ws = graph.workspaces.find(function (w) { return w.id === detailWorkspaceId; });
+          var ws = graph.workspaces.find(function (w) {
+            return w.id === detailWorkspaceId;
+          });
           if (!ws) return;
           ws.color = swatch.dataset.color;
           document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s) {
@@ -1828,7 +2254,9 @@
       /* Workspace purpose */
       document.getElementById('ws-detail-purpose').addEventListener('input', function () {
         if (!detailWorkspaceId) return;
-        var ws = graph.workspaces.find(function (w) { return w.id === detailWorkspaceId; });
+        var ws = graph.workspaces.find(function (w) {
+          return w.id === detailWorkspaceId;
+        });
         if (!ws) return;
         ws.purpose = this.value;
         renderWorkspaces();
@@ -1838,7 +2266,9 @@
       /* Workspace budget */
       document.getElementById('ws-detail-budget').addEventListener('input', function () {
         if (!detailWorkspaceId) return;
-        var ws = graph.workspaces.find(function (w) { return w.id === detailWorkspaceId; });
+        var ws = graph.workspaces.find(function (w) {
+          return w.id === detailWorkspaceId;
+        });
         if (!ws) return;
         ws.budget = parseFloat(this.value) || 0;
         saveGraph();
@@ -1849,11 +2279,14 @@
         var container = document.getElementById('ws-detail-tags');
         var input = document.getElementById('ws-tag-input');
         /* Remove existing tag items */
-        container.querySelectorAll('.tag-item').forEach(function (t) { t.remove(); });
+        container.querySelectorAll('.tag-item').forEach(function (t) {
+          t.remove();
+        });
         topics.forEach(function (topic, idx) {
           var tag = document.createElement('span');
           tag.className = 'tag-item';
-          tag.innerHTML = escapeHtml(topic) + '<button class="tag-remove" data-idx="' + idx + '">x</button>';
+          tag.innerHTML =
+            escapeHtml(topic) + '<button class="tag-remove" data-idx="' + idx + '">x</button>';
           container.insertBefore(tag, input);
         });
       }
@@ -1861,7 +2294,9 @@
       document.getElementById('ws-detail-tags').addEventListener('click', function (e) {
         var removeBtn = e.target.closest('.tag-remove');
         if (!removeBtn || !detailWorkspaceId) return;
-        var ws = graph.workspaces.find(function (w) { return w.id === detailWorkspaceId; });
+        var ws = graph.workspaces.find(function (w) {
+          return w.id === detailWorkspaceId;
+        });
         if (!ws || !ws.topics) return;
         var idx = parseInt(removeBtn.dataset.idx, 10);
         ws.topics.splice(idx, 1);
@@ -1874,7 +2309,9 @@
         e.preventDefault();
         var val = this.value.trim();
         if (!val || !detailWorkspaceId) return;
-        var ws = graph.workspaces.find(function (w) { return w.id === detailWorkspaceId; });
+        var ws = graph.workspaces.find(function (w) {
+          return w.id === detailWorkspaceId;
+        });
         if (!ws) return;
         if (!ws.topics) ws.topics = [];
         ws.topics.push(val);

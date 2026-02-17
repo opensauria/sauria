@@ -35,8 +35,15 @@ import { AgentMemory } from './orchestrator/agent-memory.js';
 import { KPITracker } from './orchestrator/kpi-tracker.js';
 import { CheckpointManager } from './orchestrator/checkpoint.js';
 import type {
-  CanvasGraph, CEOIdentity, CEOCommand, AgentNode, InboundMessage,
-  Edge, Workspace, AutonomyLevel, AgentRole,
+  CanvasGraph,
+  CEOIdentity,
+  CEOCommand,
+  AgentNode,
+  InboundMessage,
+  Edge,
+  Workspace,
+  AutonomyLevel,
+  AgentRole,
 } from './orchestrator/types.js';
 import { createEmptyGraph, DEFAULT_GROUP_BEHAVIOR } from './orchestrator/types.js';
 
@@ -128,7 +135,12 @@ interface RawWorkspace {
   readonly topics: readonly string[];
   readonly budget: number | Workspace['budget'];
   readonly position: { readonly x: number; readonly y: number };
-  readonly size: { readonly w?: number; readonly h?: number; readonly width?: number; readonly height?: number };
+  readonly size: {
+    readonly w?: number;
+    readonly h?: number;
+    readonly width?: number;
+    readonly height?: number;
+  };
   readonly checkpoints?: Workspace['checkpoints'];
   readonly groups?: Workspace['groups'];
   readonly models?: Workspace['models'];
@@ -152,12 +164,13 @@ function normalizeNode(raw: RawNode): AgentNode {
     autonomy = raw.autonomy as AutonomyLevel;
   }
 
-  const role: AgentRole = typeof raw.role === 'string' && VALID_ROLES.has(raw.role)
-    ? raw.role as AgentRole
-    : 'assistant';
+  const role: AgentRole =
+    typeof raw.role === 'string' && VALID_ROLES.has(raw.role)
+      ? (raw.role as AgentRole)
+      : 'assistant';
 
   const status = VALID_STATUSES.has(raw.status)
-    ? raw.status as AgentNode['status']
+    ? (raw.status as AgentNode['status'])
     : 'disconnected';
 
   return {
@@ -192,9 +205,8 @@ function normalizeWorkspace(raw: RawWorkspace): Workspace {
   const width = raw.size.width ?? raw.size.w ?? 400;
   const height = raw.size.height ?? raw.size.h ?? 320;
 
-  const budget: Workspace['budget'] = typeof raw.budget === 'number'
-    ? { dailyLimitUsd: raw.budget, preferCheap: true }
-    : raw.budget;
+  const budget: Workspace['budget'] =
+    typeof raw.budget === 'number' ? { dailyLimitUsd: raw.budget, preferCheap: true } : raw.budget;
 
   return {
     id: raw.id,
@@ -257,7 +269,7 @@ async function createChannelForNode(
   const nodeToken = await vaultGet(`channel_token_${node.id}`);
 
   if (node.platform === 'telegram') {
-    const token = nodeToken ?? await vaultGet('telegram_bot_token');
+    const token = nodeToken ?? (await vaultGet('telegram_bot_token'));
     if (!token) {
       logger.warn(`Skipping node ${node.id}: no telegram token in vault`);
       return null;
@@ -294,9 +306,9 @@ async function createChannelForNode(
   }
 
   if (node.platform === 'slack') {
-    const token = nodeToken ?? await vaultGet('slack_bot_token');
-    const signingSecret = await vaultGet(`channel_signing_${node.id}`)
-      ?? await vaultGet('slack_signing_secret');
+    const token = nodeToken ?? (await vaultGet('slack_bot_token'));
+    const signingSecret =
+      (await vaultGet(`channel_signing_${node.id}`)) ?? (await vaultGet('slack_signing_secret'));
 
     if (!token || !signingSecret) {
       logger.warn(`Skipping node ${node.id}: no slack credentials in vault`);
@@ -307,7 +319,11 @@ async function createChannelForNode(
       db,
       router,
       audit,
-      createLimiter(`slack_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
+      createLimiter(
+        `slack_ingest_${node.id}`,
+        SECURITY_LIMITS.ingestion.maxEventsPerHour,
+        3_600_000,
+      ),
     );
 
     return new SlackChannel({
@@ -323,7 +339,7 @@ async function createChannelForNode(
   }
 
   if (node.platform === 'discord') {
-    const token = nodeToken ?? await vaultGet('discord_bot_token');
+    const token = nodeToken ?? (await vaultGet('discord_bot_token'));
     if (!token) {
       logger.warn(`Skipping node ${node.id}: no discord token in vault`);
       return null;
@@ -333,7 +349,11 @@ async function createChannelForNode(
       db,
       router,
       audit,
-      createLimiter(`discord_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
+      createLimiter(
+        `discord_ingest_${node.id}`,
+        SECURITY_LIMITS.ingestion.maxEventsPerHour,
+        3_600_000,
+      ),
     );
 
     return new DiscordChannel({
@@ -349,11 +369,12 @@ async function createChannelForNode(
   }
 
   if (node.platform === 'whatsapp') {
-    const accessToken = nodeToken ?? await vaultGet('whatsapp_access_token');
-    const verifyToken = await vaultGet(`whatsapp_verify_token_${node.id}`)
-      ?? await vaultGet('whatsapp_verify_token');
-    const appSecret = await vaultGet(`whatsapp_app_secret_${node.id}`)
-      ?? await vaultGet('whatsapp_app_secret');
+    const accessToken = nodeToken ?? (await vaultGet('whatsapp_access_token'));
+    const verifyToken =
+      (await vaultGet(`whatsapp_verify_token_${node.id}`)) ??
+      (await vaultGet('whatsapp_verify_token'));
+    const appSecret =
+      (await vaultGet(`whatsapp_app_secret_${node.id}`)) ?? (await vaultGet('whatsapp_app_secret'));
 
     if (!accessToken || !verifyToken || !appSecret) {
       logger.warn(`Skipping node ${node.id}: incomplete whatsapp credentials`);
@@ -381,7 +402,7 @@ async function createChannelForNode(
   }
 
   if (node.platform === 'email') {
-    const password = nodeToken ?? await vaultGet('email_password');
+    const password = nodeToken ?? (await vaultGet('email_password'));
     const emailConfig = config.channels.email;
 
     if (!password || !emailConfig.imapHost || !emailConfig.username) {
@@ -393,7 +414,11 @@ async function createChannelForNode(
       db,
       router,
       audit,
-      createLimiter(`email_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
+      createLimiter(
+        `email_ingest_${node.id}`,
+        SECURITY_LIMITS.ingestion.maxEventsPerHour,
+        3_600_000,
+      ),
     );
 
     return new EmailChannel({
@@ -467,13 +492,10 @@ async function setupOrchestrator(
     checkpointManager,
   });
 
-  const queue = new MessageQueue(
-    (msg: InboundMessage) => orchestrator.handleInbound(msg),
-    {
-      maxConcurrent: deps.config.orchestrator.maxMessagesPerSecond,
-      maxQueueSize: 1000,
-    },
-  );
+  const queue = new MessageQueue((msg: InboundMessage) => orchestrator.handleInbound(msg), {
+    maxConcurrent: deps.config.orchestrator.maxMessagesPerSecond,
+    maxQueueSize: 1000,
+  });
 
   // 2. Create channels with onInbound wired to the queue
   const onInbound = (msg: InboundMessage): void => {
@@ -565,9 +587,8 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   // If no orchestrator was set up but legacy telegram config is enabled,
   // keep backward-compatible single-bot mode.
   let telegram: TelegramChannel | null = null;
-  const hasOrchestratorTelegram = bundle?.startedChannels.some(
-    (c) => c.channel.name === 'telegram',
-  ) ?? false;
+  const hasOrchestratorTelegram =
+    bundle?.startedChannels.some((c) => c.channel.name === 'telegram') ?? false;
 
   if (!hasOrchestratorTelegram && config.channels.telegram.enabled) {
     const token = await vaultGet('telegram_bot_token');
@@ -595,7 +616,9 @@ export async function startDaemonContext(): Promise<DaemonContext> {
         transcription,
       });
     } else {
-      logger.warn('Telegram enabled but bot token not found in vault. Run: openwind connect telegram');
+      logger.warn(
+        'Telegram enabled but bot token not found in vault. Run: openwind connect telegram',
+      );
     }
   }
 

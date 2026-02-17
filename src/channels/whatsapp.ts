@@ -138,7 +138,7 @@ export class WhatsAppChannel implements Channel {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
         body,
@@ -195,11 +195,7 @@ export class WhatsAppChannel implements Channel {
       this.processWebhookPayload(payload);
       res.writeHead(200).end();
     } catch (error: unknown) {
-      audit.logAction(
-        'whatsapp:webhook_error',
-        { error: String(error) },
-        { success: false },
-      );
+      audit.logAction('whatsapp:webhook_error', { error: String(error) }, { success: false });
       res.writeHead(400).end();
     }
   }

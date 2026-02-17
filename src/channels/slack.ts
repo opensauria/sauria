@@ -194,18 +194,11 @@ export class SlackChannel implements Channel {
         this.latestTimestamps.set(channelId, newest.ts);
       }
     } catch (error) {
-      audit.logAction(
-        'slack:poll_error',
-        { channelId, error: String(error) },
-        { success: false },
-      );
+      audit.logAction('slack:poll_error', { channelId, error: String(error) }, { success: false });
     }
   }
 
-  private async processInboundMessage(
-    channelId: string,
-    message: SlackMessage,
-  ): Promise<void> {
+  private async processInboundMessage(channelId: string, message: SlackMessage): Promise<void> {
     const { audit, pipeline, onInbound, ceoUserId, nodeId } = this.deps;
     const rawText = message.text ?? '';
 
@@ -277,10 +270,10 @@ export class SlackChannel implements Channel {
     const { audit } = this.deps;
 
     try {
-      const response = await this.callSlackApi<ChatPostMessageResponse>(
-        'chat.postMessage',
-        { channel: channelId, text },
-      );
+      const response = await this.callSlackApi<ChatPostMessageResponse>('chat.postMessage', {
+        channel: channelId,
+        text,
+      });
 
       if (!response.ok) {
         audit.logAction(
@@ -298,11 +291,7 @@ export class SlackChannel implements Channel {
 
       return response;
     } catch (error) {
-      audit.logAction(
-        'slack:send_error',
-        { channelId, error: String(error) },
-        { success: false },
-      );
+      audit.logAction('slack:send_error', { channelId, error: String(error) }, { success: false });
       return null;
     }
   }
@@ -320,7 +309,7 @@ export class SlackChannel implements Channel {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json; charset=utf-8',
         },
         body: JSON.stringify(params),

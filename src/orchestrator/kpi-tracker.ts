@@ -75,9 +75,9 @@ export class KPITracker {
   }
 
   getPerformance(nodeId: string): AgentPerformance {
-    const row = this.db
-      .prepare(`SELECT * FROM agent_performance WHERE node_id = ?`)
-      .get(nodeId) as PerformanceRow | undefined;
+    const row = this.db.prepare(`SELECT * FROM agent_performance WHERE node_id = ?`).get(nodeId) as
+      | PerformanceRow
+      | undefined;
 
     if (!row) {
       return {
@@ -122,10 +122,7 @@ export class KPITracker {
     ];
   }
 
-  getWorkspacePerformance(
-    workspaceId: string,
-    graph: CanvasGraph,
-  ): WorkspacePerformance {
+  getWorkspacePerformance(workspaceId: string, graph: CanvasGraph): WorkspacePerformance {
     const nodeIds = graph.nodes
       .filter((node) => node.workspaceId === workspaceId)
       .map((node) => node.id);
@@ -142,9 +139,7 @@ export class KPITracker {
 
     const placeholders = nodeIds.map(() => '?').join(',');
     const rows = this.db
-      .prepare(
-        `SELECT * FROM agent_performance WHERE node_id IN (${placeholders})`,
-      )
+      .prepare(`SELECT * FROM agent_performance WHERE node_id IN (${placeholders})`)
       .all(...nodeIds) as PerformanceRow[];
 
     let totalMessages = 0;
@@ -160,9 +155,7 @@ export class KPITracker {
     }
 
     const avgResponseTimeMs =
-      totalMessages > 0
-        ? Math.round(totalResponseTimeMs / totalMessages)
-        : 0;
+      totalMessages > 0 ? Math.round(totalResponseTimeMs / totalMessages) : 0;
 
     return {
       totalMessages,
@@ -174,19 +167,13 @@ export class KPITracker {
   }
 
   private ensureRow(nodeId: string): void {
-    this.db
-      .prepare(
-        `INSERT OR IGNORE INTO agent_performance (node_id) VALUES (?)`,
-      )
-      .run(nodeId);
+    this.db.prepare(`INSERT OR IGNORE INTO agent_performance (node_id) VALUES (?)`).run(nodeId);
   }
 }
 
 function rowToPerformance(row: PerformanceRow): AgentPerformance {
   const avgResponseTimeMs =
-    row.messages_handled > 0
-      ? Math.round(row.total_response_time_ms / row.messages_handled)
-      : 0;
+    row.messages_handled > 0 ? Math.round(row.total_response_time_ms / row.messages_handled) : 0;
 
   return {
     messagesHandled: row.messages_handled,

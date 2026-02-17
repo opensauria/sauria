@@ -150,10 +150,7 @@ export class AgentMemory {
       )
       .all(conversationId, limit);
 
-    return rows
-      .filter(isAgentMessageRow)
-      .map(toAgentMessage)
-      .reverse();
+    return rows.filter(isAgentMessageRow).map(toAgentMessage).reverse();
   }
 
   recordMessage(message: RecordedMessage): void {
