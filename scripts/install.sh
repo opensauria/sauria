@@ -1,85 +1,186 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# OpenWind — zero-friction installer
+# Usage: curl -fsSL https://openwind.ai/install.sh | bash
+#
+# What happens:
+#   1. Installs the package silently
+#   2. Shows native OS dialogs for provider + API key (2 clicks)
+#   3. Configures everything automatically
+#   4. Opens your AI client
+#   User never touches a terminal.
+
 REQUIRED_NODE_MAJOR=22
-OPENWIND_DIR="${HOME}/.openwind"
-SUBDIRS=("logs" "tmp" "exports" "vault")
+LABEL="ai.openwind.daemon"
 
-log_info() {
-  printf "\n[openwind] %s\n" "$1"
-}
+# ─── OS Detection ────────────────────────────────────────────────────────
+OS="$(uname -s)"
 
-log_error() {
-  printf "\n[openwind] ERROR: %s\n" "$1" >&2
-}
+# ─── Native Dialog Helpers ───────────────────────────────────────────────
 
-check_node_version() {
-  if ! command -v node &>/dev/null; then
-    log_error "Node.js is not installed. Please install Node.js >= ${REQUIRED_NODE_MAJOR} first."
-    log_error "Visit https://nodejs.org/ or use a version manager like fnm/nvm."
-    exit 1
+dialog_list() {
+  local title="$1" prompt="$2"
+  shift 2
+  local items=("$@")
+
+  if [ "${OS}" = "Darwin" ]; then
+    local applescript_list=""
+    for item in "${items[@]}"; do
+      [ -n "${applescript_list}" ] && applescript_list="${applescript_list}, "
+      applescript_list="${applescript_list}\"${item}\""
+    done
+    osascript -e "choose from list {${applescript_list}} with title \"${title}\" with prompt \"${prompt}\" default items {\"${items[0]}\"}" 2>/dev/null
+  elif command -v zenity &>/dev/null; then
+    local zenity_items=""
+    for item in "${items[@]}"; do
+      zenity_items="${zenity_items} ${item}"
+    done
+    zenity --list --title="${title}" --text="${prompt}" --column="Provider" ${zenity_items} 2>/dev/null
+  else
+    # Fallback: terminal select
+    echo "${prompt}" >&2
+    select choice in "${items[@]}"; do
+      echo "${choice}"
+      break
+    done
   fi
+}
 
-  local node_version
-  node_version="$(node --version)"
-  local major
-  major="$(echo "${node_version}" | sed 's/v//' | cut -d. -f1)"
+dialog_password() {
+  local title="$1" prompt="$2"
 
-  if [ "${major}" -lt "${REQUIRED_NODE_MAJOR}" ]; then
-    log_error "Node.js >= ${REQUIRED_NODE_MAJOR} is required. Found ${node_version}."
-    log_error "Please upgrade Node.js and try again."
-    exit 1
+  if [ "${OS}" = "Darwin" ]; then
+    osascript -e "
+      set apiKey to text returned of (display dialog \"${prompt}\" with title \"${title}\" default answer \"\" with hidden answer)
+      return apiKey
+    " 2>/dev/null
+  elif command -v zenity &>/dev/null; then
+    zenity --password --title="${title}" --text="${prompt}" 2>/dev/null
+  else
+    read -rsp "${prompt}: " key
+    echo "${key}"
   fi
-
-  log_info "Node.js ${node_version} detected."
 }
 
-install_openwind() {
-  log_info "Installing openwind globally via npm..."
-  npm install -g openwind
-  log_info "openwind installed successfully."
+dialog_notify() {
+  local title="$1" message="$2"
+
+  if [ "${OS}" = "Darwin" ]; then
+    osascript -e "display notification \"${message}\" with title \"${title}\""
+  elif command -v notify-send &>/dev/null; then
+    notify-send "${title}" "${message}"
+  fi
 }
 
-create_directories() {
-  log_info "Creating openwind data directory at ${OPENWIND_DIR}..."
+dialog_alert() {
+  local title="$1" message="$2"
 
-  mkdir -p "${OPENWIND_DIR}"
-  chmod 700 "${OPENWIND_DIR}"
-
-  for subdir in "${SUBDIRS[@]}"; do
-    mkdir -p "${OPENWIND_DIR}/${subdir}"
-    chmod 700 "${OPENWIND_DIR}/${subdir}"
-  done
-
-  log_info "Directory structure created:"
-  for subdir in "${SUBDIRS[@]}"; do
-    printf "  %s/%s\n" "${OPENWIND_DIR}" "${subdir}"
-  done
+  if [ "${OS}" = "Darwin" ]; then
+    osascript -e "display dialog \"${message}\" with title \"${title}\" buttons {\"OK\"} default button \"OK\"" &>/dev/null
+  elif command -v zenity &>/dev/null; then
+    zenity --info --title="${title}" --text="${message}" &>/dev/null
+  else
+    echo "${message}"
+  fi
 }
 
-print_success() {
-  printf "\n"
-  printf "============================================\n"
-  printf "  openwind installed successfully\n"
-  printf "============================================\n"
-  printf "\n"
-  printf "  Data directory: %s\n" "${OPENWIND_DIR}"
-  printf "\n"
-  printf "  Next steps:\n"
-  printf "    1. Run 'openwind onboard' to complete setup\n"
-  printf "    2. Configure your AI provider API key\n"
-  printf "    3. Start ingesting your data\n"
-  printf "\n"
-  printf "  Documentation: https://github.com/openwind-dev/openwind\n"
-  printf "\n"
+open_url() {
+  local url="$1"
+  if [ "${OS}" = "Darwin" ]; then
+    open "${url}" 2>/dev/null || true
+  elif command -v xdg-open &>/dev/null; then
+    xdg-open "${url}" 2>/dev/null || true
+  fi
 }
 
-main() {
-  log_info "Starting openwind installation..."
-  check_node_version
-  install_openwind
-  create_directories
-  print_success
-}
+# ─── 1. Check Node.js ───────────────────────────────────────────────────
 
-main
+if ! command -v node &>/dev/null; then
+  dialog_alert "OpenWind" "Node.js >= ${REQUIRED_NODE_MAJOR} is required.\n\nDownload it from nodejs.org"
+  open_url "https://nodejs.org"
+  exit 1
+fi
+
+NODE_MAJOR="$(node --version | sed 's/v//' | cut -d. -f1)"
+if [ "${NODE_MAJOR}" -lt "${REQUIRED_NODE_MAJOR}" ]; then
+  dialog_alert "OpenWind" "Node.js >= ${REQUIRED_NODE_MAJOR} required.\nFound: $(node --version)\n\nPlease upgrade."
+  exit 1
+fi
+
+# ─── 2. Install package ─────────────────────────────────────────────────
+
+npm install -g openwind@latest --silent 2>/dev/null || npm install -g openwind --silent
+
+# ─── 3. Choose provider (native dialog) ─────────────────────────────────
+
+PROVIDER=$(dialog_list "OpenWind Setup" "Choose your AI provider:" \
+  "Anthropic (recommended)" \
+  "OpenAI" \
+  "Google" \
+  "Ollama (local)")
+
+# Normalize provider name
+case "${PROVIDER}" in
+  *Anthropic*) PROVIDER="anthropic" ;;
+  *OpenAI*)    PROVIDER="openai" ;;
+  *Google*)    PROVIDER="google" ;;
+  *Ollama*)    PROVIDER="ollama" ;;
+  *)
+    # User cancelled
+    exit 0
+    ;;
+esac
+
+# ─── 4. Get API key (native dialog) ─────────────────────────────────────
+
+API_KEY=""
+if [ "${PROVIDER}" != "ollama" ]; then
+  case "${PROVIDER}" in
+    anthropic) KEY_URL="https://console.anthropic.com/settings/keys" ;;
+    openai)    KEY_URL="https://platform.openai.com/api-keys" ;;
+    google)    KEY_URL="https://aistudio.google.com/apikey" ;;
+  esac
+
+  # Open the API key page so user can copy their key
+  open_url "${KEY_URL}"
+
+  API_KEY=$(dialog_password "OpenWind Setup" "Paste your ${PROVIDER} API key:")
+
+  if [ -z "${API_KEY}" ]; then
+    dialog_alert "OpenWind" "No API key provided. Setup cancelled."
+    exit 0
+  fi
+fi
+
+# ─── 5. Run silent setup ────────────────────────────────────────────────
+
+SETUP_ARGS="--provider ${PROVIDER}"
+[ -n "${API_KEY}" ] && SETUP_ARGS="${SETUP_ARGS} --api-key ${API_KEY}"
+
+if ! openwind setup ${SETUP_ARGS} 2>/dev/null; then
+  dialog_alert "OpenWind" "Setup failed. Please try again or run:\nopenwind onboard"
+  exit 1
+fi
+
+# ─── 6. Start daemon ────────────────────────────────────────────────────
+
+if [ "${OS}" = "Darwin" ]; then
+  PLIST="${HOME}/Library/LaunchAgents/${LABEL}.plist"
+  if [ -f "${PLIST}" ]; then
+    launchctl unload -w "${PLIST}" 2>/dev/null || true
+    launchctl load -w "${PLIST}" 2>/dev/null || true
+  fi
+elif [ "${OS}" = "Linux" ]; then
+  UNIT="${HOME}/.config/systemd/user/openwind.service"
+  if [ -f "${UNIT}" ]; then
+    systemctl --user daemon-reload 2>/dev/null || true
+    systemctl --user enable --now openwind 2>/dev/null || true
+  fi
+fi
+
+# ─── 7. Done ─────────────────────────────────────────────────────────────
+
+dialog_notify "OpenWind" "Installation complete. Restart your AI client."
+
+dialog_alert "OpenWind" "Setup complete!\n\nOpenWind is now connected to your AI clients.\nRestart Claude Desktop or Cursor to get started.\n\nhttps://openwind.ai"

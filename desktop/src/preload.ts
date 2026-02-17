@@ -29,6 +29,9 @@ contextBridge.exposeInMainWorld('openwind', {
   onShowTelegramForm: (cb: () => void) =>
     ipcRenderer.on('show-telegram-form', () => cb()),
 
+  // CEO profile
+  getCeoProfile: () => ipcRenderer.invoke('get-ceo-profile'),
+
   // Canvas IPC
   getCanvasGraph: () => ipcRenderer.invoke('get-canvas-graph'),
   saveCanvasGraph: (graph: unknown) => ipcRenderer.invoke('save-canvas-graph', graph),

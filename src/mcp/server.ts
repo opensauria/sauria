@@ -12,7 +12,10 @@ import {
   getEntityTimeline,
   recordEvent,
   searchEntities,
+  upsertEntity,
+  upsertRelation,
 } from '../db/world-model.js';
+import { resolveEntity } from '../ingestion/resolver.js';
 import { getUpcomingDeadlines } from '../db/temporal.js';
 import { hybridSearch } from '../db/search.js';
 import { TOOL_DEFS, validateToolInput } from './tools.js';
@@ -225,6 +228,57 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
         timestamp: input.timestamp ?? new Date().toISOString(),
       });
       return textResult(`Event recorded: ${eventId}`);
+    },
+  );
+
+  registerTool(
+    server,
+    'openwind_remember',
+    TOOL_DEFS.openwind_remember.description,
+    TOOL_DEFS.openwind_remember.schema.shape,
+    async (raw) => {
+      guardRateLimit('openwind_remember');
+      const { entities, relations } = validateToolInput('openwind_remember', raw);
+      auditToolCall('openwind_remember', raw);
+
+      const entityIdMap = new Map<string, string>();
+
+      for (const entity of entities) {
+        const id = resolveEntity(db, {
+          name: entity.name,
+          type: entity.type,
+          properties: entity.properties,
+        });
+        entityIdMap.set(entity.name, id);
+        upsertEntity(db, {
+          id,
+          type: entity.type,
+          name: entity.name,
+          summary: entity.summary,
+          properties: entity.properties,
+        });
+      }
+
+      let relCount = 0;
+      for (const rel of relations) {
+        const fromId = entityIdMap.get(rel.from);
+        const toId = entityIdMap.get(rel.to);
+        if (!fromId || !toId) continue;
+        upsertRelation(db, {
+          id: nanoid(),
+          fromEntityId: fromId,
+          toEntityId: toId,
+          type: rel.type,
+          context: rel.context,
+        });
+        relCount++;
+      }
+
+      return textResult(
+        `Remembered ${entities.length} entit${entities.length === 1 ? 'y' : 'ies'}` +
+          (relCount > 0 ? ` and ${relCount} relation${relCount === 1 ? '' : 's'}` : '') +
+          '.',
+      );
     },
   );
 

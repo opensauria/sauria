@@ -32,6 +32,18 @@ const PRESETS: Readonly<Record<string, ModelPreset>> = {
     deep: { provider: 'ollama', model: 'llama3.2' },
     embeddings: { provider: 'local', model: 'all-MiniLM-L6-v2' },
   },
+  'lm-studio': {
+    extraction: { provider: 'openai', model: 'lm-studio' },
+    reasoning: { provider: 'openai', model: 'lm-studio' },
+    deep: { provider: 'openai', model: 'lm-studio' },
+    embeddings: { provider: 'local', model: 'all-MiniLM-L6-v2' },
+  },
+  'open-webui': {
+    extraction: { provider: 'openai', model: 'default' },
+    reasoning: { provider: 'openai', model: 'default' },
+    deep: { provider: 'openai', model: 'default' },
+    embeddings: { provider: 'local', model: 'all-MiniLM-L6-v2' },
+  },
 };
 
 const DEFAULT_PRESET = PRESETS['anthropic']!;

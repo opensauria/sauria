@@ -3,23 +3,30 @@ import type {
   Workspace, AgentNode, Platform,
 } from './types.js';
 import type { ChannelRegistry } from '../channels/registry.js';
+import type { LLMRoutingBrain, RoutingContext } from './llm-router.js';
+import { AutonomyEnforcer } from './autonomy.js';
 import { evaluateEdgeRules } from './routing.js';
+import { getLogger } from '../utils/logger.js';
 
 interface OrchestratorDeps {
   readonly registry: ChannelRegistry;
   readonly graph: CanvasGraph;
   readonly ceoIdentity: CEOIdentity;
+  readonly brain?: LLMRoutingBrain;
 }
 
 export class AgentOrchestrator {
   private graph: CanvasGraph;
   private readonly registry: ChannelRegistry;
   private readonly ceoIdentity: CEOIdentity;
+  private readonly brain: LLMRoutingBrain | null;
+  private readonly autonomy = new AutonomyEnforcer();
 
   constructor(deps: OrchestratorDeps) {
     this.registry = deps.registry;
     this.graph = deps.graph;
     this.ceoIdentity = deps.ceoIdentity;
+    this.brain = deps.brain ?? null;
   }
 
   updateGraph(graph: CanvasGraph): void {
@@ -50,25 +57,53 @@ export class AgentOrchestrator {
   }
 
   async handleInbound(message: InboundMessage): Promise<void> {
+    const logger = getLogger();
     const node = this.findNode(message.sourceNodeId);
     if (!node) return;
 
     // Step 1: Evaluate deterministic edge rules
     const ruleActions = evaluateEdgeRules(node, message, [...this.graph.edges]);
 
-    // Step 2: Execute rule-based actions immediately
-    for (const action of ruleActions) {
-      await this.executeAction(action, message);
+    // Step 2: Execute rule-based actions (filtered by autonomy)
+    if (ruleActions.length > 0) {
+      const { immediate } = this.autonomy.filterActions(node, ruleActions);
+      for (const action of immediate) {
+        await this.executeAction(action, message);
+      }
     }
 
     // Step 3: If no rules matched and LLM edges exist, defer to LLM routing
-    // (LLM integration added in Phase 4)
     const hasLlmEdges = this.graph.edges.some(
       (e) => e.from === node.id && e.rules.some((r) => r.type === 'llm_decided'),
     );
 
-    if (hasLlmEdges && ruleActions.length === 0) {
-      // Placeholder for LLM routing — will be implemented in a future task
+    if (hasLlmEdges && ruleActions.length === 0 && this.brain) {
+      const workspace = this.findWorkspace(node.id);
+      const teamNodes = workspace
+        ? this.graph.nodes.filter((n) => n.workspaceId === workspace.id)
+        : [];
+
+      const context: RoutingContext = {
+        message,
+        sourceNode: node,
+        workspace,
+        teamNodes,
+        ruleActions,
+        conversationId: null,
+      };
+
+      try {
+        const decision = await this.brain.decideRouting(context);
+        const { immediate } = this.autonomy.filterActions(node, decision.actions);
+        for (const action of immediate) {
+          await this.executeAction(action, message);
+        }
+      } catch (error) {
+        logger.error('LLM routing failed', {
+          nodeId: node.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 

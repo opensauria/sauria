@@ -915,11 +915,40 @@ ipcMain.handle(
   },
 );
 
+// ─── CEO Profile ────────────────────────────────────────────────────────
+
+ipcMain.handle('get-ceo-profile', () => {
+  let fullName = userInfo().username;
+  try {
+    if (platform() === 'darwin') {
+      const name = execFileSync('/usr/bin/id', ['-F'], {
+        encoding: 'utf-8',
+        timeout: 3000,
+      }).trim();
+      if (name) fullName = name;
+    }
+  } catch {
+    /* fallback to username */
+  }
+
+  let customInstructions = '';
+  const claudeMdPath = join(homedir(), '.claude', 'CLAUDE.md');
+  if (existsSync(claudeMdPath)) {
+    try {
+      customInstructions = readFileSync(claudeMdPath, 'utf-8');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return { fullName, customInstructions };
+});
+
 // ─── Canvas Graph Persistence ───────────────────────────────────────────
 
 interface CanvasNode {
   id: string;
-  platform: 'telegram' | 'slack' | 'whatsapp';
+  platform: 'telegram' | 'slack' | 'whatsapp' | 'discord' | 'email';
   label: string;
   photo: string | null;
   position: { x: number; y: number };
@@ -1078,6 +1107,10 @@ ipcMain.handle(
         }
 
         vaultStore('telegram_bot_token', token);
+        const nodeId = credentials['nodeId'] ? String(credentials['nodeId']) : null;
+        if (nodeId) {
+          vaultStore(`channel_token_${nodeId}`, token);
+        }
 
         // Store bot profile
         const profilePath = join(OPENWIND_HOME, 'bot-profiles.json');
@@ -1137,6 +1170,11 @@ ipcMain.handle(
 
         vaultStore('slack_bot_token', token);
         vaultStore('slack_signing_secret', signingSecret);
+        const slackNodeId = credentials['nodeId'] ? String(credentials['nodeId']) : null;
+        if (slackNodeId) {
+          vaultStore(`channel_token_${slackNodeId}`, token);
+          vaultStore(`channel_signing_${slackNodeId}`, signingSecret);
+        }
 
         let config: Record<string, unknown> = {};
         if (existsSync(CONFIG_PATH)) {
@@ -1188,6 +1226,10 @@ ipcMain.handle(
         }
 
         vaultStore('whatsapp_access_token', accessToken);
+        const waNodeId = credentials['nodeId'] ? String(credentials['nodeId']) : null;
+        if (waNodeId) {
+          vaultStore(`channel_token_${waNodeId}`, accessToken);
+        }
 
         let config: Record<string, unknown> = {};
         if (existsSync(CONFIG_PATH)) {
@@ -1210,6 +1252,117 @@ ipcMain.handle(
         };
       }
 
+      if (platform === 'discord') {
+        const token = String(credentials['token'] ?? '');
+        if (!token) {
+          return { success: false, error: 'Bot token required' };
+        }
+
+        const res = await fetch('https://discord.com/api/v10/users/@me', {
+          headers: { 'Authorization': `Bot ${token}` },
+          signal: AbortSignal.timeout(10_000),
+        });
+        const body = (await res.json()) as {
+          id?: string;
+          username?: string;
+          discriminator?: string;
+          avatar?: string;
+          message?: string;
+        };
+
+        if (!res.ok || !body.id) {
+          return { success: false, error: body.message ?? 'Invalid Discord bot token' };
+        }
+
+        let photoBase64: string | null = null;
+        if (body.avatar) {
+          try {
+            const avatarUrl = `https://cdn.discordapp.com/avatars/${body.id}/${body.avatar}.png?size=128`;
+            const imgRes = await fetch(avatarUrl, { signal: AbortSignal.timeout(10_000) });
+            const imgBuf = Buffer.from(await imgRes.arrayBuffer());
+            photoBase64 = `data:image/png;base64,${imgBuf.toString('base64')}`;
+          } catch {
+            // Avatar fetch is best-effort
+          }
+        }
+
+        vaultStore('discord_bot_token', token);
+        const discordNodeId = credentials['nodeId'] ? String(credentials['nodeId']) : null;
+        if (discordNodeId) {
+          vaultStore(`channel_token_${discordNodeId}`, token);
+        }
+
+        let config: Record<string, unknown> = {};
+        if (existsSync(CONFIG_PATH)) {
+          try { config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as Record<string, unknown>; } catch { config = {}; }
+        }
+        const channels = (config['channels'] ?? {}) as Record<string, unknown>;
+        channels['discord'] = {
+          enabled: true,
+          botUserId: body.id,
+        };
+        config['channels'] = channels;
+        writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+
+        stopDaemon();
+        startDaemon();
+
+        return {
+          success: true,
+          botUsername: body.username ?? 'Discord Bot',
+          botId: body.id,
+          photo: photoBase64,
+        };
+      }
+
+      if (platform === 'email') {
+        const imapHost = String(credentials['imapHost'] ?? '');
+        const smtpHost = String(credentials['smtpHost'] ?? '');
+        const username = String(credentials['username'] ?? '');
+        const password = String(credentials['password'] ?? '');
+        const imapPort = Number(credentials['imapPort']) || 993;
+        const smtpPort = Number(credentials['smtpPort']) || 587;
+
+        if (!imapHost || !username || !password) {
+          return { success: false, error: 'IMAP host, username, and password required' };
+        }
+
+        vaultStore('email_password', password);
+        const emailNodeId = credentials['nodeId'] ? String(credentials['nodeId']) : null;
+        if (emailNodeId) {
+          vaultStore(`channel_token_${emailNodeId}`, password);
+        }
+
+        let config: Record<string, unknown> = {};
+        if (existsSync(CONFIG_PATH)) {
+          try { config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as Record<string, unknown>; } catch { config = {}; }
+        }
+        const channels = (config['channels'] ?? {}) as Record<string, unknown>;
+        channels['email'] = {
+          enabled: true,
+          imapHost,
+          imapPort,
+          smtpHost: smtpHost || imapHost,
+          smtpPort,
+          username,
+          tls: true,
+        };
+        config['channels'] = channels;
+        writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+
+        stopDaemon();
+        startDaemon();
+
+        return {
+          success: true,
+          displayName: username,
+        };
+      }
+
+      if (platform === 'gmail') {
+        return { success: false, error: 'Gmail OAuth coming soon. Use Email (IMAP) with a Google App Password instead.' };
+      }
+
       return { success: false, error: `Unknown platform: ${platform}` };
     } catch (err) {
       return {
@@ -1222,7 +1375,7 @@ ipcMain.handle(
 
 ipcMain.handle(
   'disconnect-channel',
-  (_event, platform: string, _nodeId: string) => {
+  (_event, platform: string, nodeId: string) => {
     try {
       stopDaemon();
 
@@ -1230,9 +1383,19 @@ ipcMain.handle(
         telegram: ['telegram_bot_token.enc'],
         slack: ['slack_bot_token.enc', 'slack_signing_secret.enc'],
         whatsapp: ['whatsapp_access_token.enc'],
+        discord: ['discord_bot_token.enc'],
+        email: ['email_password.enc'],
       };
 
       const files = vaultFiles[platform] ?? [];
+      // Also remove per-node vault entries
+      if (nodeId) {
+        files.push(`channel_token_${nodeId}.enc`);
+        if (platform === 'slack') {
+          files.push(`channel_signing_${nodeId}.enc`);
+        }
+      }
+
       for (const file of files) {
         const filePath = join(OPENWIND_HOME, 'vault', file);
         if (existsSync(filePath)) {
@@ -1251,6 +1414,10 @@ ipcMain.handle(
           channels['slack'] = { enabled: false };
         } else if (platform === 'whatsapp') {
           channels['whatsapp'] = { enabled: false };
+        } else if (platform === 'discord') {
+          channels['discord'] = { enabled: false };
+        } else if (platform === 'email') {
+          channels['email'] = { enabled: false };
         }
         config['channels'] = channels;
         writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');

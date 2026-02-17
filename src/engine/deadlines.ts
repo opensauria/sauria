@@ -130,7 +130,7 @@ function findConflicts(events: Event[]): DeadlineAlert[] {
 
       const nextEntityIds = next.entityIds ?? [];
       const hasSharedEntity = currentEntityIds.some((id) => nextEntityIds.includes(id));
-      if (!hasSharedEntity && currentEntityIds.length > 0 && nextEntityIds.length > 0) continue;
+      if (!hasSharedEntity) continue;
 
       const gapMinutes = Math.round(gapMs / 60_000);
       const mergedIds = [...new Set([...currentEntityIds, ...nextEntityIds])];
