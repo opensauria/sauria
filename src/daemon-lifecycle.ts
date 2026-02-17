@@ -1,4 +1,11 @@
-import { readFileSync, writeFileSync, existsSync, watch, type FSWatcher } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  unlinkSync,
+  watch,
+  type FSWatcher,
+} from 'node:fs';
 import type BetterSqlite3 from 'better-sqlite3';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { openDatabase, closeDatabase } from './db/connection.js';
@@ -54,7 +61,6 @@ export interface DaemonContext {
   readonly router: ModelRouter;
   readonly mcpClients: McpClientManager;
   readonly engine: ProactiveEngine;
-  readonly telegram: TelegramChannel | null;
   readonly mcpServer: McpServer;
   readonly refreshInterval: ReturnType<typeof setInterval>;
   readonly registry: ChannelRegistry | null;
@@ -64,14 +70,16 @@ export interface DaemonContext {
   readonly ceoCommandWatcher: FSWatcher | null;
 }
 
-function handleAlert(alert: ProactiveAlert, telegram: TelegramChannel | null): void {
+function handleAlert(alert: ProactiveAlert, registry: ChannelRegistry | null): void {
   const logger = getLogger();
   logger.info(`Alert: [${alert.type}] ${alert.title}`, {
     priority: alert.priority,
     entityIds: alert.entityIds,
   });
-  if (telegram) {
-    void telegram.sendAlert(alert);
+  if (registry) {
+    for (const { channel } of registry.getAll()) {
+      void channel.sendAlert(alert);
+    }
   }
 }
 
@@ -265,11 +273,10 @@ async function createChannelForNode(
   const logger = getLogger();
   const { db, router, audit, config, onInbound } = deps;
 
-  // Try per-node token first, fall back to legacy global key
   const nodeToken = await vaultGet(`channel_token_${node.id}`);
 
   if (node.platform === 'telegram') {
-    const token = nodeToken ?? (await vaultGet('telegram_bot_token'));
+    const token = nodeToken;
     if (!token) {
       logger.warn(`Skipping node ${node.id}: no telegram token in vault`);
       return null;
@@ -504,8 +511,21 @@ async function setupOrchestrator(
 
   const channelDeps = { ...deps, onInbound };
   const startedChannels: OrchestratorBundle['startedChannels'] = [];
+  const usedTokens = new Set<string>();
 
   for (const node of connectedNodes) {
+    // Prevent duplicate polling instances for the same token (e.g. Telegram 409)
+    const resolvedToken = await vaultGet(`channel_token_${node.id}`);
+    if (resolvedToken) {
+      if (usedTokens.has(resolvedToken)) {
+        logger.warn(
+          `Skipping node ${node.id}: token already in use by another node. Each bot needs a unique token.`,
+        );
+        continue;
+      }
+      usedTokens.add(resolvedToken);
+    }
+
     const channel = await createChannelForNode(node, channelDeps);
     if (!channel) continue;
 
@@ -535,9 +555,51 @@ async function setupOrchestrator(
 
 // ─── Daemon Lifecycle ─────────────────────────────────────────────────
 
+function acquirePidLock(): void {
+  const { pidFile } = paths;
+
+  if (existsSync(pidFile)) {
+    const existingPid = parseInt(readFileSync(pidFile, 'utf-8').trim(), 10);
+    if (!isNaN(existingPid)) {
+      try {
+        // Signal 0 checks if process exists without killing it
+        process.kill(existingPid, 0);
+        throw new Error(
+          `Another daemon is already running (PID ${existingPid}). ` +
+            `Remove ${pidFile} if the process is stale.`,
+        );
+      } catch (error: unknown) {
+        if (error instanceof Error && 'code' in error && error.code === 'ESRCH') {
+          // Process doesn't exist — stale PID file, safe to overwrite
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  writeFileSync(pidFile, String(process.pid), 'utf-8');
+}
+
+function releasePidLock(): void {
+  try {
+    const { pidFile } = paths;
+    if (existsSync(pidFile)) {
+      const storedPid = parseInt(readFileSync(pidFile, 'utf-8').trim(), 10);
+      if (storedPid === process.pid) {
+        unlinkSync(pidFile);
+      }
+    }
+  } catch {
+    // Best-effort cleanup
+  }
+}
+
 export async function startDaemonContext(): Promise<DaemonContext> {
   const logger = getLogger();
   logger.info('Daemon starting');
+
+  acquirePidLock();
 
   await runSecurityChecks();
   logger.info('Security checks passed');
@@ -583,53 +645,9 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     });
   }
 
-  // ─── Legacy single-bot fallback ─────────────────────────────────────
-  // If no orchestrator was set up but legacy telegram config is enabled,
-  // keep backward-compatible single-bot mode.
-  let telegram: TelegramChannel | null = null;
-  const hasOrchestratorTelegram =
-    bundle?.startedChannels.some((c) => c.channel.name === 'telegram') ?? false;
-
-  if (!hasOrchestratorTelegram && config.channels.telegram.enabled) {
-    const token = await vaultGet('telegram_bot_token');
-    if (token) {
-      const { voice } = config.channels.telegram;
-      const transcription = voice.enabled
-        ? new TranscriptionService({
-            model: voice.model,
-            maxDurationSeconds: voice.maxDurationSeconds,
-          })
-        : null;
-      const pipeline = new IngestPipeline(
-        db,
-        router,
-        audit,
-        createLimiter('telegram_ingest', SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
-      );
-      telegram = new TelegramChannel({
-        token,
-        allowedUserIds: config.channels.telegram.allowedUserIds,
-        db,
-        router,
-        audit,
-        pipeline,
-        transcription,
-      });
-    } else {
-      logger.warn(
-        'Telegram enabled but bot token not found in vault. Run: openwind connect telegram',
-      );
-    }
-  }
-
-  const engine = new ProactiveEngine(db, router, (alert) => handleAlert(alert, telegram));
+  const engine = new ProactiveEngine(db, router, (alert) => handleAlert(alert, registry));
   engine.start();
   logger.info('Proactive engine started');
-
-  if (telegram) {
-    await telegram.start();
-    logger.info('Telegram bot started (legacy single-bot mode)');
-  }
 
   const mcpServer = await startMcpServer({
     db,
@@ -771,7 +789,6 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     router,
     mcpClients,
     engine,
-    telegram,
     mcpServer,
     refreshInterval,
     registry,
@@ -811,16 +828,13 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
   ctx.engine.stop();
   logger.info('Proactive engine stopped');
 
-  if (ctx.telegram) {
-    await ctx.telegram.stop();
-    logger.info('Telegram bot stopped');
-  }
-
   await ctx.mcpClients.disconnectAll();
   logger.info('MCP clients disconnected');
 
   ctx.audit.logAction('daemon:stop', {});
   closeDatabase(ctx.db);
   logger.info('Database closed');
+
+  releasePidLock();
   logger.info('Daemon stopped');
 }

@@ -136,7 +136,6 @@ export class TelegramChannel implements Channel {
         timestamp: new Date().toISOString(),
       };
       onInbound(inbound);
-      return;
     }
 
     await this.handleAsk(ctx, text);
@@ -188,7 +187,6 @@ export class TelegramChannel implements Channel {
         timestamp: new Date().toISOString(),
       };
       onInbound(inbound);
-      return;
     }
 
     await this.handleAsk(ctx, text);
@@ -220,9 +218,20 @@ export class TelegramChannel implements Channel {
     const context = entities
       .map((e) => `[${e.type}] ${e.name}: ${e.summary ?? 'no summary'}`)
       .join('\n');
-    const answer = await reasonAbout(router, context, question);
-    audit.logAction('telegram:ask', { question, entityCount: entities.length });
-    await ctx.reply(answer);
+    try {
+      const answer = await reasonAbout(router, context, question);
+      audit.logAction('telegram:ask', { question, entityCount: entities.length });
+      await ctx.reply(answer);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const errStack = error instanceof Error ? error.stack : '';
+      process.stderr.write(`[telegram:ask_error] ${errMsg}\n${errStack}\n`);
+      audit.logAction('telegram:ask_error', {
+        question,
+        error: errMsg,
+      }, { success: false });
+      await ctx.reply('Sorry, I could not process that request right now.');
+    }
   }
 
   private async handleStatus(ctx: Context): Promise<void> {

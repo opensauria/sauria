@@ -13,7 +13,8 @@ contextBridge.exposeInMainWorld('openwind', {
     localBaseUrl: string;
   }) => ipcRenderer.invoke('configure', opts),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
-  finish: () => ipcRenderer.invoke('finish'),
+  startOAuth: () => ipcRenderer.invoke('start-oauth'),
+  completeOAuth: (code: string) => ipcRenderer.invoke('complete-oauth', code),
   executeCommand: (id: string) => ipcRenderer.invoke('execute-command', id),
   hidePalette: () => ipcRenderer.invoke('hide-palette'),
   onCommandResult: (cb: (result: string) => void) =>
@@ -21,9 +22,6 @@ contextBridge.exposeInMainWorld('openwind', {
   onPaletteShow: (cb: () => void) => ipcRenderer.on('palette-show', () => cb()),
   onPaletteReset: (cb: () => void) => ipcRenderer.on('palette-reset', () => cb()),
   getTelegramStatus: () => ipcRenderer.invoke('get-telegram-status'),
-  connectTelegram: (token: string, userId: number) =>
-    ipcRenderer.invoke('connect-telegram', token, userId),
-  disconnectTelegram: () => ipcRenderer.invoke('disconnect-telegram'),
   onShowTelegramForm: (cb: () => void) => ipcRenderer.on('show-telegram-form', () => cb()),
 
   // CEO profile

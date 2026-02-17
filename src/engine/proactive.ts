@@ -92,7 +92,11 @@ export class ProactiveEngine {
     }
 
     if (this.dailyAlertCount < MAX_ALERTS_PER_DAY) {
-      await this.tryGenerateInsight();
+      try {
+        await this.tryGenerateInsight();
+      } catch {
+        // Insight generation is best-effort; missing credentials should not crash the daemon
+      }
     }
 
     this.audit.logAction('proactive_tick', {
