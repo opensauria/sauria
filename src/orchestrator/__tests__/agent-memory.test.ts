@@ -20,7 +20,13 @@ describe('AgentMemory', () => {
 
   describe('storeFact / getAgentFacts', () => {
     it('stores and retrieves facts for an agent', () => {
-      memory.storeFact('node1', 'ws1', 'Customer prefers email', ['support', 'preferences'], 'conversation');
+      memory.storeFact(
+        'node1',
+        'ws1',
+        'Customer prefers email',
+        ['support', 'preferences'],
+        'conversation',
+      );
       memory.storeFact('node1', 'ws1', 'Budget approved for Q2', ['finance'], 'conversation');
 
       const facts = memory.getAgentFacts('node1', 10);
@@ -171,7 +177,9 @@ describe('AgentMemory', () => {
         contentType: 'text',
       });
 
-      const row = db.prepare('SELECT message_count FROM agent_conversations WHERE id = ?').get(conversationId) as Record<string, unknown>;
+      const row = db
+        .prepare('SELECT message_count FROM agent_conversations WHERE id = ?')
+        .get(conversationId) as Record<string, unknown>;
       expect(row['message_count']).toBe(1);
     });
   });

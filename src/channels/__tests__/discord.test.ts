@@ -123,12 +123,14 @@ describe('DiscordChannel', () => {
   });
 
   it('skips bot messages', async () => {
-    const botMessages = [{
-      id: '201',
-      author: { id: 'bot1', username: 'BotUser', bot: true },
-      content: 'I am a bot',
-      timestamp: '2024-01-01T00:00:00Z',
-    }];
+    const botMessages = [
+      {
+        id: '201',
+        author: { id: 'bot1', username: 'BotUser', bot: true },
+        content: 'I am a bot',
+        timestamp: '2024-01-01T00:00:00Z',
+      },
+    ];
 
     const responses = new Map<string, unknown>();
     responses.set('/channels/ch-1/messages?limit=1', [{ id: '100' }]);
@@ -143,12 +145,14 @@ describe('DiscordChannel', () => {
   });
 
   it('identifies CEO messages', async () => {
-    const ceoMessages = [{
-      id: '202',
-      author: { id: 'ceo-user', username: 'CEO', bot: false },
-      content: 'CEO command',
-      timestamp: '2024-01-01T00:00:00Z',
-    }];
+    const ceoMessages = [
+      {
+        id: '202',
+        author: { id: 'ceo-user', username: 'CEO', bot: false },
+        content: 'CEO command',
+        timestamp: '2024-01-01T00:00:00Z',
+      },
+    ];
 
     const responses = new Map<string, unknown>();
     responses.set('/channels/ch-1/messages?limit=1', [{ id: '100' }]);
@@ -225,9 +229,11 @@ describe('DiscordChannel', () => {
   });
 
   it('handles poll errors gracefully', async () => {
-    const failFetch = vi.fn()
+    const failFetch = vi
+      .fn()
       .mockResolvedValueOnce({
-        ok: true, status: 200,
+        ok: true,
+        status: 200,
         json: () => Promise.resolve([{ id: '100' }]),
       })
       .mockRejectedValueOnce(new Error('Network error'));

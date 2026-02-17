@@ -54,11 +54,7 @@ export class MessageQueue {
   }
 
   private async drain(): Promise<void> {
-    while (
-      !this.stopped &&
-      this.queue.length > 0 &&
-      this.processing < this.options.maxConcurrent
-    ) {
+    while (!this.stopped && this.queue.length > 0 && this.processing < this.options.maxConcurrent) {
       const message = this.queue.shift();
       if (!message) break;
 

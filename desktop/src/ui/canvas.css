@@ -14,8 +14,7 @@
   inset: 0;
   overflow: hidden;
   cursor: grab;
-  background:
-    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.03) 1px, transparent 0);
+  background: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.03) 1px, transparent 0);
   background-size: 32px 32px;
 }
 
@@ -45,7 +44,9 @@
   align-items: center;
   gap: 6px;
   cursor: grab;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
   user-select: none;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -102,9 +103,15 @@
   z-index: 1;
 }
 
-.agent-status-dot.connected { background: #34d399; }
-.agent-status-dot.disconnected { background: rgba(255, 255, 255, 0.2); }
-.agent-status-dot.error { background: #f87171; }
+.agent-status-dot.connected {
+  background: #34d399;
+}
+.agent-status-dot.disconnected {
+  background: rgba(255, 255, 255, 0.2);
+}
+.agent-status-dot.error {
+  background: #f87171;
+}
 
 .agent-name {
   font-size: 13px;
@@ -143,12 +150,30 @@
   margin-top: 2px;
 }
 
-.platform-badge.telegram { color: #27A7E7; background: rgba(39, 167, 231, 0.12); }
-.platform-badge.slack { color: #E01E5A; background: rgba(224, 30, 90, 0.12); }
-.platform-badge.whatsapp { color: #25D366; background: rgba(37, 211, 102, 0.12); }
-.platform-badge.discord { color: #5865F2; background: rgba(88, 101, 242, 0.12); }
-.platform-badge.gmail { color: #EA4335; background: rgba(234, 67, 53, 0.12); }
-.platform-badge.email { color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.06); }
+.platform-badge.telegram {
+  color: #27a7e7;
+  background: rgba(39, 167, 231, 0.12);
+}
+.platform-badge.slack {
+  color: #e01e5a;
+  background: rgba(224, 30, 90, 0.12);
+}
+.platform-badge.whatsapp {
+  color: #25d366;
+  background: rgba(37, 211, 102, 0.12);
+}
+.platform-badge.discord {
+  color: #5865f2;
+  background: rgba(88, 101, 242, 0.12);
+}
+.platform-badge.gmail {
+  color: #ea4335;
+  background: rgba(234, 67, 53, 0.12);
+}
+.platform-badge.email {
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+}
 
 /* ── Connection Ports ────────────────────────── */
 
@@ -197,7 +222,7 @@
 }
 
 .edge-svg path {
-  stroke: rgba(255, 255, 255, 0.10);
+  stroke: rgba(255, 255, 255, 0.1);
   stroke-width: 1.5;
   fill: none;
   stroke-linecap: round;
@@ -245,7 +270,10 @@
   z-index: 2;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.8);
-  transition: opacity 0.15s ease, transform 0.15s ease, background 0.12s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    background 0.12s ease;
   pointer-events: none;
   padding: 0;
 }
@@ -353,7 +381,12 @@
   justify-content: center;
   perspective: 1200px;
   z-index: 150;
-  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.35) 50%, rgba(0, 0, 0, 0.55) 100%);
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 50%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
 }
 
 .coverflow-track {
@@ -456,7 +489,9 @@
   width: 16px;
   height: 16px;
   filter: brightness(0) invert(0.4);
-  transition: filter 0.12s ease, transform 0.2s ease;
+  transition:
+    filter 0.12s ease,
+    transform 0.2s ease;
 }
 
 .dock-toggle:hover img {
@@ -474,8 +509,9 @@
 }
 
 .coverflow-dock {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Drag Ghost ──────────────────────────────── */
@@ -496,7 +532,9 @@
   gap: 12px;
   pointer-events: none;
   z-index: 1000;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
   opacity: 0.85;
 }
 
@@ -665,9 +703,15 @@
   min-height: 16px;
 }
 
-.card-setup-status.error { color: #f87171; }
-.card-setup-status.success { color: #34d399; }
-.card-setup-status.info { color: rgba(255, 255, 255, 0.4); }
+.card-setup-status.error {
+  color: #f87171;
+}
+.card-setup-status.success {
+  color: #34d399;
+}
+.card-setup-status.info {
+  color: rgba(255, 255, 255, 0.4);
+}
 
 /* Error state card */
 .agent-card.error-state {
@@ -688,7 +732,9 @@
 }
 
 @keyframes cardSpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Gear Button (on connected cards) ────────── */
@@ -777,9 +823,15 @@
 }
 
 @keyframes cardFlipIn {
-  0% { transform: perspective(800px) rotateY(0deg); }
-  50% { transform: perspective(800px) rotateY(90deg); }
-  100% { transform: perspective(800px) rotateY(0deg); }
+  0% {
+    transform: perspective(800px) rotateY(0deg);
+  }
+  50% {
+    transform: perspective(800px) rotateY(90deg);
+  }
+  100% {
+    transform: perspective(800px) rotateY(0deg);
+  }
 }
 
 .agent-card.card-flip {
@@ -1019,11 +1071,15 @@
   z-index: 0;
   user-select: none;
   cursor: grab;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .workspace-frame.drop-target {
-  box-shadow: 0 0 0 4px rgba(124, 107, 245, 0.18), 0 0 24px rgba(124, 107, 245, 0.08);
+  box-shadow:
+    0 0 0 4px rgba(124, 107, 245, 0.18),
+    0 0 24px rgba(124, 107, 245, 0.08);
 }
 
 .workspace-frame.selected {
@@ -1217,7 +1273,7 @@
   margin-bottom: 8px;
 }
 
-.autonomy-track input[type="range"] {
+.autonomy-track input[type='range'] {
   width: 100%;
   height: 4px;
   -webkit-appearance: none;
@@ -1227,7 +1283,7 @@
   outline: none;
 }
 
-.autonomy-track input[type="range"]::-webkit-slider-thumb {
+.autonomy-track input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 16px;
@@ -1498,7 +1554,6 @@
   color: rgba(255, 255, 255, 0.9);
   margin-bottom: 24px;
 }
-
 
 /* ── Titlebar drag region ────────────────────── */
 

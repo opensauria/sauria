@@ -7,18 +7,37 @@ import { ChannelRegistry } from '../../channels/registry.js';
 function makeGraph(): CanvasGraph {
   return {
     ...createEmptyGraph(),
-    workspaces: [{
-      id: 'ws1', name: 'Support', color: '#ff0000', purpose: 'Handle support',
-      topics: ['support'], budget: { dailyLimitUsd: 5, preferCheap: true },
-      position: { x: 0, y: 0 }, size: { width: 400, height: 300 },
-      checkpoints: [], groups: [],
-    }],
-    nodes: [{
-      id: 'n1', platform: 'telegram', label: '@support_bot', photo: null,
-      position: { x: 0, y: 0 }, status: 'connected', credentials: 'key',
-      meta: {}, workspaceId: 'ws1', role: 'assistant', autonomy: 'supervised',
-      instructions: '', groupBehavior: DEFAULT_GROUP_BEHAVIOR,
-    }],
+    workspaces: [
+      {
+        id: 'ws1',
+        name: 'Support',
+        color: '#ff0000',
+        purpose: 'Handle support',
+        topics: ['support'],
+        budget: { dailyLimitUsd: 5, preferCheap: true },
+        position: { x: 0, y: 0 },
+        size: { width: 400, height: 300 },
+        checkpoints: [],
+        groups: [],
+      },
+    ],
+    nodes: [
+      {
+        id: 'n1',
+        platform: 'telegram',
+        label: '@support_bot',
+        photo: null,
+        position: { x: 0, y: 0 },
+        status: 'connected',
+        credentials: 'key',
+        meta: {},
+        workspaceId: 'ws1',
+        role: 'assistant',
+        autonomy: 'supervised',
+        instructions: '',
+        groupBehavior: DEFAULT_GROUP_BEHAVIOR,
+      },
+    ],
   };
 }
 

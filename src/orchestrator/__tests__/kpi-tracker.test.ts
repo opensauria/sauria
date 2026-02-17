@@ -4,10 +4,7 @@ import { KPITracker } from '../kpi-tracker.js';
 import type { CanvasGraph } from '../types.js';
 import { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '../types.js';
 
-function createGraphWithNodes(
-  workspaceId: string,
-  nodeIds: string[],
-): CanvasGraph {
+function createGraphWithNodes(workspaceId: string, nodeIds: string[]): CanvasGraph {
   const base = createEmptyGraph();
   return {
     ...base,
@@ -166,13 +163,13 @@ describe('KPITracker', () => {
       tracker.recordMessageHandled('n2', 300);
       tracker.recordTaskCompleted('n1');
       tracker.recordTaskCompleted('n3');
-      tracker.recordCost('n1', 0.10);
-      tracker.recordCost('n2', 0.20);
+      tracker.recordCost('n1', 0.1);
+      tracker.recordCost('n2', 0.2);
 
       const perf = tracker.getWorkspacePerformance('ws1', graph);
       expect(perf.totalMessages).toBe(3);
       expect(perf.totalTasks).toBe(2);
-      expect(perf.totalCostUsd).toBeCloseTo(0.30, 10);
+      expect(perf.totalCostUsd).toBeCloseTo(0.3, 10);
       expect(perf.avgResponseTimeMs).toBe(200); // (100+200+300)/3
       expect(perf.agentCount).toBe(3);
     });

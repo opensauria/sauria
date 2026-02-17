@@ -150,7 +150,8 @@ describe('LLMRoutingBrain', () => {
       const router = createMockRouter('{}');
       const brain = new LLMRoutingBrain(router, db);
       const message = buildMessage({
-        content: 'Review the budget allocation and strategy for next quarter across the company-wide initiatives',
+        content:
+          'Review the budget allocation and strategy for next quarter across the company-wide initiatives',
       });
 
       const tier = brain.selectModelTier(message, false);
@@ -180,7 +181,9 @@ describe('LLMRoutingBrain', () => {
       const router = createMockRouter(responseJson);
       const brain = new LLMRoutingBrain(router, db);
       const context = buildContext({
-        message: buildMessage({ content: 'Can you help me with my order status and tracking information?' }),
+        message: buildMessage({
+          content: 'Can you help me with my order status and tracking information?',
+        }),
       });
 
       const decision = await brain.decideRouting(context);
@@ -198,7 +201,8 @@ describe('LLMRoutingBrain', () => {
       const brain = new LLMRoutingBrain(router, db);
       const context = buildContext({
         message: buildMessage({
-          content: 'We need to reorganize the entire strategy for our company-wide budget allocation across all teams',
+          content:
+            'We need to reorganize the entire strategy for our company-wide budget allocation across all teams',
         }),
       });
 
@@ -252,7 +256,8 @@ describe('parseRoutingResponse', () => {
   });
 
   it('parses valid JSON with forward action', () => {
-    const raw = '{"actions": [{"type": "forward", "targetNodeId": "n2", "content": "Forwarded msg"}]}';
+    const raw =
+      '{"actions": [{"type": "forward", "targetNodeId": "n2", "content": "Forwarded msg"}]}';
     const decision = parseRoutingResponse(raw);
 
     expect(decision.actions).toHaveLength(1);
@@ -264,7 +269,8 @@ describe('parseRoutingResponse', () => {
   });
 
   it('parses assign action with priority', () => {
-    const raw = '{"actions": [{"type": "assign", "targetNodeId": "n2", "task": "Fix bug", "priority": "high"}]}';
+    const raw =
+      '{"actions": [{"type": "assign", "targetNodeId": "n2", "task": "Fix bug", "priority": "high"}]}';
     const decision = parseRoutingResponse(raw);
 
     expect(decision.actions).toHaveLength(1);
@@ -277,7 +283,8 @@ describe('parseRoutingResponse', () => {
   });
 
   it('defaults assign priority to normal when invalid', () => {
-    const raw = '{"actions": [{"type": "assign", "targetNodeId": "n2", "task": "Fix bug", "priority": "urgent"}]}';
+    const raw =
+      '{"actions": [{"type": "assign", "targetNodeId": "n2", "task": "Fix bug", "priority": "urgent"}]}';
     const decision = parseRoutingResponse(raw);
 
     expect(decision.actions).toHaveLength(1);
@@ -290,7 +297,8 @@ describe('parseRoutingResponse', () => {
   });
 
   it('parses notify action', () => {
-    const raw = '{"actions": [{"type": "notify", "targetNodeId": "n3", "summary": "New ticket filed"}]}';
+    const raw =
+      '{"actions": [{"type": "notify", "targetNodeId": "n3", "summary": "New ticket filed"}]}';
     const decision = parseRoutingResponse(raw);
 
     expect(decision.actions[0]).toEqual({
@@ -301,7 +309,8 @@ describe('parseRoutingResponse', () => {
   });
 
   it('parses learn action', () => {
-    const raw = '{"actions": [{"type": "learn", "fact": "Customer prefers email", "topics": ["preferences"]}]}';
+    const raw =
+      '{"actions": [{"type": "learn", "fact": "Customer prefers email", "topics": ["preferences"]}]}';
     const decision = parseRoutingResponse(raw);
 
     expect(decision.actions[0]).toEqual({
@@ -323,7 +332,8 @@ describe('parseRoutingResponse', () => {
   });
 
   it('parses send_to_all action', () => {
-    const raw = '{"actions": [{"type": "send_to_all", "workspaceId": "ws1", "content": "Announcement"}]}';
+    const raw =
+      '{"actions": [{"type": "send_to_all", "workspaceId": "ws1", "content": "Announcement"}]}';
     const decision = parseRoutingResponse(raw);
 
     expect(decision.actions[0]).toEqual({
@@ -334,7 +344,8 @@ describe('parseRoutingResponse', () => {
   });
 
   it('parses group_message action', () => {
-    const raw = '{"actions": [{"type": "group_message", "workspaceId": "ws1", "content": "Team update"}]}';
+    const raw =
+      '{"actions": [{"type": "group_message", "workspaceId": "ws1", "content": "Team update"}]}';
     const decision = parseRoutingResponse(raw);
 
     expect(decision.actions[0]).toEqual({
@@ -345,7 +356,8 @@ describe('parseRoutingResponse', () => {
   });
 
   it('filters out invalid action types', () => {
-    const raw = '{"actions": [{"type": "invalid_action", "content": "bad"}, {"type": "reply", "content": "good"}]}';
+    const raw =
+      '{"actions": [{"type": "invalid_action", "content": "bad"}, {"type": "reply", "content": "good"}]}';
     const decision = parseRoutingResponse(raw);
 
     expect(decision.actions).toHaveLength(1);
@@ -386,7 +398,8 @@ describe('parseRoutingResponse', () => {
   });
 
   it('extracts JSON from surrounding text', () => {
-    const raw = 'Here is my analysis:\n\n{"actions": [{"type": "reply", "content": "Done"}]}\n\nHope that helps!';
+    const raw =
+      'Here is my analysis:\n\n{"actions": [{"type": "reply", "content": "Done"}]}\n\nHope that helps!';
     const decision = parseRoutingResponse(raw);
 
     expect(decision.actions).toHaveLength(1);

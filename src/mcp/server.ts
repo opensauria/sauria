@@ -304,7 +304,10 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
         const lines = pending.map((p) => {
           const actionSummary = p.actions
-            .map((a) => `  - ${a.type}${'targetNodeId' in a ? ` → ${(a as Record<string, unknown>).targetNodeId}` : ''}`)
+            .map(
+              (a) =>
+                `  - ${a.type}${'targetNodeId' in a ? ` → ${(a as Record<string, unknown>).targetNodeId}` : ''}`,
+            )
             .join('\n');
           return `[${p.id}] Agent: ${p.agentId} | Workspace: ${p.workspaceId}\n${p.description}\nActions:\n${actionSummary}\nCreated: ${p.createdAt}`;
         });
@@ -335,7 +338,9 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
           return textResult(`Approved and executed ${String(executed)} action(s).`);
         }
 
-        return textResult(`Approved ${String(actions.length)} action(s). No orchestrator to execute them.`);
+        return textResult(
+          `Approved ${String(actions.length)} action(s). No orchestrator to execute them.`,
+        );
       },
     );
 

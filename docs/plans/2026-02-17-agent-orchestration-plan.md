@@ -17,6 +17,7 @@
 ### Task 1: Core type definitions
 
 **Files:**
+
 - Create: `src/orchestrator/types.ts`
 
 **Step 1: Write type definitions**
@@ -171,11 +172,20 @@ export interface InboundMessage {
 export type RoutingAction =
   | { readonly type: 'reply'; readonly content: string }
   | { readonly type: 'forward'; readonly targetNodeId: string; readonly content: string }
-  | { readonly type: 'assign'; readonly targetNodeId: string; readonly task: string; readonly priority: 'low' | 'normal' | 'high' }
+  | {
+      readonly type: 'assign';
+      readonly targetNodeId: string;
+      readonly task: string;
+      readonly priority: 'low' | 'normal' | 'high';
+    }
   | { readonly type: 'notify'; readonly targetNodeId: string; readonly summary: string }
   | { readonly type: 'send_to_all'; readonly workspaceId: string; readonly content: string }
   | { readonly type: 'learn'; readonly fact: string; readonly topics: readonly string[] }
-  | { readonly type: 'checkpoint'; readonly description: string; readonly pendingActions: readonly RoutingAction[] }
+  | {
+      readonly type: 'checkpoint';
+      readonly description: string;
+      readonly pendingActions: readonly RoutingAction[];
+    }
   | { readonly type: 'group_message'; readonly workspaceId: string; readonly content: string };
 
 export interface RoutingDecision {
@@ -207,7 +217,12 @@ export type CEOCommand =
   | { readonly type: 'pause'; readonly workspaceId: string }
   | { readonly type: 'broadcast'; readonly message: string }
   | { readonly type: 'review'; readonly agentId: string }
-  | { readonly type: 'hire'; readonly platform: Platform; readonly workspace: string; readonly role: AgentRole }
+  | {
+      readonly type: 'hire';
+      readonly platform: Platform;
+      readonly workspace: string;
+      readonly role: AgentRole;
+    }
   | { readonly type: 'fire'; readonly agentId: string };
 
 // ─── Default Factories ─────────────────────────────────────────────
@@ -253,6 +268,7 @@ git commit -m "feat: add core type definitions for agent orchestration"
 ### Task 2: Extend database schema for agent messaging
 
 **Files:**
+
 - Modify: `src/db/schema.ts` (add tables after line 63)
 
 **Step 1: Write test for new tables**
@@ -277,37 +293,55 @@ describe('orchestrator schema', () => {
   });
 
   it('creates agent_messages table', () => {
-    const info = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_messages'").get();
+    const info = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_messages'")
+      .get();
     expect(info).toBeTruthy();
   });
 
   it('creates agent_conversations table', () => {
-    const info = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_conversations'").get();
+    const info = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_conversations'")
+      .get();
     expect(info).toBeTruthy();
   });
 
   it('creates agent_tasks table', () => {
-    const info = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_tasks'").get();
+    const info = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_tasks'")
+      .get();
     expect(info).toBeTruthy();
   });
 
   it('creates agent_memory table', () => {
-    const info = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_memory'").get();
+    const info = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_memory'")
+      .get();
     expect(info).toBeTruthy();
   });
 
   it('inserts and retrieves an agent message', () => {
-    db.prepare(`INSERT INTO agent_messages (id, conversation_id, source_node_id, sender_id, sender_is_ceo, platform, content, content_type)
-      VALUES ('m1', 'c1', 'node1', 'user1', 1, 'telegram', 'hello', 'text')`).run();
-    const row = db.prepare('SELECT * FROM agent_messages WHERE id = ?').get('m1') as Record<string, unknown>;
+    db.prepare(
+      `INSERT INTO agent_messages (id, conversation_id, source_node_id, sender_id, sender_is_ceo, platform, content, content_type)
+      VALUES ('m1', 'c1', 'node1', 'user1', 1, 'telegram', 'hello', 'text')`,
+    ).run();
+    const row = db.prepare('SELECT * FROM agent_messages WHERE id = ?').get('m1') as Record<
+      string,
+      unknown
+    >;
     expect(row['content']).toBe('hello');
     expect(row['sender_is_ceo']).toBe(1);
   });
 
   it('inserts and retrieves an agent task', () => {
-    db.prepare(`INSERT INTO agent_tasks (id, workspace_id, assigned_to, title, priority, status)
-      VALUES ('t1', 'ws1', 'node1', 'Fix billing', 'high', 'pending')`).run();
-    const row = db.prepare('SELECT * FROM agent_tasks WHERE id = ?').get('t1') as Record<string, unknown>;
+    db.prepare(
+      `INSERT INTO agent_tasks (id, workspace_id, assigned_to, title, priority, status)
+      VALUES ('t1', 'ws1', 'node1', 'Fix billing', 'high', 'pending')`,
+    ).run();
+    const row = db.prepare('SELECT * FROM agent_tasks WHERE id = ?').get('t1') as Record<
+      string,
+      unknown
+    >;
     expect(row['title']).toBe('Fix billing');
   });
 });
@@ -398,6 +432,7 @@ git commit -m "feat: add database schema for agent messaging and tasks"
 ### Task 3: Extend config schema with workspace and CEO identity
 
 **Files:**
+
 - Modify: `src/config/schema.ts`
 
 **Step 1: Write test**
@@ -506,6 +541,7 @@ git commit -m "feat: add CEO identity and orchestrator config schemas"
 ### Task 4: Extend Channel interface and create ChannelRegistry
 
 **Files:**
+
 - Modify: `src/channels/base.ts` (extend Channel interface)
 - Create: `src/channels/registry.ts`
 
@@ -677,6 +713,7 @@ git commit -m "feat: add ChannelRegistry and extend Channel interface with sendM
 ### Task 5: Circuit breaker
 
 **Files:**
+
 - Create: `src/orchestrator/circuit-breaker.ts`
 
 **Step 1: Write test**
@@ -791,6 +828,7 @@ git commit -m "feat: add circuit breaker for channel resilience"
 ### Task 6: Message queue with backpressure
 
 **Files:**
+
 - Create: `src/orchestrator/message-queue.ts`
 
 **Step 1: Write test**
@@ -923,11 +961,7 @@ export class MessageQueue {
   }
 
   private async drain(): Promise<void> {
-    while (
-      !this.stopped &&
-      this.queue.length > 0 &&
-      this.processing < this.options.maxConcurrent
-    ) {
+    while (!this.stopped && this.queue.length > 0 && this.processing < this.options.maxConcurrent) {
       const message = this.queue.shift();
       if (!message) break;
 
@@ -955,6 +989,7 @@ git commit -m "feat: add message queue with CEO priority and backpressure"
 ### Task 7: Edge rule evaluator
 
 **Files:**
+
 - Create: `src/orchestrator/routing.ts`
 
 **Step 1: Write test**
@@ -968,16 +1003,30 @@ import type { AgentNode, Edge, InboundMessage } from '../types.js';
 import { DEFAULT_GROUP_BEHAVIOR } from '../types.js';
 
 const baseNode: AgentNode = {
-  id: 'n1', platform: 'telegram', label: '@bot', photo: null,
-  position: { x: 0, y: 0 }, status: 'connected', credentials: 'key',
-  meta: {}, workspaceId: 'ws1', role: 'assistant', autonomy: 'supervised',
-  instructions: '', groupBehavior: DEFAULT_GROUP_BEHAVIOR,
+  id: 'n1',
+  platform: 'telegram',
+  label: '@bot',
+  photo: null,
+  position: { x: 0, y: 0 },
+  status: 'connected',
+  credentials: 'key',
+  meta: {},
+  workspaceId: 'ws1',
+  role: 'assistant',
+  autonomy: 'supervised',
+  instructions: '',
+  groupBehavior: DEFAULT_GROUP_BEHAVIOR,
 };
 
 const baseMessage: InboundMessage = {
-  sourceNodeId: 'n1', platform: 'telegram', senderId: 'u1',
-  senderIsCeo: false, groupId: null, content: 'hello billing issue',
-  contentType: 'text', timestamp: new Date().toISOString(),
+  sourceNodeId: 'n1',
+  platform: 'telegram',
+  senderId: 'u1',
+  senderIsCeo: false,
+  groupId: null,
+  content: 'hello billing issue',
+  contentType: 'text',
+  timestamp: new Date().toISOString(),
 };
 
 describe('evaluateEdgeRules', () => {
@@ -987,39 +1036,59 @@ describe('evaluateEdgeRules', () => {
   });
 
   it('triggers always-forward rule', () => {
-    const edges: Edge[] = [{
-      id: 'e1', from: 'n1', to: 'n2', edgeType: 'manual',
-      rules: [{ type: 'always', action: 'forward' }],
-    }];
+    const edges: Edge[] = [
+      {
+        id: 'e1',
+        from: 'n1',
+        to: 'n2',
+        edgeType: 'manual',
+        rules: [{ type: 'always', action: 'forward' }],
+      },
+    ];
     const actions = evaluateEdgeRules(baseNode, baseMessage, edges);
     expect(actions).toHaveLength(1);
     expect(actions[0]?.type).toBe('forward');
   });
 
   it('triggers keyword rule when content matches', () => {
-    const edges: Edge[] = [{
-      id: 'e1', from: 'n1', to: 'n2', edgeType: 'manual',
-      rules: [{ type: 'keyword', condition: 'billing', action: 'notify' }],
-    }];
+    const edges: Edge[] = [
+      {
+        id: 'e1',
+        from: 'n1',
+        to: 'n2',
+        edgeType: 'manual',
+        rules: [{ type: 'keyword', condition: 'billing', action: 'notify' }],
+      },
+    ];
     const actions = evaluateEdgeRules(baseNode, baseMessage, edges);
     expect(actions).toHaveLength(1);
     expect(actions[0]?.type).toBe('notify');
   });
 
   it('skips keyword rule when content does not match', () => {
-    const edges: Edge[] = [{
-      id: 'e1', from: 'n1', to: 'n2', edgeType: 'manual',
-      rules: [{ type: 'keyword', condition: 'shipping', action: 'notify' }],
-    }];
+    const edges: Edge[] = [
+      {
+        id: 'e1',
+        from: 'n1',
+        to: 'n2',
+        edgeType: 'manual',
+        rules: [{ type: 'keyword', condition: 'shipping', action: 'notify' }],
+      },
+    ];
     const actions = evaluateEdgeRules(baseNode, baseMessage, edges);
     expect(actions).toHaveLength(0);
   });
 
   it('skips llm_decided rules (handled separately)', () => {
-    const edges: Edge[] = [{
-      id: 'e1', from: 'n1', to: 'n2', edgeType: 'manual',
-      rules: [{ type: 'llm_decided', action: 'forward' }],
-    }];
+    const edges: Edge[] = [
+      {
+        id: 'e1',
+        from: 'n1',
+        to: 'n2',
+        edgeType: 'manual',
+        rules: [{ type: 'llm_decided', action: 'forward' }],
+      },
+    ];
     const actions = evaluateEdgeRules(baseNode, baseMessage, edges);
     expect(actions).toHaveLength(0);
   });
@@ -1096,6 +1165,7 @@ git commit -m "feat: add deterministic edge rule evaluator"
 ### Task 8: AgentOrchestrator core
 
 **Files:**
+
 - Create: `src/orchestrator/orchestrator.ts`
 
 **Step 1: Write test**
@@ -1112,18 +1182,37 @@ import { ChannelRegistry } from '../../channels/registry.js';
 function makeGraph(): CanvasGraph {
   return {
     ...createEmptyGraph(),
-    workspaces: [{
-      id: 'ws1', name: 'Support', color: '#ff0000', purpose: 'Handle support',
-      topics: ['support'], budget: { dailyLimitUsd: 5, preferCheap: true },
-      position: { x: 0, y: 0 }, size: { width: 400, height: 300 },
-      checkpoints: [], groups: [],
-    }],
-    nodes: [{
-      id: 'n1', platform: 'telegram', label: '@support_bot', photo: null,
-      position: { x: 0, y: 0 }, status: 'connected', credentials: 'key',
-      meta: {}, workspaceId: 'ws1', role: 'assistant', autonomy: 'supervised',
-      instructions: '', groupBehavior: DEFAULT_GROUP_BEHAVIOR,
-    }],
+    workspaces: [
+      {
+        id: 'ws1',
+        name: 'Support',
+        color: '#ff0000',
+        purpose: 'Handle support',
+        topics: ['support'],
+        budget: { dailyLimitUsd: 5, preferCheap: true },
+        position: { x: 0, y: 0 },
+        size: { width: 400, height: 300 },
+        checkpoints: [],
+        groups: [],
+      },
+    ],
+    nodes: [
+      {
+        id: 'n1',
+        platform: 'telegram',
+        label: '@support_bot',
+        photo: null,
+        position: { x: 0, y: 0 },
+        status: 'connected',
+        credentials: 'key',
+        meta: {},
+        workspaceId: 'ws1',
+        role: 'assistant',
+        autonomy: 'supervised',
+        instructions: '',
+        groupBehavior: DEFAULT_GROUP_BEHAVIOR,
+      },
+    ],
   };
 }
 
@@ -1168,8 +1257,13 @@ describe('AgentOrchestrator', () => {
 ```typescript
 // src/orchestrator/orchestrator.ts
 import type {
-  CanvasGraph, InboundMessage, RoutingAction, CEOIdentity,
-  Workspace, AgentNode, Platform,
+  CanvasGraph,
+  InboundMessage,
+  RoutingAction,
+  CEOIdentity,
+  Workspace,
+  AgentNode,
+  Platform,
 } from './types.js';
 import type { ChannelRegistry } from '../channels/registry.js';
 import { evaluateEdgeRules } from './routing.js';
@@ -1297,6 +1391,7 @@ git commit -m "feat: add AgentOrchestrator with edge rule routing and CEO detect
 ### Task 9: Canvas graph v2 migration in `desktop/src/main.ts`
 
 **Files:**
+
 - Modify: `desktop/src/main.ts` — update `CanvasGraph` interface and `readCanvasGraph()` to handle v1 → v2 migration
 
 **Step 1: Update interfaces (lines 921-942)**
@@ -1319,6 +1414,7 @@ git commit -m "feat: migrate canvas graph to v2 with workspaces and agent roles"
 ### Task 10: Workspace frames and agent detail panel in canvas UI
 
 **Files:**
+
 - Modify: `desktop/src/ui/canvas.html` — add workspace rendering, agent detail side panel, workspace creation
 - Modify: `desktop/src/ui/canvas.css` — workspace frame styles, agent detail panel styles
 
@@ -1331,6 +1427,7 @@ git commit -m "feat: migrate canvas graph to v2 with workspaces and agent roles"
 3. **Agent snap-to-workspace** — when dragging an agent card and releasing it inside a workspace frame, set `node.workspaceId = workspace.id`. Visual feedback: workspace frame highlights on hover during drag.
 
 4. **Agent detail panel** — click an agent card to open a side panel (right side, similar to add-agent panel):
+
    - Role selector (dropdown: lead, specialist, observer, bridge, assistant)
    - Autonomy slider (manual → approval → supervised → full)
    - Standing instructions (textarea)
@@ -1338,6 +1435,7 @@ git commit -m "feat: migrate canvas graph to v2 with workspaces and agent roles"
    - KPI display (placeholder for now)
 
 5. **Workspace detail panel** — click a workspace frame header to open detail panel:
+
    - Purpose editor (textarea)
    - Topics list (tag input)
    - Budget config (daily limit number input)
@@ -1348,6 +1446,7 @@ git commit -m "feat: migrate canvas graph to v2 with workspaces and agent roles"
 **Step 1: Add CSS for workspace frames and detail panel to `canvas.css`**
 
 Key classes:
+
 - `.workspace-frame` — positioned absolute, rounded rect, colored border, semi-transparent fill
 - `.workspace-header` — name + agent count at top of frame
 - `.workspace-frame.drop-target` — highlight state during drag
@@ -1375,12 +1474,14 @@ git commit -m "feat: add workspace frames and agent detail panel to canvas UI"
 ### Task 11: CEO command bar in canvas
 
 **Files:**
+
 - Modify: `desktop/src/ui/canvas.html`
 - Modify: `desktop/src/ui/canvas.css`
 
 **Step 1: Add command bar HTML**
 
 Fixed bottom bar with text input. Placeholder: "Type a command... (@agent, #workspace, or action)". Parses input:
+
 - `@agent_name message` → instruct specific agent
 - `#workspace_name message` → broadcast to workspace
 - `hire telegram lead in Support` → parsed as hire command
@@ -1414,11 +1515,13 @@ git commit -m "feat: add CEO command bar to canvas with @agent and #workspace ro
 ### Task 12: Refactor daemon-lifecycle for multi-channel orchestrator
 
 **Files:**
+
 - Modify: `src/daemon-lifecycle.ts`
 
 **Step 1: Replace single `telegram` field with `ChannelRegistry`**
 
 The `DaemonContext` interface changes:
+
 ```typescript
 export interface DaemonContext {
   readonly db: BetterSqlite3.Database;
@@ -1427,8 +1530,8 @@ export interface DaemonContext {
   readonly router: ModelRouter;
   readonly mcpClients: McpClientManager;
   readonly engine: ProactiveEngine;
-  readonly orchestrator: AgentOrchestrator;  // NEW
-  readonly registry: ChannelRegistry;        // NEW (replaces telegram)
+  readonly orchestrator: AgentOrchestrator; // NEW
+  readonly registry: ChannelRegistry; // NEW (replaces telegram)
   readonly mcpServer: McpServer;
   readonly refreshInterval: ReturnType<typeof setInterval>;
 }
@@ -1437,6 +1540,7 @@ export interface DaemonContext {
 **Step 2: Load canvas graph and create orchestrator**
 
 In `startDaemonContext()`:
+
 1. Read `~/.openwind/canvas.json` → parse as `CanvasGraph`
 2. Read `config.ceo` → build `CEOIdentity`
 3. Create `ChannelRegistry`
@@ -1460,6 +1564,7 @@ git commit -m "refactor: replace single telegram channel with multi-channel orch
 ### Task 13: Add `sendMessage` and `sendToGroup` to TelegramChannel
 
 **Files:**
+
 - Modify: `src/channels/telegram.ts`
 
 **Step 1: Implement `sendMessage()`**
@@ -1498,6 +1603,7 @@ git commit -m "feat: add sendMessage/sendToGroup to TelegramChannel and wire to 
 ### Task 14: Worker thread per workspace
 
 **Files:**
+
 - Create: `src/orchestrator/workspace-worker.ts`
 - Create: `src/orchestrator/worker-pool.ts`
 

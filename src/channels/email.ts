@@ -68,11 +68,7 @@ export class EmailChannel implements Channel {
       const status = await this.imapClient.status('INBOX', { uidNext: true });
       this.lastSeenUid = (status.uidNext ?? 1) - 1;
     } catch (error) {
-      audit.logAction(
-        'email:imap_connect_error',
-        { error: String(error) },
-        { success: false },
-      );
+      audit.logAction('email:imap_connect_error', { error: String(error) }, { success: false });
     }
 
     try {
@@ -85,11 +81,7 @@ export class EmailChannel implements Channel {
         connectionTimeout: SMTP_TIMEOUT_MS,
       }) as NodemailerTransport;
     } catch (error) {
-      audit.logAction(
-        'email:smtp_connect_error',
-        { error: String(error) },
-        { success: false },
-      );
+      audit.logAction('email:smtp_connect_error', { error: String(error) }, { success: false });
     }
 
     this.stopped = false;
@@ -193,11 +185,7 @@ export class EmailChannel implements Channel {
         lock.release();
       }
     } catch (error) {
-      audit.logAction(
-        'email:poll_error',
-        { error: String(error) },
-        { success: false },
-      );
+      audit.logAction('email:poll_error', { error: String(error) }, { success: false });
     }
   }
 
@@ -231,11 +219,7 @@ export class EmailChannel implements Channel {
         subject: email.subject,
       });
     } catch (error) {
-      audit.logAction(
-        'email:ingest_error',
-        { error: String(error) },
-        { success: false },
-      );
+      audit.logAction('email:ingest_error', { error: String(error) }, { success: false });
     }
 
     audit.logAction('email:message_received', {
@@ -277,11 +261,7 @@ export class EmailChannel implements Channel {
 
       audit.logAction('email:message_sent', { to, subject });
     } catch (error) {
-      audit.logAction(
-        'email:send_error',
-        { to, error: String(error) },
-        { success: false },
-      );
+      audit.logAction('email:send_error', { to, error: String(error) }, { success: false });
     }
   }
 }
@@ -309,11 +289,6 @@ interface ImapFlowClient {
 }
 
 interface NodemailerTransport {
-  sendMail(options: {
-    from: string;
-    to: string;
-    subject: string;
-    text: string;
-  }): Promise<unknown>;
+  sendMail(options: { from: string; to: string; subject: string; text: string }): Promise<unknown>;
   close(): void;
 }

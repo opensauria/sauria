@@ -23,8 +23,8 @@ interface Workspace {
   id: string;
   name: string;
   color: string;
-  purpose: string;                 // system prompt/charter for all agents
-  topics: string[];                // knowledge graph filter tags
+  purpose: string; // system prompt/charter for all agents
+  topics: string[]; // knowledge graph filter tags
   budget: {
     dailyLimitUsd: number;
     preferCheap: boolean;
@@ -69,23 +69,17 @@ interface AgentNode {
   workspaceId: string | null;
   role: AgentRole;
   autonomy: AutonomyLevel;
-  instructions: string;            // CEO standing orders
+  instructions: string; // CEO standing orders
   groupBehavior: GroupBehavior;
 }
 
-type AgentRole =
-  | 'lead'
-  | 'specialist'
-  | 'observer'
-  | 'bridge'
-  | 'assistant'
-  | string;
+type AgentRole = 'lead' | 'specialist' | 'observer' | 'bridge' | 'assistant' | string;
 
 type AutonomyLevel =
-  | 'full'           // act independently, report daily
-  | 'supervised'     // act, notify CEO in real-time
-  | 'approval'       // propose, wait for CEO approval
-  | 'manual';        // do nothing without CEO instruction
+  | 'full' // act independently, report daily
+  | 'supervised' // act, notify CEO in real-time
+  | 'approval' // propose, wait for CEO approval
+  | 'manual'; // do nothing without CEO instruction
 ```
 
 ### GroupBehavior
@@ -229,6 +223,7 @@ interface ModelTiers {
 ```
 
 Selection logic:
+
 - `route`, `classify`, `summarize`, `simple reply` -> local (free, 50-200ms)
 - `moderate reply`, `draft content` -> fast cloud (cheap, 1-2s)
 - `analyze`, `strategic decision`, `complex reasoning` -> deep cloud (expensive, 5-10s)
@@ -268,7 +263,7 @@ interface InboundMessage {
   platform: 'telegram' | 'slack' | 'whatsapp';
   senderId: string;
   senderIsCeo: boolean;
-  groupId: string | null;        // null = DM, string = group chat
+  groupId: string | null; // null = DM, string = group chat
   content: string;
   contentType: 'text' | 'voice' | 'image';
   timestamp: string;
@@ -293,7 +288,7 @@ type RoutingAction =
 
 ```typescript
 class ChannelRegistry {
-  private readonly channels: Map<string, Channel>;  // nodeId -> Channel
+  private readonly channels: Map<string, Channel>; // nodeId -> Channel
 
   register(nodeId: string, channel: Channel): void;
   unregister(nodeId: string): void;
@@ -320,6 +315,7 @@ type CEOCommand =
 ```
 
 CEO commands originate from:
+
 - Canvas UI (click, drag, context menu)
 - Group chats (type in a workspace group)
 - DMs (message a specific agent directly)
@@ -364,6 +360,7 @@ Visual rounded rectangles on the canvas. Agents snap into them. Draggable, resiz
 ### Agent Detail Panel
 
 Click an agent card to open a side panel:
+
 - Role selector
 - Autonomy level slider
 - Standing instructions (editable text)
@@ -374,6 +371,7 @@ Click an agent card to open a side panel:
 ### Workspace Detail Panel
 
 Click a workspace frame:
+
 - Purpose editor
 - Topics list
 - Budget configuration
@@ -385,6 +383,7 @@ Click a workspace frame:
 ### CEO Command Bar
 
 Quick-access command input at bottom of canvas (like Spotlight/Alfred):
+
 - `@agent_name instruction` -> direct instruction
 - `#workspace_name message` -> team broadcast
 - `hire telegram lead in Support` -> create new agent

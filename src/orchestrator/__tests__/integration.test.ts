@@ -24,31 +24,61 @@ function mockChannel(name: string): Channel {
 function makeGraph(): CanvasGraph {
   return {
     ...createEmptyGraph(),
-    workspaces: [{
-      id: 'ws1', name: 'Support', color: '#ff0000', purpose: 'Handle support',
-      topics: ['support'], budget: { dailyLimitUsd: 5, preferCheap: true },
-      position: { x: 0, y: 0 }, size: { width: 400, height: 300 },
-      checkpoints: [], groups: [],
-    }],
-    nodes: [
+    workspaces: [
       {
-        id: 'n1', platform: 'telegram', label: 'bot-alpha', photo: null,
-        position: { x: 0, y: 0 }, status: 'connected', credentials: 'key1',
-        meta: {}, workspaceId: 'ws1', role: 'assistant', autonomy: 'supervised',
-        instructions: '', groupBehavior: DEFAULT_GROUP_BEHAVIOR,
-      },
-      {
-        id: 'n2', platform: 'slack', label: 'bot-beta', photo: null,
-        position: { x: 100, y: 0 }, status: 'connected', credentials: 'key2',
-        meta: {}, workspaceId: 'ws1', role: 'specialist', autonomy: 'full',
-        instructions: '', groupBehavior: DEFAULT_GROUP_BEHAVIOR,
+        id: 'ws1',
+        name: 'Support',
+        color: '#ff0000',
+        purpose: 'Handle support',
+        topics: ['support'],
+        budget: { dailyLimitUsd: 5, preferCheap: true },
+        position: { x: 0, y: 0 },
+        size: { width: 400, height: 300 },
+        checkpoints: [],
+        groups: [],
       },
     ],
-    edges: [{
-      id: 'e1', from: 'n1', to: 'n2',
-      edgeType: 'intra_workspace',
-      rules: [{ type: 'always', action: 'forward' }],
-    }],
+    nodes: [
+      {
+        id: 'n1',
+        platform: 'telegram',
+        label: 'bot-alpha',
+        photo: null,
+        position: { x: 0, y: 0 },
+        status: 'connected',
+        credentials: 'key1',
+        meta: {},
+        workspaceId: 'ws1',
+        role: 'assistant',
+        autonomy: 'supervised',
+        instructions: '',
+        groupBehavior: DEFAULT_GROUP_BEHAVIOR,
+      },
+      {
+        id: 'n2',
+        platform: 'slack',
+        label: 'bot-beta',
+        photo: null,
+        position: { x: 100, y: 0 },
+        status: 'connected',
+        credentials: 'key2',
+        meta: {},
+        workspaceId: 'ws1',
+        role: 'specialist',
+        autonomy: 'full',
+        instructions: '',
+        groupBehavior: DEFAULT_GROUP_BEHAVIOR,
+      },
+    ],
+    edges: [
+      {
+        id: 'e1',
+        from: 'n1',
+        to: 'n2',
+        edgeType: 'intra_workspace',
+        rules: [{ type: 'always', action: 'forward' }],
+      },
+    ],
   };
 }
 
@@ -137,9 +167,7 @@ describe('Orchestrator Integration', () => {
     });
 
     // Non-CEO message should trigger approval
-    await approvalOrchestrator.handleInbound(
-      makeMessage({ senderIsCeo: false, senderId: '999' }),
-    );
+    await approvalOrchestrator.handleInbound(makeMessage({ senderIsCeo: false, senderId: '999' }));
 
     const pending = checkpointManager.getPending();
     expect(pending.length).toBeGreaterThan(0);
@@ -153,10 +181,7 @@ describe('Orchestrator Integration', () => {
 
     const tasks = db.prepare('SELECT * FROM agent_tasks').all();
     expect(tasks.length).toBe(1);
-    expect(ch2.sendMessage).toHaveBeenCalledWith(
-      expect.stringContaining('[Task] Review PR'),
-      null,
-    );
+    expect(ch2.sendMessage).toHaveBeenCalledWith(expect.stringContaining('[Task] Review PR'), null);
   });
 
   it('handles learn action — stores fact in memory', async () => {
@@ -170,7 +195,11 @@ describe('Orchestrator Integration', () => {
   });
 
   it('CEO instruct command sends to target agent', async () => {
-    const command: CEOCommand = { type: 'instruct', agentId: 'bot-alpha', instruction: 'Deploy now' };
+    const command: CEOCommand = {
+      type: 'instruct',
+      agentId: 'bot-alpha',
+      instruction: 'Deploy now',
+    };
     await orchestrator.handleCeoCommand(command);
     expect(ch1.sendMessage).toHaveBeenCalledWith('Deploy now', null);
   });
@@ -200,17 +229,13 @@ describe('Orchestrator Integration', () => {
     await orchestrator.handleCeoCommand(command);
 
     // Review is sent to CEO's telegram channel (n1)
-    expect(ch1.sendMessage).toHaveBeenCalledWith(
-      expect.stringContaining('[Review]'),
-      null,
-    );
+    expect(ch1.sendMessage).toHaveBeenCalledWith(expect.stringContaining('[Review]'), null);
   });
 
   it('executes approved actions after approval', async () => {
-    const approvalId = checkpointManager.queueForApproval(
-      'n1', 'ws1', 'Test approval',
-      [{ type: 'forward', targetNodeId: 'n2', content: 'approved content' }],
-    );
+    const approvalId = checkpointManager.queueForApproval('n1', 'ws1', 'Test approval', [
+      { type: 'forward', targetNodeId: 'n2', content: 'approved content' },
+    ]);
 
     const actions = checkpointManager.approve(approvalId);
     const executed = await orchestrator.executeApprovedActions('n1', actions);

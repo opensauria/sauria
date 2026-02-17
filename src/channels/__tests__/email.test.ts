@@ -35,9 +35,7 @@ vi.mock('imapflow', () => ({
           subject: 'Test Subject',
           date: new Date('2024-01-01T00:00:00Z'),
         },
-        source: Buffer.from(
-          'From: sender@example.com\r\nSubject: Test\r\n\r\nHello from email',
-        ),
+        source: Buffer.from('From: sender@example.com\r\nSubject: Test\r\n\r\nHello from email'),
       };
     }),
   })),

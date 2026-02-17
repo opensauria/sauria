@@ -23,23 +23,13 @@ describe('CheckpointManager', () => {
 
   describe('queueForApproval', () => {
     it('returns a non-empty id', () => {
-      const id = manager.queueForApproval(
-        'agent1',
-        'ws1',
-        'Forward to billing',
-        sampleActions,
-      );
+      const id = manager.queueForApproval('agent1', 'ws1', 'Forward to billing', sampleActions);
       expect(id).toBeTruthy();
       expect(typeof id).toBe('string');
     });
 
     it('creates a pending approval retrievable by getPending', () => {
-      manager.queueForApproval(
-        'agent1',
-        'ws1',
-        'Forward to billing',
-        sampleActions,
-      );
+      manager.queueForApproval('agent1', 'ws1', 'Forward to billing', sampleActions);
 
       const pending = manager.getPending();
       expect(pending).toHaveLength(1);
@@ -57,12 +47,7 @@ describe('CheckpointManager', () => {
     });
 
     it('only returns pending approvals', () => {
-      const id1 = manager.queueForApproval(
-        'a1',
-        'ws1',
-        'action 1',
-        sampleActions,
-      );
+      const id1 = manager.queueForApproval('a1', 'ws1', 'action 1', sampleActions);
       manager.queueForApproval('a2', 'ws1', 'action 2', sampleActions);
 
       manager.approve(id1);
@@ -87,24 +72,14 @@ describe('CheckpointManager', () => {
 
   describe('approve', () => {
     it('returns the queued actions', () => {
-      const id = manager.queueForApproval(
-        'a1',
-        'ws1',
-        'forward msg',
-        sampleActions,
-      );
+      const id = manager.queueForApproval('a1', 'ws1', 'forward msg', sampleActions);
 
       const actions = manager.approve(id);
       expect(actions).toEqual(sampleActions);
     });
 
     it('marks the approval as approved', () => {
-      const id = manager.queueForApproval(
-        'a1',
-        'ws1',
-        'forward msg',
-        sampleActions,
-      );
+      const id = manager.queueForApproval('a1', 'ws1', 'forward msg', sampleActions);
 
       manager.approve(id);
 
@@ -113,30 +88,18 @@ describe('CheckpointManager', () => {
     });
 
     it('throws when approval not found', () => {
-      expect(() => manager.approve('nonexistent')).toThrow(
-        'Approval nonexistent not found',
-      );
+      expect(() => manager.approve('nonexistent')).toThrow('Approval nonexistent not found');
     });
 
     it('throws when approving an already approved item', () => {
-      const id = manager.queueForApproval(
-        'a1',
-        'ws1',
-        'action',
-        sampleActions,
-      );
+      const id = manager.queueForApproval('a1', 'ws1', 'action', sampleActions);
       manager.approve(id);
 
       expect(() => manager.approve(id)).toThrow('already approved');
     });
 
     it('throws when approving a rejected item', () => {
-      const id = manager.queueForApproval(
-        'a1',
-        'ws1',
-        'action',
-        sampleActions,
-      );
+      const id = manager.queueForApproval('a1', 'ws1', 'action', sampleActions);
       manager.reject(id);
 
       expect(() => manager.approve(id)).toThrow('already rejected');
@@ -145,12 +108,7 @@ describe('CheckpointManager', () => {
 
   describe('reject', () => {
     it('marks the approval as rejected', () => {
-      const id = manager.queueForApproval(
-        'a1',
-        'ws1',
-        'forward msg',
-        sampleActions,
-      );
+      const id = manager.queueForApproval('a1', 'ws1', 'forward msg', sampleActions);
 
       manager.reject(id);
 
@@ -159,18 +117,11 @@ describe('CheckpointManager', () => {
     });
 
     it('throws when approval not found', () => {
-      expect(() => manager.reject('nonexistent')).toThrow(
-        'Approval nonexistent not found',
-      );
+      expect(() => manager.reject('nonexistent')).toThrow('Approval nonexistent not found');
     });
 
     it('throws when rejecting an already rejected item', () => {
-      const id = manager.queueForApproval(
-        'a1',
-        'ws1',
-        'action',
-        sampleActions,
-      );
+      const id = manager.queueForApproval('a1', 'ws1', 'action', sampleActions);
       manager.reject(id);
 
       expect(() => manager.reject(id)).toThrow('already rejected');
@@ -191,18 +142,8 @@ describe('CheckpointManager', () => {
     });
 
     it('decrements when approvals are resolved', () => {
-      const id1 = manager.queueForApproval(
-        'a1',
-        'ws1',
-        'action 1',
-        sampleActions,
-      );
-      const id2 = manager.queueForApproval(
-        'a2',
-        'ws1',
-        'action 2',
-        sampleActions,
-      );
+      const id1 = manager.queueForApproval('a1', 'ws1', 'action 1', sampleActions);
+      const id2 = manager.queueForApproval('a2', 'ws1', 'action 2', sampleActions);
       manager.queueForApproval('a3', 'ws1', 'action 3', sampleActions);
 
       manager.approve(id1);

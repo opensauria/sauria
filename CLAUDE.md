@@ -77,6 +77,7 @@ desktop/
 ## Key Conventions
 
 ### TypeScript
+
 - Strict mode, no `any`, no `as` casting unless unavoidable
 - All imports use `.js` extension (ESM)
 - `readonly` on all interface properties and constructor deps
@@ -85,6 +86,7 @@ desktop/
 - Max 200 lines per file
 
 ### Naming
+
 - Files: `kebab-case.ts`
 - Classes: `PascalCase`
 - Functions/variables: `camelCase`
@@ -93,12 +95,14 @@ desktop/
 - Event handlers: `handle` prefix
 
 ### Error Handling
+
 - Never swallow errors silently
 - Audit logger for all channel and security events
 - `{ success: false }` pattern in audit for failures
 - Rate limiters on all inbound channels
 
 ### Security
+
 - All user input goes through `sanitizeChannelInput()` before processing
 - Vault secrets encrypted with AES-256-GCM, PBKDF2 key derivation
 - URL allowlist for external fetches (`secureFetch`)
@@ -107,18 +111,21 @@ desktop/
 - No secrets in code, all from vault
 
 ### Database
+
 - SQLite with `better-sqlite3` (synchronous reads, async-wrapped writes)
 - Schema applied on startup via `applySchema(db)`
 - Tables: `entities`, `relations`, `events`, `observations`, `agent_messages`, `agent_conversations`, `agent_memory`, `agent_tasks`
 - FTS5 for full-text search, vector embeddings for semantic search
 
 ### Channels
+
 - All channels implement the `Channel` interface from `channels/base.ts`
 - Each channel has: `start()`, `stop()`, `sendAlert()`, `sendMessage()`, `sendToGroup()`
 - Channels with orchestrator integration have `onInbound` callback in deps
 - Per-node vault keys: `channel_token_<nodeId>` alongside legacy global keys
 
 ### Orchestrator
+
 - `CanvasGraph` (v2) is the source of truth: nodes, edges, workspaces
 - Graph stored at `~/.openwind/canvas.json`, read by daemon on startup
 - `MessageQueue` provides CEO priority (unshift) and backpressure
@@ -129,6 +136,7 @@ desktop/
 ## Desktop UI Design
 
 ### Design Tokens (shared.css)
+
 ```
 --bg: #1a1a1a          --surface: rgba(255,255,255,0.04)
 --border: rgba(255,255,255,0.08)  --text: #ececec
@@ -139,22 +147,26 @@ desktop/
 ```
 
 ### Spacing
+
 - 8px grid: all spacing multiples of 8 (8, 16, 24, 32, 40, 48...)
 - 4px for micro-spacing (icon gaps, tight elements)
 - 2px for borders only
 
 ### Corner Radius
+
 - Outer radius = inner radius + padding
 - Cards: 12px radius, inner elements: 8px
 - Buttons: 8px radius
 - Badges: 5px radius
 
 ### Typography
+
 - System font stack: `-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif`
 - Monospace: `Geist Mono` (canvas)
 - Base: 14px, small: 11-12px, labels: 13px
 
 ### Canvas Specifics
+
 - Dark theme only, glass morphism (`rgba` backgrounds with blur)
 - Agent cards: 120px wide, portrait style with photo circle
 - Spring physics animation (rAF-based, not CSS transitions)
@@ -164,18 +176,21 @@ desktop/
 - Dot grid background: 32px spacing
 
 ### Icons
+
 - Brand icons: `simple-icons` npm package (telegram, discord, whatsapp, gmail)
 - UI icons: `lucide-static` npm package (settings, zoom-in, zoom-out, etc.)
 - Lucide icons need `filter: brightness(0) invert()` (stroke="currentColor" as img)
 - Brand icons have baked-in fill colors
 
 ### Components
+
 - `.btn` base + `.btn-primary` / `.btn-secondary` variants
 - `.badge` + `.badge-accent` / `.badge-success` / `.badge-dim`
 - `.spinner` for loading states (24px, accent border-top)
 - Transitions: 0.15s ease for interactions
 
 ## Git Rules
+
 - Conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`
 - Branch naming: `feat/description`, `fix/description`
 - Never commit to main directly
@@ -184,6 +199,7 @@ desktop/
 - Commit message: imperative mood, max 72 chars subject, body if needed
 
 ## Daemon Lifecycle
+
 - `startDaemonContext()` creates everything, returns `DaemonContext`
 - `stopDaemonContext()` tears down in reverse order
 - Canvas graph loaded on startup, file watcher reloads on change
@@ -191,6 +207,7 @@ desktop/
 - Orchestrator only created when canvas has connected nodes
 
 ## Electron Build
+
 - `assets/icon.icns` is missing, so `electron-forge make` fails
 - Use `npm run icons && npx tsc && rm -rf dist/ui && cp -r src/ui dist/ui && npx electron-forge start`
 - Always kill all Electron processes before restart (see memory notes)
