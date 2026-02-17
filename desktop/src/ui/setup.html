@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'"
+    />
+    <title>OpenWind</title>
+    <link rel="stylesheet" href="shared.css" />
+    <style>
+      body {
+        -webkit-app-region: drag;
+      }
+
+      .container {
+        padding: 48px 40px 40px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        -webkit-app-region: no-drag;
+      }
+
+      /* Steps */
+
+      .step {
+        display: none;
+        flex-direction: column;
+        flex: 1;
+        animation: fadeIn 0.3s ease;
+      }
+
+      .step.active {
+        display: flex;
+      }
+
+      /* Typography */
+
+      h1 {
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+        margin-bottom: 8px;
+      }
+
+      .subtitle {
+        color: var(--text-secondary);
+        font-size: 15px;
+        line-height: 1.5;
+        margin-bottom: 32px;
+      }
+
+      .brand {
+        color: var(--text-dim);
+        font-size: 13px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 24px;
+      }
+
+      /* Cards */
+
+      .cards {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 1;
+      }
+
+      .card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .card:hover {
+        background: var(--surface-hover);
+        border-color: var(--border-active);
+      }
+
+      .card.selected {
+        border-color: var(--accent);
+        background: rgba(59, 130, 246, 0.08);
+      }
+
+      .card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-sm);
+        background: var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+
+      .card-info h3 {
+        font-size: 15px;
+        font-weight: 500;
+        margin-bottom: 2px;
+      }
+
+      .card-info span {
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
+
+      /* Input */
+
+      .input-group {
+        margin-bottom: 24px;
+      }
+
+      .input-group label {
+        display: block;
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 12px 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--text);
+        font-size: 14px;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+
+      .input-group input:focus {
+        border-color: var(--accent);
+      }
+
+      .input-group input::placeholder {
+        color: var(--text-dim);
+      }
+
+      .input-hint {
+        font-size: 12px;
+        color: var(--text-dim);
+        margin-top: 8px;
+      }
+
+      .input-hint a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      /* Buttons */
+
+      .actions {
+        margin-top: auto;
+        display: flex;
+        gap: 8px;
+        padding-top: 24px;
+      }
+
+      /* Progress */
+
+      .progress-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        flex: 1;
+      }
+
+      .progress-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+        color: var(--text-secondary);
+      }
+
+      .progress-item.done {
+        color: var(--text);
+      }
+
+      .progress-dot {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 2px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 12px;
+        transition: all 0.3s ease;
+      }
+
+      .progress-item.done .progress-dot {
+        background: var(--success);
+        border-color: var(--success);
+        color: white;
+      }
+
+      .progress-item.active .progress-dot {
+        border-color: var(--accent);
+      }
+
+      /* Success */
+
+      .success-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: rgba(34, 197, 94, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        margin-bottom: 24px;
+      }
+
+      .client-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .client-list li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--text-secondary);
+        padding: 8px 12px;
+        background: var(--surface);
+        border-radius: var(--radius-sm);
+      }
+
+      .client-list li .check {
+        color: var(--success);
+      }
+
+      /* OAuth URL box */
+
+      .oauth-url-box {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 16px;
+        margin-bottom: 24px;
+        word-break: break-all;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 12px;
+        color: var(--text-dim);
+        line-height: 1.6;
+        max-height: 80px;
+        overflow-y: auto;
+      }
+
+      /* Scan status */
+
+      .scan-status {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        flex: 1;
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
+
+      /* Error */
+
+      .error-msg {
+        color: var(--error);
+        font-size: 13px;
+        margin-top: 8px;
+        display: none;
+      }
+
+      .error-msg.visible {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Step 1: Welcome -->
+      <div class="step active" id="step-welcome">
+        <div class="brand">OpenWind</div>
+        <h1>Your world, always with you.</h1>
+        <p class="subtitle">
+          OpenWind connects to your AI tools and makes them smarter. It builds a
+          private knowledge graph from your data and shares context with Claude
+          Desktop, Cursor, and more.
+        </p>
+        <p class="subtitle">Setup takes about 30 seconds.</p>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="goTo('step-mode')">
+            Get started
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Connection Mode -->
+      <div class="step" id="step-mode">
+        <h1>How do you want to connect?</h1>
+        <p class="subtitle">
+          OpenWind uses AI to understand your world. Choose how to connect.
+        </p>
+        <div class="cards">
+          <div
+            class="card"
+            data-mode="claude_desktop"
+            onclick="selectMode(this)"
+          >
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M16.98 7.35l-4.17 8.33a.94.94 0 01-1.68 0L7.02 7.35A.94.94 0 017.86 6h8.28a.94.94 0 01.84 1.35z" fill="#D97757"/></svg>
+            </div>
+            <div class="card-info">
+              <h3>I use Claude Desktop</h3>
+              <span>Pro / Max &mdash; no API key needed</span>
+            </div>
+            <span class="badge badge-accent">Recommended</span>
+          </div>
+          <div class="card" data-mode="api_key" onclick="selectMode(this)">
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 0h10.5c.69 0 1.25.56 1.25 1.25v7.5c0 .69-.56 1.25-1.25 1.25H6.75c-.69 0-1.25-.56-1.25-1.25v-7.5c0-.69.56-1.25 1.25-1.25z" stroke="#a1a1a1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="card-info">
+              <h3>I have an API key</h3>
+              <span>Anthropic, OpenAI, Google</span>
+            </div>
+          </div>
+          <div class="card" data-mode="local" onclick="selectMode(this)">
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3v-3a3 3 0 013-3h13.5a3 3 0 013 3v3a3 3 0 01-3 3m-13.5 0v3a3 3 0 003 3h7.5a3 3 0 003-3v-3m-12 0h.008v.008H6.75V14.25zm9 0h.008v.008h-.008V14.25z" stroke="#a1a1a1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="card-info">
+              <h3>I run models locally</h3>
+              <span>Ollama, LM Studio, Open WebUI</span>
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="goTo('step-welcome')">
+            Back
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btn-mode-next"
+            disabled
+            onclick="goToModeStep()"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3a: Claude Desktop -->
+      <div class="step" id="step-claude-desktop">
+        <h1>Connect to Claude Desktop</h1>
+        <p class="subtitle">
+          OpenWind will register itself in Claude Desktop. Your subscription
+          handles the AI &mdash; OpenWind provides the memory.
+        </p>
+        <div class="cards" id="claude-clients"></div>
+        <p class="error-msg" id="claude-error" style="margin-top: 16px"></p>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="goTo('step-mode')">
+            Back
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btn-claude-next"
+            onclick="configureClaudeDesktop()"
+          >
+            Connect
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3b: Provider Selection (API key path) -->
+      <div class="step" id="step-provider">
+        <h1>Choose your provider</h1>
+        <p class="subtitle">Which AI provider do you have an API key for?</p>
+        <div class="cards">
+          <div
+            class="card"
+            data-provider="anthropic"
+            onclick="selectProvider(this)"
+          >
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M16.98 7.35l-4.17 8.33a.94.94 0 01-1.68 0L7.02 7.35A.94.94 0 017.86 6h8.28a.94.94 0 01.84 1.35z" fill="#D97757"/></svg>
+            </div>
+            <div class="card-info">
+              <h3>Anthropic</h3>
+              <span>Claude Sonnet, Opus</span>
+            </div>
+            <span class="badge badge-accent">Recommended</span>
+          </div>
+          <div
+            class="card"
+            data-provider="openai"
+            onclick="selectProvider(this)"
+          >
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22.28 9.37a5.93 5.93 0 00-.51-4.88 6.01 6.01 0 00-6.47-2.9A5.95 5.95 0 0010.82.01a6.01 6.01 0 00-5.73 4.15 5.95 5.95 0 00-3.97 2.88 6.01 6.01 0 00.74 7.04 5.93 5.93 0 00.51 4.88 6.01 6.01 0 006.47 2.9A5.95 5.95 0 0013.31 24a6.01 6.01 0 005.73-4.15 5.95 5.95 0 003.97-2.88 6.01 6.01 0 00-.74-7.04z" fill="#10A37F"/></svg>
+            </div>
+            <div class="card-info">
+              <h3>OpenAI</h3>
+              <span>GPT-4o, o1</span>
+            </div>
+          </div>
+          <div
+            class="card"
+            data-provider="google"
+            onclick="selectProvider(this)"
+          >
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 001 12c0 1.77.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            </div>
+            <div class="card-info">
+              <h3>Google</h3>
+              <span>Gemini 2.5 Flash, Pro</span>
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="goTo('step-mode')">
+            Back
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btn-provider-next"
+            disabled
+            onclick="goToAuth()"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3c: Local Providers -->
+      <div class="step" id="step-local">
+        <h1>Local AI providers</h1>
+        <p class="subtitle" id="local-subtitle">
+          Scanning your machine for running AI providers...
+        </p>
+        <div id="local-scanning" class="scan-status">
+          <div class="spinner"></div>
+          <p>Looking for Ollama, LM Studio, Open WebUI...</p>
+        </div>
+        <div class="cards" id="local-results" style="display: none"></div>
+        <div class="cards" id="local-manual" style="display: none">
+          <div
+            class="card"
+            data-provider="ollama"
+            data-url="http://localhost:11434"
+            onclick="selectLocalProvider(this)"
+          >
+            <div class="card-icon">O</div>
+            <div class="card-info">
+              <h3>Ollama</h3>
+              <span>localhost:11434</span>
+            </div>
+          </div>
+          <div
+            class="card"
+            data-provider="lm-studio"
+            data-url="http://localhost:1234"
+            onclick="selectLocalProvider(this)"
+          >
+            <div class="card-icon">L</div>
+            <div class="card-info">
+              <h3>LM Studio</h3>
+              <span>localhost:1234</span>
+            </div>
+          </div>
+          <div
+            class="card"
+            data-provider="open-webui"
+            data-url="http://localhost:3000"
+            onclick="selectLocalProvider(this)"
+          >
+            <div class="card-icon">W</div>
+            <div class="card-info">
+              <h3>Open WebUI</h3>
+              <span>localhost:3000</span>
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="goTo('step-mode')">
+            Back
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btn-local-next"
+            disabled
+            onclick="configureLocal()"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 4: API Key (API key path only) -->
+      <div class="step" id="step-auth">
+        <h1 id="auth-title">Enter your API key</h1>
+        <p class="subtitle" id="auth-subtitle">
+          Your key is stored locally in an encrypted vault. It never leaves your
+          machine.
+        </p>
+        <div class="input-group">
+          <label for="api-key">API Key</label>
+          <input
+            type="password"
+            id="api-key"
+            placeholder="sk-..."
+            oninput="onKeyInput()"
+          />
+          <p class="input-hint" id="auth-hint">
+            Get your key from
+            <a href="#" id="auth-link" onclick="openProviderConsole()">
+              the provider console
+            </a>
+          </p>
+          <p class="error-msg" id="auth-error"></p>
+        </div>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="goTo('step-provider')">
+            Back
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btn-auth-next"
+            disabled
+            onclick="validateAndConfigure()"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 5: Configuring -->
+      <div class="step" id="step-configuring">
+        <h1>Setting everything up</h1>
+        <p class="subtitle">This only takes a moment.</p>
+        <ul class="progress-list" id="progress-list">
+          <li class="progress-item active" id="p-verify">
+            <div class="spinner"></div>
+            <span>Verifying connection</span>
+          </li>
+          <li class="progress-item" id="p-store">
+            <div class="progress-dot"></div>
+            <span>Securing credentials</span>
+          </li>
+          <li class="progress-item" id="p-config">
+            <div class="progress-dot"></div>
+            <span>Writing configuration</span>
+          </li>
+          <li class="progress-item" id="p-clients">
+            <div class="progress-dot"></div>
+            <span>Connecting AI clients</span>
+          </li>
+          <li class="progress-item" id="p-finish">
+            <div class="progress-dot"></div>
+            <span>Starting background service</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Step 6: Done -->
+      <div class="step" id="step-done">
+        <div class="success-icon">&#10003;</div>
+        <h1>OpenWind is ready</h1>
+        <p class="subtitle">
+          Restart your AI client and start chatting. OpenWind will share your
+          world context automatically.
+        </p>
+        <ul class="client-list" id="client-list"></ul>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="window.openwind.finish()">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let selectedMode = null;
+      let selectedProvider = null;
+      let selectedLocalUrl = '';
+
+      /* ── Navigation ──────────────────────────────── */
+
+      function goTo(stepId) {
+        document
+          .querySelectorAll('.step')
+          .forEach((s) => s.classList.remove('active'));
+        document.getElementById(stepId).classList.add('active');
+      }
+
+      /* ── Step 2: Connection Mode ─────────────────── */
+
+      function selectMode(card) {
+        document
+          .querySelectorAll('#step-mode .card')
+          .forEach((c) => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedMode = card.dataset.mode;
+        document.getElementById('btn-mode-next').disabled = false;
+      }
+
+      function goToModeStep() {
+        if (selectedMode === 'claude_desktop') {
+          detectClaudeDesktopClients();
+        } else if (selectedMode === 'api_key') {
+          goTo('step-provider');
+        } else if (selectedMode === 'local') {
+          scanLocalProviders();
+        }
+      }
+
+      /* ── Step 3a: Claude Desktop (MCP-only) ──────── */
+
+      async function detectClaudeDesktopClients() {
+        goTo('step-claude-desktop');
+        var container = document.getElementById('claude-clients');
+        container.innerHTML = '<div class="scan-status"><div class="spinner"></div><p>Detecting AI clients...</p></div>';
+        document.getElementById('btn-claude-next').disabled = true;
+        document.getElementById('claude-error').classList.remove('visible');
+
+        var clients = await window.openwind.detectClients();
+        var detected = clients.filter(function (c) { return c.detected; });
+
+        if (detected.length > 0) {
+          container.innerHTML = detected.map(function (c) {
+            return '<div class="card selected">' +
+              '<div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M16.98 7.35l-4.17 8.33a.94.94 0 01-1.68 0L7.02 7.35A.94.94 0 017.86 6h8.28a.94.94 0 01.84 1.35z" fill="#D97757"/></svg></div>' +
+              '<div class="card-info"><h3>' + c.name + '</h3><span>Will be configured automatically</span></div>' +
+              '<span class="badge badge-success">Detected</span>' +
+              '</div>';
+          }).join('');
+          document.getElementById('btn-claude-next').disabled = false;
+        } else {
+          container.innerHTML = '<div class="card">' +
+            '<div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M16.98 7.35l-4.17 8.33a.94.94 0 01-1.68 0L7.02 7.35A.94.94 0 017.86 6h8.28a.94.94 0 01.84 1.35z" fill="#D97757"/></svg></div>' +
+            '<div class="card-info"><h3>No AI client detected</h3><span>Install Claude Desktop, Cursor, or Windsurf first</span></div>' +
+            '<span class="badge badge-dim">Not found</span>' +
+            '</div>';
+          var errEl = document.getElementById('claude-error');
+          errEl.textContent = 'Install an MCP-compatible AI client and try again.';
+          errEl.classList.add('visible');
+        }
+      }
+
+      async function configureClaudeDesktop() {
+        selectedProvider = 'anthropic';
+        goTo('step-configuring');
+        await runConfiguration('anthropic', '', 'claude_desktop');
+      }
+
+      /* ── Step 3b: Provider Selection ─────────────── */
+
+      function selectProvider(card) {
+        document
+          .querySelectorAll('#step-provider .card')
+          .forEach((c) => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedProvider = card.dataset.provider;
+        document.getElementById('btn-provider-next').disabled = false;
+      }
+
+      function goToAuth() {
+        var titles = {
+          anthropic: 'Enter your Anthropic API key',
+          openai: 'Enter your OpenAI API key',
+          google: 'Enter your Google AI API key',
+        };
+
+        var hints = {
+          anthropic: 'console.anthropic.com',
+          openai: 'platform.openai.com/api-keys',
+          google: 'aistudio.google.com/apikey',
+        };
+
+        var placeholders = {
+          anthropic: 'sk-ant-...',
+          openai: 'sk-...',
+          google: 'AI...',
+        };
+
+        document.getElementById('auth-title').textContent =
+          titles[selectedProvider] || 'Enter your API key';
+        document.getElementById('auth-hint').innerHTML =
+          'Get your key from <a href="#" onclick="openProviderConsole()">' +
+          (hints[selectedProvider] || 'the provider console') +
+          '</a>';
+        document.getElementById('api-key').placeholder =
+          placeholders[selectedProvider] || 'sk-...';
+        document.getElementById('api-key').value = '';
+        document.getElementById('auth-error').classList.remove('visible');
+        document.getElementById('btn-auth-next').disabled = true;
+
+        goTo('step-auth');
+      }
+
+      function openProviderConsole() {
+        var urls = {
+          anthropic: 'https://console.anthropic.com/settings/keys',
+          openai: 'https://platform.openai.com/api-keys',
+          google: 'https://aistudio.google.com/apikey',
+        };
+        var url = urls[selectedProvider];
+        if (url) window.openwind.openExternal(url);
+      }
+
+      function onKeyInput() {
+        var key = document.getElementById('api-key').value.trim();
+        document.getElementById('btn-auth-next').disabled = key.length < 8;
+        document.getElementById('auth-error').classList.remove('visible');
+      }
+
+      /* ── Step 3c: Local Providers ────────────────── */
+
+      async function scanLocalProviders() {
+        goTo('step-local');
+        document.getElementById('local-scanning').style.display = 'flex';
+        document.getElementById('local-results').style.display = 'none';
+        document.getElementById('local-manual').style.display = 'none';
+        document.getElementById('btn-local-next').disabled = true;
+        document.getElementById('local-subtitle').textContent =
+          'Scanning your machine for running AI providers...';
+
+        var providers = await window.openwind.detectLocalProviders();
+        var running = providers.filter(function (p) {
+          return p.running;
+        });
+
+        document.getElementById('local-scanning').style.display = 'none';
+
+        if (running.length > 0) {
+          document.getElementById('local-subtitle').textContent =
+            'Found ' +
+            running.length +
+            ' running provider' +
+            (running.length > 1 ? 's' : '') +
+            '.';
+
+          var container = document.getElementById('local-results');
+          container.innerHTML = running
+            .map(function (p) {
+              var key = p.name.toLowerCase().replace(/\s+/g, '-');
+              return (
+                '<div class="card" data-provider="' +
+                key +
+                '" data-url="' +
+                p.baseUrl +
+                '" onclick="selectLocalProvider(this)">' +
+                '<div class="card-icon">' +
+                p.name[0] +
+                '</div>' +
+                '<div class="card-info"><h3>' +
+                p.name +
+                '</h3><span>' +
+                p.baseUrl +
+                '</span></div>' +
+                '<span class="badge badge-success">Running</span>' +
+                '</div>'
+              );
+            })
+            .join('');
+          container.style.display = 'flex';
+
+          if (running.length === 1) {
+            var card = container.querySelector('.card');
+            card.classList.add('selected');
+            selectedProvider = card.dataset.provider;
+            selectedLocalUrl = card.dataset.url;
+            document.getElementById('btn-local-next').disabled = false;
+          }
+        } else {
+          document.getElementById('local-subtitle').textContent =
+            'No running provider detected. Select which one you will use.';
+          document.getElementById('local-manual').style.display = 'flex';
+        }
+      }
+
+      function selectLocalProvider(card) {
+        document
+          .querySelectorAll('#step-local .card')
+          .forEach(function (c) {
+            c.classList.remove('selected');
+          });
+        card.classList.add('selected');
+        selectedProvider = card.dataset.provider;
+        selectedLocalUrl = card.dataset.url;
+        document.getElementById('btn-local-next').disabled = false;
+      }
+
+      async function configureLocal() {
+        goTo('step-configuring');
+        await runConfiguration(selectedProvider, '', 'local');
+      }
+
+      /* ── Step 4: API Key ─────────────────────────── */
+
+      async function validateAndConfigure() {
+        var apiKey = document.getElementById('api-key').value.trim();
+        goTo('step-configuring');
+        await runConfiguration(selectedProvider, apiKey, 'api_key');
+      }
+
+      /* ── Step 5: Configuration ───────────────────── */
+
+      async function runConfiguration(provider, apiKey, mode) {
+        var verifyLabel = document.querySelector('#p-verify span');
+        if (mode === 'claude_desktop') {
+          verifyLabel.textContent = 'Detecting AI clients';
+        } else if (mode === 'local') {
+          verifyLabel.textContent = 'Provider detected';
+        } else {
+          verifyLabel.textContent = 'Validating credentials';
+        }
+
+        var storeLabel = document.querySelector('#p-store span');
+        if (mode === 'local') {
+          storeLabel.textContent = 'Saving provider settings';
+        } else if (mode === 'claude_desktop') {
+          storeLabel.textContent = 'Registering MCP server';
+        } else {
+          storeLabel.textContent = 'Encrypting credentials';
+        }
+
+        async function completeStep(id, nextId) {
+          var el = document.getElementById(id);
+          el.classList.remove('active');
+          el.classList.add('done');
+          el.querySelector('.spinner, .progress-dot').outerHTML =
+            '<div class="progress-dot">&#10003;</div>';
+          if (nextId) {
+            var next = document.getElementById(nextId);
+            next.classList.add('active');
+            next.querySelector('.progress-dot').outerHTML =
+              '<div class="spinner"></div>';
+          }
+          await new Promise(function (r) {
+            setTimeout(r, 400);
+          });
+        }
+
+        try {
+          // Validate API key (only for api_key mode)
+          if (mode === 'api_key' && apiKey) {
+            var result = await window.openwind.validateKey(provider, apiKey);
+            if (!result.valid) {
+              goTo('step-auth');
+              var errEl = document.getElementById('auth-error');
+              errEl.textContent =
+                'Invalid API key. Please check and try again.';
+              errEl.classList.add('visible');
+              return;
+            }
+          }
+          await completeStep('p-verify', 'p-store');
+          await completeStep('p-store', 'p-config');
+
+          await window.openwind.configure({
+            mode: mode,
+            provider: provider,
+            apiKey: apiKey,
+            localBaseUrl: selectedLocalUrl,
+          });
+
+          await completeStep('p-config', 'p-clients');
+          await completeStep('p-clients', 'p-finish');
+          await completeStep('p-finish', null);
+
+          await new Promise(function (r) {
+            setTimeout(r, 500);
+          });
+
+          var clientList = document.getElementById('client-list');
+          var clients = await window.openwind.detectClients();
+          clientList.innerHTML = clients
+            .filter(function (c) {
+              return c.detected;
+            })
+            .map(function (c) {
+              return (
+                '<li><span class="check">&#10003;</span> ' +
+                c.name +
+                ' &mdash; configured</li>'
+              );
+            })
+            .join('');
+
+          if (clientList.innerHTML === '') {
+            clientList.innerHTML =
+              '<li>No AI clients detected. Add OpenWind manually in your client settings.</li>';
+          }
+
+          goTo('step-done');
+        } catch (err) {
+          if (mode === 'api_key') {
+            goTo('step-auth');
+            var errEl2 = document.getElementById('auth-error');
+            errEl2.textContent = 'Something went wrong. Please try again.';
+            errEl2.classList.add('visible');
+          } else {
+            goTo('step-mode');
+          }
+        }
+      }
+    </script>
+  </body>
+</html>

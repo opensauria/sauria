@@ -55,6 +55,7 @@
     "grammy": "1.35.0",
     "json5": "2.2.3",
     "nanoid": "5.1.5",
+    "ogg-opus-decoder": "1.7.3",
     "openai": "4.85.0",
     "zod": "3.24.2"
   },

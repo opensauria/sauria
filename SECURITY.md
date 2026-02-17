@@ -15,7 +15,7 @@ We take security seriously. If you discover a vulnerability, please report it re
 
 ### How to Report
 
-1. Email **security@openwind.dev** with a detailed description of the vulnerability.
+1. Email **security@openwind.ai** with a detailed description of the vulnerability.
 2. Include steps to reproduce the issue.
 3. Provide the affected version(s) and any relevant environment details.
 4. If possible, suggest a fix or mitigation.

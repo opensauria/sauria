@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { Command } from 'commander';
 import { openDatabase, closeDatabase } from './db/connection.js';
 import { applySchema } from './db/schema.js';
@@ -10,6 +11,7 @@ import { startInteractiveMode } from './channels/cli-interactive.js';
 import { startDaemon } from './daemon.js';
 import { startMcpServer } from './mcp/server.js';
 import { getVersion } from './utils/version.js';
+import { paths } from './config/paths.js';
 import type { AppContext } from './cli-actions.js';
 import {
   askAction,
@@ -27,8 +29,23 @@ import {
 
 const program = new Command();
 
+const SKIP_FIRST_RUN_CHECK = new Set(['onboard', 'setup', 'doctor', 'help', 'mcp-server', 'connect']);
+
 function w(text: string): void {
   process.stdout.write(`${text}\n`);
+}
+
+function isFirstRun(): boolean {
+  return !existsSync(paths.config);
+}
+
+async function redirectToOnboard(): Promise<void> {
+  w('');
+  w('Welcome to OpenWind! No configuration found.');
+  w('Starting setup wizard...');
+  w('');
+  const { runOnboarding } = await import('./auth/onboard.js');
+  await runOnboarding();
 }
 
 async function initContext(): Promise<AppContext> {
@@ -54,7 +71,25 @@ function withContext(fn: (ctx: AppContext) => Promise<void> | void): () => Promi
 program
   .name('openwind')
   .description('Security-first persistent cognitive kernel')
-  .version(getVersion());
+  .version(getVersion())
+  .hook('preAction', async (thisCommand) => {
+    const commandName = thisCommand.args[0] ?? thisCommand.name();
+    if (SKIP_FIRST_RUN_CHECK.has(commandName)) return;
+    if (isFirstRun()) {
+      await redirectToOnboard();
+      process.exit(0);
+    }
+  })
+  .action(async () => {
+    // Default command (no args): show status if configured, onboard if not
+    if (isFirstRun()) {
+      await redirectToOnboard();
+    } else {
+      await withContext((ctx) => {
+        statusAction(ctx);
+      })();
+    }
+  });
 
 program
   .command('onboard')
@@ -62,6 +97,31 @@ program
   .action(async () => {
     const { runOnboarding } = await import('./auth/onboard.js');
     await runOnboarding();
+  });
+
+program
+  .command('setup')
+  .description('Non-interactive setup (for install scripts)')
+  .requiredOption('--provider <name>', 'AI provider (anthropic, openai, google, ollama)')
+  .option('--api-key <key>', 'API key or OAuth token')
+  .option('--no-validate', 'Skip credential validation')
+  .action(async (opts: { provider: string; apiKey?: string; validate: boolean }) => {
+    const { runSilentSetup } = await import('./setup/silent-setup.js');
+    const result = await runSilentSetup({
+      provider: opts.provider,
+      apiKey: opts.apiKey ?? '',
+      validate: opts.validate,
+    });
+    if (!result.success) {
+      w(`Error: ${result.error ?? 'Setup failed'}`);
+      process.exit(1);
+    }
+    if (result.mcpClients.length > 0) {
+      w(`MCP registered: ${result.mcpClients.join(', ')}`);
+    }
+    if (result.daemonCommand) {
+      w(`Daemon: ${result.daemonCommand}`);
+    }
   });
 
 program
@@ -141,12 +201,19 @@ program
 program
   .command('mcp-server')
   .description('Start MCP server (stdio)')
-  .action(
-    withContext(async (ctx) => {
-      await startMcpServer({ db: ctx.db, router: ctx.router, audit: ctx.audit });
-      w('MCP server running on stdio.');
-    }),
-  );
+  .action(async () => {
+    const ctx = await initContext();
+    await startMcpServer({ db: ctx.db, router: ctx.router, audit: ctx.audit });
+    process.stderr.write('MCP server running on stdio.\n');
+    // Keep alive — DB stays open for the lifetime of the process.
+    // Cleanup on exit signals.
+    const cleanup = () => {
+      closeDatabase(ctx.db);
+      process.exit(0);
+    };
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
+  });
 
 program
   .command('doctor')
@@ -213,6 +280,19 @@ program
       purgeAction(ctx);
     }),
   );
+
+program
+  .command('connect')
+  .description('Connect a channel')
+  .argument('<channel>', 'Channel to connect (telegram)')
+  .action(async (channel: string) => {
+    if (channel !== 'telegram') {
+      w(`Unknown channel: ${channel}. Supported: telegram`);
+      process.exit(1);
+    }
+    const { connectTelegram } = await import('./channels/connect-telegram.js');
+    await connectTelegram();
+  });
 
 program
   .command('config')

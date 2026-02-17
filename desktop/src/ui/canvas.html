@@ -14,36 +14,34 @@
     <div class="titlebar-drag"></div>
 
     <div class="canvas-viewport" id="viewport">
-      <svg class="edge-svg" id="edge-svg"></svg>
-      <div class="canvas-world" id="world"></div>
+      <div class="canvas-world" id="world">
+        <svg class="edge-svg" id="edge-svg" viewBox="-5000 -5000 10000 10000"></svg>
+      </div>
     </div>
 
     <div class="canvas-empty" id="empty-state">
       <div class="canvas-empty-icons">
-        <svg viewBox="0 0 24 24"><path d="M9.04 15.6l-.39 5.36c.56 0 .8-.24 1.1-.52l2.63-2.5 5.45 3.97c1 .55 1.7.26 1.97-.92l3.57-16.67C23.71 2.7 22.85 2.14 21.9 2.5L1.4 10.17c-1.63.64-1.6 1.56-.28 1.98l5.1 1.58L19.5 5.8c.6-.38 1.15-.17.7.2L9.04 15.6z" fill="#27A7E7"/></svg>
-        <svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" fill="none"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
-        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke="#25D366" stroke-width="1.5" fill="none"/></svg>
+        <img src="icons/telegram.svg" alt="Telegram" />
+        <img src="icons/slack.svg" alt="Slack" />
+        <img src="icons/whatsapp.svg" alt="WhatsApp" />
       </div>
       <h2>Add your first agent</h2>
-      <p>Click the + button to connect a Telegram, Slack, or WhatsApp bot</p>
+      <p>Drag a platform card from the dock below onto the canvas</p>
     </div>
 
     <div class="canvas-toolbar" id="toolbar">
       <button class="toolbar-btn" id="btn-zoom-out" title="Zoom out">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <img src="icons/zoom-out.svg" alt="Zoom out" />
       </button>
       <span class="zoom-display" id="zoom-display">100%</span>
       <button class="toolbar-btn" id="btn-zoom-in" title="Zoom in">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <img src="icons/zoom-in.svg" alt="Zoom in" />
       </button>
       <button class="toolbar-btn" id="btn-zoom-reset" title="Reset zoom">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 3v18M3 9h18" stroke="currentColor" stroke-width="1.5" opacity="0.4"/></svg>
+        <img src="icons/maximize.svg" alt="Reset" />
       </button>
       <button class="toolbar-btn" id="btn-add-workspace" title="Add workspace">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
-      <button class="toolbar-btn primary" id="btn-add-agent" title="Add agent">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <img src="icons/square-plus.svg" alt="Add workspace" />
       </button>
     </div>
 
@@ -185,109 +183,15 @@
       </div>
     </div>
 
-    <!-- CEO Command Bar -->
-    <div class="ceo-command-bar" id="ceo-command-bar">
-      <div class="ceo-autocomplete" id="ceo-autocomplete"></div>
-      <input class="ceo-command-input" id="ceo-input" type="text" placeholder="Command... (@agent, #workspace)" autocomplete="off" spellcheck="false" />
+    <!-- Cover Flow Dock -->
+    <div class="coverflow-dock" id="coverflow-dock">
+      <div class="coverflow-track" id="coverflow-track"></div>
     </div>
 
-    <!-- Add Agent Panel -->
-    <div class="add-agent-panel" id="add-panel">
-      <div class="panel-header">
-        <span class="panel-title">Add Agent</span>
-        <button class="panel-close" id="panel-close">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </button>
-      </div>
-      <div class="panel-body">
-        <div class="platform-cards" id="platform-cards">
-          <div class="platform-card" data-platform="telegram">
-            <div class="platform-icon">
-              <svg viewBox="0 0 24 24"><path d="M9.04 15.6l-.39 5.36c.56 0 .8-.24 1.1-.52l2.63-2.5 5.45 3.97c1 .55 1.7.26 1.97-.92l3.57-16.67C23.71 2.7 22.85 2.14 21.9 2.5L1.4 10.17c-1.63.64-1.6 1.56-.28 1.98l5.1 1.58L19.5 5.8c.6-.38 1.15-.17.7.2L9.04 15.6z" fill="#27A7E7"/></svg>
-            </div>
-            <div class="platform-card-info">
-              <h3>Telegram</h3>
-              <span>Bot Token + User ID</span>
-            </div>
-          </div>
-          <div class="platform-card" data-platform="slack">
-            <div class="platform-icon">
-              <svg viewBox="0 0 24 24"><path d="M14.5 2c-.83 0-1.5.67-1.5 1.5V8c0 .83.67 1.5 1.5 1.5H19c.83 0 1.5-.67 1.5-1.5S19.83 5 19 5h-3V3.5c0-.83-.67-1.5-1.5-1.5z" fill="#E01E5A"/><path d="M2 8c0 .83.67 1.5 1.5 1.5H8c.83 0 1.5-.67 1.5-1.5V3.5C9.5 2.67 8.83 2 8 2S6.5 2.67 6.5 3.5V5h-3C2.67 5 2 5.67 2 6.5V8z" fill="#36C5F0"/><path d="M8 22c.83 0 1.5-.67 1.5-1.5V16c0-.83-.67-1.5-1.5-1.5H3.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5h3v1.5c0 .83.67 1.5 1.5 1.5z" fill="#2EB67D"/><path d="M22 16c0-.83-.67-1.5-1.5-1.5H16c-.83 0-1.5.67-1.5 1.5v4.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h3c.83 0 1.5-.67 1.5-1.5V16z" fill="#ECB22E"/></svg>
-            </div>
-            <div class="platform-card-info">
-              <h3>Slack</h3>
-              <span>Bot Token + Signing Secret</span>
-            </div>
-          </div>
-          <div class="platform-card" data-platform="whatsapp">
-            <div class="platform-icon">
-              <svg viewBox="0 0 24 24"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.58c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48 0 1.47 1.07 2.89 1.22 3.09.15.2 2.1 3.22 5.1 4.51.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35z" fill="#25D366"/><path d="M12 2C6.48 2 2 6.48 2 12c0 1.77.46 3.43 1.27 4.88L2 22l5.23-1.24C8.72 21.55 10.33 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.5 0-2.94-.4-4.2-1.15l-.3-.18-3.12.74.82-3-.2-.31A7.96 7.96 0 014 12c0-4.42 3.58-8 8-8s8 3.58 8 8-3.58 8-8 8z" fill="#25D366"/></svg>
-            </div>
-            <div class="platform-card-info">
-              <h3>WhatsApp</h3>
-              <span>Phone Number ID + Access Token</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Telegram Form -->
-        <div class="credential-form" id="form-telegram">
-          <div class="cred-field">
-            <label>Your User ID</label>
-            <input type="number" id="tg-userid" placeholder="123456789" min="1" step="1" />
-            <div class="cred-hint">Get from @userinfobot on Telegram</div>
-          </div>
-          <div class="cred-field">
-            <label>Bot Token</label>
-            <input type="password" id="tg-token" placeholder="123456:ABC-DEF..." />
-            <div class="cred-hint">Get from @BotFather on Telegram</div>
-          </div>
-          <div class="panel-status" id="tg-status"></div>
-          <div class="panel-actions">
-            <button class="panel-btn panel-btn-cancel" id="tg-cancel">Cancel</button>
-            <button class="panel-btn panel-btn-primary" id="tg-connect" disabled>Connect</button>
-          </div>
-        </div>
-
-        <!-- Slack Form -->
-        <div class="credential-form" id="form-slack">
-          <div class="cred-field">
-            <label>Bot Token</label>
-            <input type="password" id="slack-token" placeholder="xoxb-..." />
-            <div class="cred-hint">From Slack App &gt; OAuth &amp; Permissions</div>
-          </div>
-          <div class="cred-field">
-            <label>Signing Secret</label>
-            <input type="password" id="slack-secret" placeholder="abc123..." />
-            <div class="cred-hint">From Slack App &gt; Basic Information</div>
-          </div>
-          <div class="panel-status" id="slack-status"></div>
-          <div class="panel-actions">
-            <button class="panel-btn panel-btn-cancel" id="slack-cancel">Cancel</button>
-            <button class="panel-btn panel-btn-primary" id="slack-connect" disabled>Connect</button>
-          </div>
-        </div>
-
-        <!-- WhatsApp Form -->
-        <div class="credential-form" id="form-whatsapp">
-          <div class="cred-field">
-            <label>Phone Number ID</label>
-            <input type="text" id="wa-phone-id" placeholder="1234567890" />
-            <div class="cred-hint">From Meta Business &gt; WhatsApp &gt; API Setup</div>
-          </div>
-          <div class="cred-field">
-            <label>Access Token</label>
-            <input type="password" id="wa-token" placeholder="EAA..." />
-            <div class="cred-hint">Permanent token from System Users</div>
-          </div>
-          <div class="panel-status" id="wa-status"></div>
-          <div class="panel-actions">
-            <button class="panel-btn panel-btn-cancel" id="wa-cancel">Cancel</button>
-            <button class="panel-btn panel-btn-primary" id="wa-connect" disabled>Connect</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Dock Toggle -->
+    <button class="dock-toggle" id="dock-toggle" title="Toggle dock">
+      <img src="icons/chevron-down.svg" alt="Toggle" />
+    </button>
 
     <script>
       /* ═══════════════════════════════════════════════
@@ -296,7 +200,6 @@
 
       var graph = { nodes: [], edges: [], workspaces: [], viewport: { x: 0, y: 0, zoom: 1 } };
       var selectedNodeId = null;
-      var selectedPlatform = null;
       var selectedWorkspaceId = null;
       var detailNodeId = null;
       var detailWorkspaceId = null;
@@ -315,8 +218,11 @@
       var isWsResizing = false, wsResizeId = null, wsResizeDir = null;
       var wsResizeStartX = 0, wsResizeStartY = 0, wsResizeStartW = 0, wsResizeStartH = 0;
 
-      /* autocomplete state */
-      var acItems = [], acIndex = -1, acTrigger = '';
+      /* workspace drag state (magnetic: moves contained cards too) */
+      var isWsDragging = false, wsDragId = null;
+      var wsDragStartX = 0, wsDragStartY = 0, wsDragStartWsX = 0, wsDragStartWsY = 0;
+      var wsDragNodeStarts = [];
+
 
       /* DOM refs */
       var viewport = document.getElementById('viewport');
@@ -324,18 +230,18 @@
       var edgeSvg = document.getElementById('edge-svg');
       var emptyState = document.getElementById('empty-state');
       var zoomDisplay = document.getElementById('zoom-display');
-      var addPanel = document.getElementById('add-panel');
       var agentDetailPanel = document.getElementById('agent-detail-panel');
       var workspaceDetailPanel = document.getElementById('workspace-detail-panel');
       var wsDialogOverlay = document.getElementById('ws-dialog-overlay');
-      var ceoInput = document.getElementById('ceo-input');
-      var ceoAutocomplete = document.getElementById('ceo-autocomplete');
 
-      /* Platform SVG icons */
+      /* Platform icons — loaded from icons/ directory (simple-icons + lucide-static) */
       var platformIcons = {
-        telegram: '<svg viewBox="0 0 24 24"><path d="M9.04 15.6l-.39 5.36c.56 0 .8-.24 1.1-.52l2.63-2.5 5.45 3.97c1 .55 1.7.26 1.97-.92l3.57-16.67C23.71 2.7 22.85 2.14 21.9 2.5L1.4 10.17c-1.63.64-1.6 1.56-.28 1.98l5.1 1.58L19.5 5.8c.6-.38 1.15-.17.7.2L9.04 15.6z" fill="#27A7E7"/></svg>',
-        slack: '<svg viewBox="0 0 24 24"><path d="M14.5 2c-.83 0-1.5.67-1.5 1.5V8c0 .83.67 1.5 1.5 1.5H19c.83 0 1.5-.67 1.5-1.5S19.83 5 19 5h-3V3.5c0-.83-.67-1.5-1.5-1.5z" fill="#E01E5A"/><path d="M2 8c0 .83.67 1.5 1.5 1.5H8c.83 0 1.5-.67 1.5-1.5V3.5C9.5 2.67 8.83 2 8 2S6.5 2.67 6.5 3.5V5h-3C2.67 5 2 5.67 2 6.5V8z" fill="#36C5F0"/><path d="M8 22c.83 0 1.5-.67 1.5-1.5V16c0-.83-.67-1.5-1.5-1.5H3.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5h3v1.5c0 .83.67 1.5 1.5 1.5z" fill="#2EB67D"/><path d="M22 16c0-.83-.67-1.5-1.5-1.5H16c-.83 0-1.5.67-1.5 1.5v4.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h3c.83 0 1.5-.67 1.5-1.5V16z" fill="#ECB22E"/></svg>',
-        whatsapp: '<svg viewBox="0 0 24 24"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.58c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48 0 1.47 1.07 2.89 1.22 3.09.15.2 2.1 3.22 5.1 4.51.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35z" fill="#25D366"/><path d="M12 2C6.48 2 2 6.48 2 12c0 1.77.46 3.43 1.27 4.88L2 22l5.23-1.24C8.72 21.55 10.33 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.5 0-2.94-.4-4.2-1.15l-.3-.18-3.12.74.82-3-.2-.31A7.96 7.96 0 014 12c0-4.42 3.58-8 8-8s8 3.58 8 8-3.58 8-8 8z" fill="#25D366"/></svg>',
+        telegram: '<img src="icons/telegram.svg" alt="Telegram" />',
+        slack: '<img src="icons/slack.svg" alt="Slack" />',
+        whatsapp: '<img src="icons/whatsapp.svg" alt="WhatsApp" />',
+        discord: '<img src="icons/discord.svg" alt="Discord" />',
+        gmail: '<img src="icons/gmail.svg" alt="Gmail" />',
+        email: '<img src="icons/email.svg" alt="Email" class="icon-mono" />',
       };
 
       /* ═══════════════════════════════════════════════
@@ -352,7 +258,34 @@
         vpX = graph.viewport.x;
         vpY = graph.viewport.y;
         vpZoom = graph.viewport.zoom;
+
+        /* Auto-create CEO node if not present */
+        var hasCeo = graph.nodes.some(function (n) { return n.platform === 'ceo'; });
+        if (!hasCeo) {
+          var ceoProfile = { fullName: 'CEO', customInstructions: '' };
+          try {
+            ceoProfile = await window.openwind.getCeoProfile();
+          } catch { /* fallback */ }
+          var cx = (window.innerWidth / 2 - vpX) / vpZoom - 60;
+          graph.nodes.unshift({
+            id: 'ceo-' + generateId(),
+            platform: 'ceo',
+            label: ceoProfile.fullName || 'CEO',
+            photo: null,
+            position: { x: Math.round(cx), y: 40 },
+            status: 'connected',
+            credentials: '',
+            meta: {},
+            instructions: ceoProfile.customInstructions || '',
+            role: 'lead',
+            autonomy: 3,
+          });
+          saveGraph();
+        }
+
         renderAll();
+        cfCurrentIndex = cfActiveIndex;
+        renderCoverflow();
       }
 
       /* ═══════════════════════════════════════════════
@@ -369,7 +302,11 @@
       }
 
       function applyTransform() {
-        world.style.transform = 'translate(' + vpX + 'px, ' + vpY + 'px) scale(' + vpZoom + ')';
+        /* CSS zoom re-renders content crisp at any scale (no bitmap blur).
+           zoom also multiplies transform values, so divide translate by zoom
+           to keep vpX/vpY in screen-pixel space: visual offset = (vpX/Z)*Z = vpX */
+        world.style.zoom = vpZoom;
+        world.style.transform = 'translate(' + (vpX / vpZoom) + 'px, ' + (vpY / vpZoom) + 'px)';
       }
 
       function updateEmptyState() {
@@ -411,59 +348,292 @@
         });
       }
 
+      function getFieldsForPlatform(platform) {
+        var fields = {
+          telegram: [
+            { key: 'userId', label: 'Your User ID', type: 'text', placeholder: '123456789', hint: 'Get from @userinfobot on Telegram' },
+            { key: 'token', label: 'Bot Token', type: 'password', placeholder: '123456:ABC-DEF...', hint: 'Get from @BotFather on Telegram' },
+          ],
+          slack: [
+            { key: 'token', label: 'Bot Token', type: 'password', placeholder: 'xoxb-...', hint: 'From Slack App > OAuth & Permissions' },
+            { key: 'signingSecret', label: 'Signing Secret', type: 'password', placeholder: 'abc123...', hint: 'From Slack App > Basic Information' },
+          ],
+          whatsapp: [
+            { key: 'phoneNumberId', label: 'Phone Number ID', type: 'text', placeholder: '1234567890', hint: 'From Meta Business > WhatsApp > API Setup' },
+            { key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'EAA...', hint: 'Permanent token from System Users' },
+          ],
+          discord: [
+            { key: 'token', label: 'Bot Token', type: 'password', placeholder: 'MTIz...', hint: 'From Discord Developer Portal > Bot > Token' },
+          ],
+          gmail: [],
+          email: [
+            { key: 'imapHost', label: 'IMAP Host', type: 'text', placeholder: 'imap.gmail.com', hint: '' },
+            { key: 'imapPort', label: 'IMAP Port', type: 'number', placeholder: '993', hint: '' },
+            { key: 'smtpHost', label: 'SMTP Host', type: 'text', placeholder: 'smtp.gmail.com', hint: 'Leave empty to use IMAP host' },
+            { key: 'smtpPort', label: 'SMTP Port', type: 'number', placeholder: '587', hint: '' },
+            { key: 'username', label: 'Username / Email', type: 'text', placeholder: 'bot@example.com', hint: '' },
+            { key: 'password', label: 'Password', type: 'password', placeholder: 'App password', hint: 'Use an app password for Gmail / Outlook' },
+          ],
+        };
+        return fields[platform] || [];
+      }
+
+      var GEAR_SVG = '<img src="icons/settings.svg" alt="Settings" />';
+
       function renderNodes() {
-        /* Remove existing agent cards only */
         world.querySelectorAll('.agent-card').forEach(function (el) { el.remove(); });
         graph.nodes.forEach(function (node) {
           var card = document.createElement('div');
-          card.className = 'agent-card' + (node.id === selectedNodeId ? ' selected' : '');
+          var isSetup = node.status === 'setup' || node.status === 'connecting' || node.status === 'error';
+          var isEditing = node._editing === true;
+
           card.dataset.nodeId = node.id;
           card.style.left = node.position.x + 'px';
           card.style.top = node.position.y + 'px';
 
-          var photoHtml = node.photo
-            ? '<img src="' + node.photo + '" alt="" />'
-            : platformIcons[node.platform] || '';
+          if (node.status === 'setup' || node.status === 'connecting') {
+            var isConnecting = node.status === 'connecting';
+            card.className = 'agent-card ' + node.status + (node.id === selectedNodeId ? ' selected' : '');
 
-          var displayName = node.meta.firstName || node.label.replace(/^@/, '');
-          var handle = node.label.startsWith('@') ? node.label : '';
+            var statusHtml = '';
+            if (isConnecting) {
+              statusHtml = '<div class="card-setup-status info"><span class="card-spinner"></span>Connecting...</div>';
+            } else if (node._statusMsg) {
+              statusHtml = '<div class="card-setup-status ' + (node._statusType || '') + '">' + escapeHtml(node._statusMsg) + '</div>';
+            }
 
-          card.innerHTML =
-            '<div class="agent-avatar">' +
-              photoHtml +
-              '<span class="agent-status-dot ' + node.status + '"></span>' +
-            '</div>' +
-            '<div class="agent-name">' + escapeHtml(displayName) + '</div>' +
-            (handle ? '<div class="agent-handle">' + escapeHtml(handle) + '</div>' : '') +
-            '<span class="platform-badge ' + node.platform + '">' + node.platform + '</span>' +
-            '<div class="port port-input" data-node-id="' + node.id + '" data-port="input"></div>' +
-            '<div class="port port-output" data-node-id="' + node.id + '" data-port="output"></div>';
+            if (node.platform === 'gmail') {
+              /* Gmail: OAuth-based, single button */
+              card.innerHTML =
+                '<div class="card-setup-header">' +
+                  '<div class="cf-icon">' + (platformIcons.gmail || '') + '</div>' +
+                  '<span class="card-setup-title">Gmail</span>' +
+                  '<button class="card-setup-close" data-action="cancel">&times;</button>' +
+                '</div>' +
+                '<div class="card-setup-field" style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;margin-bottom:8px;">Sign in securely with your Google account. No passwords stored.</div>' +
+                statusHtml +
+                '<div class="card-setup-actions">' +
+                  '<button class="btn-cancel" data-action="cancel"' + (isConnecting ? ' disabled' : '') + '>Cancel</button>' +
+                  '<button class="btn-connect" data-action="connect" style="background:#4285F4;"' + (isConnecting ? ' disabled' : '') + '>Sign in with Google</button>' +
+                '</div>';
+            } else {
+              var fieldsHtml = '';
+              var platformFields = getFieldsForPlatform(node.platform);
+              platformFields.forEach(function (f) {
+                var val = (node._formData && node._formData[f.key]) || '';
+                fieldsHtml +=
+                  '<div class="card-setup-field">' +
+                    '<label>' + escapeHtml(f.label) + '</label>' +
+                    '<input type="' + f.type + '" data-field="' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="' + escapeHtml(String(val)) + '"' + (isConnecting ? ' disabled' : '') + ' />' +
+                    (f.hint ? '<div class="card-field-hint">' + escapeHtml(f.hint) + '</div>' : '') +
+                  '</div>';
+              });
+
+              card.innerHTML =
+                '<div class="card-setup-header">' +
+                  '<div class="cf-icon">' + (platformIcons[node.platform] || '') + '</div>' +
+                  '<span class="card-setup-title">' + escapeHtml(capitalize(node.platform)) + '</span>' +
+                  '<button class="card-setup-close" data-action="cancel">&times;</button>' +
+                '</div>' +
+                fieldsHtml +
+                statusHtml +
+                '<div class="card-setup-actions">' +
+                  '<button class="btn-cancel" data-action="cancel"' + (isConnecting ? ' disabled' : '') + '>Cancel</button>' +
+                  '<button class="btn-connect" data-action="connect"' + (isConnecting ? ' disabled' : '') + '>Connect</button>' +
+                '</div>';
+            }
+
+          } else if (node.status === 'error') {
+            card.className = 'agent-card error-state' + (node.id === selectedNodeId ? ' selected' : '');
+            var fieldsHtml = '';
+            var platformFields = getFieldsForPlatform(node.platform);
+            platformFields.forEach(function (f) {
+              var val = (node._formData && node._formData[f.key]) || '';
+              fieldsHtml +=
+                '<div class="card-setup-field">' +
+                  '<label>' + escapeHtml(f.label) + '</label>' +
+                  '<input type="' + f.type + '" data-field="' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="' + escapeHtml(String(val)) + '" />' +
+                  (f.hint ? '<div class="card-field-hint">' + escapeHtml(f.hint) + '</div>' : '') +
+                '</div>';
+            });
+
+            card.innerHTML =
+              '<div class="card-setup-header">' +
+                '<div class="cf-icon">' + (platformIcons[node.platform] || '') + '</div>' +
+                '<span class="card-setup-title">' + escapeHtml(capitalize(node.platform)) + '</span>' +
+                '<button class="card-setup-close" data-action="cancel">&times;</button>' +
+              '</div>' +
+              fieldsHtml +
+              '<div class="card-setup-status error">' + escapeHtml(node._statusMsg || 'Connection failed') + '</div>' +
+              '<div class="card-setup-actions">' +
+                '<button class="btn-cancel" data-action="cancel">Cancel</button>' +
+                '<button class="btn-connect" data-action="connect">Retry</button>' +
+              '</div>';
+
+          } else if (isEditing) {
+            card.className = 'agent-card setup' + (node.id === selectedNodeId ? ' selected' : '');
+            var displayName = node.meta.firstName || node.label.replace(/^@/, '');
+            var fieldsHtml = '';
+            var platformFields = getFieldsForPlatform(node.platform);
+            platformFields.forEach(function (f) {
+              fieldsHtml +=
+                '<div class="card-setup-field">' +
+                  '<label>' + escapeHtml(f.label) + '</label>' +
+                  '<input type="password" data-field="' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="********" disabled />' +
+                '</div>';
+            });
+
+            card.innerHTML =
+              '<div class="card-setup-header">' +
+                '<div class="cf-icon">' + (platformIcons[node.platform] || '') + '</div>' +
+                '<span class="card-setup-title">' + escapeHtml(displayName) + '</span>' +
+                '<button class="card-setup-close" data-action="close-edit">&times;</button>' +
+              '</div>' +
+              fieldsHtml +
+              '<div class="card-setup-actions">' +
+                '<button class="btn-cancel" data-action="disconnect">Disconnect</button>' +
+                '<button class="btn-connect" data-action="close-edit">Done</button>' +
+              '</div>';
+
+          } else if (node.platform === 'ceo') {
+            /* CEO card */
+            card.className = 'agent-card ceo-card' + (node.id === selectedNodeId ? ' selected' : '');
+
+            card.innerHTML =
+              '<button class="card-gear" data-action="gear" title="Settings">' + GEAR_SVG + '</button>' +
+              '<div class="agent-avatar ceo-avatar">' +
+                '<img src="icons/crown.svg" alt="CEO" />' +
+              '</div>' +
+              '<div class="agent-name">' + escapeHtml(node.label) + '</div>' +
+              '<span class="platform-badge ceo">CEO</span>' +
+              '<div class="port port-output" data-node-id="' + node.id + '" data-port="output"></div>';
+
+          } else {
+            /* Connected portrait card */
+            card.className = 'agent-card' + (node.id === selectedNodeId ? ' selected' : '');
+            var photoHtml = node.photo
+              ? '<img src="' + node.photo + '" alt="" />'
+              : platformIcons[node.platform] || '';
+            var displayName = node.meta.firstName || node.label.replace(/^@/, '');
+            var handle = node.label.startsWith('@') ? node.label : '';
+
+            card.innerHTML =
+              '<button class="card-gear" data-action="gear" title="Settings">' + GEAR_SVG + '</button>' +
+              '<div class="agent-avatar">' +
+                photoHtml +
+                '<span class="agent-status-dot ' + node.status + '"></span>' +
+              '</div>' +
+              '<div class="agent-name">' + escapeHtml(displayName) + '</div>' +
+              (handle ? '<div class="agent-handle">' + escapeHtml(handle) + '</div>' : '') +
+              '<span class="platform-badge ' + node.platform + '">' + node.platform + '</span>' +
+              '<div class="port port-input" data-node-id="' + node.id + '" data-port="input"></div>' +
+              '<div class="port port-output" data-node-id="' + node.id + '" data-port="output"></div>';
+          }
 
           world.appendChild(card);
+
+          /* Drop-in animation */
+          if (node._animateIn) {
+            card.classList.add('card-enter');
+            delete node._animateIn;
+            card.addEventListener('animationend', function () {
+              card.classList.remove('card-enter');
+            }, { once: true });
+          }
         });
       }
 
-      var CARD_W = 120, CARD_CY = 75;
+      /* Flip card animation: swap content at the midpoint of a Y-axis flip */
+      function flipCard(card, callback) {
+        card.classList.add('card-flip');
+        /* Swap content at the 50% mark (when card is edge-on) */
+        setTimeout(callback, 200);
+        card.addEventListener('animationend', function () {
+          card.classList.remove('card-flip');
+        }, { once: true });
+      }
+
+      /* Confetti-style delete: spawn particles from card center, then remove */
+      function animateCardDelete(nodeId, callback) {
+        var card = world.querySelector('[data-node-id="' + nodeId + '"]');
+        if (!card) { callback(); return; }
+
+        var cardRect = card.getBoundingClientRect();
+        var cx = cardRect.left + cardRect.width / 2;
+        var cy = cardRect.top + cardRect.height / 2;
+
+        /* Spawn confetti particles */
+        var PARTICLE_COUNT = 18;
+        var particles = [];
+        for (var i = 0; i < PARTICLE_COUNT; i++) {
+          var p = document.createElement('div');
+          var angle = (i / PARTICLE_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+          var dist = 60 + Math.random() * 80;
+          var size = 4 + Math.random() * 6;
+          var hue = Math.random() * 360;
+          p.style.cssText =
+            'position:fixed;left:' + cx + 'px;top:' + cy + 'px;width:' + size + 'px;height:' + size + 'px;' +
+            'border-radius:' + (Math.random() > 0.5 ? '50%' : '2px') + ';' +
+            'background:hsl(' + hue + ',70%,65%);pointer-events:none;z-index:1000;' +
+            'transition:all 0.55s cubic-bezier(0.25,0.46,0.45,0.94);' +
+            'opacity:1;transform:translate(-50%,-50%) scale(1);';
+          document.body.appendChild(p);
+          particles.push({ el: p, angle: angle, dist: dist });
+        }
+
+        /* Start card shrink */
+        card.classList.add('card-exit');
+
+        /* Spread particles outward after a frame */
+        requestAnimationFrame(function () {
+          particles.forEach(function (pt) {
+            var dx = Math.cos(pt.angle) * pt.dist;
+            var dy = Math.sin(pt.angle) * pt.dist - 30;
+            pt.el.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(0.2) rotate(' + (Math.random() * 360) + 'deg)';
+            pt.el.style.opacity = '0';
+          });
+        });
+
+        /* Clean up after animation */
+        setTimeout(function () {
+          particles.forEach(function (pt) { pt.el.remove(); });
+          callback();
+        }, 550);
+      }
 
       function renderEdges() {
+        /* Hide edge delete button since paths are being recreated */
+        if (edgeDeleteBtn) {
+          edgeDeleteBtn.classList.remove('visible');
+          hoveredEdgeId = null;
+        }
+
         var paths = '';
         graph.edges.forEach(function (edge) {
           var fromNode = graph.nodes.find(function (n) { return n.id === edge.from; });
           var toNode = graph.nodes.find(function (n) { return n.id === edge.to; });
           if (!fromNode || !toNode) return;
 
-          var x1 = fromNode.position.x + CARD_W;
-          var y1 = fromNode.position.y + CARD_CY;
-          var x2 = toNode.position.x;
-          var y2 = toNode.position.y + CARD_CY;
+          /* Org chart: bottom-center of parent → top-center of child */
+          var fromCard = world.querySelector('[data-node-id="' + edge.from + '"]');
+          var toCard = world.querySelector('[data-node-id="' + edge.to + '"]');
+          var fromW = fromCard ? fromCard.offsetWidth : 120;
+          var fromH = fromCard ? fromCard.offsetHeight : 150;
+          var toW = toCard ? toCard.offsetWidth : 120;
 
-          var dx = Math.abs(x2 - x1) * 0.5;
-          var d = 'M' + x1 + ',' + y1 + ' C' + (x1 + dx) + ',' + y1 + ' ' + (x2 - dx) + ',' + y2 + ' ' + x2 + ',' + y2;
+          var x1 = fromNode.position.x + fromW / 2;
+          var y1 = fromNode.position.y + fromH;
+          var x2 = toNode.position.x + toW / 2;
+          var y2 = toNode.position.y;
 
-          paths += '<path data-edge-id="' + edge.id + '" d="' + d + '" />';
+          var dy = Math.abs(y2 - y1) * 0.4;
+          var d = 'M' + x1 + ',' + y1 + ' C' + x1 + ',' + (y1 + dy) + ' ' + x2 + ',' + (y2 - dy) + ' ' + x2 + ',' + y2;
+
+          /* Hit-area path first (wide, invisible, interactive), then visible path */
+          paths += '<path class="edge-hit" data-edge-id="' + edge.id + '" d="' + d + '" />';
+          paths += '<path d="' + d + '" />';
         });
         edgeSvg.innerHTML = paths;
-        edgeSvg.style.transform = 'translate(' + vpX + 'px, ' + vpY + 'px) scale(' + vpZoom + ')';
       }
 
       /* ═══════════════════════════════════════════════
@@ -471,8 +641,14 @@
          ═══════════════════════════════════════════════ */
 
       viewport.addEventListener('mousedown', function (e) {
-        if (e.target !== viewport && !e.target.classList.contains('edge-svg')) return;
+        if (e.target !== viewport && e.target !== world && !e.target.classList.contains('edge-svg')) return;
         if (e.button !== 0) return;
+        /* Ignore if clicking in the dock area */
+        var dockEl = document.getElementById('coverflow-dock');
+        if (dockEl) {
+          var dockRect = dockEl.getBoundingClientRect();
+          if (e.clientY >= dockRect.top) return;
+        }
         isPanning = true;
         panStartX = e.clientX;
         panStartY = e.clientY;
@@ -521,8 +697,42 @@
           var rect = viewport.getBoundingClientRect();
           var mx = (e.clientX - rect.left - vpX) / vpZoom;
           var my = (e.clientY - rect.top - vpY) / vpZoom;
-          edgeTempLine.setAttribute('x2', String(mx));
-          edgeTempLine.setAttribute('y2', String(my));
+          var dy = Math.abs(my - edgeDragOrigin.y) * 0.4;
+          edgeTempLine.setAttribute('d',
+            'M' + edgeDragOrigin.x + ',' + edgeDragOrigin.y +
+            ' C' + edgeDragOrigin.x + ',' + (edgeDragOrigin.y + dy) +
+            ' ' + mx + ',' + (my - dy) +
+            ' ' + mx + ',' + my
+          );
+        }
+        if (isWsDragging && wsDragId) {
+          var ws = graph.workspaces.find(function (w) { return w.id === wsDragId; });
+          if (ws) {
+            var dx = (e.clientX - wsDragStartX) / vpZoom;
+            var dy = (e.clientY - wsDragStartY) / vpZoom;
+            ws.position.x = wsDragStartWsX + dx;
+            ws.position.y = wsDragStartWsY + dy;
+
+            /* Move magnetic cards with the workspace */
+            wsDragNodeStarts.forEach(function (snap) {
+              var node = graph.nodes.find(function (n) { return n.id === snap.id; });
+              if (!node) return;
+              node.position.x = snap.startX + dx;
+              node.position.y = snap.startY + dy;
+              var card = world.querySelector('[data-node-id="' + snap.id + '"]');
+              if (card) {
+                card.style.left = node.position.x + 'px';
+                card.style.top = node.position.y + 'px';
+              }
+            });
+
+            var frame = world.querySelector('[data-workspace-id="' + wsDragId + '"]');
+            if (frame) {
+              frame.style.left = ws.position.x + 'px';
+              frame.style.top = ws.position.y + 'px';
+            }
+            renderEdges();
+          }
         }
         if (isWsResizing && wsResizeId) {
           var ws = graph.workspaces.find(function (w) { return w.id === wsResizeId; });
@@ -581,6 +791,13 @@
         if (isEdgeDragging) {
           finishEdgeDrag(e);
         }
+        if (isWsDragging) {
+          isWsDragging = false;
+          wsDragId = null;
+          wsDragNodeStarts = [];
+          renderAll();
+          saveGraph();
+        }
         if (isWsResizing) {
           isWsResizing = false;
           wsResizeId = null;
@@ -590,6 +807,12 @@
       });
 
       viewport.addEventListener('wheel', function (e) {
+        /* Ignore if mouse is over the dock area */
+        var dockEl = document.getElementById('coverflow-dock');
+        if (dockEl) {
+          var dockRect = dockEl.getBoundingClientRect();
+          if (e.clientY >= dockRect.top) return;
+        }
         e.preventDefault();
         var rect = viewport.getBoundingClientRect();
         var mx = e.clientX - rect.left;
@@ -639,6 +862,9 @@
 
         var card = e.target.closest('.agent-card');
         if (card && e.button === 0) {
+          /* Don't start drag if clicking inputs/buttons inside setup cards */
+          if (e.target.closest('input') || e.target.closest('button') || e.target.closest('label')) return;
+
           var nodeId = card.dataset.nodeId;
           selectedNodeId = nodeId;
           selectedWorkspaceId = null;
@@ -660,13 +886,32 @@
           return;
         }
 
-        /* Workspace frame click (header area) */
-        var wsHeader = e.target.closest('.workspace-header');
-        if (wsHeader && e.button === 0) {
-          selectedWorkspaceId = wsHeader.dataset.workspaceId;
+        /* Workspace drag (header or frame body — not resize handles) */
+        var wsFrame = e.target.closest('.workspace-frame');
+        if (wsFrame && e.button === 0) {
+          var wsId = wsFrame.dataset.workspaceId;
+          selectedWorkspaceId = wsId;
           selectedNodeId = null;
           renderNodes();
           renderWorkspaces();
+
+          isWsDragging = true;
+          wsDragId = wsId;
+          wsDragStartX = e.clientX;
+          wsDragStartY = e.clientY;
+          var ws = graph.workspaces.find(function (w) { return w.id === wsId; });
+          if (ws) {
+            wsDragStartWsX = ws.position.x;
+            wsDragStartWsY = ws.position.y;
+          }
+          /* Snapshot start positions of all contained cards (magnetic drag) */
+          wsDragNodeStarts = [];
+          graph.nodes.forEach(function (n) {
+            if (n.workspaceId === wsId) {
+              wsDragNodeStarts.push({ id: n.id, startX: n.position.x, startY: n.position.y });
+            }
+          });
+
           e.preventDefault();
           e.stopPropagation();
           return;
@@ -687,8 +932,11 @@
         var fromNode = graph.nodes.find(function (n) { return n.id === edgeFromId; });
         if (!fromNode) return;
 
-        edgeDragOrigin.x = fromNode.position.x + CARD_W;
-        edgeDragOrigin.y = fromNode.position.y + CARD_CY;
+        var fromCard = world.querySelector('[data-node-id="' + edgeFromId + '"]');
+        var fromW = fromCard ? fromCard.offsetWidth : 120;
+        var fromH = fromCard ? fromCard.offsetHeight : 150;
+        edgeDragOrigin.x = fromNode.position.x + fromW / 2;
+        edgeDragOrigin.y = fromNode.position.y + fromH;
 
         edgeTempLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         edgeTempLine.classList.add('edge-temp');
@@ -757,202 +1005,477 @@
       }
 
       /* ═══════════════════════════════════════════════
-         Add Agent Panel
+         Cover Flow Dock
          ═══════════════════════════════════════════════ */
 
-      document.getElementById('btn-add-agent').addEventListener('click', function () {
-        openAddPanel();
-      });
+      var cfActiveIndex = 0;
+      var cfPlatforms = [
+        { id: 'telegram', name: 'Telegram', hint: 'Bot Token + User ID' },
+        { id: 'slack', name: 'Slack', hint: 'Bot Token + Signing Secret' },
+        { id: 'whatsapp', name: 'WhatsApp', hint: 'Phone Number ID + Token' },
+        { id: 'discord', name: 'Discord', hint: 'Bot Token' },
+        { id: 'gmail', name: 'Gmail', hint: 'Sign in with Google' },
+        { id: 'email', name: 'Email', hint: 'IMAP + SMTP manual' },
+      ];
 
-      document.getElementById('panel-close').addEventListener('click', function () {
-        closeAddPanel();
-      });
+      var cfTrack = document.getElementById('coverflow-track');
+      var cfDock = document.getElementById('coverflow-dock');
 
-      function openAddPanel() {
-        addPanel.classList.add('open');
-        selectedPlatform = null;
-        document.querySelectorAll('.platform-card').forEach(function (c) {
-          c.classList.remove('selected');
+      /* Spring physics state */
+      var cfCurrentIndex = 0;
+      var cfVelocity = 0;
+      var cfAnimating = false;
+
+      function renderCoverflow() {
+        cfTrack.innerHTML = '';
+        cfPlatforms.forEach(function (p, i) {
+          var card = document.createElement('div');
+          card.className = 'coverflow-card';
+          card.dataset.platform = p.id;
+          card.dataset.index = String(i);
+
+          card.innerHTML =
+            '<div class="cf-icon">' + (platformIcons[p.id] || '') + '</div>' +
+            '<div class="cf-name">' + escapeHtml(p.name) + '</div>' +
+            '<div class="cf-hint">' + escapeHtml(p.hint) + '</div>';
+
+          cfTrack.appendChild(card);
         });
-        document.querySelectorAll('.credential-form').forEach(function (f) {
-          f.className = 'credential-form';
-        });
-        clearAllForms();
+        updateCoverflowTransforms();
       }
 
-      function closeAddPanel() {
-        addPanel.classList.remove('open');
+      function updateCoverflowTransforms() {
+        var cards = cfTrack.querySelectorAll('.coverflow-card');
+        for (var i = 0; i < cards.length; i++) {
+          var card = cards[i];
+          var offset = i - cfCurrentIndex;
+          var absOffset = Math.abs(offset);
+          var sign = offset > 0 ? 1 : -1;
+
+          var translateX = offset * 100;
+          var translateZ = 60 - absOffset * 120;
+          var rotateY = absOffset < 0.01 ? 0 : -sign * Math.min(absOffset, 1.2) * 40;
+          var scale = Math.max(0.85, 1.08 - absOffset * 0.16);
+          var opacity = Math.max(0, 1 - absOffset * 0.3);
+          var zIndex = Math.max(0, 5 - Math.round(absOffset));
+
+          card.style.transform =
+            'translateX(' + translateX + 'px) translateZ(' + translateZ + 'px) rotateY(' + rotateY + 'deg) scale(' + scale + ')';
+          card.style.opacity = String(opacity);
+          card.style.zIndex = String(zIndex);
+          card.style.pointerEvents = absOffset > 2.5 ? 'none' : 'auto';
+        }
       }
 
-      document.querySelectorAll('.platform-card').forEach(function (card) {
-        card.addEventListener('click', function () {
-          document.querySelectorAll('.platform-card').forEach(function (c) {
-            c.classList.remove('selected');
-          });
-          card.classList.add('selected');
-          selectedPlatform = card.dataset.platform;
+      function cfSpringTick() {
+        var stiffness = 0.06;
+        var damping = 0.78;
 
-          document.querySelectorAll('.credential-form').forEach(function (f) {
-            f.className = 'credential-form';
-          });
-          clearAllForms();
+        var force = (cfActiveIndex - cfCurrentIndex) * stiffness;
+        cfVelocity = (cfVelocity + force) * damping;
+        cfCurrentIndex += cfVelocity;
 
-          var form = document.getElementById('form-' + selectedPlatform);
-          if (form) form.className = 'credential-form visible';
-        });
-      });
-
-      /* ═══════════════════════════════════════════════
-         Telegram Connect
-         ═══════════════════════════════════════════════ */
-
-      var tgToken = document.getElementById('tg-token');
-      var tgUserId = document.getElementById('tg-userid');
-      var tgConnect = document.getElementById('tg-connect');
-      var tgStatus = document.getElementById('tg-status');
-
-      function validateTg() {
-        tgConnect.disabled = !(tgToken.value.trim() && tgUserId.value.trim());
-      }
-      tgToken.addEventListener('input', validateTg);
-      tgUserId.addEventListener('input', validateTg);
-
-      document.getElementById('tg-cancel').addEventListener('click', function () { closeAddPanel(); });
-
-      tgConnect.addEventListener('click', async function () {
-        if (tgConnect.disabled) return;
-        tgConnect.disabled = true;
-        setStatus(tgStatus, 'Connecting...', '');
-
-        var rawId = tgUserId.value.trim().replace(/\D/g, '');
-        var parsedId = parseInt(rawId, 10);
-        if (!rawId || isNaN(parsedId) || parsedId <= 0) {
-          setStatus(tgStatus, 'User ID must be a positive number', 'error');
-          tgConnect.disabled = false;
+        if (Math.abs(cfCurrentIndex - cfActiveIndex) < 0.002 && Math.abs(cfVelocity) < 0.002) {
+          cfCurrentIndex = cfActiveIndex;
+          cfVelocity = 0;
+          cfAnimating = false;
+          updateCoverflowTransforms();
           return;
         }
 
-        try {
-          var result = await window.openwind.connectChannel('telegram', {
-            token: tgToken.value.trim(),
-            userId: parsedId,
-          });
-          if (result.success) {
-            setStatus(tgStatus, 'Connected to @' + result.botUsername, 'success');
-            addNodeToGraph({
-              platform: 'telegram',
-              label: '@' + result.botUsername,
-              photo: result.photo || null,
-              status: 'connected',
-              credentials: 'telegram_bot_token',
-              meta: { botId: String(result.botId || ''), userId: String(parsedId) },
-            });
-            setTimeout(function () { closeAddPanel(); }, 800);
+        updateCoverflowTransforms();
+        requestAnimationFrame(cfSpringTick);
+      }
+
+      function startCfAnimation() {
+        if (!cfAnimating) {
+          cfAnimating = true;
+          requestAnimationFrame(cfSpringTick);
+        }
+      }
+
+      /* Scroll on dock to change active card (debounced for trackpad) */
+      var cfScrollAccum = 0;
+      var CF_SCROLL_THRESHOLD = 40;
+      cfDock.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        cfScrollAccum += e.deltaY;
+        if (Math.abs(cfScrollAccum) >= CF_SCROLL_THRESHOLD) {
+          if (cfScrollAccum > 0) {
+            cfActiveIndex = Math.min(cfActiveIndex + 1, cfPlatforms.length - 1);
           } else {
-            setStatus(tgStatus, result.error || 'Connection failed', 'error');
-            tgConnect.disabled = false;
+            cfActiveIndex = Math.max(cfActiveIndex - 1, 0);
           }
-        } catch {
-          setStatus(tgStatus, 'Connection failed', 'error');
-          tgConnect.disabled = false;
+          cfScrollAccum = 0;
+          startCfAnimation();
+        }
+      }, { passive: false });
+
+      /* Click non-center card to center it */
+      cfTrack.addEventListener('click', function (e) {
+        var card = e.target.closest('.coverflow-card');
+        if (!card) return;
+        var idx = parseInt(card.dataset.index, 10);
+        if (idx !== cfActiveIndex) {
+          cfActiveIndex = idx;
+          startCfAnimation();
+        }
+      });
+
+      /* Dock collapse/expand toggle */
+      var dockToggle = document.getElementById('dock-toggle');
+      var isDockCollapsed = false;
+      dockToggle.addEventListener('click', function () {
+        isDockCollapsed = !isDockCollapsed;
+        cfDock.classList.toggle('collapsed', isDockCollapsed);
+        dockToggle.classList.toggle('collapsed', isDockCollapsed);
+      });
+
+      /* ═══════════════════════════════════════════════
+         Edge Hover Delete Button
+         ═══════════════════════════════════════════════ */
+
+      var edgeDeleteBtn = document.createElement('button');
+      edgeDeleteBtn.className = 'edge-delete-btn';
+      edgeDeleteBtn.innerHTML = '<img src="icons/unlink.svg" alt="Remove" />';
+      world.appendChild(edgeDeleteBtn);
+
+      var hoveredEdgeId = null;
+      var edgeHideTimeout = null;
+
+      function getEdgeMidpoint(edgeId) {
+        var edge = graph.edges.find(function (e) { return e.id === edgeId; });
+        if (!edge) return null;
+        var fromNode = graph.nodes.find(function (n) { return n.id === edge.from; });
+        var toNode = graph.nodes.find(function (n) { return n.id === edge.to; });
+        if (!fromNode || !toNode) return null;
+        var fromCard = world.querySelector('[data-node-id="' + edge.from + '"]');
+        var toCard = world.querySelector('[data-node-id="' + edge.to + '"]');
+        var fromW = fromCard ? fromCard.offsetWidth : 120;
+        var fromH = fromCard ? fromCard.offsetHeight : 150;
+        var toW = toCard ? toCard.offsetWidth : 120;
+        var x1 = fromNode.position.x + fromW / 2;
+        var y1 = fromNode.position.y + fromH;
+        var x2 = toNode.position.x + toW / 2;
+        var y2 = toNode.position.y;
+        return { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
+      }
+
+      edgeSvg.addEventListener('mouseover', function (e) {
+        var hit = e.target.closest('.edge-hit');
+        if (!hit) return;
+        if (edgeHideTimeout) clearTimeout(edgeHideTimeout);
+        hoveredEdgeId = hit.dataset.edgeId;
+        var mid = getEdgeMidpoint(hoveredEdgeId);
+        if (mid) {
+          edgeDeleteBtn.style.left = mid.x + 'px';
+          edgeDeleteBtn.style.top = mid.y + 'px';
+          edgeDeleteBtn.dataset.edgeId = hoveredEdgeId;
+          edgeDeleteBtn.classList.add('visible');
+        }
+      });
+
+      edgeSvg.addEventListener('mouseout', function (e) {
+        var hit = e.target.closest('.edge-hit');
+        if (!hit) return;
+        edgeHideTimeout = setTimeout(function () {
+          edgeDeleteBtn.classList.remove('visible');
+          hoveredEdgeId = null;
+        }, 300);
+      });
+
+      edgeDeleteBtn.addEventListener('mouseenter', function () {
+        if (edgeHideTimeout) clearTimeout(edgeHideTimeout);
+      });
+
+      edgeDeleteBtn.addEventListener('mouseleave', function () {
+        edgeHideTimeout = setTimeout(function () {
+          edgeDeleteBtn.classList.remove('visible');
+          hoveredEdgeId = null;
+        }, 200);
+      });
+
+      edgeDeleteBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        var edgeId = edgeDeleteBtn.dataset.edgeId;
+        if (!edgeId) return;
+        graph.edges = graph.edges.filter(function (edge) { return edge.id !== edgeId; });
+        edgeDeleteBtn.classList.remove('visible');
+        hoveredEdgeId = null;
+        renderEdges();
+        saveGraph();
+      });
+
+      /* ═══════════════════════════════════════════════
+         Drag from Dock
+         ═══════════════════════════════════════════════ */
+
+      var cfGhost = null;
+      var cfDragPlatform = null;
+      var cfIsDragging = false;
+
+      cfTrack.addEventListener('mousedown', function (e) {
+        var card = e.target.closest('.coverflow-card');
+        if (!card || e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        cfDragPlatform = card.dataset.platform;
+        cfIsDragging = true;
+
+        cfGhost = document.createElement('div');
+        cfGhost.className = 'coverflow-ghost';
+        cfGhost.innerHTML =
+          '<div class="cf-icon">' + (platformIcons[cfDragPlatform] || '') + '</div>' +
+          '<div class="cf-name">' + escapeHtml(capitalize(cfDragPlatform)) + '</div>';
+        cfGhost.style.left = (e.clientX - 48) + 'px';
+        cfGhost.style.top = (e.clientY - 64) + 'px';
+        document.body.appendChild(cfGhost);
+      });
+
+      document.addEventListener('mousemove', function (e) {
+        if (!cfIsDragging || !cfGhost) return;
+        cfGhost.style.left = (e.clientX - 48) + 'px';
+        cfGhost.style.top = (e.clientY - 64) + 'px';
+
+        var dockRect = cfDock.getBoundingClientRect();
+        if (e.clientY < dockRect.top) {
+          cfGhost.classList.add('above-dock');
+        } else {
+          cfGhost.classList.remove('above-dock');
+        }
+      });
+
+      document.addEventListener('mouseup', function (e) {
+        if (!cfIsDragging) return;
+        cfIsDragging = false;
+
+        var dockRect = cfDock.getBoundingClientRect();
+        var droppedAboveDock = e.clientY < dockRect.top;
+
+        if (cfGhost) {
+          cfGhost.remove();
+          cfGhost = null;
+        }
+
+        if (droppedAboveDock && cfDragPlatform) {
+          var rect = viewport.getBoundingClientRect();
+          var wx = (e.clientX - rect.left - vpX) / vpZoom - 140;
+          var wy = (e.clientY - rect.top - vpY) / vpZoom - 80;
+
+          var node = {
+            id: generateId(),
+            platform: cfDragPlatform,
+            label: capitalize(cfDragPlatform),
+            photo: null,
+            position: { x: Math.round(wx), y: Math.round(wy) },
+            status: 'setup',
+            credentials: '',
+            meta: {},
+            _formData: {},
+            _statusMsg: '',
+            _statusType: '',
+            _animateIn: true,
+          };
+          graph.nodes.push(node);
+          renderAll();
+          saveGraph();
+        }
+
+        cfDragPlatform = null;
+      });
+
+      /* Cleanup ghost on window blur */
+      window.addEventListener('blur', function () {
+        if (cfIsDragging && cfGhost) {
+          cfGhost.remove();
+          cfGhost = null;
+          cfIsDragging = false;
+          cfDragPlatform = null;
         }
       });
 
       /* ═══════════════════════════════════════════════
-         Slack Connect
+         Inline Card Actions (connect, cancel, gear, etc.)
          ═══════════════════════════════════════════════ */
 
-      var slackToken = document.getElementById('slack-token');
-      var slackSecret = document.getElementById('slack-secret');
-      var slackConnect = document.getElementById('slack-connect');
-      var slackStatus = document.getElementById('slack-status');
+      world.addEventListener('click', function (e) {
+        var actionEl = e.target.closest('[data-action]');
+        if (!actionEl) return;
+        var action = actionEl.dataset.action;
+        var card = actionEl.closest('.agent-card');
+        if (!card) return;
+        var nodeId = card.dataset.nodeId;
+        var node = graph.nodes.find(function (n) { return n.id === nodeId; });
+        if (!node) return;
 
-      function validateSlack() {
-        slackConnect.disabled = !(slackToken.value.trim() && slackSecret.value.trim());
-      }
-      slackToken.addEventListener('input', validateSlack);
-      slackSecret.addEventListener('input', validateSlack);
-
-      document.getElementById('slack-cancel').addEventListener('click', function () { closeAddPanel(); });
-
-      slackConnect.addEventListener('click', async function () {
-        if (slackConnect.disabled) return;
-        slackConnect.disabled = true;
-        setStatus(slackStatus, 'Connecting...', '');
-
-        try {
-          var result = await window.openwind.connectChannel('slack', {
-            token: slackToken.value.trim(),
-            signingSecret: slackSecret.value.trim(),
+        if (action === 'cancel') {
+          animateCardDelete(nodeId, function () {
+            graph.nodes = graph.nodes.filter(function (n) { return n.id !== nodeId; });
+            graph.edges = graph.edges.filter(function (edge) { return edge.from !== nodeId && edge.to !== nodeId; });
+            if (selectedNodeId === nodeId) selectedNodeId = null;
+            renderAll();
+            saveGraph();
           });
-          if (result.success) {
-            setStatus(slackStatus, 'Connected to ' + (result.teamName || 'Slack'), 'success');
-            addNodeToGraph({
-              platform: 'slack',
-              label: result.teamName || 'Slack Bot',
-              photo: null,
-              status: 'connected',
-              credentials: 'slack_bot_token',
-              meta: { botUserId: result.botUserId || '', teamId: result.teamId || '' },
-            });
-            setTimeout(function () { closeAddPanel(); }, 800);
+          e.stopPropagation();
+          return;
+        }
+
+        if (action === 'connect') {
+          handleInlineConnect(node);
+          e.stopPropagation();
+          return;
+        }
+
+        if (action === 'gear') {
+          if (node.platform === 'ceo') {
+            openAgentDetail(nodeId);
           } else {
-            setStatus(slackStatus, result.error || 'Connection failed', 'error');
-            slackConnect.disabled = false;
+            flipCard(card, function () {
+              node._editing = true;
+              renderNodes();
+            });
           }
-        } catch {
-          setStatus(slackStatus, 'Connection failed', 'error');
-          slackConnect.disabled = false;
+          e.stopPropagation();
+          return;
+        }
+
+        if (action === 'close-edit') {
+          flipCard(card, function () {
+            node._editing = false;
+            renderNodes();
+          });
+          e.stopPropagation();
+          return;
+        }
+
+        if (action === 'disconnect') {
+          window.openwind.disconnectChannel(node.platform, nodeId);
+          animateCardDelete(nodeId, function () {
+            graph.nodes = graph.nodes.filter(function (n) { return n.id !== nodeId; });
+            graph.edges = graph.edges.filter(function (edge) { return edge.from !== nodeId && edge.to !== nodeId; });
+            if (selectedNodeId === nodeId) selectedNodeId = null;
+            renderAll();
+            saveGraph();
+          });
+          e.stopPropagation();
+          return;
+        }
+      });
+
+      /* Capture form input changes into node._formData */
+      world.addEventListener('input', function (e) {
+        if (!e.target.matches('.card-setup-field input')) return;
+        var card = e.target.closest('.agent-card');
+        if (!card) return;
+        var nodeId = card.dataset.nodeId;
+        var node = graph.nodes.find(function (n) { return n.id === nodeId; });
+        if (!node) return;
+        if (!node._formData) node._formData = {};
+        var fieldKey = e.target.dataset.field;
+        if (fieldKey) {
+          node._formData[fieldKey] = e.target.value;
         }
       });
 
       /* ═══════════════════════════════════════════════
-         WhatsApp Connect
+         Inline Connect Logic
          ═══════════════════════════════════════════════ */
 
-      var waPhoneId = document.getElementById('wa-phone-id');
-      var waToken = document.getElementById('wa-token');
-      var waConnect = document.getElementById('wa-connect');
-      var waStatus = document.getElementById('wa-status');
+      async function handleInlineConnect(node) {
+        var formData = node._formData || {};
+        var platform = node.platform;
+        var credentials = {};
 
-      function validateWa() {
-        waConnect.disabled = !(waPhoneId.value.trim() && waToken.value.trim());
-      }
-      waPhoneId.addEventListener('input', validateWa);
-      waToken.addEventListener('input', validateWa);
+        if (platform === 'telegram') {
+          var rawId = String(formData.userId || '').trim().replace(/\D/g, '');
+          var parsedId = parseInt(rawId, 10);
+          if (!rawId || isNaN(parsedId) || parsedId <= 0) {
+            node._statusMsg = 'User ID must be a positive number';
+            node._statusType = 'error';
+            node.status = 'error';
+            renderNodes();
+            return;
+          }
+          credentials = { token: (formData.token || '').trim(), userId: parsedId };
+        } else if (platform === 'slack') {
+          credentials = { token: (formData.token || '').trim(), signingSecret: (formData.signingSecret || '').trim() };
+        } else if (platform === 'whatsapp') {
+          credentials = { phoneNumberId: (formData.phoneNumberId || '').trim(), accessToken: (formData.accessToken || '').trim() };
+        } else if (platform === 'discord') {
+          credentials = { token: (formData.token || '').trim() };
+        } else if (platform === 'gmail') {
+          credentials = { oauth: true };
+        } else if (platform === 'email') {
+          credentials = {
+            imapHost: (formData.imapHost || '').trim(),
+            imapPort: parseInt(formData.imapPort, 10) || 993,
+            smtpHost: (formData.smtpHost || '').trim(),
+            smtpPort: parseInt(formData.smtpPort, 10) || 587,
+            username: (formData.username || '').trim(),
+            password: (formData.password || '').trim(),
+          };
+        }
 
-      document.getElementById('wa-cancel').addEventListener('click', function () { closeAddPanel(); });
-
-      waConnect.addEventListener('click', async function () {
-        if (waConnect.disabled) return;
-        waConnect.disabled = true;
-        setStatus(waStatus, 'Connecting...', '');
+        node.status = 'connecting';
+        node._statusMsg = '';
+        node._statusType = '';
+        renderNodes();
 
         try {
-          var result = await window.openwind.connectChannel('whatsapp', {
-            phoneNumberId: waPhoneId.value.trim(),
-            accessToken: waToken.value.trim(),
-          });
+          var result = await window.openwind.connectChannel(platform, credentials);
           if (result.success) {
-            setStatus(waStatus, 'Connected to WhatsApp', 'success');
-            addNodeToGraph({
-              platform: 'whatsapp',
-              label: result.displayName || 'WhatsApp',
-              photo: null,
-              status: 'connected',
-              credentials: 'whatsapp_access_token',
-              meta: { phoneNumberId: waPhoneId.value.trim() },
-            });
-            setTimeout(function () { closeAddPanel(); }, 800);
+            node.status = 'connected';
+            node._statusMsg = '';
+            node._statusType = '';
+            delete node._formData;
+
+            if (platform === 'telegram') {
+              node.label = '@' + (result.botUsername || 'TelegramBot');
+              node.photo = result.photo || null;
+              node.credentials = 'telegram_bot_token';
+              node.meta = { botId: String(result.botId || ''), userId: String(credentials.userId), firstName: result.firstName || result.botUsername || '' };
+            } else if (platform === 'slack') {
+              node.label = result.teamName || 'Slack Bot';
+              node.credentials = 'slack_bot_token';
+              node.meta = { botUserId: result.botUserId || '', teamId: result.teamId || '' };
+            } else if (platform === 'whatsapp') {
+              node.label = result.displayName || 'WhatsApp';
+              node.credentials = 'whatsapp_access_token';
+              node.meta = { phoneNumberId: credentials.phoneNumberId };
+            } else if (platform === 'discord') {
+              node.label = result.botUsername || 'Discord Bot';
+              node.photo = result.photo || null;
+              node.credentials = 'discord_bot_token';
+              node.meta = { botId: result.botId || '' };
+            } else if (platform === 'gmail') {
+              node.label = result.email || result.displayName || 'Gmail';
+              node.photo = result.photo || null;
+              node.credentials = 'gmail_oauth';
+              node.meta = { email: result.email || '' };
+            } else if (platform === 'email') {
+              node.label = result.displayName || 'Email';
+              node.credentials = 'email_password';
+              node.meta = { username: credentials.username, imapHost: credentials.imapHost };
+            }
+
+            renderAll();
+            saveGraph();
           } else {
-            setStatus(waStatus, result.error || 'Connection failed', 'error');
-            waConnect.disabled = false;
+            node.status = 'error';
+            node._statusMsg = result.error || 'Connection failed';
+            node._statusType = 'error';
+            renderNodes();
           }
         } catch {
-          setStatus(waStatus, 'Connection failed', 'error');
-          waConnect.disabled = false;
+          node.status = 'error';
+          node._statusMsg = 'Connection failed';
+          node._statusType = 'error';
+          renderNodes();
         }
-      });
+      }
 
       /* ═══════════════════════════════════════════════
          Keyboard Shortcuts
@@ -968,13 +1491,30 @@
             closeAgentDetail();
           } else if (workspaceDetailPanel.classList.contains('open')) {
             closeWorkspaceDetail();
-          } else if (addPanel.classList.contains('open')) {
-            closeAddPanel();
           } else {
-            selectedNodeId = null;
-            selectedWorkspaceId = null;
-            renderNodes();
-            renderWorkspaces();
+            /* Close any setup/error cards first, then deselect */
+            var closedSetup = false;
+            graph.nodes.forEach(function (n) {
+              if (n.status === 'setup' || n.status === 'error') {
+                closedSetup = true;
+              }
+              if (n._editing) {
+                n._editing = false;
+                closedSetup = true;
+              }
+            });
+            if (closedSetup) {
+              graph.nodes = graph.nodes.filter(function (n) {
+                return n.status !== 'setup' && n.status !== 'error';
+              });
+              renderAll();
+              saveGraph();
+            } else {
+              selectedNodeId = null;
+              selectedWorkspaceId = null;
+              renderNodes();
+              renderWorkspaces();
+            }
           }
           e.preventDefault();
           return;
@@ -1007,42 +1547,19 @@
          Graph Mutations
          ═══════════════════════════════════════════════ */
 
-      function addNodeToGraph(opts) {
-        var cx = (window.innerWidth / 2 - vpX) / vpZoom - 68;
-        var cy = (window.innerHeight / 2 - vpY) / vpZoom - 64;
-
-        /* offset if overlapping */
-        var offset = graph.nodes.length * 32;
-        cx += offset % 256;
-        cy += Math.floor(offset / 256) * 48;
-
-        var node = {
-          id: generateId(),
-          platform: opts.platform,
-          label: opts.label,
-          photo: opts.photo,
-          position: { x: Math.round(cx), y: Math.round(cy) },
-          status: opts.status,
-          credentials: opts.credentials,
-          meta: opts.meta || {},
-        };
-        graph.nodes.push(node);
-        renderAll();
-        saveGraph();
-      }
-
       function removeNode(nodeId) {
         var node = graph.nodes.find(function (n) { return n.id === nodeId; });
-        graph.nodes = graph.nodes.filter(function (n) { return n.id !== nodeId; });
-        graph.edges = graph.edges.filter(function (e) { return e.from !== nodeId && e.to !== nodeId; });
-        selectedNodeId = null;
+        if (!node) return;
+        if (node.platform === 'ceo') return; /* CEO cannot be deleted */
+        window.openwind.disconnectChannel(node.platform, nodeId);
 
-        if (node) {
-          window.openwind.disconnectChannel(node.platform, nodeId);
-        }
-
-        renderAll();
-        saveGraph();
+        animateCardDelete(nodeId, function () {
+          graph.nodes = graph.nodes.filter(function (n) { return n.id !== nodeId; });
+          graph.edges = graph.edges.filter(function (e) { return e.from !== nodeId && e.to !== nodeId; });
+          selectedNodeId = null;
+          renderAll();
+          saveGraph();
+        });
       }
 
       /* ═══════════════════════════════════════════════
@@ -1084,19 +1601,6 @@
         return s.charAt(0).toUpperCase() + s.slice(1);
       }
 
-      function setStatus(el, msg, type) {
-        el.textContent = msg;
-        el.className = 'panel-status visible' + (type ? ' ' + type : '');
-      }
-
-      function clearAllForms() {
-        tgToken.value = ''; tgUserId.value = ''; tgConnect.disabled = true;
-        tgStatus.className = 'panel-status';
-        slackToken.value = ''; slackSecret.value = ''; slackConnect.disabled = true;
-        slackStatus.className = 'panel-status';
-        waPhoneId.value = ''; waToken.value = ''; waConnect.disabled = true;
-        waStatus.className = 'panel-status';
-      }
 
       /* ═══════════════════════════════════════════════
          Listen for external updates
@@ -1139,20 +1643,24 @@
         detailNodeId = nodeId;
 
         /* Close other panels */
-        closeAddPanel();
         closeWorkspaceDetail();
 
         /* Populate identity */
         var identityEl = document.getElementById('agent-detail-identity');
-        var photoHtml = node.photo
-          ? '<img src="' + node.photo + '" alt="" />'
-          : platformIcons[node.platform] || '';
-        var displayName = node.meta.firstName || node.label.replace(/^@/, '');
+        var isCeo = node.platform === 'ceo';
+        var photoHtml = isCeo
+          ? '<img src="icons/crown.svg" alt="CEO" style="width:24px;height:24px;filter:brightness(0) invert(0.9);" />'
+          : node.photo
+            ? '<img src="' + node.photo + '" alt="" />'
+            : platformIcons[node.platform] || '';
+        var displayName = isCeo ? node.label : (node.meta.firstName || node.label.replace(/^@/, ''));
+        var platformLabel = isCeo ? 'CEO — Organization Owner' : capitalize(node.platform);
+        var avatarClass = isCeo ? 'detail-avatar ceo-avatar' : 'detail-avatar';
         identityEl.innerHTML =
-          '<div class="detail-avatar">' + photoHtml + '</div>' +
+          '<div class="' + avatarClass + '">' + photoHtml + '</div>' +
           '<div>' +
             '<div class="detail-agent-name">' + escapeHtml(displayName) + '</div>' +
-            '<div class="detail-agent-platform">' + escapeHtml(capitalize(node.platform)) + '</div>' +
+            '<div class="detail-agent-platform">' + escapeHtml(platformLabel) + '</div>' +
           '</div>';
 
         /* Role pills */
@@ -1262,7 +1770,6 @@
         detailWorkspaceId = wsId;
 
         /* Close other panels */
-        closeAddPanel();
         closeAgentDetail();
 
         document.getElementById('ws-detail-name').value = ws.name;
@@ -1432,150 +1939,7 @@
       });
 
       /* ═══════════════════════════════════════════════
-         CEO Command Bar
-         ═══════════════════════════════════════════════ */
-
-      ceoInput.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrowDown' && ceoAutocomplete.classList.contains('visible')) {
-          e.preventDefault();
-          acIndex = Math.min(acIndex + 1, acItems.length - 1);
-          renderAutocomplete();
-          return;
-        }
-        if (e.key === 'ArrowUp' && ceoAutocomplete.classList.contains('visible')) {
-          e.preventDefault();
-          acIndex = Math.max(acIndex - 1, 0);
-          renderAutocomplete();
-          return;
-        }
-        if (e.key === 'Tab' && ceoAutocomplete.classList.contains('visible') && acItems.length > 0) {
-          e.preventDefault();
-          applyAutocomplete(acItems[Math.max(0, acIndex)]);
-          return;
-        }
-        if (e.key === 'Enter') {
-          if (ceoAutocomplete.classList.contains('visible') && acIndex >= 0 && acItems[acIndex]) {
-            e.preventDefault();
-            applyAutocomplete(acItems[acIndex]);
-            return;
-          }
-          e.preventDefault();
-          var cmd = ceoInput.value.trim();
-          if (!cmd) return;
-          ceoInput.value = '';
-          hideAutocomplete();
-          window.openwind.executeCeoCommand(cmd);
-          return;
-        }
-        if (e.key === 'Escape') {
-          if (ceoAutocomplete.classList.contains('visible')) {
-            hideAutocomplete();
-            e.stopPropagation();
-          }
-        }
-      });
-
-      ceoInput.addEventListener('input', function () {
-        var val = this.value;
-        var cursor = this.selectionStart;
-        /* Find trigger: look backwards from cursor for @ or # */
-        var triggerIdx = -1;
-        acTrigger = '';
-        for (var i = cursor - 1; i >= 0; i--) {
-          if (val[i] === ' ') break;
-          if (val[i] === '@' || val[i] === '#') {
-            triggerIdx = i;
-            acTrigger = val[i];
-            break;
-          }
-        }
-
-        if (triggerIdx < 0) {
-          hideAutocomplete();
-          return;
-        }
-
-        var query = val.slice(triggerIdx + 1, cursor).toLowerCase();
-        acItems = [];
-
-        if (acTrigger === '@') {
-          graph.nodes.forEach(function (n) {
-            var name = (n.meta.firstName || n.label.replace(/^@/, '')).toLowerCase();
-            if (name.indexOf(query) >= 0) {
-              acItems.push({ prefix: '@', name: n.meta.firstName || n.label.replace(/^@/, ''), type: n.platform, raw: n.label.replace(/^@/, '') });
-            }
-          });
-        } else if (acTrigger === '#') {
-          graph.workspaces.forEach(function (ws) {
-            if (ws.name.toLowerCase().indexOf(query) >= 0) {
-              acItems.push({ prefix: '#', name: ws.name, type: 'workspace', raw: ws.name });
-            }
-          });
-        }
-
-        if (acItems.length > 0) {
-          acIndex = 0;
-          showAutocomplete();
-        } else {
-          hideAutocomplete();
-        }
-      });
-
-      function showAutocomplete() {
-        renderAutocomplete();
-        ceoAutocomplete.classList.add('visible');
-      }
-
-      function hideAutocomplete() {
-        ceoAutocomplete.classList.remove('visible');
-        acItems = [];
-        acIndex = -1;
-      }
-
-      function renderAutocomplete() {
-        var html = '';
-        acItems.forEach(function (item, idx) {
-          html += '<div class="ceo-autocomplete-item' + (idx === acIndex ? ' active' : '') + '" data-idx="' + idx + '">' +
-            '<span class="ac-prefix">' + escapeHtml(item.prefix) + '</span>' +
-            '<span class="ac-name">' + escapeHtml(item.name) + '</span>' +
-            '<span class="ac-type">' + escapeHtml(item.type) + '</span>' +
-          '</div>';
-        });
-        ceoAutocomplete.innerHTML = html;
-      }
-
-      ceoAutocomplete.addEventListener('click', function (e) {
-        var itemEl = e.target.closest('.ceo-autocomplete-item');
-        if (!itemEl) return;
-        var idx = parseInt(itemEl.dataset.idx, 10);
-        if (acItems[idx]) {
-          applyAutocomplete(acItems[idx]);
-        }
-      });
-
-      function applyAutocomplete(item) {
-        var val = ceoInput.value;
-        var cursor = ceoInput.selectionStart;
-        /* Find trigger position */
-        var triggerIdx = -1;
-        for (var i = cursor - 1; i >= 0; i--) {
-          if (val[i] === '@' || val[i] === '#') {
-            triggerIdx = i;
-            break;
-          }
-        }
-        if (triggerIdx < 0) return;
-        var before = val.slice(0, triggerIdx);
-        var after = val.slice(cursor);
-        var inserted = item.prefix + item.raw + ' ';
-        ceoInput.value = before + inserted + after;
-        ceoInput.selectionStart = ceoInput.selectionEnd = before.length + inserted.length;
-        hideAutocomplete();
-        ceoInput.focus();
-      }
-
-      /* ═══════════════════════════════════════════════
-         Escape key: close detail panels
+         Helpers (continued)
          ═══════════════════════════════════════════════ */
 
       function hexToRgba(hex, alpha) {

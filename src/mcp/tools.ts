@@ -36,6 +36,42 @@ const addEventSchema = z.object({
   entityNames: z.array(z.string().max(200)).max(20).optional(),
 });
 
+const entityTypeEnum = z.enum([
+  'person',
+  'project',
+  'company',
+  'event',
+  'document',
+  'goal',
+  'place',
+  'concept',
+]);
+
+const rememberSchema = z.object({
+  entities: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(200),
+        type: entityTypeEnum,
+        summary: z.string().max(1000).optional(),
+        properties: z.record(z.string().max(500)).optional(),
+      }),
+    )
+    .min(1)
+    .max(30),
+  relations: z
+    .array(
+      z.object({
+        from: z.string().min(1).max(200),
+        to: z.string().min(1).max(200),
+        type: z.string().min(1).max(100),
+        context: z.string().max(500).optional(),
+      }),
+    )
+    .max(50)
+    .default([]),
+});
+
 export const TOOL_DEFS = {
   openwind_query: {
     description: 'Ask a natural language question about your world model',
@@ -65,6 +101,11 @@ export const TOOL_DEFS = {
   openwind_add_event: {
     description: 'Feed a new event into the world model (requires authorization)',
     schema: addEventSchema,
+  },
+  openwind_remember: {
+    description:
+      'Store structured knowledge: entities (people, projects, companies, etc.) and their relations. Use this whenever you learn something new about the user or their world.',
+    schema: rememberSchema,
   },
 } as const;
 

@@ -49,6 +49,7 @@
   user-select: none;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  z-index: 1;
 }
 
 .agent-card:hover {
@@ -145,49 +146,54 @@
 .platform-badge.telegram { color: #27A7E7; background: rgba(39, 167, 231, 0.12); }
 .platform-badge.slack { color: #E01E5A; background: rgba(224, 30, 90, 0.12); }
 .platform-badge.whatsapp { color: #25D366; background: rgba(37, 211, 102, 0.12); }
+.platform-badge.discord { color: #5865F2; background: rgba(88, 101, 242, 0.12); }
+.platform-badge.gmail { color: #EA4335; background: rgba(234, 67, 53, 0.12); }
+.platform-badge.email { color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.06); }
 
 /* ── Connection Ports ────────────────────────── */
 
 .port {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgb(30, 30, 30);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
   cursor: crosshair;
-  transition: all 0.12s ease;
+  transition: all 0.15s ease;
   z-index: 10;
 }
 
 .port:hover {
   background: var(--accent);
   border-color: var(--accent);
-  transform: scale(1.3);
+  transform: scale(1.4);
+  box-shadow: 0 0 8px rgba(124, 107, 245, 0.4);
 }
 
 .port-output {
-  right: -6px;
-  top: 50%;
-  margin-top: -6px;
+  bottom: -5px;
+  left: 50%;
+  margin-left: -5px;
 }
 
 .port-input {
-  left: -6px;
-  top: 50%;
-  margin-top: -6px;
+  top: -5px;
+  left: 50%;
+  margin-left: -5px;
 }
 
 /* ── SVG Edges ───────────────────────────────── */
 
 .edge-svg {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: -5000px;
+  left: -5000px;
+  width: 10000px;
+  height: 10000px;
   pointer-events: none;
   z-index: 0;
+  overflow: visible;
 }
 
 .edge-svg path {
@@ -209,12 +215,69 @@
   opacity: 0.5;
 }
 
+/* Edge hit area (wide invisible stroke for hover detection) */
+.edge-svg .edge-hit {
+  stroke: transparent;
+  stroke-width: 16px;
+  fill: none;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.edge-svg .edge-hit:hover + path {
+  stroke: rgba(255, 255, 255, 0.25);
+}
+
+/* Edge delete button (positioned at bezier midpoint) */
+.edge-delete-btn {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(40, 40, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.8);
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.12s ease;
+  pointer-events: none;
+  padding: 0;
+}
+
+.edge-delete-btn.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+
+.edge-delete-btn:hover {
+  background: rgba(248, 113, 113, 0.25);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.edge-delete-btn img {
+  width: 12px;
+  height: 12px;
+  filter: brightness(0) invert(0.5);
+  transition: filter 0.12s ease;
+}
+
+.edge-delete-btn:hover img {
+  filter: brightness(0) invert(0.8);
+}
+
 /* ── Toolbar ─────────────────────────────────── */
 
 .canvas-toolbar {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  top: 48px;
+  left: 24px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -247,6 +310,17 @@
   height: 16px;
 }
 
+.toolbar-btn img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(0.5);
+  transition: filter 0.12s ease;
+}
+
+.toolbar-btn:hover img {
+  filter: brightness(0) invert(0.8);
+}
+
 .toolbar-btn.primary {
   background: var(--accent);
   border-color: var(--accent);
@@ -265,28 +339,454 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Add Agent Panel ─────────────────────────── */
+/* ── Cover Flow Dock ─────────────────────────── */
 
-.add-agent-panel {
+.coverflow-dock {
   position: fixed;
-  top: 0;
-  right: -400px;
-  width: 400px;
-  height: 100%;
-  background: rgba(22, 22, 22, 0.95);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  z-index: 300;
-  transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  padding-bottom: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+  z-index: 150;
+  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.35) 50%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.coverflow-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  position: relative;
+  height: 140px;
+}
+
+.coverflow-card {
+  position: absolute;
+  width: 96px;
+  height: 128px;
+  border-radius: 16px;
+  background: rgba(30, 30, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: grab;
+  user-select: none;
+  transition: border-color 0.15s ease;
+  -webkit-box-reflect: below 4px linear-gradient(transparent 70%, rgba(255, 255, 255, 0.08));
 }
 
-.add-agent-panel.open {
-  right: 0;
+.coverflow-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
 }
+
+/* Position classes removed — spring animation drives transforms via JS */
+
+.cf-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cf-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.cf-icon img {
+  width: 32px;
+  height: 32px;
+}
+
+.cf-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  line-height: 1;
+}
+
+.cf-hint {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  line-height: 1.2;
+  padding: 0 8px;
+}
+
+/* ── Dock Toggle Button ─────────────────────── */
+
+.dock-toggle {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(30, 30, 30, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 160;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.dock-toggle:hover {
+  background: rgba(50, 50, 50, 0.9);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.dock-toggle img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(0.4);
+  transition: filter 0.12s ease, transform 0.2s ease;
+}
+
+.dock-toggle:hover img {
+  filter: brightness(0) invert(0.7);
+}
+
+.dock-toggle.collapsed img {
+  transform: rotate(180deg);
+}
+
+.coverflow-dock.collapsed {
+  transform: translateY(100%);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.coverflow-dock {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Drag Ghost ──────────────────────────────── */
+
+.coverflow-ghost {
+  position: fixed;
+  width: 96px;
+  height: 128px;
+  border-radius: 16px;
+  background: rgba(30, 30, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 1000;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  opacity: 0.85;
+}
+
+.coverflow-ghost.above-dock {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* ── Setup Card (expanded on canvas) ─────────── */
+
+.agent-card.setup,
+.agent-card.connecting,
+.agent-card.error-state {
+  width: 280px;
+  padding: 20px;
+  border-radius: 16px;
+  align-items: stretch;
+}
+
+.card-setup-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card-setup-header .cf-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.card-setup-header .cf-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.card-setup-header .cf-icon img {
+  width: 28px;
+  height: 28px;
+}
+
+.card-setup-header .card-setup-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-setup-close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.12s ease;
+  padding: 0;
+}
+
+.card-setup-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.card-setup-field {
+  margin-bottom: 12px;
+}
+
+.card-setup-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 4px;
+}
+
+.card-setup-field input {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.card-setup-field input:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.card-setup-field input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.card-setup-field input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.card-setup-field .card-field-hint {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.2);
+  margin-top: 2px;
+}
+
+.card-setup-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.card-setup-actions button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex: 1;
+}
+
+.card-setup-actions .btn-connect {
+  background: var(--accent);
+  color: white;
+}
+
+.card-setup-actions .btn-connect:hover {
+  background: var(--accent-hover);
+}
+
+.card-setup-actions .btn-connect:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.card-setup-actions .btn-cancel {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.card-setup-actions .btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.card-setup-status {
+  font-size: 11px;
+  margin-top: 8px;
+  min-height: 16px;
+}
+
+.card-setup-status.error { color: #f87171; }
+.card-setup-status.success { color: #34d399; }
+.card-setup-status.info { color: rgba(255, 255, 255, 0.4); }
+
+/* Error state card */
+.agent-card.error-state {
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+/* Connecting spinner */
+.card-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: cardSpin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+@keyframes cardSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Gear Button (on connected cards) ────────── */
+
+.card-gear {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+  padding: 0;
+  z-index: 2;
+  opacity: 0;
+}
+
+.agent-card:hover .card-gear {
+  opacity: 1;
+}
+
+.card-gear:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  transform: scale(1.1);
+}
+
+.card-gear svg {
+  width: 14px;
+  height: 14px;
+}
+
+.card-gear img {
+  width: 14px;
+  height: 14px;
+  filter: brightness(0) invert(0.35);
+  transition: filter 0.12s ease;
+}
+
+.card-gear:hover img {
+  filter: brightness(0) invert(0.7);
+}
+
+/* ── CEO Card ────────────────────────────────── */
+
+.agent-card.ceo-card {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.agent-card.ceo-card:hover {
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.agent-card.ceo-card.selected {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.24);
+}
+
+.ceo-avatar {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.08));
+}
+
+.ceo-avatar img {
+  width: 28px;
+  height: 28px;
+  filter: brightness(0) invert(0.9);
+}
+
+.platform-badge.ceo {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  letter-spacing: 1px;
+}
+
+/* ── Card Flip (settings) ──────────────────── */
+
+.agent-card {
+  transform-style: preserve-3d;
+}
+
+@keyframes cardFlipIn {
+  0% { transform: perspective(800px) rotateY(0deg); }
+  50% { transform: perspective(800px) rotateY(90deg); }
+  100% { transform: perspective(800px) rotateY(0deg); }
+}
+
+.agent-card.card-flip {
+  animation: cardFlipIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Kept: panel-header/body/close/title for detail panels ── */
 
 .panel-header {
   display: flex;
@@ -333,72 +833,7 @@
   padding: 24px;
 }
 
-.platform-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-.platform-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.12s ease;
-}
-
-.platform-card:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.platform-card.selected {
-  border-color: var(--accent);
-  background: rgba(124, 107, 245, 0.08);
-}
-
-.platform-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.platform-icon svg {
-  width: 24px;
-  height: 24px;
-}
-
-.platform-card-info h3 {
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 2px;
-}
-
-.platform-card-info span {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-/* ── Credential Form ─────────────────────────── */
-
-.credential-form {
-  display: none;
-  animation: fadeIn 0.15s ease;
-}
-
-.credential-form.visible {
-  display: block;
-}
+/* ── Kept: cred-field for workspace dialog ───── */
 
 .cred-field {
   margin-bottom: 16px;
@@ -434,11 +869,7 @@
   color: rgba(255, 255, 255, 0.2);
 }
 
-.cred-hint {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.25);
-  margin-top: 4px;
-}
+/* ── Kept: panel-actions/btn for workspace dialog ── */
 
 .panel-actions {
   display: flex;
@@ -481,16 +912,6 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-.panel-status {
-  font-size: 12px;
-  margin-top: 12px;
-  display: none;
-}
-
-.panel-status.visible { display: block; }
-.panel-status.error { color: #f87171; }
-.panel-status.success { color: #34d399; }
-
 /* ── Empty State ─────────────────────────────── */
 
 .canvas-empty {
@@ -517,6 +938,63 @@
   height: 32px;
 }
 
+.canvas-empty-icons img {
+  width: 32px;
+  height: 32px;
+}
+
+/* Monochrome icons (lucide-based) need filter to be visible on dark bg */
+.icon-mono {
+  filter: brightness(0) invert(0.5);
+}
+
+/* ── Card Drop / Delete Animations ─────────── */
+
+@keyframes cardDropIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(-40px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06) translateY(4px);
+  }
+  70% {
+    transform: scale(0.97) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.agent-card.card-enter {
+  animation: cardDropIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes cardExplode {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  30% {
+    opacity: 0.9;
+    transform: scale(1.12);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.1);
+    filter: blur(12px);
+  }
+}
+
+.agent-card.card-exit {
+  animation: cardExplode 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  pointer-events: none;
+}
+
 .canvas-empty h2 {
   font-size: 18px;
   font-weight: 500;
@@ -540,6 +1018,7 @@
   background: rgba(255, 255, 255, 0.02);
   z-index: 0;
   user-select: none;
+  cursor: grab;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -1020,106 +1499,6 @@
   margin-bottom: 24px;
 }
 
-/* ── CEO Command Bar ─────────────────────────── */
-
-.ceo-command-bar {
-  position: fixed;
-  bottom: 24px;
-  left: 24px;
-  width: 50%;
-  height: 48px;
-  background: rgba(22, 22, 22, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  z-index: 200;
-  transition: border-color 0.15s ease;
-}
-
-.ceo-command-bar:focus-within {
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.ceo-command-input {
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  border: none;
-  color: var(--text);
-  font-size: 14px;
-  font-family: 'Geist Mono', 'SF Mono', 'Fira Code', monospace;
-  outline: none;
-}
-
-.ceo-command-input::placeholder {
-  color: rgba(255, 255, 255, 0.2);
-}
-
-.ceo-autocomplete {
-  position: absolute;
-  bottom: 56px;
-  left: 0;
-  right: 0;
-  background: rgba(26, 26, 26, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  max-height: 200px;
-  overflow-y: auto;
-  display: none;
-}
-
-.ceo-autocomplete.visible {
-  display: block;
-}
-
-.ceo-autocomplete-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  cursor: pointer;
-  transition: background 0.08s ease;
-}
-
-.ceo-autocomplete-item:first-child {
-  border-radius: 12px 12px 0 0;
-}
-
-.ceo-autocomplete-item:last-child {
-  border-radius: 0 0 12px 12px;
-}
-
-.ceo-autocomplete-item:only-child {
-  border-radius: 12px;
-}
-
-.ceo-autocomplete-item:hover,
-.ceo-autocomplete-item.active {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.ceo-autocomplete-item .ac-prefix {
-  font-size: 13px;
-  color: var(--accent);
-  font-family: 'Geist Mono', 'SF Mono', 'Fira Code', monospace;
-}
-
-.ceo-autocomplete-item .ac-name {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.ceo-autocomplete-item .ac-type {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
-  margin-left: auto;
-}
 
 /* ── Titlebar drag region ────────────────────── */
 
