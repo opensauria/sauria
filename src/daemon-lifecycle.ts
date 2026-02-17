@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, watch, type FSWatcher } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, watch, type FSWatcher } from 'node:fs';
 import type BetterSqlite3 from 'better-sqlite3';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { openDatabase, closeDatabase } from './db/connection.js';
@@ -14,8 +14,11 @@ import { refreshOAuthTokenIfNeeded } from './auth/oauth.js';
 import { McpClientManager } from './mcp/client.js';
 import { ProactiveEngine } from './engine/proactive.js';
 import type { ProactiveAlert } from './engine/proactive.js';
+import type { Channel } from './channels/base.js';
 import { TelegramChannel } from './channels/telegram.js';
 import { SlackChannel } from './channels/slack.js';
+import { DiscordChannel } from './channels/discord.js';
+import { EmailChannel } from './channels/email.js';
 import { TranscriptionService } from './channels/transcription.js';
 import { IngestPipeline } from './ingestion/pipeline.js';
 import { createLimiter, SECURITY_LIMITS } from './security/rate-limiter.js';
@@ -28,8 +31,14 @@ import { ChannelRegistry } from './channels/registry.js';
 import { AgentOrchestrator } from './orchestrator/orchestrator.js';
 import { LLMRoutingBrain } from './orchestrator/llm-router.js';
 import { MessageQueue } from './orchestrator/message-queue.js';
-import type { CanvasGraph, CEOIdentity, AgentNode, InboundMessage } from './orchestrator/types.js';
-import { createEmptyGraph } from './orchestrator/types.js';
+import { AgentMemory } from './orchestrator/agent-memory.js';
+import { KPITracker } from './orchestrator/kpi-tracker.js';
+import { CheckpointManager } from './orchestrator/checkpoint.js';
+import type {
+  CanvasGraph, CEOIdentity, CEOCommand, AgentNode, InboundMessage,
+  Edge, Workspace, AutonomyLevel, AgentRole,
+} from './orchestrator/types.js';
+import { createEmptyGraph, DEFAULT_GROUP_BEHAVIOR } from './orchestrator/types.js';
 
 export interface DaemonContext {
   readonly db: BetterSqlite3.Database;
@@ -45,6 +54,7 @@ export interface DaemonContext {
   readonly orchestrator: AgentOrchestrator | null;
   readonly queue: MessageQueue | null;
   readonly canvasWatcher: FSWatcher | null;
+  readonly ceoCommandWatcher: FSWatcher | null;
 }
 
 function handleAlert(alert: ProactiveAlert, telegram: TelegramChannel | null): void {
@@ -84,18 +94,135 @@ async function connectMcpSources(
 
 // ─── Canvas Graph Loading ─────────────────────────────────────────────
 
+// ─── Raw types from desktop canvas (simplified schema) ───────────────
+interface RawNode {
+  readonly id: string;
+  readonly platform: string;
+  readonly label: string;
+  readonly photo: string | null;
+  readonly position: { readonly x: number; readonly y: number };
+  readonly status: string;
+  readonly credentials: string;
+  readonly meta: Record<string, string>;
+  readonly workspaceId?: string | null;
+  readonly role?: string;
+  readonly autonomy?: string | number;
+  readonly instructions?: string;
+  readonly groupBehavior?: AgentNode['groupBehavior'];
+}
+
+interface RawEdge {
+  readonly id: string;
+  readonly from: string;
+  readonly to: string;
+  readonly label?: string;
+  readonly edgeType?: Edge['edgeType'];
+  readonly rules?: Edge['rules'];
+}
+
+interface RawWorkspace {
+  readonly id: string;
+  readonly name: string;
+  readonly color: string;
+  readonly purpose: string;
+  readonly topics: readonly string[];
+  readonly budget: number | Workspace['budget'];
+  readonly position: { readonly x: number; readonly y: number };
+  readonly size: { readonly w?: number; readonly h?: number; readonly width?: number; readonly height?: number };
+  readonly checkpoints?: Workspace['checkpoints'];
+  readonly groups?: Workspace['groups'];
+  readonly models?: Workspace['models'];
+}
+
+interface RawGraph {
+  readonly version?: number;
+  readonly nodes?: readonly RawNode[];
+  readonly edges?: readonly RawEdge[];
+  readonly workspaces?: readonly RawWorkspace[];
+  readonly viewport?: { readonly x: number; readonly y: number; readonly zoom: number };
+}
+
+const VALID_AUTONOMY_LEVELS = new Set<string>(['full', 'supervised', 'approval', 'manual']);
+const VALID_ROLES = new Set<string>(['lead', 'specialist', 'observer', 'bridge', 'assistant']);
+const VALID_STATUSES = new Set<string>(['connected', 'disconnected', 'error']);
+
+function normalizeNode(raw: RawNode): AgentNode {
+  let autonomy: AutonomyLevel = 'supervised';
+  if (typeof raw.autonomy === 'string' && VALID_AUTONOMY_LEVELS.has(raw.autonomy)) {
+    autonomy = raw.autonomy as AutonomyLevel;
+  }
+
+  const role: AgentRole = typeof raw.role === 'string' && VALID_ROLES.has(raw.role)
+    ? raw.role as AgentRole
+    : 'assistant';
+
+  const status = VALID_STATUSES.has(raw.status)
+    ? raw.status as AgentNode['status']
+    : 'disconnected';
+
+  return {
+    id: raw.id,
+    platform: raw.platform as AgentNode['platform'],
+    label: raw.label,
+    photo: raw.photo,
+    position: raw.position,
+    status,
+    credentials: raw.credentials,
+    meta: raw.meta,
+    workspaceId: raw.workspaceId ?? null,
+    role,
+    autonomy,
+    instructions: raw.instructions ?? '',
+    groupBehavior: raw.groupBehavior ?? DEFAULT_GROUP_BEHAVIOR,
+  };
+}
+
+function normalizeEdge(raw: RawEdge): Edge {
+  return {
+    id: raw.id,
+    from: raw.from,
+    to: raw.to,
+    label: raw.label,
+    edgeType: raw.edgeType ?? 'manual',
+    rules: raw.rules ?? [{ type: 'always', action: 'forward' }],
+  };
+}
+
+function normalizeWorkspace(raw: RawWorkspace): Workspace {
+  const width = raw.size.width ?? raw.size.w ?? 400;
+  const height = raw.size.height ?? raw.size.h ?? 320;
+
+  const budget: Workspace['budget'] = typeof raw.budget === 'number'
+    ? { dailyLimitUsd: raw.budget, preferCheap: true }
+    : raw.budget;
+
+  return {
+    id: raw.id,
+    name: raw.name,
+    color: raw.color,
+    purpose: raw.purpose,
+    topics: [...raw.topics],
+    budget,
+    position: raw.position,
+    size: { width, height },
+    checkpoints: raw.checkpoints ?? [],
+    groups: raw.groups ?? [],
+    models: raw.models,
+  };
+}
+
 function loadCanvasGraph(): CanvasGraph {
   if (!existsSync(paths.canvas)) {
     return createEmptyGraph();
   }
   try {
     const raw = readFileSync(paths.canvas, 'utf-8');
-    const parsed = JSON.parse(raw) as Partial<CanvasGraph>;
+    const parsed = JSON.parse(raw) as RawGraph;
     return {
       version: 2,
-      workspaces: parsed.workspaces ?? [],
-      nodes: parsed.nodes ?? [],
-      edges: parsed.edges ?? [],
+      nodes: (parsed.nodes ?? []).map(normalizeNode),
+      edges: (parsed.edges ?? []).map(normalizeEdge),
+      workspaces: (parsed.workspaces ?? []).map(normalizeWorkspace),
       viewport: parsed.viewport ?? { x: 0, y: 0, zoom: 1 },
     };
   } catch {
@@ -122,7 +249,7 @@ async function createChannelForNode(
     config: OpenWindConfig;
     onInbound: (message: InboundMessage) => void;
   },
-): Promise<TelegramChannel | SlackChannel | null> {
+): Promise<Channel | null> {
   const logger = getLogger();
   const { db, router, audit, config, onInbound } = deps;
 
@@ -195,7 +322,95 @@ async function createChannelForNode(
     });
   }
 
-  // WhatsApp, Discord, Email — channels exist but not yet integrated as daemon services
+  if (node.platform === 'discord') {
+    const token = nodeToken ?? await vaultGet('discord_bot_token');
+    if (!token) {
+      logger.warn(`Skipping node ${node.id}: no discord token in vault`);
+      return null;
+    }
+
+    const pipeline = new IngestPipeline(
+      db,
+      router,
+      audit,
+      createLimiter(`discord_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
+    );
+
+    return new DiscordChannel({
+      token,
+      guildId: config.channels.discord.guildId,
+      channelIds: [],
+      ceoUserId: config.channels.discord.botUserId,
+      nodeId: node.id,
+      audit,
+      pipeline,
+      onInbound,
+    });
+  }
+
+  if (node.platform === 'whatsapp') {
+    const accessToken = nodeToken ?? await vaultGet('whatsapp_access_token');
+    const verifyToken = await vaultGet(`whatsapp_verify_token_${node.id}`)
+      ?? await vaultGet('whatsapp_verify_token');
+    const appSecret = await vaultGet(`whatsapp_app_secret_${node.id}`)
+      ?? await vaultGet('whatsapp_app_secret');
+
+    if (!accessToken || !verifyToken || !appSecret) {
+      logger.warn(`Skipping node ${node.id}: incomplete whatsapp credentials`);
+      return null;
+    }
+
+    const pipeline = new IngestPipeline(
+      db,
+      router,
+      audit,
+      createLimiter(`wa_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
+    );
+
+    const { WhatsAppChannel } = await import('./channels/whatsapp.js');
+    return new WhatsAppChannel({
+      accessToken,
+      phoneNumberId: config.channels.whatsapp.phoneNumberId ?? '',
+      webhookPort: config.channels.whatsapp.webhookPort ?? 9090,
+      verifyToken,
+      appSecret,
+      audit,
+      pipeline,
+      onInbound,
+    });
+  }
+
+  if (node.platform === 'email') {
+    const password = nodeToken ?? await vaultGet('email_password');
+    const emailConfig = config.channels.email;
+
+    if (!password || !emailConfig.imapHost || !emailConfig.username) {
+      logger.warn(`Skipping node ${node.id}: incomplete email credentials`);
+      return null;
+    }
+
+    const pipeline = new IngestPipeline(
+      db,
+      router,
+      audit,
+      createLimiter(`email_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
+    );
+
+    return new EmailChannel({
+      imapHost: emailConfig.imapHost,
+      imapPort: emailConfig.imapPort,
+      smtpHost: emailConfig.smtpHost ?? emailConfig.imapHost,
+      smtpPort: emailConfig.smtpPort,
+      username: emailConfig.username,
+      password,
+      tls: emailConfig.tls,
+      nodeId: node.id,
+      audit,
+      pipeline,
+      onInbound,
+    });
+  }
+
   logger.info(`Platform ${node.platform} on node ${node.id} not yet supported in daemon`);
   return null;
 }
@@ -206,7 +421,7 @@ interface OrchestratorBundle {
   readonly registry: ChannelRegistry;
   readonly orchestrator: AgentOrchestrator;
   readonly queue: MessageQueue;
-  readonly startedChannels: Array<{ nodeId: string; channel: TelegramChannel | SlackChannel }>;
+  readonly startedChannels: Array<{ nodeId: string; channel: Channel }>;
 }
 
 async function setupOrchestrator(
@@ -217,6 +432,7 @@ async function setupOrchestrator(
     audit: AuditLogger;
     config: OpenWindConfig;
   },
+  checkpointManager: CheckpointManager,
 ): Promise<OrchestratorBundle | null> {
   const logger = getLogger();
 
@@ -228,8 +444,10 @@ async function setupOrchestrator(
     return null;
   }
 
-  // 1. Create empty registry and orchestrator first (no chicken-and-egg)
+  // 1. Create modules and orchestrator (no chicken-and-egg)
   const registry = new ChannelRegistry();
+  const agentMemory = new AgentMemory(deps.db);
+  const kpiTracker = new KPITracker(deps.db);
 
   const brain = new LLMRoutingBrain(
     deps.router,
@@ -243,6 +461,10 @@ async function setupOrchestrator(
     graph,
     ceoIdentity,
     brain,
+    db: deps.db,
+    agentMemory,
+    kpiTracker,
+    checkpointManager,
   });
 
   const queue = new MessageQueue(
@@ -323,9 +545,10 @@ export async function startDaemonContext(): Promise<DaemonContext> {
 
   // ─── Canvas-based orchestrator setup ────────────────────────────────
   const graph = loadCanvasGraph();
+  const checkpointManager = new CheckpointManager(db);
   const channelDeps = { db, router, audit, config };
 
-  const bundle = await setupOrchestrator(graph, channelDeps);
+  const bundle = await setupOrchestrator(graph, channelDeps, checkpointManager);
   const registry: ChannelRegistry | null = bundle?.registry ?? null;
   const orchestrator: AgentOrchestrator | null = bundle?.orchestrator ?? null;
   const queue: MessageQueue | null = bundle?.queue ?? null;
@@ -385,26 +608,131 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     logger.info('Telegram bot started (legacy single-bot mode)');
   }
 
-  const mcpServer = await startMcpServer({ db, router, audit });
+  const mcpServer = await startMcpServer({
+    db,
+    router,
+    audit,
+    checkpointManager,
+    orchestrator: orchestrator ?? undefined,
+  });
   logger.info('MCP server started on stdio');
 
   const refreshInterval = setInterval(() => {
     void refreshOAuthTokenIfNeeded('anthropic');
   }, 1_800_000);
 
-  // ─── Canvas file watcher ────────────────────────────────────────────
+  // ─── Canvas file watcher with channel lifecycle ────────────────────
   let canvasWatcher: FSWatcher | null = null;
   try {
     canvasWatcher = watch(paths.canvas, { persistent: false }, () => {
       const newGraph = loadCanvasGraph();
-      if (orchestrator) {
+
+      if (orchestrator && registry) {
+        const currentNodeIds = new Set(registry.getAll().map((c) => c.nodeId));
+        const newConnectedNodes = newGraph.nodes.filter(
+          (n) => n.status === 'connected' && n.platform !== 'ceo',
+        );
+        const newNodeIds = new Set(newConnectedNodes.map((n) => n.id));
+
+        // Stop + unregister removed nodes
+        for (const existingId of currentNodeIds) {
+          if (!newNodeIds.has(existingId)) {
+            void (async () => {
+              try {
+                await registry.stop(existingId);
+                registry.unregister(existingId);
+                logger.info('Channel removed on canvas change', { nodeId: existingId });
+              } catch (error) {
+                logger.warn('Error removing channel', {
+                  nodeId: existingId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              }
+            })();
+          }
+        }
+
+        // Create + register + start new nodes
+        const onInbound = (msg: InboundMessage): void => {
+          if (queue) queue.enqueue(msg);
+        };
+        for (const node of newConnectedNodes) {
+          if (!currentNodeIds.has(node.id)) {
+            void (async () => {
+              try {
+                const channel = await createChannelForNode(node, { ...channelDeps, onInbound });
+                if (channel) {
+                  registry.register(node.id, channel);
+                  await channel.start();
+                  logger.info('Channel added on canvas change', {
+                    nodeId: node.id,
+                    platform: node.platform,
+                  });
+                }
+              } catch (error) {
+                logger.warn('Error adding channel', {
+                  nodeId: node.id,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              }
+            })();
+          }
+        }
+
         orchestrator.updateGraph(newGraph);
         logger.info('Canvas graph reloaded', { nodes: newGraph.nodes.length });
+      } else if (orchestrator) {
+        orchestrator.updateGraph(newGraph);
+        logger.info('Canvas graph reloaded (no registry)', { nodes: newGraph.nodes.length });
       }
     });
   } catch {
     // File may not exist yet, watcher will fail gracefully
     logger.info('Canvas watcher not started (file may not exist yet)');
+  }
+
+  // ─── CEO command file watcher ──────────────────────────────────────
+  let ceoCommandWatcher: FSWatcher | null = null;
+  if (orchestrator) {
+    const processCeoCommands = (): void => {
+      if (!existsSync(paths.ceoCommands)) return;
+      try {
+        const content = readFileSync(paths.ceoCommands, 'utf-8').trim();
+        if (!content) return;
+
+        // Clear the file immediately to avoid reprocessing
+        writeFileSync(paths.ceoCommands, '', 'utf-8');
+
+        const lines = content.split('\n').filter(Boolean);
+        for (const line of lines) {
+          try {
+            const command = JSON.parse(line) as CEOCommand;
+            audit.logAction('ceo:command_received', { type: command.type });
+            void orchestrator.handleCeoCommand(command);
+          } catch {
+            logger.warn('Invalid CEO command line', { line });
+          }
+        }
+      } catch (error) {
+        logger.warn('Error reading CEO commands', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    };
+
+    try {
+      // Create the file if it doesn't exist
+      if (!existsSync(paths.ceoCommands)) {
+        writeFileSync(paths.ceoCommands, '', 'utf-8');
+      }
+
+      ceoCommandWatcher = watch(paths.ceoCommands, { persistent: false }, () => {
+        processCeoCommands();
+      });
+      logger.info('CEO command watcher started');
+    } catch {
+      logger.info('CEO command watcher not started');
+    }
   }
 
   audit.logAction('daemon:start', {
@@ -427,6 +755,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     orchestrator,
     queue,
     canvasWatcher,
+    ceoCommandWatcher,
   };
 }
 
@@ -435,6 +764,11 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
   logger.info('Daemon shutting down');
 
   clearInterval(ctx.refreshInterval);
+
+  if (ctx.ceoCommandWatcher) {
+    ctx.ceoCommandWatcher.close();
+    logger.info('CEO command watcher stopped');
+  }
 
   if (ctx.canvasWatcher) {
     ctx.canvasWatcher.close();

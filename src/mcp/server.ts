@@ -26,6 +26,8 @@ interface McpServerDeps {
   readonly db: BetterSqlite3.Database;
   readonly router: ModelRouter;
   readonly audit: AuditLogger;
+  readonly checkpointManager?: import('../orchestrator/checkpoint.js').CheckpointManager;
+  readonly orchestrator?: import('../orchestrator/orchestrator.js').AgentOrchestrator;
 }
 
 export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
@@ -281,6 +283,78 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
       );
     },
   );
+
+  // ─── Approval tools (only if checkpoint manager is available) ─────────
+
+  if (deps.checkpointManager) {
+    const cm = deps.checkpointManager;
+
+    registerTool(
+      server,
+      'openwind_pending_approvals',
+      TOOL_DEFS.openwind_pending_approvals.description,
+      TOOL_DEFS.openwind_pending_approvals.schema.shape,
+      async (raw) => {
+        guardRateLimit('openwind_pending_approvals');
+        validateToolInput('openwind_pending_approvals', raw);
+        auditToolCall('openwind_pending_approvals', raw);
+
+        const pending = cm.getPending();
+        if (pending.length === 0) return textResult('No pending approvals.');
+
+        const lines = pending.map((p) => {
+          const actionSummary = p.actions
+            .map((a) => `  - ${a.type}${'targetNodeId' in a ? ` → ${(a as Record<string, unknown>).targetNodeId}` : ''}`)
+            .join('\n');
+          return `[${p.id}] Agent: ${p.agentId} | Workspace: ${p.workspaceId}\n${p.description}\nActions:\n${actionSummary}\nCreated: ${p.createdAt}`;
+        });
+        return textResult(lines.join('\n\n'));
+      },
+    );
+
+    registerTool(
+      server,
+      'openwind_approve',
+      TOOL_DEFS.openwind_approve.description,
+      TOOL_DEFS.openwind_approve.schema.shape,
+      async (raw) => {
+        guardRateLimit('openwind_approve');
+        const { approvalId } = validateToolInput('openwind_approve', raw);
+        auditToolCall('openwind_approve', raw);
+
+        // Get agent ID before approving (approve changes status)
+        const pendingList = cm.getPending();
+        const approval = pendingList.find((p) => p.id === approvalId);
+        const agentId = approval?.agentId ?? '';
+
+        const actions = cm.approve(approvalId);
+        audit.logAction('mcp:approval_approved', { approvalId, actionCount: actions.length });
+
+        if (deps.orchestrator && actions.length > 0) {
+          const executed = await deps.orchestrator.executeApprovedActions(agentId, actions);
+          return textResult(`Approved and executed ${String(executed)} action(s).`);
+        }
+
+        return textResult(`Approved ${String(actions.length)} action(s). No orchestrator to execute them.`);
+      },
+    );
+
+    registerTool(
+      server,
+      'openwind_reject',
+      TOOL_DEFS.openwind_reject.description,
+      TOOL_DEFS.openwind_reject.schema.shape,
+      async (raw) => {
+        guardRateLimit('openwind_reject');
+        const { approvalId } = validateToolInput('openwind_reject', raw);
+        auditToolCall('openwind_reject', raw);
+
+        cm.reject(approvalId);
+        audit.logAction('mcp:approval_rejected', { approvalId });
+        return textResult(`Approval ${approvalId} rejected.`);
+      },
+    );
+  }
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

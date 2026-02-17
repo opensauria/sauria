@@ -53,8 +53,10 @@
     "better-sqlite3": "11.8.1",
     "commander": "13.1.0",
     "grammy": "1.35.0",
+    "imapflow": "^1.2.9",
     "json5": "2.2.3",
     "nanoid": "5.1.5",
+    "nodemailer": "^8.0.1",
     "ogg-opus-decoder": "1.7.3",
     "openai": "4.85.0",
     "zod": "3.24.2"
@@ -62,6 +64,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "22.13.4",
+    "@types/nodemailer": "^7.0.10",
     "prettier": "3.5.3",
     "tsdown": "0.20.3",
     "tsx": "4.19.3",

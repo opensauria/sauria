@@ -966,6 +966,8 @@
               id: generateId(),
               from: edgeFromId,
               to: toId,
+              edgeType: 'manual',
+              rules: [],
             });
             renderEdges();
             saveGraph();
@@ -1274,6 +1276,10 @@
             status: 'setup',
             credentials: '',
             meta: {},
+            workspaceId: null,
+            role: 'assistant',
+            autonomy: 'supervised',
+            instructions: '',
             _formData: {},
             _statusMsg: '',
             _statusType: '',
@@ -1924,6 +1930,8 @@
           budget: 0,
           position: { x: Math.round(cx), y: Math.round(cy) },
           size: { w: 400, h: 320 },
+          checkpoints: [],
+          groups: [],
         };
         graph.workspaces.push(ws);
         wsDialogOverlay.classList.remove('open');
