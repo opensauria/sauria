@@ -8,7 +8,7 @@ const ANTHROPIC_OAUTH = {
   tokenUrl: 'https://console.anthropic.com/v1/oauth/token',
   clientId: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
   scopes: 'org:create_api_key user:profile user:inference',
-  redirectUri: 'https://console.anthropic.com/oauth/return',
+  redirectUri: 'https://console.anthropic.com/oauth/code/callback',
 } as const;
 
 function base64url(buffer: Buffer): string {
@@ -40,18 +40,18 @@ export async function exchangeAuthorizationCode(
   code: string,
   codeVerifier: string,
 ): Promise<OAuthTokenResponse> {
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    client_id: ANTHROPIC_OAUTH.clientId,
-    code,
-    redirect_uri: ANTHROPIC_OAUTH.redirectUri,
-    code_verifier: codeVerifier,
-  });
+  const actualCode = code.includes('#') ? code.split('#')[0] : code;
 
   const response = await secureFetch(ANTHROPIC_OAUTH.tokenUrl, {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'authorization_code',
+      client_id: ANTHROPIC_OAUTH.clientId,
+      code: actualCode,
+      redirect_uri: ANTHROPIC_OAUTH.redirectUri,
+      code_verifier: codeVerifier,
+    }),
     signal: AbortSignal.timeout(15_000),
   });
 
@@ -64,16 +64,14 @@ export async function exchangeAuthorizationCode(
 }
 
 export async function refreshOAuthToken(refreshToken: string): Promise<OAuthTokenResponse> {
-  const body = new URLSearchParams({
-    grant_type: 'refresh_token',
-    client_id: ANTHROPIC_OAUTH.clientId,
-    refresh_token: refreshToken,
-  });
-
   const response = await secureFetch(ANTHROPIC_OAUTH.tokenUrl, {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'refresh_token',
+      client_id: ANTHROPIC_OAUTH.clientId,
+      refresh_token: refreshToken,
+    }),
     signal: AbortSignal.timeout(15_000),
   });
 

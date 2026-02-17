@@ -301,7 +301,7 @@
         <h1>Your world, always with you.</h1>
         <p class="subtitle">
           OpenWind connects to your AI tools and makes them smarter. It builds a private knowledge
-          graph from your data and shares context with Claude Desktop, Cursor, and more.
+          graph from your data and shares context across your apps.
         </p>
         <p class="subtitle">Setup takes about 30 seconds.</p>
         <div class="actions">
@@ -311,8 +311,8 @@
 
       <!-- Step 2: Connection Mode -->
       <div class="step" id="step-mode">
-        <h1>How do you want to connect?</h1>
-        <p class="subtitle">OpenWind uses AI to understand your world. Choose how to connect.</p>
+        <h1>Choose your AI provider</h1>
+        <p class="subtitle">OpenWind needs an AI provider to work. How do you want to connect?</p>
         <div class="cards">
           <div class="card" data-mode="claude_desktop" onclick="selectMode(this)">
             <div class="card-icon">
@@ -324,8 +324,8 @@
               </svg>
             </div>
             <div class="card-info">
-              <h3>I use Claude Desktop</h3>
-              <span>Pro / Max &mdash; no API key needed</span>
+              <h3>I have a Claude subscription</h3>
+              <span>Connect with your Anthropic account</span>
             </div>
             <span class="badge badge-accent">Recommended</span>
           </div>
@@ -372,20 +372,61 @@
         </div>
       </div>
 
-      <!-- Step 3a: Claude Desktop -->
+      <!-- Step 3a: Claude Subscription (OAuth) -->
       <div class="step" id="step-claude-desktop">
-        <h1>Connect to Claude Desktop</h1>
+        <h1>Sign in to Anthropic</h1>
         <p class="subtitle">
-          OpenWind will register itself in Claude Desktop. Your subscription handles the AI &mdash;
-          OpenWind provides the memory.
+          OpenWind will connect to your Anthropic account to use Claude as its AI engine.
+          No API key needed.
         </p>
-        <div class="cards" id="claude-clients"></div>
-        <p class="error-msg" id="claude-error" style="margin-top: 16px"></p>
-        <div class="actions">
-          <button class="btn btn-secondary" onclick="goTo('step-mode')">Back</button>
-          <button class="btn btn-primary" id="btn-claude-next" onclick="configureClaudeDesktop()">
-            Connect
-          </button>
+
+        <div id="oauth-start" style="display: block">
+          <p style="color: var(--text-secondary); font-size: 13px; margin-top: 8px; line-height: 1.6">
+            1. Click the button below to open Anthropic's login page<br />
+            2. Log in and authorize OpenWind<br />
+            3. Copy the code shown on screen and paste it back here
+          </p>
+          <p class="error-msg" id="oauth-error" style="margin-top: 16px"></p>
+          <div class="actions">
+            <button class="btn btn-secondary" onclick="goTo('step-mode')">Back</button>
+            <button class="btn btn-primary" id="btn-oauth-start" onclick="startOAuthFlow()">
+              Open Anthropic login
+            </button>
+          </div>
+        </div>
+
+        <div id="oauth-code" style="display: none">
+          <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px">
+            A code is displayed in your browser. Copy it and paste it here.
+          </p>
+          <div class="input-group">
+            <label for="oauth-code-input">Authorization code</label>
+            <input
+              type="text"
+              id="oauth-code-input"
+              placeholder="Paste code here..."
+              oninput="onOAuthCodeInput()"
+            />
+          </div>
+          <p class="error-msg" id="oauth-code-error"></p>
+          <div class="actions">
+            <button class="btn btn-secondary" onclick="resetOAuth()">Back</button>
+            <button
+              class="btn btn-primary"
+              id="btn-oauth-submit"
+              disabled
+              onclick="submitOAuthCode()"
+            >
+              Connect
+            </button>
+          </div>
+        </div>
+
+        <div id="oauth-loading" style="display: none; text-align: center; padding: 32px 0">
+          <div class="spinner"></div>
+          <p style="color: var(--text-secondary); margin-top: 16px">
+            Connecting to your account...
+          </p>
         </div>
       </div>
 
@@ -576,12 +617,11 @@
         <div class="success-icon">&#10003;</div>
         <h1>OpenWind is ready</h1>
         <p class="subtitle">
-          Restart your AI client and start chatting. OpenWind will share your world context
-          automatically.
+          Your AI provider is connected. OpenWind is running in the background.
         </p>
         <ul class="client-list" id="client-list"></ul>
         <div class="actions">
-          <button class="btn btn-primary" onclick="window.openwind.finish()">Done</button>
+          <button class="btn btn-primary" onclick="window.openwind.showCanvas()">Done</button>
         </div>
       </div>
     </div>
@@ -611,7 +651,8 @@
 
       function goToModeStep() {
         if (selectedMode === 'claude_desktop') {
-          detectClaudeDesktopClients();
+          resetOAuth();
+          goTo('step-claude-desktop');
         } else if (selectedMode === 'api_key') {
           goTo('step-provider');
         } else if (selectedMode === 'local') {
@@ -621,51 +662,55 @@
 
       /* ── Step 3a: Claude Desktop (MCP-only) ──────── */
 
-      async function detectClaudeDesktopClients() {
-        goTo('step-claude-desktop');
-        var container = document.getElementById('claude-clients');
-        container.innerHTML =
-          '<div class="scan-status"><div class="spinner"></div><p>Detecting AI clients...</p></div>';
-        document.getElementById('btn-claude-next').disabled = true;
-        document.getElementById('claude-error').classList.remove('visible');
+      async function startOAuthFlow() {
+        document.getElementById('oauth-error').textContent = '';
+        document.getElementById('oauth-error').classList.remove('visible');
 
-        var clients = await window.openwind.detectClients();
-        var detected = clients.filter(function (c) {
-          return c.detected;
-        });
-
-        if (detected.length > 0) {
-          container.innerHTML = detected
-            .map(function (c) {
-              return (
-                '<div class="card selected">' +
-                '<div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M16.98 7.35l-4.17 8.33a.94.94 0 01-1.68 0L7.02 7.35A.94.94 0 017.86 6h8.28a.94.94 0 01.84 1.35z" fill="#D97757"/></svg></div>' +
-                '<div class="card-info"><h3>' +
-                c.name +
-                '</h3><span>Will be configured automatically</span></div>' +
-                '<span class="badge badge-success">Detected</span>' +
-                '</div>'
-              );
-            })
-            .join('');
-          document.getElementById('btn-claude-next').disabled = false;
+        var result = await window.openwind.startOAuth();
+        if (result.started) {
+          document.getElementById('oauth-start').style.display = 'none';
+          document.getElementById('oauth-code').style.display = 'block';
+          document.getElementById('oauth-code-input').value = '';
+          document.getElementById('btn-oauth-submit').disabled = true;
+          document.getElementById('oauth-code-input').focus();
         } else {
-          container.innerHTML =
-            '<div class="card">' +
-            '<div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M16.98 7.35l-4.17 8.33a.94.94 0 01-1.68 0L7.02 7.35A.94.94 0 017.86 6h8.28a.94.94 0 01.84 1.35z" fill="#D97757"/></svg></div>' +
-            '<div class="card-info"><h3>No AI client detected</h3><span>Install Claude Desktop, Cursor, or Windsurf first</span></div>' +
-            '<span class="badge badge-dim">Not found</span>' +
-            '</div>';
-          var errEl = document.getElementById('claude-error');
-          errEl.textContent = 'Install an MCP-compatible AI client and try again.';
+          var errEl = document.getElementById('oauth-error');
+          errEl.textContent = result.error || 'Could not start OAuth flow.';
           errEl.classList.add('visible');
         }
       }
 
-      async function configureClaudeDesktop() {
-        selectedProvider = 'anthropic';
-        goTo('step-configuring');
-        await runConfiguration('anthropic', '', 'claude_desktop');
+      function onOAuthCodeInput() {
+        var code = document.getElementById('oauth-code-input').value.trim();
+        document.getElementById('btn-oauth-submit').disabled = code.length < 4;
+        document.getElementById('oauth-code-error').classList.remove('visible');
+      }
+
+      async function submitOAuthCode() {
+        var code = document.getElementById('oauth-code-input').value.trim();
+        if (!code) return;
+
+        document.getElementById('oauth-code').style.display = 'none';
+        document.getElementById('oauth-loading').style.display = 'block';
+
+        var result = await window.openwind.completeOAuth(code);
+        if (result.success) {
+          selectedProvider = 'anthropic';
+          goTo('step-configuring');
+          await runConfiguration('anthropic', '', 'claude_desktop');
+        } else {
+          document.getElementById('oauth-loading').style.display = 'none';
+          document.getElementById('oauth-code').style.display = 'block';
+          var errEl = document.getElementById('oauth-code-error');
+          errEl.textContent = result.error || 'Token exchange failed. Please try again.';
+          errEl.classList.add('visible');
+        }
+      }
+
+      function resetOAuth() {
+        document.getElementById('oauth-start').style.display = 'block';
+        document.getElementById('oauth-code').style.display = 'none';
+        document.getElementById('oauth-loading').style.display = 'none';
       }
 
       /* ── Step 3b: Provider Selection ─────────────── */
@@ -817,7 +862,7 @@
       async function runConfiguration(provider, apiKey, mode) {
         var verifyLabel = document.querySelector('#p-verify span');
         if (mode === 'claude_desktop') {
-          verifyLabel.textContent = 'Detecting AI clients';
+          verifyLabel.textContent = 'Account connected';
         } else if (mode === 'local') {
           verifyLabel.textContent = 'Provider detected';
         } else {
@@ -828,7 +873,7 @@
         if (mode === 'local') {
           storeLabel.textContent = 'Saving provider settings';
         } else if (mode === 'claude_desktop') {
-          storeLabel.textContent = 'Registering MCP server';
+          storeLabel.textContent = 'Securing tokens';
         } else {
           storeLabel.textContent = 'Encrypting credentials';
         }

@@ -17,11 +17,11 @@ CLI (commander) ──► daemon-lifecycle.ts ──► ProactiveEngine
                                          │    ├── LLMRoutingBrain
                                          │    ├── AutonomyEnforcer
                                          │    └── ChannelRegistry
-                                         └── Channels (Telegram, Slack, WhatsApp)
+                                         └── Channels (Telegram, Slack, WhatsApp, Discord, Email)
 
 Desktop (Electron) ──► Canvas UI (agent cards, edges, workspaces)
-                     ├── Setup Wizard
-                     ├── Command Palette
+                     ├── Setup Wizard (OAuth + API key + local)
+                     ├── Command Palette (provider status, Telegram mgmt)
                      └── IPC ──► vault, config, daemon management
 ```
 
@@ -30,7 +30,7 @@ Desktop (Electron) ──► Canvas UI (agent cards, edges, workspaces)
 - **Runtime**: Node.js 22+, ESM only
 - **Language**: TypeScript strict mode (`verbatimModuleSyntax`, `noUncheckedIndexedAccess`)
 - **Database**: SQLite via `better-sqlite3` (encrypted at rest)
-- **AI Providers**: Anthropic, OpenAI, Google, Ollama (local)
+- **AI Providers**: Anthropic (OAuth or API key), OpenAI, Google, Ollama (local)
 - **Desktop**: Electron + Electron Forge (no framework, vanilla HTML/CSS/JS)
 - **Build**: `tsdown` for CLI bundle, `tsc` for desktop
 - **Test**: Vitest
@@ -42,7 +42,7 @@ Desktop (Electron) ──► Canvas UI (agent cards, edges, workspaces)
 src/
   ai/              # Multi-provider router, extraction, reasoning
   auth/            # OAuth PKCE, API key validation, onboarding
-  channels/        # Telegram, Slack, WhatsApp, base interface, registry
+  channels/        # Telegram, Slack, WhatsApp, Discord, Email, base interface, registry
   config/          # Zod schema, loader, paths
   db/              # SQLite schema, world-model queries, search
   engine/          # Proactive alerts, deadlines, pattern detection
@@ -104,11 +104,25 @@ desktop/
 ### Security
 
 - All user input goes through `sanitizeChannelInput()` before processing
-- Vault secrets encrypted with AES-256-GCM, PBKDF2 key derivation
+- Vault secrets encrypted with AES-256-GCM, PBKDF2 key derivation (256k iterations, sha512)
+- Vault password derived from hardware UUID (macOS `IOPlatformUUID`), NOT hostname
+- Machine ID cached at `~/.openwind/vault/.machine-id` — never changes
 - URL allowlist for external fetches (`secureFetch`)
 - PII scrubber before logging
 - Rate limiting on every channel (per-minute caps)
 - No secrets in code, all from vault
+- NEVER commit credentials, API keys, client IDs, tokens, passwords, or any sensitive values anywhere in the codebase — not in code, comments, docs, CLAUDE.md, or tests. Reference constants by variable name only.
+
+### Authentication
+
+- **OAuth PKCE** (recommended): Anthropic subscription, copy-paste code flow
+  - Token endpoint expects **JSON body**, not form-urlencoded
+  - Code from Anthropic is `code#state` — must split and send both in token exchange
+  - Tokens stored in vault as `anthropic-oauth.enc`
+  - Constants defined in `desktop/src/main.ts` (`ANTHROPIC_OAUTH`) and `src/auth/oauth.ts`
+- **API key**: stored in vault as `<provider>-api-key.enc`
+- **Local**: no credentials needed (Ollama, LM Studio)
+- Desktop and daemon share the same vault format and key derivation
 
 ### Database
 
@@ -205,9 +219,21 @@ desktop/
 - Canvas graph loaded on startup, file watcher reloads on change
 - Legacy single-bot Telegram fallback when no canvas graph exists
 - Orchestrator only created when canvas has connected nodes
+- Desktop manages daemon spawn with `daemonStarting` guard and `restartDaemon()`
+- `restartDaemon()` waits for old process to exit before spawning new one
+- ProactiveEngine errors are caught (best-effort, non-fatal)
 
 ## Electron Build
 
 - `assets/icon.icns` is missing, so `electron-forge make` fails
 - Use `npm run icons && npx tsc && rm -rf dist/ui && cp -r src/ui dist/ui && npx electron-forge start`
 - Always kill all Electron processes before restart (see memory notes)
+- Daemon bundle must be rebuilt separately: `npm run build` at root (tsdown)
+- Desktop `npx tsc` only rebuilds desktop TypeScript, NOT the daemon CLI bundle
+
+## Build Checklist
+
+When changing daemon code (`src/`): `npm run build` at project root
+When changing desktop code (`desktop/src/`): `cd desktop && npx tsc`
+When changing UI files (`desktop/src/ui/`): `rm -rf dist/ui && cp -r src/ui dist/ui`
+Full restart: kill Electron + daemon, rebuild both, copy UI, start Electron

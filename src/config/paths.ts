@@ -15,6 +15,7 @@ export const paths = {
   audit: join(OPENWIND_HOME, 'audit.log'),
   canvas: join(OPENWIND_HOME, 'canvas.json'),
   ceoCommands: join(OPENWIND_HOME, 'ceo-commands.jsonl'),
+  pidFile: join(OPENWIND_HOME, 'daemon.pid'),
 } as const;
 
 export type PathKey = keyof typeof paths;

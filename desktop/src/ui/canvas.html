@@ -1071,6 +1071,9 @@
           saveViewport();
         }
         if (isDragging) {
+          var dragDist = Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY);
+          var clickedNodeId = dragNodeId;
+
           /* Snap agent to workspace */
           var node = graph.nodes.find(function (n) {
             return n.id === dragNodeId;
@@ -1104,6 +1107,11 @@
           dragNodeId = null;
           renderWorkspaces();
           saveGraph();
+
+          /* Click (not drag): open agent detail panel */
+          if (dragDist < 5 && clickedNodeId) {
+            openAgentDetail(clickedNodeId);
+          }
         }
         if (isEdgeDragging) {
           finishEdgeDrag(e);
@@ -1789,21 +1797,23 @@
             renderNodes();
             return;
           }
-          credentials = { token: (formData.token || '').trim(), userId: parsedId };
+          credentials = { token: (formData.token || '').trim(), userId: parsedId, nodeId: node.id };
         } else if (platform === 'slack') {
           credentials = {
             token: (formData.token || '').trim(),
             signingSecret: (formData.signingSecret || '').trim(),
+            nodeId: node.id,
           };
         } else if (platform === 'whatsapp') {
           credentials = {
             phoneNumberId: (formData.phoneNumberId || '').trim(),
             accessToken: (formData.accessToken || '').trim(),
+            nodeId: node.id,
           };
         } else if (platform === 'discord') {
-          credentials = { token: (formData.token || '').trim() };
+          credentials = { token: (formData.token || '').trim(), nodeId: node.id };
         } else if (platform === 'gmail') {
-          credentials = { oauth: true };
+          credentials = { oauth: true, nodeId: node.id };
         } else if (platform === 'email') {
           credentials = {
             imapHost: (formData.imapHost || '').trim(),
@@ -1812,6 +1822,7 @@
             smtpPort: parseInt(formData.smtpPort, 10) || 587,
             username: (formData.username || '').trim(),
             password: (formData.password || '').trim(),
+            nodeId: node.id,
           };
         }
 
@@ -1831,7 +1842,7 @@
             if (platform === 'telegram') {
               node.label = '@' + (result.botUsername || 'TelegramBot');
               node.photo = result.photo || null;
-              node.credentials = 'telegram_bot_token';
+              node.credentials = 'channel_token_' + nodeId;
               node.meta = {
                 botId: String(result.botId || ''),
                 userId: String(credentials.userId),
@@ -2026,14 +2037,6 @@
          ═══════════════════════════════════════════════ */
 
       world.addEventListener('dblclick', function (e) {
-        var card = e.target.closest('.agent-card');
-        if (card) {
-          openAgentDetail(card.dataset.nodeId);
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
-
         var wsHeader = e.target.closest('.workspace-header');
         if (wsHeader) {
           openWorkspaceDetail(wsHeader.dataset.workspaceId);
