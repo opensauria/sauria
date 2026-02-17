@@ -68,9 +68,7 @@ export class TaskManager {
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
-    this.selectByIdStmt = db.prepare(
-      'SELECT * FROM tasks WHERE id = ?',
-    );
+    this.selectByIdStmt = db.prepare('SELECT * FROM tasks WHERE id = ?');
 
     this.selectByStatusStmt = db.prepare(
       'SELECT * FROM tasks WHERE status = ? ORDER BY created_at DESC',
@@ -118,10 +116,22 @@ export class TaskManager {
     const fields: string[] = [];
     const values: unknown[] = [];
 
-    if (updates.title !== undefined) { fields.push('title = ?'); values.push(updates.title); }
-    if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description); }
-    if (updates.priority !== undefined) { fields.push('priority = ?'); values.push(updates.priority); }
-    if (updates.scheduledFor !== undefined) { fields.push('scheduled_for = ?'); values.push(updates.scheduledFor); }
+    if (updates.title !== undefined) {
+      fields.push('title = ?');
+      values.push(updates.title);
+    }
+    if (updates.description !== undefined) {
+      fields.push('description = ?');
+      values.push(updates.description);
+    }
+    if (updates.priority !== undefined) {
+      fields.push('priority = ?');
+      values.push(updates.priority);
+    }
+    if (updates.scheduledFor !== undefined) {
+      fields.push('scheduled_for = ?');
+      values.push(updates.scheduledFor);
+    }
 
     if (updates.status !== undefined) {
       fields.push('status = ?');

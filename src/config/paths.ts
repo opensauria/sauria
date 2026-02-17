@@ -13,6 +13,8 @@ export const paths = {
   exports: join(OPENWIND_HOME, 'exports'),
   vault: join(OPENWIND_HOME, 'vault'),
   audit: join(OPENWIND_HOME, 'audit.log'),
+  canvas: join(OPENWIND_HOME, 'canvas.json'),
+  ceoCommands: join(OPENWIND_HOME, 'ceo-commands.jsonl'),
 } as const;
 
 export type PathKey = keyof typeof paths;

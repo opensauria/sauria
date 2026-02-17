@@ -60,9 +60,11 @@ export function scanDeadlines(db: BetterSqlite3.Database): DeadlineAlert[] {
   const alerts: DeadlineAlert[] = [];
   const now = Date.now();
 
-  const taskRows: unknown[] = db.prepare(
-    "SELECT * FROM tasks WHERE status NOT IN ('completed','cancelled') AND scheduled_for IS NOT NULL ORDER BY scheduled_for ASC",
-  ).all();
+  const taskRows: unknown[] = db
+    .prepare(
+      "SELECT * FROM tasks WHERE status NOT IN ('completed','cancelled') AND scheduled_for IS NOT NULL ORDER BY scheduled_for ASC",
+    )
+    .all();
 
   for (const raw of taskRows) {
     if (!isTaskRow(raw)) continue;
@@ -104,7 +106,9 @@ export function scanDeadlines(db: BetterSqlite3.Database): DeadlineAlert[] {
   const upcomingEvents = getUpcomingDeadlines(db, 72);
   alerts.push(...findConflicts(upcomingEvents));
 
-  return alerts.sort((a, b) => b.numericPriority - a.numericPriority || a.hoursUntil - b.hoursUntil);
+  return alerts.sort(
+    (a, b) => b.numericPriority - a.numericPriority || a.hoursUntil - b.hoursUntil,
+  );
 }
 
 function findConflicts(events: Event[]): DeadlineAlert[] {
@@ -126,7 +130,7 @@ function findConflicts(events: Event[]): DeadlineAlert[] {
 
       const nextEntityIds = next.entityIds ?? [];
       const hasSharedEntity = currentEntityIds.some((id) => nextEntityIds.includes(id));
-      if (!hasSharedEntity && currentEntityIds.length > 0 && nextEntityIds.length > 0) continue;
+      if (!hasSharedEntity) continue;
 
       const gapMinutes = Math.round(gapMs / 60_000);
       const mergedIds = [...new Set([...currentEntityIds, ...nextEntityIds])];

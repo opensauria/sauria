@@ -36,16 +36,17 @@ function isDecayRow(value: unknown): value is DecayRow {
   );
 }
 
-export function getUpcomingDeadlines(
-  db: BetterSqlite3.Database,
-  hours: number,
-): Event[] {
-  const rows: unknown[] = db.prepare(`
+export function getUpcomingDeadlines(db: BetterSqlite3.Database, hours: number): Event[] {
+  const rows: unknown[] = db
+    .prepare(
+      `
     SELECT * FROM events
     WHERE timestamp > datetime('now')
       AND timestamp <= datetime('now', ? || ' hours')
     ORDER BY timestamp ASC
-  `).all(String(hours));
+  `,
+    )
+    .all(String(hours));
 
   return rows.filter(isEventRow).map(toEvent);
 }
@@ -55,12 +56,16 @@ export function getRecentActivity(
   entityId: string,
   days: number,
 ): Event[] {
-  const rows: unknown[] = db.prepare(`
+  const rows: unknown[] = db
+    .prepare(
+      `
     SELECT e.* FROM events e, json_each(e.entity_ids) j
     WHERE j.value = ?
       AND e.timestamp >= datetime('now', ? || ' days')
     ORDER BY e.timestamp DESC
-  `).all(entityId, String(-days));
+  `,
+    )
+    .all(entityId, String(-days));
 
   return rows.filter(isEventRow).map(toEvent);
 }
@@ -69,7 +74,9 @@ export function getDecayingRelationships(
   db: BetterSqlite3.Database,
   thresholdDays: number,
 ): DecayingRelationship[] {
-  const rows: unknown[] = db.prepare(`
+  const rows: unknown[] = db
+    .prepare(
+      `
     SELECT
       ent.*,
       CAST(julianday('now') - julianday(ent.last_mentioned_at) AS REAL) AS days_since_contact,
@@ -85,7 +92,9 @@ export function getDecayingRelationships(
       AND ent.last_mentioned_at IS NOT NULL
       AND julianday('now') - julianday(ent.last_mentioned_at) > ?
     ORDER BY days_since_contact DESC
-  `).all(thresholdDays);
+  `,
+    )
+    .all(thresholdDays);
 
   return rows.filter(isDecayRow).map((row) => ({
     entity: toEntity(row),

@@ -41,11 +41,12 @@ function extractMetadata(raw: Record<string, unknown>): Record<string, string> {
 }
 
 function extractContent(raw: Record<string, unknown>): string {
-  const body = extractStringField(raw, 'body')
-    ?? extractStringField(raw, 'content')
-    ?? extractStringField(raw, 'text')
-    ?? extractStringField(raw, 'description')
-    ?? '';
+  const body =
+    extractStringField(raw, 'body') ??
+    extractStringField(raw, 'content') ??
+    extractStringField(raw, 'text') ??
+    extractStringField(raw, 'description') ??
+    '';
 
   const subject = extractStringField(raw, 'subject');
   const parts = subject ? [subject, body] : [body];
@@ -53,15 +54,14 @@ function extractContent(raw: Record<string, unknown>): string {
 }
 
 function extractEventType(raw: Record<string, unknown>): string {
-  return extractStringField(raw, 'type')
-    ?? extractStringField(raw, 'eventType')
-    ?? 'unknown';
+  return extractStringField(raw, 'type') ?? extractStringField(raw, 'eventType') ?? 'unknown';
 }
 
 function extractTimestamp(raw: Record<string, unknown>): string {
-  const date = extractStringField(raw, 'date')
-    ?? extractStringField(raw, 'timestamp')
-    ?? extractStringField(raw, 'created_at');
+  const date =
+    extractStringField(raw, 'date') ??
+    extractStringField(raw, 'timestamp') ??
+    extractStringField(raw, 'created_at');
 
   if (date !== undefined) {
     return date;

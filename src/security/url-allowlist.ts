@@ -19,17 +19,17 @@ export const OUTBOUND_ALLOWLIST: ReadonlySet<string> = new Set([
   'accounts.google.com',
   'oauth2.googleapis.com',
   'login.microsoftonline.com',
+  'claude.ai',
+  'console.anthropic.com',
   'registry.npmjs.org',
+  'slack.com',
 ]);
 
 function isAllowedHostname(hostname: string): boolean {
   return OUTBOUND_ALLOWLIST.has(hostname);
 }
 
-export async function secureFetch(
-  url: string,
-  options?: RequestInit,
-): Promise<Response> {
+export async function secureFetch(url: string, options?: RequestInit): Promise<Response> {
   const parsed = new URL(url);
 
   if (!isAllowedHostname(parsed.hostname)) {

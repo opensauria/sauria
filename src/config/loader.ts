@@ -4,11 +4,7 @@ import { paths } from './paths.js';
 import { OpenWindConfigSchema } from './schema.js';
 import type { OpenWindConfig } from './schema.js';
 import { DEFAULT_CONFIG } from './defaults.js';
-import {
-  safeMkdir,
-  safeReadFile,
-  safeWriteFile,
-} from '../security/fs-sandbox.js';
+import { safeMkdir, safeReadFile, safeWriteFile } from '../security/fs-sandbox.js';
 
 export async function loadConfig(): Promise<OpenWindConfig> {
   let raw: string;
@@ -36,13 +32,7 @@ export async function saveConfig(config: OpenWindConfig): Promise<void> {
 }
 
 export async function ensureConfigDir(): Promise<void> {
-  const dirs = [
-    paths.home,
-    paths.logs,
-    paths.tmp,
-    paths.exports,
-    paths.vault,
-  ];
+  const dirs = [paths.home, paths.logs, paths.tmp, paths.exports, paths.vault];
 
   for (const dir of dirs) {
     await safeMkdir(dir);

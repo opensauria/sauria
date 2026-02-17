@@ -26,10 +26,7 @@ export async function safeReadFile(filePath: string): Promise<Buffer> {
   return readFile(safe);
 }
 
-export async function safeWriteFile(
-  filePath: string,
-  data: string | Buffer,
-): Promise<void> {
+export async function safeWriteFile(filePath: string, data: string | Buffer): Promise<void> {
   const safe = safePath(filePath);
   await mkdir(dirname(safe), { recursive: true });
   await writeFile(safe, data);

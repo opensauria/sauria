@@ -31,7 +31,9 @@ function countRows(db: BetterSqlite3.Database, sql: string): number {
 export async function askAction(ctx: AppContext, question: string): Promise<void> {
   const sanitized = sanitizeChannelInput(question);
   const entities = searchByKeyword(ctx.db, sanitized, 10);
-  const context = entities.map((e) => `[${e.type}] ${e.name}: ${e.summary ?? 'no summary'}`).join('\n');
+  const context = entities
+    .map((e) => `[${e.type}] ${e.name}: ${e.summary ?? 'no summary'}`)
+    .join('\n');
   w(await reasonAbout(ctx.router, context, sanitized));
 }
 
@@ -42,14 +44,19 @@ export function statusAction(ctx: AppContext): void {
   w(`Entities:     ${String(countRows(ctx.db, 'SELECT COUNT(*) AS c FROM entities'))}`);
   w(`Events:       ${String(countRows(ctx.db, 'SELECT COUNT(*) AS c FROM events'))}`);
   w(`Observations: ${String(countRows(ctx.db, 'SELECT COUNT(*) AS c FROM observations'))}`);
-  w(`Active tasks: ${String(countRows(ctx.db, "SELECT COUNT(*) AS c FROM tasks WHERE status IN ('pending','active')"))}`);
+  w(
+    `Active tasks: ${String(countRows(ctx.db, "SELECT COUNT(*) AS c FROM tasks WHERE status IN ('pending','active')"))}`,
+  );
   w(`Total cost:   $${totalCost.toFixed(4)}`);
 }
 
 export async function focusAction(ctx: AppContext, entityName: string): Promise<void> {
   const name = sanitizeChannelInput(entityName);
   const entity = getEntityByName(ctx.db, name) ?? searchEntities(ctx.db, name)[0];
-  if (!entity) { w(`Entity "${name}" not found.`); return; }
+  if (!entity) {
+    w(`Entity "${name}" not found.`);
+    return;
+  }
   const relations = getEntityRelations(ctx.db, entity.id);
   const timeline = getEntityTimeline(ctx.db, entity.id, 10);
   const context = [
@@ -69,7 +76,10 @@ export async function focusAction(ctx: AppContext, entityName: string): Promise<
 export function entityAction(ctx: AppContext, entityName: string): void {
   const name = sanitizeChannelInput(entityName);
   const entity = getEntityByName(ctx.db, name) ?? searchEntities(ctx.db, name)[0];
-  if (!entity) { w(`Entity "${name}" not found.`); return; }
+  if (!entity) {
+    w(`Entity "${name}" not found.`);
+    return;
+  }
   const relations = getEntityRelations(ctx.db, entity.id);
   const timeline = getEntityTimeline(ctx.db, entity.id, 5);
   w(`${entity.name} (${entity.type})`);
@@ -88,16 +98,24 @@ export function entityAction(ctx: AppContext, entityName: string): void {
 
 export function upcomingAction(ctx: AppContext, hours: number): void {
   const deadlines = getUpcomingDeadlines(ctx.db, hours);
-  if (deadlines.length === 0) { w(`No upcoming deadlines in the next ${String(hours)} hours.`); return; }
+  if (deadlines.length === 0) {
+    w(`No upcoming deadlines in the next ${String(hours)} hours.`);
+    return;
+  }
   w(`Upcoming (next ${String(hours)}h):`);
   for (const e of deadlines) w(`  [${e.timestamp}] ${e.eventType} (${e.source})`);
 }
 
 export function insightsAction(ctx: AppContext): void {
-  const rows: unknown[] = ctx.db.prepare(
-    "SELECT content, confidence, created_at FROM observations WHERE type = 'insight' ORDER BY created_at DESC LIMIT 10",
-  ).all();
-  if (rows.length === 0) { w('No insights generated yet.'); return; }
+  const rows: unknown[] = ctx.db
+    .prepare(
+      "SELECT content, confidence, created_at FROM observations WHERE type = 'insight' ORDER BY created_at DESC LIMIT 10",
+    )
+    .all();
+  if (rows.length === 0) {
+    w('No insights generated yet.');
+    return;
+  }
   w('Recent Insights:');
   for (const row of rows) {
     const r = row as Record<string, unknown>;
@@ -114,18 +132,26 @@ export function teachAction(ctx: AppContext, fact: string): void {
 
 export function sourcesAction(ctx: AppContext): void {
   const serverNames = Object.keys(ctx.config.mcp.servers);
-  if (serverNames.length === 0) { w('No MCP sources configured.'); return; }
+  if (serverNames.length === 0) {
+    w('No MCP sources configured.');
+    return;
+  }
   w('Configured MCP Sources:');
   for (const name of serverNames) {
     const server = ctx.config.mcp.servers[name];
     if (!server) continue;
-    w(`  ${name}: ${server.command} ${server.args.join(' ')} (interval: ${String(server.interval)}s)`);
+    w(
+      `  ${name}: ${server.command} ${server.args.join(' ')} (interval: ${String(server.interval)}s)`,
+    );
   }
 }
 
 export function auditAction(ctx: AppContext, count: number): void {
   const entries = ctx.audit.getRecentActions(count);
-  if (entries.length === 0) { w('No audit entries.'); return; }
+  if (entries.length === 0) {
+    w('No audit entries.');
+    return;
+  }
   w(`Last ${String(entries.length)} audit entries:`);
   for (const entry of entries) {
     const cost = entry.costUsd !== null ? ` ($${entry.costUsd.toFixed(4)})` : '';

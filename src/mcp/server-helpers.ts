@@ -17,14 +17,18 @@ export function textResult(text: string): ToolResult {
 
 export function formatEntity(entity: Entity): string {
   const props = entity.properties
-    ? Object.entries(entity.properties).map(([k, v]) => `  ${k}: ${v}`).join('\n')
+    ? Object.entries(entity.properties)
+        .map(([k, v]) => `  ${k}: ${v}`)
+        .join('\n')
     : '';
   return [
     `[${entity.type}] ${entity.name} (id: ${entity.id})`,
     entity.summary ? `Summary: ${entity.summary}` : '',
     `Importance: ${entity.importanceScore} | Mentions: ${entity.mentionCount}`,
     props ? `Properties:\n${props}` : '',
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 export function isObservationRow(value: unknown): value is Record<string, unknown> {
@@ -47,7 +51,10 @@ export function registerTool(
   handler: ToolHandler,
 ): void {
   const register = server.tool.bind(server) as (
-    n: string, d: string, s: Record<string, z.ZodTypeAny>, h: ToolHandler,
+    n: string,
+    d: string,
+    s: Record<string, z.ZodTypeAny>,
+    h: ToolHandler,
   ) => void;
   register(name, description, schema, handler);
 }

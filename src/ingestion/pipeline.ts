@@ -26,10 +26,7 @@ export class IngestPipeline {
     private readonly rateLimiter: RateLimiter,
   ) {}
 
-  async ingestEvent(
-    source: string,
-    rawData: Record<string, unknown>,
-  ): Promise<void> {
+  async ingestEvent(source: string, rawData: Record<string, unknown>): Promise<void> {
     if (!this.rateLimiter.tryConsume()) {
       throw new RateLimitExceededError();
     }
@@ -72,9 +69,7 @@ export class IngestPipeline {
     });
   }
 
-  private resolveAllEntities(
-    extraction: ExtractionResult,
-  ): Map<string, string> {
+  private resolveAllEntities(extraction: ExtractionResult): Map<string, string> {
     const idMap = new Map<string, string>();
 
     for (const entity of extraction.entities) {
@@ -89,19 +84,16 @@ export class IngestPipeline {
     return idMap;
   }
 
-  private upsertAllEntities(
-    extraction: ExtractionResult,
-    entityIdMap: Map<string, string>,
-  ): void {
+  private upsertAllEntities(extraction: ExtractionResult, entityIdMap: Map<string, string>): void {
     for (const entity of extraction.entities) {
       const id = entityIdMap.get(entity.name);
       if (id === undefined) {
         continue;
       }
 
-      const existing = this.db
-        .prepare('SELECT properties FROM entities WHERE id = ?')
-        .get(id) as { properties: string | null } | undefined;
+      const existing = this.db.prepare('SELECT properties FROM entities WHERE id = ?').get(id) as
+        | { properties: string | null }
+        | undefined;
 
       const existingProps = existing?.properties
         ? (JSON.parse(existing.properties) as Record<string, string>)
@@ -118,10 +110,7 @@ export class IngestPipeline {
     }
   }
 
-  private upsertAllRelations(
-    extraction: ExtractionResult,
-    entityIdMap: Map<string, string>,
-  ): void {
+  private upsertAllRelations(extraction: ExtractionResult, entityIdMap: Map<string, string>): void {
     for (const relation of extraction.relations) {
       const fromId = entityIdMap.get(relation.from);
       const toId = entityIdMap.get(relation.to);

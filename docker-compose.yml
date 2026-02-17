@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - "${HOME}/.openwind:/home/openwind/.openwind"
+      - '${HOME}/.openwind:/home/openwind/.openwind'
     environment:
       - NODE_ENV=production
     read_only: true

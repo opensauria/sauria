@@ -47,10 +47,7 @@ function computeNameSimilarity(a: string, b: string): number {
 
 const SIMILARITY_THRESHOLD = 0.7;
 
-export function resolveEntity(
-  db: BetterSqlite3.Database,
-  extracted: ExtractedEntityInput,
-): string {
+export function resolveEntity(db: BetterSqlite3.Database, extracted: ExtractedEntityInput): string {
   const exactMatch = getEntityByName(db, extracted.name);
   if (exactMatch) {
     return exactMatch.id;

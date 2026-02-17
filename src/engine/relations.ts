@@ -38,9 +38,12 @@ export function detectDecay(
   return decaying
     .map((d) => {
       const { entity, daysSinceContact, averageGapDays } = d;
-      const decayRatio = averageGapDays > 0
-        ? Math.round((daysSinceContact / averageGapDays) * 100) / 100
-        : daysSinceContact > DEFAULT_THRESHOLD_DAYS ? 999 : 0;
+      const decayRatio =
+        averageGapDays > 0
+          ? Math.round((daysSinceContact / averageGapDays) * 100) / 100
+          : daysSinceContact > DEFAULT_THRESHOLD_DAYS
+            ? 999
+            : 0;
 
       return { entity, daysSinceContact, averageGapDays, decayRatio };
     })

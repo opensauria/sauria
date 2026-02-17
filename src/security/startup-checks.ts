@@ -14,10 +14,7 @@ function isErrnoException(err: unknown): err is NodeJS.ErrnoException {
   return err instanceof Error && 'code' in err;
 }
 
-export async function enforceFilePermissions(
-  filePath: string,
-  mode: number,
-): Promise<void> {
+export async function enforceFilePermissions(filePath: string, mode: number): Promise<void> {
   try {
     const info = await stat(filePath);
     const currentMode = info.mode & 0o777;
@@ -99,9 +96,7 @@ async function checkDatabaseSize(): Promise<void> {
     }
 
     if (info.size >= SECURITY_LIMITS.database.maxSizeWarnBytes) {
-      console.warn(
-        `[openwind] Warning: database size ${info.size} exceeds warning threshold`,
-      );
+      console.warn(`[openwind] Warning: database size ${info.size} exceeds warning threshold`);
     }
   } catch (err: unknown) {
     if (err instanceof SecurityCheckError) {
@@ -118,10 +113,7 @@ function checkDebugger(): void {
   const hasInspect = process.execArgv.some((arg) => arg.includes('inspect'));
 
   if (hasInspect) {
-    throw new SecurityCheckError(
-      'debugger',
-      'Debugger attachment detected via --inspect flag',
-    );
+    throw new SecurityCheckError('debugger', 'Debugger attachment detected via --inspect flag');
   }
 }
 

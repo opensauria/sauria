@@ -4,8 +4,8 @@ export const SECURITY_LIMITS = {
     reasoningCallsPerHour: 30,
     deepReasoningCallsPerDay: 10,
     maxConcurrentCalls: 3,
-    dailyBudgetUsd: 5.00,
-    warnBudgetUsd: 3.00,
+    dailyBudgetUsd: 5.0,
+    warnBudgetUsd: 3.0,
     maxTokensPerRequest: 16384,
     requestTimeoutMs: 30_000,
   },
@@ -71,18 +71,11 @@ export class RateLimiter {
       return;
     }
 
-    this.tokens = Math.min(
-      this.maxTokens,
-      this.tokens + intervalsElapsed * this.refillRate,
-    );
+    this.tokens = Math.min(this.maxTokens, this.tokens + intervalsElapsed * this.refillRate);
     this.lastRefill += intervalsElapsed * this.refillIntervalMs;
   }
 }
 
-export function createLimiter(
-  _name: string,
-  maxPerPeriod: number,
-  periodMs: number,
-): RateLimiter {
+export function createLimiter(_name: string, maxPerPeriod: number, periodMs: number): RateLimiter {
   return new RateLimiter(maxPerPeriod, maxPerPeriod, periodMs);
 }
