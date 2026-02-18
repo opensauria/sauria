@@ -88,22 +88,15 @@
         </div>
 
         <div class="detail-section">
-          <span class="detail-section-label">Instructions</span>
+          <span class="detail-section-label" id="instructions-label">Instructions</span>
           <textarea
             class="detail-textarea"
             id="agent-instructions"
             placeholder="Standing orders for this agent..."
           ></textarea>
-        </div>
-
-        <div class="detail-section" id="global-instructions-section" style="display:none;">
-          <span class="detail-section-label">Global Instructions (all agents)</span>
-          <textarea
-            class="detail-textarea"
-            id="global-instructions"
-            placeholder="Response style for all agents (e.g. plain text, no emojis)..."
-            rows="4"
-          ></textarea>
+          <button class="btn btn-secondary" id="insert-template-btn" style="margin-top:8px;font-size:12px;">
+            Use Template
+          </button>
         </div>
 
         <div class="detail-section">
@@ -318,6 +311,34 @@
         email: '<img src="icons/email.svg" alt="Email" class="icon-mono" />',
       };
 
+      /* Persona templates */
+      var CEO_TEMPLATE = [
+        '## Response Format',
+        'Plain text only. No markdown formatting, no emojis, no asterisks.',
+        '',
+        '## Tone',
+        'Concise, direct, professional.',
+        '',
+        '## Language',
+        'English.',
+      ].join('\n');
+
+      var BOT_TEMPLATE = [
+        '## Role',
+        '[What this agent does — e.g., Customer support for billing]',
+        '',
+        '## Personality',
+        '[How this agent communicates — e.g., Friendly, patient, empathetic]',
+        '',
+        '## Response Style',
+        '- [e.g., Use simple language]',
+        '- [e.g., Ask clarifying questions when needed]',
+        '',
+        '## Constraints',
+        '- [e.g., Never share internal policies]',
+        '- [e.g., Escalate to human for complex issues]',
+      ].join('\n');
+
       /* ═══════════════════════════════════════════════
          Init: load graph
          ═══════════════════════════════════════════════ */
@@ -359,6 +380,13 @@
             role: 'lead',
             autonomy: 3,
           });
+          saveGraph();
+        }
+
+        /* Migrate: if globalInstructions exists but CEO node has no instructions, copy over */
+        var ceoNode = graph.nodes.find(function (n) { return n.platform === 'ceo'; });
+        if (ceoNode && !ceoNode.instructions && graph.globalInstructions) {
+          ceoNode.instructions = graph.globalInstructions;
           saveGraph();
         }
 
@@ -2104,17 +2132,17 @@
         document.getElementById('agent-autonomy').value = autonomy;
         updateAutonomyLabels(autonomy);
 
-        /* Instructions */
-        document.getElementById('agent-instructions').value = node.instructions || '';
-
-        /* Global instructions (CEO only) */
-        var globalSection = document.getElementById('global-instructions-section');
+        /* Instructions — dynamic label based on node type */
+        var instructionsLabel = document.getElementById('instructions-label');
+        var instructionsTextarea = document.getElementById('agent-instructions');
         if (isCeo) {
-          globalSection.style.display = '';
-          document.getElementById('global-instructions').value = graph.globalInstructions || '';
+          instructionsLabel.textContent = 'Communication Style (all agents)';
+          instructionsTextarea.placeholder = 'Define how all agents should respond...\n\nExample:\n- Plain text only, no markdown\n- Concise and direct\n- No emojis';
         } else {
-          globalSection.style.display = 'none';
+          instructionsLabel.textContent = 'Agent Persona';
+          instructionsTextarea.placeholder = 'Describe this agent\'s role, personality, and behavior...';
         }
+        instructionsTextarea.value = node.instructions || '';
 
         /* Toggles */
         var behavior = node.behavior || {};
@@ -2175,12 +2203,22 @@
         });
         if (!node) return;
         node.instructions = this.value;
+        if (node.platform === 'ceo') {
+          graph.globalInstructions = this.value;
+        }
         saveGraph();
       });
 
-      /* Global instructions textarea */
-      document.getElementById('global-instructions').addEventListener('input', function () {
-        graph.globalInstructions = this.value;
+      /* Template button */
+      document.getElementById('insert-template-btn').addEventListener('click', function () {
+        if (!detailNodeId) return;
+        var node = graph.nodes.find(function (n) { return n.id === detailNodeId; });
+        if (!node) return;
+        var textarea = document.getElementById('agent-instructions');
+        var template = node.platform === 'ceo' ? CEO_TEMPLATE : BOT_TEMPLATE;
+        textarea.value = template;
+        node.instructions = template;
+        if (node.platform === 'ceo') graph.globalInstructions = template;
         saveGraph();
       });
 
