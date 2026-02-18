@@ -44,6 +44,7 @@ import type {
   CanvasGraph,
   OwnerIdentity,
   OwnerCommand,
+  OwnerCommandSchema,
   AgentNode,
   InboundMessage,
   Edge,
@@ -265,10 +266,13 @@ async function createChannelForNode(
 
   const platformName =
     node.platform.charAt(0).toUpperCase() + node.platform.slice(1);
+  const displayName = node.meta?.['firstName']
+    || node.label.replace(/^@/, '')
+    || node.label;
   const personaBlock = [
-    `Your name is ${node.label}.`,
+    `Your name is ${displayName}.`,
     `You are a ${node.role ?? 'assistant'} agent on ${platformName}.`,
-    `Always respond as ${node.label}. Never say you are Claude, an AI assistant, or a language model.`,
+    `Always respond as ${displayName}. Never say you are Claude, an AI assistant, or a language model.`,
   ].join(' ');
 
   const combinedInstructions = [personaBlock, globalInstructions, node.instructions]
@@ -508,6 +512,7 @@ async function setupOrchestrator(
     agentMemory,
     kpiTracker,
     checkpointManager,
+    canvasPath: paths.canvas,
   });
 
   const queue = new MessageQueue((msg: InboundMessage) => orchestrator.handleInbound(msg), {
@@ -758,7 +763,13 @@ export async function startDaemonContext(): Promise<DaemonContext> {
         const lines = content.split('\n').filter(Boolean);
         for (const line of lines) {
           try {
-            const command = JSON.parse(line) as OwnerCommand;
+            const parsed: unknown = JSON.parse(line);
+            const result = OwnerCommandSchema.safeParse(parsed);
+            if (!result.success) {
+              logger.warn('Invalid owner command schema', { error: result.error.message });
+              continue;
+            }
+            const command: OwnerCommand = result.data;
             audit.logAction('owner:command_received', { type: command.type });
             void orchestrator.handleOwnerCommand(command);
           } catch {
