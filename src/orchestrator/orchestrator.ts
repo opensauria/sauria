@@ -339,12 +339,28 @@ export class AgentOrchestrator {
     switch (action.type) {
       case 'forward': {
         const group = this.findGroupForNode(action.targetNodeId);
-        await this.registry.sendTo(action.targetNodeId, action.content, group);
+        const contextPrefix = this.buildForwardContext(
+          source.sourceNodeId,
+          source.platform,
+          source.groupId,
+        );
+        const enrichedContent = contextPrefix
+          ? `${contextPrefix}\n${action.content}`
+          : action.content;
+        await this.registry.sendTo(action.targetNodeId, enrichedContent, group);
         break;
       }
       case 'notify': {
         const group = this.findGroupForNode(action.targetNodeId);
-        await this.registry.sendTo(action.targetNodeId, action.summary, group);
+        const contextPrefix = this.buildForwardContext(
+          source.sourceNodeId,
+          source.platform,
+          source.groupId,
+        );
+        const enrichedSummary = contextPrefix
+          ? `${contextPrefix}\n${action.summary}`
+          : action.summary;
+        await this.registry.sendTo(action.targetNodeId, enrichedSummary, group);
         break;
       }
       case 'send_to_all': {
@@ -461,6 +477,42 @@ export class AgentOrchestrator {
     if (node.platform === 'slack' && this.ownerIdentity.slack) return true;
     if (node.platform === 'whatsapp' && this.ownerIdentity.whatsapp) return true;
     return false;
+  }
+
+  private buildForwardContext(
+    sourceNodeId: string,
+    platform: string,
+    groupId: string | null,
+  ): string {
+    if (!this.agentMemory) return '';
+
+    const sourceNode = this.findNode(sourceNodeId);
+    if (!sourceNode) return '';
+
+    const conversationId = this.agentMemory.getOrCreateConversation(
+      platform,
+      groupId,
+      [sourceNodeId],
+    );
+
+    const nodeLabels = new Map(
+      this.graph.nodes.map((n) => [n.id, n.label]),
+    );
+    const recentMessages = this.agentMemory.getRecentMessagesForContext(
+      conversationId,
+      5,
+      nodeLabels,
+    );
+
+    if (recentMessages.length === 0) return '';
+
+    return [
+      `[Forwarded from ${sourceNode.label}]`,
+      '[Recent context]:',
+      ...recentMessages.map((m) => `- ${m}`),
+      '',
+      '[Message]:',
+    ].join('\n');
   }
 
   private findGroupForNode(nodeId: string): string | null {
