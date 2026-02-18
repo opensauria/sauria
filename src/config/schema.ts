@@ -34,7 +34,11 @@ const TelegramVoiceConfigSchema = z
     model: z.string().default('onnx-community/whisper-small'),
     maxDurationSeconds: z.number().int().min(1).max(300).default(120),
   })
-  .default({});
+  .default({
+    enabled: true,
+    model: 'onnx-community/whisper-small',
+    maxDurationSeconds: 120,
+  });
 
 const SlackChannelSchema = z
   .object({
@@ -42,7 +46,7 @@ const SlackChannelSchema = z
     workspaceId: z.string().optional(),
     botUserId: z.string().optional(),
   })
-  .default({});
+  .default({ enabled: false });
 
 const WhatsAppChannelSchema = z
   .object({
@@ -50,7 +54,7 @@ const WhatsAppChannelSchema = z
     phoneNumberId: z.string().optional(),
     webhookPort: z.number().int().min(1024).max(65535).default(9090),
   })
-  .default({});
+  .default({ enabled: false, webhookPort: 9090 });
 
 const DiscordChannelSchema = z
   .object({
@@ -58,7 +62,7 @@ const DiscordChannelSchema = z
     guildId: z.string().optional(),
     botUserId: z.string().optional(),
   })
-  .default({});
+  .default({ enabled: false });
 
 const EmailChannelSchema = z
   .object({
@@ -70,7 +74,7 @@ const EmailChannelSchema = z
     username: z.string().optional(),
     tls: z.boolean().default(true),
   })
-  .default({});
+  .default({ enabled: false, imapPort: 993, smtpPort: 587, tls: true });
 
 const CEOIdentitySchema = z
   .object({
@@ -95,7 +99,11 @@ const OrchestratorConfigSchema = z
     maxMessagesPerSecond: z.number().int().min(1).max(100).default(10),
     routingCacheTtlMs: z.number().int().min(0).max(600_000).default(300_000),
   })
-  .default({});
+  .default({
+    maxConcurrentWorkspaces: 4,
+    maxMessagesPerSecond: 10,
+    routingCacheTtlMs: 300_000,
+  });
 
 const ChannelsConfigSchema = z.object({
   telegram: z
@@ -104,35 +112,38 @@ const ChannelsConfigSchema = z.object({
       allowedUserIds: z.array(z.number().int()).default([]),
       voice: TelegramVoiceConfigSchema,
     })
-    .default({}),
+    .default({
+      enabled: false,
+      allowedUserIds: [],
+      voice: {
+        enabled: true,
+        model: 'onnx-community/whisper-small',
+        maxDurationSeconds: 120,
+      },
+    }),
   slack: SlackChannelSchema,
   whatsapp: WhatsAppChannelSchema,
   discord: DiscordChannelSchema,
   email: EmailChannelSchema,
 });
 
+const DEFAULT_MODELS = {
+  extraction: { provider: 'google' as const, model: 'gemini-2.5-flash' },
+  reasoning: { provider: 'anthropic' as const, model: 'claude-sonnet-4-5' },
+  deep: { provider: 'anthropic' as const, model: 'claude-opus-4-6' },
+  embeddings: { provider: 'local' as const, model: 'all-MiniLM-L6-v2' },
+};
+
 export const OpenWindConfigSchema = z
   .object({
     models: z
       .object({
-        extraction: ModelConfigSchema.default({
-          provider: 'google',
-          model: 'gemini-2.5-flash',
-        }),
-        reasoning: ModelConfigSchema.default({
-          provider: 'anthropic',
-          model: 'claude-sonnet-4-5',
-        }),
-        deep: ModelConfigSchema.default({
-          provider: 'anthropic',
-          model: 'claude-opus-4-6',
-        }),
-        embeddings: ModelConfigSchema.default({
-          provider: 'local',
-          model: 'all-MiniLM-L6-v2',
-        }),
+        extraction: ModelConfigSchema.default(DEFAULT_MODELS.extraction),
+        reasoning: ModelConfigSchema.default(DEFAULT_MODELS.reasoning),
+        deep: ModelConfigSchema.default(DEFAULT_MODELS.deep),
+        embeddings: ModelConfigSchema.default(DEFAULT_MODELS.embeddings),
       })
-      .default({}),
+      .default(DEFAULT_MODELS),
     auth: z.record(z.string(), AuthConfigSchema).default({}),
     budget: z
       .object({
@@ -140,13 +151,27 @@ export const OpenWindConfigSchema = z
         warnAtUsd: z.number().min(0).max(100).default(3.0),
         preferCheap: z.boolean().default(true),
       })
-      .default({}),
+      .default({ dailyLimitUsd: 5.0, warnAtUsd: 3.0, preferCheap: true }),
     mcp: z
       .object({
         servers: z.record(z.string(), McpServerConfigSchema).default({}),
       })
-      .default({}),
-    channels: ChannelsConfigSchema.default({}),
+      .default({ servers: {} }),
+    channels: ChannelsConfigSchema.default({
+      telegram: {
+        enabled: false,
+        allowedUserIds: [],
+        voice: {
+          enabled: true,
+          model: 'onnx-community/whisper-small',
+          maxDurationSeconds: 120,
+        },
+      },
+      slack: { enabled: false },
+      whatsapp: { enabled: false, webhookPort: 9090 },
+      discord: { enabled: false },
+      email: { enabled: false, imapPort: 993, smtpPort: 587, tls: true },
+    }),
     ceo: CEOIdentitySchema,
     orchestrator: OrchestratorConfigSchema,
   })

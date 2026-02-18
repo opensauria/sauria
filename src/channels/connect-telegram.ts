@@ -61,6 +61,7 @@ export async function connectTelegram(): Promise<void> {
   const userIdInput = await p.text({
     message: 'Enter your Telegram user ID (numeric, from @userinfobot)',
     validate: (value) => {
+      if (!value) return 'Required';
       const parsed = parseInt(value, 10);
       if (Number.isNaN(parsed) || parsed <= 0) return 'Must be a positive integer';
       return undefined;

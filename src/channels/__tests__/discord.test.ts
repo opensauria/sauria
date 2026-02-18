@@ -3,6 +3,7 @@ import { DiscordChannel } from '../discord.js';
 import type { DiscordDeps } from '../discord.js';
 import type { AuditLogger } from '../../security/audit.js';
 import type { IngestPipeline } from '../../ingestion/pipeline.js';
+import type { InboundMessage } from '../../orchestrator/types.js';
 
 function mockAudit(): AuditLogger {
   return {
@@ -50,7 +51,7 @@ describe('DiscordChannel', () => {
   let channel: DiscordChannel;
   let audit: AuditLogger;
   let pipeline: IngestPipeline;
-  let onInbound: ReturnType<typeof vi.fn>;
+  let onInbound: (message: InboundMessage) => void;
   let originalFetch: typeof globalThis.fetch;
 
   const baseDeps: Omit<DiscordDeps, 'audit' | 'pipeline' | 'onInbound'> = {
@@ -64,7 +65,7 @@ describe('DiscordChannel', () => {
   beforeEach(() => {
     audit = mockAudit();
     pipeline = mockPipeline();
-    onInbound = vi.fn();
+    onInbound = vi.fn<(message: InboundMessage) => void>();
     originalFetch = globalThis.fetch;
   });
 

@@ -16,16 +16,22 @@ function extractSystemPrompt(messages: ChatMessage[], fallback?: string): string
   return systemMessage?.content ?? fallback;
 }
 
+const OAUTH_TOKEN_PREFIX = 'sk-ant-oat01-';
+const OAUTH_BETA_HEADER = 'oauth-2025-04-20';
+
 export class AnthropicProvider implements LLMProvider {
   readonly name = 'anthropic';
   readonly supportsStreaming = true;
   private readonly client: Anthropic;
 
-  constructor(apiKey: string, authToken?: string) {
-    if (authToken) {
-      this.client = new Anthropic({ authToken });
+  constructor(apiKeyOrToken: string) {
+    if (apiKeyOrToken.startsWith(OAUTH_TOKEN_PREFIX)) {
+      this.client = new Anthropic({
+        authToken: apiKeyOrToken,
+        defaultHeaders: { 'anthropic-beta': OAUTH_BETA_HEADER },
+      });
     } else {
-      this.client = new Anthropic({ apiKey });
+      this.client = new Anthropic({ apiKey: apiKeyOrToken });
     }
   }
 

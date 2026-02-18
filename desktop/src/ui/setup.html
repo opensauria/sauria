@@ -86,7 +86,7 @@
 
       .card.selected {
         border-color: var(--accent);
-        background: rgba(59, 130, 246, 0.08);
+        background: rgba(3, 139, 154, 0.08);
       }
 
       .card-icon {
@@ -376,12 +376,14 @@
       <div class="step" id="step-claude-desktop">
         <h1>Sign in to Anthropic</h1>
         <p class="subtitle">
-          OpenWind will connect to your Anthropic account to use Claude as its AI engine.
-          No API key needed.
+          OpenWind will connect to your Anthropic account to use Claude as its AI engine. No API key
+          needed.
         </p>
 
         <div id="oauth-start" style="display: block">
-          <p style="color: var(--text-secondary); font-size: 13px; margin-top: 8px; line-height: 1.6">
+          <p
+            style="color: var(--text-secondary); font-size: 13px; margin-top: 8px; line-height: 1.6"
+          >
             1. Click the button below to open Anthropic's login page<br />
             2. Log in and authorize OpenWind<br />
             3. Copy the code shown on screen and paste it back here
@@ -621,7 +623,7 @@
         </p>
         <ul class="client-list" id="client-list"></ul>
         <div class="actions">
-          <button class="btn btn-primary" onclick="window.openwind.showCanvas()">Done</button>
+          <button class="btn btn-primary" onclick="window.close()">Done</button>
         </div>
       </div>
     </div>

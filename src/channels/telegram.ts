@@ -35,6 +35,7 @@ export interface TelegramDeps {
   readonly nodeId?: string;
   readonly ceoUserId?: number;
   readonly onInbound?: (message: InboundMessage) => void;
+  readonly instructions?: string;
 }
 
 function countRows(db: BetterSqlite3.Database, sql: string): number {
@@ -62,7 +63,13 @@ export class TelegramChannel implements Channel {
 
   private setupMiddleware(): void {
     this.bot.use(async (ctx, next) => {
-      if (!ctx.from?.id || !this.allowedUsers.has(ctx.from.id)) return;
+      const fromId = ctx.from?.id;
+      if (!fromId || !this.allowedUsers.has(fromId)) {
+        process.stderr.write(
+          `[telegram:auth] Rejected user ${String(fromId)} — allowed: [${[...this.allowedUsers].join(',')}]\n`,
+        );
+        return;
+      }
       if (!this.limiter.tryConsume()) {
         await ctx.reply('Rate limit reached. Please wait a moment.');
         return;
@@ -219,7 +226,7 @@ export class TelegramChannel implements Channel {
       .map((e) => `[${e.type}] ${e.name}: ${e.summary ?? 'no summary'}`)
       .join('\n');
     try {
-      const answer = await reasonAbout(router, context, question);
+      const answer = await reasonAbout(router, context, question, this.deps.instructions);
       audit.logAction('telegram:ask', { question, entityCount: entities.length });
       await ctx.reply(answer);
     } catch (error) {
@@ -311,10 +318,18 @@ export class TelegramChannel implements Channel {
 
   async start(): Promise<void> {
     this.deps.audit.logAction('telegram:start', {});
+    process.stderr.write(
+      `[telegram:start] nodeId=${this.deps.nodeId ?? 'none'} allowedUsers=[${[...this.allowedUsers].join(',')}]\n`,
+    );
     this.bot.catch((err) => {
+      process.stderr.write(`[telegram:bot_error] ${String(err)}\n`);
       this.deps.audit.logAction('telegram:error', { error: String(err) }, { success: false });
     });
-    void this.bot.start();
+    void this.bot.start({
+      onStart: () => {
+        process.stderr.write(`[telegram:polling] Bot polling started for nodeId=${this.deps.nodeId ?? 'none'}\n`);
+      },
+    });
   }
 
   async stop(): Promise<void> {

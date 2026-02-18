@@ -133,6 +133,7 @@ export class AgentOrchestrator {
         teamNodes,
         ruleActions,
         conversationId,
+        globalInstructions: this.graph.globalInstructions,
       };
 
       try {

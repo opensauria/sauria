@@ -1,4 +1,7 @@
+import { execSync } from 'node:child_process';
+import { userInfo } from 'node:os';
 import { vaultGet } from '../security/vault-key.js';
+import { getValidOAuthToken } from './oauth.js';
 import type { Credential, OAuthCredential } from './types.js';
 
 const ENV_MAP: Readonly<Record<string, string>> = {
@@ -56,6 +59,36 @@ async function resolveApiKeyFromVault(providerName: string): Promise<string | nu
   return vaultGet(`${providerName}-api-key`);
 }
 
+function resolveFromClaudeCodeKeychain(): OAuthCredential | null {
+  if (process.platform !== 'darwin') return null;
+
+  try {
+    const account = userInfo().username;
+    const raw = execSync(
+      `security find-generic-password -s "Claude Code-credentials" -a "${account}" -w`,
+      { encoding: 'utf-8', timeout: 5_000, stdio: ['pipe', 'pipe', 'pipe'] },
+    ).trim();
+    if (!raw) return null;
+
+    const data = JSON.parse(raw) as Record<string, unknown>;
+    const oauth = data['claudeAiOauth'] as Record<string, unknown> | undefined;
+    if (!oauth) return null;
+
+    const { accessToken, refreshToken, expiresAt } = oauth;
+    if (
+      typeof accessToken !== 'string' ||
+      typeof refreshToken !== 'string' ||
+      typeof expiresAt !== 'number'
+    ) {
+      return null;
+    }
+
+    return { kind: 'oauth', accessToken, refreshToken, expiresAt };
+  } catch {
+    return null;
+  }
+}
+
 export async function resolveCredential(providerName: string): Promise<Credential | null> {
   const oauth = await resolveOAuthFromVault(providerName);
   if (oauth) return oauth;
@@ -65,6 +98,11 @@ export async function resolveCredential(providerName: string): Promise<Credentia
 
   const envKey = resolveFromEnv(providerName);
   if (envKey) return { kind: 'api_key', value: envKey };
+
+  if (providerName === 'anthropic') {
+    const keychainOAuth = resolveFromClaudeCodeKeychain();
+    if (keychainOAuth) return keychainOAuth;
+  }
 
   return null;
 }
@@ -79,7 +117,8 @@ export async function resolveApiKey(providerName: string): Promise<string> {
   }
 
   if (credential.kind === 'oauth') {
-    return credential.accessToken;
+    const token = await getValidOAuthToken(providerName);
+    return token ?? credential.accessToken;
   }
 
   return credential.value;

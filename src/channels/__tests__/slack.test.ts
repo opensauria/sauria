@@ -240,7 +240,7 @@ describe('SlackChannel', () => {
         }),
       );
 
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       const deps = createDeps({ onInbound });
       const channel = new SlackChannel(deps);
       await channel.start();
@@ -271,7 +271,7 @@ describe('SlackChannel', () => {
         }),
       );
 
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       const deps = createDeps({ onInbound });
       const channel = new SlackChannel(deps);
       await channel.start();
@@ -303,7 +303,7 @@ describe('SlackChannel', () => {
         }),
       );
 
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       const deps = createDeps({ onInbound, nodeId: 'slack-node-1' });
       const channel = new SlackChannel(deps);
       await channel.start();
@@ -366,7 +366,7 @@ describe('SlackChannel', () => {
         }),
       );
 
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       const deps = createDeps({ onInbound });
       const channel = new SlackChannel(deps);
       await channel.start();
@@ -424,7 +424,7 @@ describe('SlackChannel', () => {
         }),
       );
 
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       const deps = createDeps({ onInbound });
       const channel = new SlackChannel(deps);
       await channel.start();
@@ -461,7 +461,7 @@ describe('SlackChannel', () => {
         }),
       );
 
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       const deps = createDeps({ onInbound, ceoUserId: 'UCEO' });
       const channel = new SlackChannel(deps);
       await channel.start();
@@ -489,7 +489,7 @@ describe('SlackChannel', () => {
         }),
       );
 
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       const deps = createDeps({ onInbound, ceoUserId: 'UCEO' });
       const channel = new SlackChannel(deps);
       await channel.start();
@@ -597,7 +597,7 @@ describe('SlackChannel', () => {
         }),
       );
 
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       const deps = createDeps({ onInbound });
       const channel = new SlackChannel(deps);
       await channel.start();
@@ -631,7 +631,7 @@ describe('SlackChannel', () => {
         }),
       );
 
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       const deps = createDeps({ onInbound });
       const channel = new SlackChannel(deps);
       await channel.start();

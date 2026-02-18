@@ -8,7 +8,7 @@ import {
   globalShortcut,
   BrowserWindow,
 } from 'electron';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync, unlinkSync } from 'fs';
 import { createHash, createCipheriv, pbkdf2Sync, randomBytes } from 'crypto';
 import { join, dirname } from 'path';
 import { homedir, platform, userInfo } from 'os';
@@ -44,10 +44,10 @@ function machineId(): string {
   let id: string;
   if (platform() === 'darwin') {
     try {
-      const raw = execSync(
-        'ioreg -rd1 -c IOPlatformExpertDevice | grep IOPlatformUUID',
-        { encoding: 'utf-8', timeout: 3000 },
-      );
+      const raw = execSync('ioreg -rd1 -c IOPlatformExpertDevice | grep IOPlatformUUID', {
+        encoding: 'utf-8',
+        timeout: 3000,
+      });
       const match = raw.match(/"([A-F0-9-]{36})"/);
       id = match ? match[1] : userInfo().username;
     } catch {
@@ -204,9 +204,25 @@ function startDaemon(): void {
   });
 }
 
+function killOrphanDaemon(): void {
+  const pidPath = join(OPENWIND_HOME, 'daemon.pid');
+  if (!existsSync(pidPath)) return;
+  const pid = parseInt(readFileSync(pidPath, 'utf-8').trim(), 10);
+  if (isNaN(pid)) return;
+  try {
+    process.kill(pid, 'SIGTERM');
+  } catch {
+    // Already dead
+  }
+  try {
+    unlinkSync(pidPath);
+  } catch {
+    // Best effort
+  }
+}
+
 function restartDaemon(): void {
   if (daemonProcess && !daemonProcess.killed) {
-    // Kill old process and restart once it exits
     const oldProcess = daemonProcess;
     oldProcess.removeAllListeners('exit');
     oldProcess.kill('SIGTERM');
@@ -215,12 +231,13 @@ function restartDaemon(): void {
     oldProcess.on('exit', () => {
       startDaemon();
     });
-    // Fallback if SIGTERM doesn't work within 3s
     setTimeout(() => {
       if (!isDaemonRunning()) startDaemon();
     }, 3000);
   } else {
-    startDaemon();
+    // Kill orphan daemon not spawned by this Electron instance
+    killOrphanDaemon();
+    setTimeout(() => startDaemon(), 1000);
   }
 }
 
@@ -230,6 +247,25 @@ function stopDaemon(): void {
   daemonRunning = false;
   daemonProcess = null;
   updateTrayMenu();
+}
+
+// Health check: restart daemon if it dies unexpectedly
+let healthCheckTimer: ReturnType<typeof setInterval> | null = null;
+
+function startDaemonHealthCheck(): void {
+  if (healthCheckTimer) return;
+  healthCheckTimer = setInterval(() => {
+    if (!isDaemonRunning() && isConfigured()) {
+      startDaemon();
+    }
+  }, 10_000);
+}
+
+function stopDaemonHealthCheck(): void {
+  if (healthCheckTimer) {
+    clearInterval(healthCheckTimer);
+    healthCheckTimer = null;
+  }
 }
 
 function isConfigured(): boolean {
@@ -724,7 +760,9 @@ ipcMain.handle(
       const authMethod = isLocal
         ? 'none'
         : mode === 'claude_desktop'
-          ? (hasOAuthToken ? 'oauth' : 'none')
+          ? hasOAuthToken
+            ? 'oauth'
+            : 'none'
           : 'encrypted_file';
 
       // Preserve existing settings (channels, mcp) when reconfiguring
@@ -788,10 +826,10 @@ ipcMain.handle(
 
 const ANTHROPIC_OAUTH = {
   authorizeUrl: 'https://claude.ai/oauth/authorize',
-  tokenUrl: 'https://console.anthropic.com/v1/oauth/token',
+  tokenUrl: 'https://platform.claude.com/v1/oauth/token',
   clientId: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
-  scopes: 'org:create_api_key user:profile user:inference',
-  redirectUri: 'https://console.anthropic.com/oauth/code/callback',
+  scopes: 'user:inference user:profile',
+  redirectUri: 'https://platform.claude.com/oauth/code/callback',
 } as const;
 
 let pendingOAuthVerifier: string | null = null;
@@ -849,7 +887,10 @@ ipcMain.handle('complete-oauth', async (_event, code: string) => {
     if (!tokenRes.ok) {
       const text = await tokenRes.text();
       console.error('[OAuth] Token exchange failed:', tokenRes.status, text.slice(0, 500));
-      return { success: false, error: `Token exchange failed (${tokenRes.status}): ${text.slice(0, 200)}` };
+      return {
+        success: false,
+        error: `Token exchange failed (${tokenRes.status}): ${text.slice(0, 200)}`,
+      };
     }
 
     const tokens = (await tokenRes.json()) as {
@@ -917,8 +958,9 @@ ipcMain.handle('get-telegram-status', () => {
     if (existsSync(canvasPath)) {
       try {
         const canvas = JSON.parse(readFileSync(canvasPath, 'utf-8')) as Record<string, unknown>;
-        canvasNodes = ((canvas['nodes'] ?? []) as Array<Record<string, unknown>>)
-          .filter((n) => n['platform'] === 'telegram');
+        canvasNodes = ((canvas['nodes'] ?? []) as Array<Record<string, unknown>>).filter(
+          (n) => n['platform'] === 'telegram',
+        );
       } catch {
         canvasNodes = [];
       }
@@ -962,7 +1004,6 @@ ipcMain.handle('stop-daemon', () => {
   stopDaemon();
   return { running: false };
 });
-
 
 // ─── CEO Profile ────────────────────────────────────────────────────────
 
@@ -1713,7 +1754,10 @@ ipcMain.handle('disconnect-channel', (_event, platform: string, nodeId: string) 
         let remainingProfiles: Record<string, unknown> = {};
         if (existsSync(profilePath)) {
           try {
-            remainingProfiles = JSON.parse(readFileSync(profilePath, 'utf-8')) as Record<string, unknown>;
+            remainingProfiles = JSON.parse(readFileSync(profilePath, 'utf-8')) as Record<
+              string,
+              unknown
+            >;
           } catch {
             remainingProfiles = {};
           }
@@ -1757,6 +1801,7 @@ app.whenReady().then(() => {
   registerGlobalShortcut();
 
   startDaemon();
+  startDaemonHealthCheck();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -1767,6 +1812,7 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  stopDaemonHealthCheck();
   stopDaemon();
 });
 

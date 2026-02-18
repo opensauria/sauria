@@ -3,6 +3,7 @@ import { EmailChannel } from '../email.js';
 import type { EmailDeps } from '../email.js';
 import type { AuditLogger } from '../../security/audit.js';
 import type { IngestPipeline } from '../../ingestion/pipeline.js';
+import type { InboundMessage } from '../../orchestrator/types.js';
 
 function mockAudit(): AuditLogger {
   return {
@@ -19,26 +20,28 @@ function mockPipeline(): IngestPipeline {
 
 // Mock imapflow and nodemailer modules
 vi.mock('imapflow', () => ({
-  ImapFlow: vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockResolvedValue(undefined),
-    logout: vi.fn().mockResolvedValue(undefined),
-    mailboxOpen: vi.fn().mockResolvedValue({}),
-    status: vi.fn().mockResolvedValue({ uidNext: 10 }),
-    getMailboxLock: vi.fn().mockResolvedValue({
-      release: vi.fn(),
-    }),
-    fetch: vi.fn().mockImplementation(function* () {
-      yield {
-        uid: 11,
-        envelope: {
-          from: [{ address: 'sender@example.com' }],
-          subject: 'Test Subject',
-          date: new Date('2024-01-01T00:00:00Z'),
-        },
-        source: Buffer.from('From: sender@example.com\r\nSubject: Test\r\n\r\nHello from email'),
-      };
-    }),
-  })),
+  ImapFlow: vi.fn().mockImplementation(function () {
+    return {
+      connect: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn().mockResolvedValue(undefined),
+      mailboxOpen: vi.fn().mockResolvedValue({}),
+      status: vi.fn().mockResolvedValue({ uidNext: 10 }),
+      getMailboxLock: vi.fn().mockResolvedValue({
+        release: vi.fn(),
+      }),
+      fetch: vi.fn().mockImplementation(function* () {
+        yield {
+          uid: 11,
+          envelope: {
+            from: [{ address: 'sender@example.com' }],
+            subject: 'Test Subject',
+            date: new Date('2024-01-01T00:00:00Z'),
+          },
+          source: Buffer.from('From: sender@example.com\r\nSubject: Test\r\n\r\nHello from email'),
+        };
+      }),
+    };
+  }),
 }));
 
 const mockSendMail = vi.fn().mockResolvedValue({ messageId: 'msg-1' });
@@ -55,7 +58,7 @@ describe('EmailChannel', () => {
   let channel: EmailChannel;
   let audit: AuditLogger;
   let pipeline: IngestPipeline;
-  let onInbound: ReturnType<typeof vi.fn>;
+  let onInbound: (message: InboundMessage) => void;
 
   const baseDeps: Omit<EmailDeps, 'audit' | 'pipeline' | 'onInbound'> = {
     imapHost: 'imap.example.com',
@@ -71,7 +74,7 @@ describe('EmailChannel', () => {
   beforeEach(() => {
     audit = mockAudit();
     pipeline = mockPipeline();
-    onInbound = vi.fn();
+    onInbound = vi.fn<(message: InboundMessage) => void>();
     mockSendMail.mockClear();
     mockClose.mockClear();
   });

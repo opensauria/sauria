@@ -59,7 +59,7 @@
 
 .agent-card.selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(124, 107, 245, 0.24);
+  box-shadow: 0 0 0 2px rgba(3, 139, 154, 0.24);
 }
 
 .agent-card.dragging {
@@ -193,7 +193,7 @@
   background: var(--accent);
   border-color: var(--accent);
   transform: scale(1.4);
-  box-shadow: 0 0 8px rgba(124, 107, 245, 0.4);
+  box-shadow: 0 0 8px rgba(3, 139, 154, 0.4);
 }
 
 .port-output {
@@ -664,7 +664,7 @@
 
 .card-setup-actions button {
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   font-size: 12px;
   font-weight: 500;
   border: none;
@@ -931,7 +931,7 @@
 
 .panel-btn {
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   font-size: 13px;
   font-weight: 500;
   border: none;
@@ -1078,13 +1078,13 @@
 
 .workspace-frame.drop-target {
   box-shadow:
-    0 0 0 4px rgba(124, 107, 245, 0.18),
-    0 0 24px rgba(124, 107, 245, 0.08);
+    0 0 0 4px rgba(3, 139, 154, 0.18),
+    0 0 24px rgba(3, 139, 154, 0.08);
 }
 
 .workspace-frame.selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(124, 107, 245, 0.24);
+  box-shadow: 0 0 0 2px rgba(3, 139, 154, 0.24);
 }
 
 .workspace-header {
@@ -1259,7 +1259,7 @@
 }
 
 .role-pill.active {
-  background: rgba(124, 107, 245, 0.12);
+  background: rgba(3, 139, 154, 0.12);
   border-color: var(--accent);
   color: var(--accent);
 }

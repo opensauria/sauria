@@ -333,7 +333,7 @@ describe('WhatsAppChannel', () => {
 
   describe('webhook inbound messages', () => {
     it('processes valid inbound text message', async () => {
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       deps = createDeps({ webhookPort: 0, onInbound });
       channel = new WhatsAppChannel(deps);
       await channel.start();
@@ -374,7 +374,7 @@ describe('WhatsAppChannel', () => {
     });
 
     it('ignores messages from a different phone number ID', async () => {
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       deps = createDeps({ webhookPort: 0, onInbound });
       channel = new WhatsAppChannel(deps);
       await channel.start();
@@ -451,7 +451,7 @@ describe('WhatsAppChannel', () => {
 
   describe('rate limiting', () => {
     it('rate limits rapid inbound messages', async () => {
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       deps = createDeps({ webhookPort: 0, onInbound });
       channel = new WhatsAppChannel(deps);
       await channel.start();
@@ -481,7 +481,7 @@ describe('WhatsAppChannel', () => {
 
   describe('message sanitization', () => {
     it('sanitizes injection tokens from inbound messages', async () => {
-      const onInbound = vi.fn();
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
       deps = createDeps({ webhookPort: 0, onInbound });
       channel = new WhatsAppChannel(deps);
       await channel.start();

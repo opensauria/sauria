@@ -20,7 +20,6 @@ import { resolveApiKey } from './auth/resolve.js';
 import { refreshOAuthTokenIfNeeded } from './auth/oauth.js';
 import { McpClientManager } from './mcp/client.js';
 import { ProactiveEngine } from './engine/proactive.js';
-import type { ProactiveAlert } from './engine/proactive.js';
 import type { Channel } from './channels/base.js';
 import { TelegramChannel } from './channels/telegram.js';
 import { SlackChannel } from './channels/slack.js';
@@ -70,18 +69,6 @@ export interface DaemonContext {
   readonly ceoCommandWatcher: FSWatcher | null;
 }
 
-function handleAlert(alert: ProactiveAlert, registry: ChannelRegistry | null): void {
-  const logger = getLogger();
-  logger.info(`Alert: [${alert.type}] ${alert.title}`, {
-    priority: alert.priority,
-    entityIds: alert.entityIds,
-  });
-  if (registry) {
-    for (const { channel } of registry.getAll()) {
-      void channel.sendAlert(alert);
-    }
-  }
-}
 
 async function connectMcpSources(
   config: OpenWindConfig,
@@ -156,6 +143,7 @@ interface RawWorkspace {
 
 interface RawGraph {
   readonly version?: number;
+  readonly globalInstructions?: string;
   readonly nodes?: readonly RawNode[];
   readonly edges?: readonly RawEdge[];
   readonly workspaces?: readonly RawWorkspace[];
@@ -240,6 +228,7 @@ function loadCanvasGraph(): CanvasGraph {
     const parsed = JSON.parse(raw) as RawGraph;
     return {
       version: 2,
+      globalInstructions: typeof parsed.globalInstructions === 'string' ? parsed.globalInstructions : '',
       nodes: (parsed.nodes ?? []).map(normalizeNode),
       edges: (parsed.edges ?? []).map(normalizeEdge),
       workspaces: (parsed.workspaces ?? []).map(normalizeWorkspace),
@@ -268,10 +257,15 @@ async function createChannelForNode(
     audit: AuditLogger;
     config: OpenWindConfig;
     onInbound: (message: InboundMessage) => void;
+    globalInstructions: string;
   },
 ): Promise<Channel | null> {
   const logger = getLogger();
-  const { db, router, audit, config, onInbound } = deps;
+  const { db, router, audit, config, onInbound, globalInstructions } = deps;
+
+  const combinedInstructions = [globalInstructions, node.instructions]
+    .filter(Boolean)
+    .join('\n\n');
 
   const nodeToken = await vaultGet(`channel_token_${node.id}`);
 
@@ -298,17 +292,26 @@ async function createChannelForNode(
     );
 
     const ceoTelegramId = config.ceo.telegram?.userId;
+    const nodeUserId = typeof node.meta?.['userId'] === 'string'
+      ? Number(node.meta['userId'])
+      : undefined;
+    const configUserIds = config.channels.telegram.allowedUserIds;
+    const allowedUserIds = configUserIds.length > 0
+      ? configUserIds
+      : nodeUserId ? [nodeUserId] : [];
+
     return new TelegramChannel({
       token,
-      allowedUserIds: config.channels.telegram.allowedUserIds,
+      allowedUserIds,
       db,
       router,
       audit,
       pipeline,
       transcription,
       nodeId: node.id,
-      ceoUserId: ceoTelegramId,
+      ceoUserId: ceoTelegramId ?? nodeUserId,
       onInbound,
+      instructions: combinedInstructions,
     });
   }
 
@@ -509,7 +512,7 @@ async function setupOrchestrator(
     queue.enqueue(msg);
   };
 
-  const channelDeps = { ...deps, onInbound };
+  const channelDeps = { ...deps, onInbound, globalInstructions: graph.globalInstructions };
   const startedChannels: OrchestratorBundle['startedChannels'] = [];
   const usedTokens = new Set<string>();
 
@@ -630,7 +633,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   // ─── Canvas-based orchestrator setup ────────────────────────────────
   const graph = loadCanvasGraph();
   const checkpointManager = new CheckpointManager(db);
-  const channelDeps = { db, router, audit, config };
+  const channelDeps = { db, router, audit, config, globalInstructions: graph.globalInstructions };
 
   const bundle = await setupOrchestrator(graph, channelDeps, checkpointManager);
   const registry: ChannelRegistry | null = bundle?.registry ?? null;
@@ -645,9 +648,9 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     });
   }
 
-  const engine = new ProactiveEngine(db, router, (alert) => handleAlert(alert, registry));
-  engine.start();
-  logger.info('Proactive engine started');
+  // ProactiveEngine disabled — CEO drives all interaction through canvas bots
+  const engine = new ProactiveEngine(db, router, () => {});
+  logger.info('Proactive engine disabled (CEO-driven mode)');
 
   const mcpServer = await startMcpServer({
     db,
@@ -701,7 +704,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
           if (!currentNodeIds.has(node.id)) {
             void (async () => {
               try {
-                const channel = await createChannelForNode(node, { ...channelDeps, onInbound });
+                const channel = await createChannelForNode(node, { ...channelDeps, onInbound, globalInstructions: newGraph.globalInstructions });
                 if (channel) {
                   registry.register(node.id, channel);
                   await channel.start();

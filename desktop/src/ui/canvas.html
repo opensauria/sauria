@@ -96,6 +96,16 @@
           ></textarea>
         </div>
 
+        <div class="detail-section" id="global-instructions-section" style="display:none;">
+          <span class="detail-section-label">Global Instructions (all agents)</span>
+          <textarea
+            class="detail-textarea"
+            id="global-instructions"
+            placeholder="Response style for all agents (e.g. plain text, no emojis)..."
+            rows="4"
+          ></textarea>
+        </div>
+
         <div class="detail-section">
           <span class="detail-section-label">Group Behavior</span>
           <div class="toggle-row">
@@ -148,7 +158,7 @@
         <div class="detail-section">
           <span class="detail-section-label">Color</span>
           <div class="color-picker-row" id="ws-detail-colors">
-            <div class="color-swatch" data-color="#7c6bf5" style="background: #7c6bf5"></div>
+            <div class="color-swatch" data-color="#038B9A" style="background: #038B9A"></div>
             <div class="color-swatch" data-color="#27A7E7" style="background: #27a7e7"></div>
             <div class="color-swatch" data-color="#34d399" style="background: #34d399"></div>
             <div class="color-swatch" data-color="#f59e0b" style="background: #f59e0b"></div>
@@ -203,7 +213,7 @@
         <div class="cred-field">
           <label>Color</label>
           <div class="color-picker-row" id="ws-create-colors">
-            <div class="color-swatch active" data-color="#7c6bf5" style="background: #7c6bf5"></div>
+            <div class="color-swatch active" data-color="#038B9A" style="background: #038B9A"></div>
             <div class="color-swatch" data-color="#27A7E7" style="background: #27a7e7"></div>
             <div class="color-swatch" data-color="#34d399" style="background: #34d399"></div>
             <div class="color-swatch" data-color="#f59e0b" style="background: #f59e0b"></div>
@@ -241,7 +251,7 @@
          State
          ═══════════════════════════════════════════════ */
 
-      var graph = { nodes: [], edges: [], workspaces: [], viewport: { x: 0, y: 0, zoom: 1 } };
+      var graph = { nodes: [], edges: [], workspaces: [], globalInstructions: '', viewport: { x: 0, y: 0, zoom: 1 } };
       var selectedNodeId = null;
       var selectedWorkspaceId = null;
       var detailNodeId = null;
@@ -316,9 +326,10 @@
         try {
           graph = await window.openwind.getCanvasGraph();
         } catch {
-          graph = { nodes: [], edges: [], workspaces: [], viewport: { x: 0, y: 0, zoom: 1 } };
+          graph = { nodes: [], edges: [], workspaces: [], globalInstructions: '', viewport: { x: 0, y: 0, zoom: 1 } };
         }
         if (!graph.workspaces) graph.workspaces = [];
+        if (typeof graph.globalInstructions !== 'string') graph.globalInstructions = '';
         vpX = graph.viewport.x;
         vpY = graph.viewport.y;
         vpZoom = graph.viewport.zoom;
@@ -2096,6 +2107,15 @@
         /* Instructions */
         document.getElementById('agent-instructions').value = node.instructions || '';
 
+        /* Global instructions (CEO only) */
+        var globalSection = document.getElementById('global-instructions-section');
+        if (isCeo) {
+          globalSection.style.display = '';
+          document.getElementById('global-instructions').value = graph.globalInstructions || '';
+        } else {
+          globalSection.style.display = 'none';
+        }
+
         /* Toggles */
         var behavior = node.behavior || {};
         setToggle('toggle-proactive', behavior.proactive === true);
@@ -2155,6 +2175,12 @@
         });
         if (!node) return;
         node.instructions = this.value;
+        saveGraph();
+      });
+
+      /* Global instructions textarea */
+      document.getElementById('global-instructions').addEventListener('input', function () {
+        graph.globalInstructions = this.value;
         saveGraph();
       });
 
@@ -2327,15 +2353,15 @@
          Workspace Creation Dialog
          ═══════════════════════════════════════════════ */
 
-      var wsCreateColor = '#7c6bf5';
+      var wsCreateColor = '#038B9A';
 
       document.getElementById('btn-add-workspace').addEventListener('click', function () {
         wsDialogOverlay.classList.add('open');
         document.getElementById('ws-create-name').value = '';
         document.getElementById('ws-create-purpose').value = '';
-        wsCreateColor = '#7c6bf5';
+        wsCreateColor = '#038B9A';
         document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s) {
-          s.classList.toggle('active', s.dataset.color === '#7c6bf5');
+          s.classList.toggle('active', s.dataset.color === '#038B9A');
         });
         document.getElementById('ws-create-name').focus();
       });
