@@ -5,10 +5,10 @@ import type { OAuthCredential, OAuthTokenResponse } from './types.js';
 
 const ANTHROPIC_OAUTH = {
   authorizeUrl: 'https://claude.ai/oauth/authorize',
-  tokenUrl: 'https://console.anthropic.com/v1/oauth/token',
+  tokenUrl: 'https://platform.claude.com/v1/oauth/token',
   clientId: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
-  scopes: 'org:create_api_key user:profile user:inference',
-  redirectUri: 'https://console.anthropic.com/oauth/code/callback',
+  scopes: 'user:inference user:profile',
+  redirectUri: 'https://platform.claude.com/oauth/code/callback',
 } as const;
 
 function base64url(buffer: Buffer): string {

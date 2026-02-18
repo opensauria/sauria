@@ -115,6 +115,7 @@ export interface Edge {
 
 export interface CanvasGraph {
   readonly version: 2;
+  readonly globalInstructions: string;
   readonly workspaces: readonly Workspace[];
   readonly nodes: readonly AgentNode[];
   readonly edges: readonly Edge[];
@@ -220,5 +221,12 @@ export const DEFAULT_GROUP_BEHAVIOR: GroupBehavior = {
 };
 
 export function createEmptyGraph(): CanvasGraph {
-  return { version: 2, workspaces: [], nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
+  return {
+    version: 2,
+    globalInstructions: '',
+    workspaces: [],
+    nodes: [],
+    edges: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
 }

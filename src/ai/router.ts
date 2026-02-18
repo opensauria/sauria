@@ -8,8 +8,6 @@ import { AnthropicProvider } from './providers/anthropic.js';
 import { OpenAIProvider } from './providers/openai.js';
 import { GoogleProvider } from './providers/google.js';
 import { OllamaProvider } from './providers/ollama.js';
-import { isOAuthToken } from '../auth/resolve.js';
-
 export type CostCallback = (model: string, costUsd: number) => void;
 export type ApiKeyGetter = (providerName: string) => string | Promise<string>;
 
@@ -128,12 +126,6 @@ export class ModelRouter {
         : await this.getApiKey(providerName);
 
     const resolvedBaseUrl = baseUrl ?? PROVIDER_BASE_URLS[providerName];
-
-    if (providerName === 'anthropic' && isOAuthToken(apiKey)) {
-      const provider = new AnthropicProvider('', apiKey);
-      this.providers.set(cacheKey, provider);
-      return provider;
-    }
 
     const provider = createProvider(providerName, apiKey, resolvedBaseUrl);
     this.providers.set(cacheKey, provider);

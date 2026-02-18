@@ -392,7 +392,7 @@
 
       .form-btn {
         padding: 6px 14px;
-        border-radius: 6px;
+        border-radius: 9999px;
         font-size: 12px;
         font-weight: 500;
         border: none;
@@ -508,8 +508,15 @@
       }
 
       @keyframes pulse {
-        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
-        50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(52, 211, 153, 0); }
+        0%,
+        100% {
+          opacity: 1;
+          box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4);
+        }
+        50% {
+          opacity: 0.7;
+          box-shadow: 0 0 0 4px rgba(52, 211, 153, 0);
+        }
       }
 
       .empty-state {
@@ -614,7 +621,13 @@
         <div class="tg-connect-form" id="tg-form-fields">
           <div class="form-field">
             <label>Your User ID</label>
-            <input type="text" id="tg-userid" placeholder="123456789" inputmode="numeric" autocomplete="off" />
+            <input
+              type="text"
+              id="tg-userid"
+              placeholder="123456789"
+              inputmode="numeric"
+              autocomplete="off"
+            />
             <div class="field-hint">Get from @userinfobot on Telegram</div>
           </div>
           <div class="form-field">
@@ -768,7 +781,9 @@
         var nodeId = bot.nodeId || '';
 
         return (
-          '<div class="bot-card" data-node-id="' + nodeId + '">' +
+          '<div class="bot-card" data-node-id="' +
+          nodeId +
+          '">' +
           '<div class="bot-avatar">' +
           photoHtml +
           '</div>' +
@@ -784,7 +799,9 @@
           '</div>' +
           '</div>' +
           '<div class="bot-actions">' +
-          '<button class="bot-action-btn danger tg-disconnect-btn" data-node-id="' + nodeId + '" title="Disconnect">' +
+          '<button class="bot-action-btn danger tg-disconnect-btn" data-node-id="' +
+          nodeId +
+          '" title="Disconnect">' +
           trashSvg +
           '</button>' +
           '</div>' +
@@ -801,7 +818,9 @@
 
         var status = await window.openwind.getTelegramStatus();
         var bots = status.bots || [];
-        var connectedBots = bots.filter(function (b) { return b.connected; });
+        var connectedBots = bots.filter(function (b) {
+          return b.connected;
+        });
 
         if (connectedBots.length > 0) {
           tgBotList.innerHTML = connectedBots.map(renderBotCard).join('');
@@ -1035,7 +1054,9 @@
         });
         if (!tgCmd) return;
         var bots = status.bots || [];
-        var count = bots.filter(function (b) { return b.connected; }).length;
+        var count = bots.filter(function (b) {
+          return b.connected;
+        }).length;
         if (count > 0) {
           tgCmd.hint = count === 1 ? 'connected' : count + ' bots';
           render();

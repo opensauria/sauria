@@ -22,6 +22,7 @@ export interface RoutingContext {
   readonly teamNodes: readonly AgentNode[];
   readonly ruleActions: readonly RoutingAction[];
   readonly conversationId: string | null;
+  readonly globalInstructions: string;
 }
 
 interface LLMRoutingResponse {
@@ -143,7 +144,7 @@ export class LLMRoutingBrain {
 // ─── Prompt Building ────────────────────────────────────────────────
 
 function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatMessage[] {
-  const { message, sourceNode, workspace, teamNodes, ruleActions, conversationId } = context;
+  const { message, sourceNode, workspace, teamNodes, ruleActions, conversationId, globalInstructions } = context;
 
   const agentList = teamNodes
     .map((node) => `- ${node.label} (${node.role}) on ${node.platform}`)
@@ -183,6 +184,14 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
     '',
     ruleActionsText,
     '',
+    ...(globalInstructions || sourceNode.instructions
+      ? [
+          'Response style instructions (apply to all reply content):',
+          ...(globalInstructions ? [globalInstructions] : []),
+          ...(sourceNode.instructions ? [sourceNode.instructions] : []),
+          '',
+        ]
+      : []),
     'Decide what actions to take. Return ONLY valid JSON:',
     '{"actions": [{"type": "reply", "content": "..."}, ...]}',
     '',

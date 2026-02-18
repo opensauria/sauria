@@ -60,6 +60,7 @@ function buildContext(overrides: Partial<RoutingContext> = {}): RoutingContext {
     teamNodes: [baseNode],
     ruleActions: [],
     conversationId: null,
+    globalInstructions: '',
     ...overrides,
   };
 }

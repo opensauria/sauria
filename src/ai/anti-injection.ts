@@ -29,7 +29,7 @@ export const ExtractionResponseSchema = z.object({
           'place',
           'concept',
         ]),
-        properties: z.record(z.string().max(500)).optional(),
+        properties: z.record(z.string(), z.string().max(500)).optional(),
       }),
     )
     .max(50),

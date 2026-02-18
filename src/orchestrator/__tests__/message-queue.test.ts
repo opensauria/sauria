@@ -17,10 +17,10 @@ function makeMessage(content: string): InboundMessage {
 
 describe('MessageQueue', () => {
   let queue: MessageQueue;
-  let handler: ReturnType<typeof vi.fn>;
+  let handler: (message: InboundMessage) => Promise<void>;
 
   beforeEach(() => {
-    handler = vi.fn().mockResolvedValue(undefined);
+    handler = vi.fn<(message: InboundMessage) => Promise<void>>().mockResolvedValue(undefined);
     queue = new MessageQueue(handler, { maxConcurrent: 2, maxQueueSize: 10 });
   });
 

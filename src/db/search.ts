@@ -4,6 +4,15 @@ import type { Entity } from './types.js';
 
 const DEFAULT_LIMIT = 20;
 
+const FTS5_SPECIAL = /[?"'*+\-(){}^:]/g;
+
+function sanitizeFtsQuery(raw: string): string {
+  const cleaned = raw.replace(FTS5_SPECIAL, ' ').trim();
+  const terms = cleaned.split(/\s+/).filter((t) => t.length > 0);
+  if (terms.length === 0) return '';
+  return terms.map((t) => `"${t}"`).join(' ');
+}
+
 interface EmbeddingRow {
   entity_id: string;
   vector: Buffer;
@@ -113,7 +122,9 @@ export function searchByKeyword(
   query: string,
   limit = DEFAULT_LIMIT,
 ): Entity[] {
-  const rows: unknown[] = db.prepare(FTS_SQL).all(query, limit);
+  const ftsQuery = sanitizeFtsQuery(query);
+  if (!ftsQuery) return [];
+  const rows: unknown[] = db.prepare(FTS_SQL).all(ftsQuery, limit);
   return rows.filter(isEntityRow).map(toEntity);
 }
 
@@ -137,7 +148,10 @@ export function hybridSearch(
   limit = DEFAULT_LIMIT,
 ): Entity[] {
   const scores = new Map<string, { fts: number; vector: number }>();
-  const ftsRows = db.prepare(FTS_SQL).all(query, limit * 2) as unknown[];
+  const ftsQuery = sanitizeFtsQuery(query);
+  const ftsRows = ftsQuery
+    ? (db.prepare(FTS_SQL).all(ftsQuery, limit * 2) as unknown[])
+    : [];
   const rankedFts = ftsRows.filter(isFtsRankRow);
 
   let minRank = 0;

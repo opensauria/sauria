@@ -14,12 +14,13 @@
   --text: #ececec;
   --text-secondary: #999;
   --text-dim: #555;
-  --accent: #7c6bf5;
-  --accent-hover: #6854e0;
+  --accent: #038B9A;
+  --accent-hover: #027A87;
   --success: #34d399;
   --error: #f87171;
   --radius: 12px;
   --radius-sm: 8px;
+  --radius-pill: 9999px;
 }
 
 body {
@@ -59,7 +60,7 @@ body {
 
 .badge-accent {
   color: var(--accent);
-  background: rgba(124, 107, 245, 0.12);
+  background: rgba(3, 139, 154, 0.12);
 }
 
 .badge-success {
@@ -74,7 +75,7 @@ body {
 
 .btn {
   padding: 12px 24px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   font-size: 14px;
   font-weight: 500;
   border: none;

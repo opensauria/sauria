@@ -27,7 +27,7 @@ Desktop (Electron) ──► Canvas UI (agent cards, edges, workspaces)
 
 ## Tech Stack
 
-- **Runtime**: Node.js 22+, ESM only
+- **Runtime**: Node.js 24+, ESM only
 - **Language**: TypeScript strict mode (`verbatimModuleSyntax`, `noUncheckedIndexedAccess`)
 - **Database**: SQLite via `better-sqlite3` (encrypted at rest)
 - **AI Providers**: Anthropic (OAuth or API key), OpenAI, Google, Ollama (local)
@@ -155,9 +155,10 @@ desktop/
 --bg: #1a1a1a          --surface: rgba(255,255,255,0.04)
 --border: rgba(255,255,255,0.08)  --text: #ececec
 --text-secondary: #999  --text-dim: #555
---accent: #7c6bf5       --accent-hover: #6854e0
+--accent: #038B9A       --accent-hover: #027A87
 --success: #34d399      --error: #f87171
 --radius: 12px          --radius-sm: 8px
+--radius-pill: 9999px
 ```
 
 ### Spacing

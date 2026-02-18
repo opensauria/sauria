@@ -64,7 +64,7 @@ const rememberSchema = z.object({
         name: z.string().min(1).max(200),
         type: entityTypeEnum,
         summary: z.string().max(1000).optional(),
-        properties: z.record(z.string().max(500)).optional(),
+        properties: z.record(z.string(), z.string().max(500)).optional(),
       }),
     )
     .min(1)
