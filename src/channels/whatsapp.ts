@@ -269,7 +269,7 @@ export class WhatsAppChannel implements Channel {
               sourceNodeId: phoneNumberId,
               platform: 'whatsapp',
               senderId: msg.from,
-              senderIsCeo: false,
+              senderIsOwner: false,
               groupId: null,
               content: sanitized,
               contentType: 'text',

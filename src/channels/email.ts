@@ -233,7 +233,7 @@ export class EmailChannel implements Channel {
         sourceNodeId: nodeId ?? 'email-default',
         platform: 'email',
         senderId: email.from,
-        senderIsCeo: false,
+        senderIsOwner: false,
         groupId: null,
         content: `[${email.subject}] ${sanitizedText}`,
         contentType: 'text',

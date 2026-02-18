@@ -24,8 +24,8 @@ contextBridge.exposeInMainWorld('openwind', {
   getTelegramStatus: () => ipcRenderer.invoke('get-telegram-status'),
   onShowTelegramForm: (cb: () => void) => ipcRenderer.on('show-telegram-form', () => cb()),
 
-  // CEO profile
-  getCeoProfile: () => ipcRenderer.invoke('get-ceo-profile'),
+  // Owner Profile
+  getOwnerProfile: () => ipcRenderer.invoke('get-owner-profile'),
 
   // Canvas IPC
   getCanvasGraph: () => ipcRenderer.invoke('get-canvas-graph'),
@@ -37,5 +37,5 @@ contextBridge.exposeInMainWorld('openwind', {
   onCanvasUpdate: (cb: (graph: unknown) => void) =>
     ipcRenderer.on('canvas-update', (_event, graph: unknown) => cb(graph)),
   showCanvas: () => ipcRenderer.invoke('show-canvas'),
-  executeCeoCommand: (command: string) => ipcRenderer.invoke('execute-ceo-command', command),
+  executeOwnerCommand: (command: string) => ipcRenderer.invoke('execute-owner-command', command),
 });

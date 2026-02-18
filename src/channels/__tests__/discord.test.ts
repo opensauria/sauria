@@ -59,7 +59,7 @@ describe('DiscordChannel', () => {
     guildId: 'guild-123',
     channelIds: ['ch-1'],
     nodeId: 'node-discord',
-    ceoUserId: 'ceo-user',
+    ownerId: 'ceo-user',
   };
 
   beforeEach(() => {
@@ -145,19 +145,19 @@ describe('DiscordChannel', () => {
     expect(onInbound).not.toHaveBeenCalled();
   });
 
-  it('identifies CEO messages', async () => {
-    const ceoMessages = [
+  it('identifies owner messages', async () => {
+    const ownerMessages = [
       {
         id: '202',
-        author: { id: 'ceo-user', username: 'CEO', bot: false },
-        content: 'CEO command',
+        author: { id: 'ceo-user', username: 'Owner', bot: false },
+        content: 'owner command',
         timestamp: '2024-01-01T00:00:00Z',
       },
     ];
 
     const responses = new Map<string, unknown>();
     responses.set('/channels/ch-1/messages?limit=1', [{ id: '100' }]);
-    responses.set('/channels/ch-1/messages?after=100', ceoMessages);
+    responses.set('/channels/ch-1/messages?after=100', ownerMessages);
     globalThis.fetch = createMockFetch(responses) as typeof fetch;
 
     channel = new DiscordChannel({ ...baseDeps, audit, pipeline, onInbound });
@@ -166,7 +166,7 @@ describe('DiscordChannel', () => {
 
     expect(onInbound).toHaveBeenCalledWith(
       expect.objectContaining({
-        senderIsCeo: true,
+        senderIsOwner: true,
       }),
     );
   });

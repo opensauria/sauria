@@ -33,7 +33,7 @@ export interface DiscordDeps {
   readonly guildId?: string;
   readonly channelIds: readonly string[];
   readonly nodeId?: string;
-  readonly ceoUserId?: string;
+  readonly ownerId?: string;
   readonly audit: AuditLogger;
   readonly pipeline: IngestPipeline;
   readonly onInbound?: (message: InboundMessage) => void;
@@ -201,7 +201,7 @@ export class DiscordChannel implements Channel {
   }
 
   private async processInboundMessage(channelId: string, message: DiscordMessage): Promise<void> {
-    const { audit, pipeline, onInbound, ceoUserId, nodeId } = this.deps;
+    const { audit, pipeline, onInbound, ownerId, nodeId } = this.deps;
     const rawText = message.content;
 
     if (!rawText.trim()) return;
@@ -226,7 +226,7 @@ export class DiscordChannel implements Channel {
       return;
     }
 
-    const isCeo = Boolean(ceoUserId && message.author.id === ceoUserId);
+    const isOwner = Boolean(ownerId && message.author.id === ownerId);
 
     try {
       await pipeline.ingestEvent('discord:message', {
@@ -246,7 +246,7 @@ export class DiscordChannel implements Channel {
     audit.logAction('discord:message_received', {
       channelId,
       senderId: message.author.id,
-      isCeo,
+      isOwner,
       textLength: sanitizedText.length,
     });
 
@@ -255,7 +255,7 @@ export class DiscordChannel implements Channel {
         sourceNodeId: nodeId ?? 'discord-default',
         platform: 'discord',
         senderId: message.author.id,
-        senderIsCeo: isCeo,
+        senderIsOwner: isOwner,
         groupId: channelId,
         content: sanitizedText,
         contentType: 'text',

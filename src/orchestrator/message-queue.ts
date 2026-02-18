@@ -30,7 +30,7 @@ export class MessageQueue {
       throw new Error('Queue full — backpressure active');
     }
 
-    if (message.senderIsCeo) {
+    if (message.senderIsOwner) {
       this.queue.unshift(message);
     } else {
       this.queue.push(message);

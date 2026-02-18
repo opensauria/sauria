@@ -2,16 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { OpenWindConfigSchema } from '../schema.js';
 
 describe('workspace config schema', () => {
-  it('accepts config with ceo identity', () => {
+  it('accepts config with owner identity', () => {
     const config = OpenWindConfigSchema.parse({
-      ceo: { telegram: { userId: 123456 } },
+      owner: { telegram: { userId: 123456 } },
     });
-    expect(config.ceo.telegram?.userId).toBe(123456);
+    expect(config.owner.telegram?.userId).toBe(123456);
   });
 
-  it('defaults ceo to empty object', () => {
+  it('defaults owner to empty object', () => {
     const config = OpenWindConfigSchema.parse({});
-    expect(config.ceo).toEqual({});
+    expect(config.owner).toEqual({});
   });
 
   it('accepts orchestrator config with model tiers', () => {

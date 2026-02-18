@@ -7,7 +7,7 @@ function makeMessage(content: string): InboundMessage {
     sourceNodeId: 'node-1',
     platform: 'telegram',
     senderId: 'user-1',
-    senderIsCeo: false,
+    senderIsOwner: false,
     groupId: null,
     content,
     contentType: 'text',
@@ -48,16 +48,16 @@ describe('MessageQueue', () => {
     small.stop();
   });
 
-  it('prioritizes CEO messages', async () => {
+  it('prioritizes owner messages', async () => {
     const order: string[] = [];
     const slowHandler = vi.fn().mockImplementation(async (msg: InboundMessage) => {
       order.push(msg.content);
     });
     const q = new MessageQueue(slowHandler, { maxConcurrent: 1, maxQueueSize: 10 });
     q.enqueue(makeMessage('normal'));
-    q.enqueue({ ...makeMessage('ceo'), senderIsCeo: true });
+    q.enqueue({ ...makeMessage('owner-msg'), senderIsOwner: true });
     await q.flush();
-    expect(order[0]).toBe('ceo');
+    expect(order[0]).toBe('owner-msg');
     q.stop();
   });
 });

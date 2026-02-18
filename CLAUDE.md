@@ -4,7 +4,7 @@
 
 OpenWind is a security-first personal AI operating system. It runs as a local daemon that ingests information from multiple sources (MCP servers, email, calendars), builds a persistent knowledge graph (entities, relations, events), and exposes it through channels (Telegram, Slack, WhatsApp, Discord, Email) and an MCP server.
 
-The desktop app (Electron) provides a visual canvas where users connect AI agents, draw edges between them, and orchestrate multi-agent workflows. The user is the "CEO" who gives orders; agents collaborate through the orchestrator.
+The desktop app (Electron) provides a visual canvas where users connect AI agents, draw edges between them, and orchestrate multi-agent workflows. The user is the "owner" who gives orders; agents collaborate through the orchestrator.
 
 ## Architecture
 
@@ -142,7 +142,7 @@ desktop/
 
 - `CanvasGraph` (v2) is the source of truth: nodes, edges, workspaces
 - Graph stored at `~/.openwind/canvas.json`, read by daemon on startup
-- `MessageQueue` provides CEO priority (unshift) and backpressure
+- `MessageQueue` provides owner priority (unshift) and backpressure
 - `evaluateEdgeRules()` for deterministic routing, `LLMRoutingBrain` for intelligent routing
 - `AutonomyEnforcer` filters actions based on agent autonomy level
 - `ChannelRegistry` maps nodeId to channel instances

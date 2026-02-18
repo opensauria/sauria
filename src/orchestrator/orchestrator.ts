@@ -4,8 +4,8 @@ import type {
   CanvasGraph,
   InboundMessage,
   RoutingAction,
-  CEOIdentity,
-  CEOCommand,
+  OwnerIdentity,
+  OwnerCommand,
   Workspace,
   AgentNode,
   Platform,
@@ -22,7 +22,7 @@ import { getLogger } from '../utils/logger.js';
 interface OrchestratorDeps {
   readonly registry: ChannelRegistry;
   readonly graph: CanvasGraph;
-  readonly ceoIdentity: CEOIdentity;
+  readonly ownerIdentity: OwnerIdentity;
   readonly brain?: LLMRoutingBrain;
   readonly db?: BetterSqlite3.Database;
   readonly agentMemory?: AgentMemory;
@@ -33,7 +33,7 @@ interface OrchestratorDeps {
 export class AgentOrchestrator {
   private graph: CanvasGraph;
   private readonly registry: ChannelRegistry;
-  private readonly ceoIdentity: CEOIdentity;
+  private readonly ownerIdentity: OwnerIdentity;
   private readonly brain: LLMRoutingBrain | null;
   private readonly autonomy = new AutonomyEnforcer();
   private readonly db: BetterSqlite3.Database | null;
@@ -44,7 +44,7 @@ export class AgentOrchestrator {
   constructor(deps: OrchestratorDeps) {
     this.registry = deps.registry;
     this.graph = deps.graph;
-    this.ceoIdentity = deps.ceoIdentity;
+    this.ownerIdentity = deps.ownerIdentity;
     this.brain = deps.brain ?? null;
     this.db = deps.db ?? null;
     this.agentMemory = deps.agentMemory ?? null;
@@ -56,15 +56,15 @@ export class AgentOrchestrator {
     this.graph = graph;
   }
 
-  isCeoSender(platform: Platform, senderId: string): boolean {
-    if (platform === 'telegram' && this.ceoIdentity.telegram) {
-      return String(this.ceoIdentity.telegram.userId) === senderId;
+  isOwnerSender(platform: Platform, senderId: string): boolean {
+    if (platform === 'telegram' && this.ownerIdentity.telegram) {
+      return String(this.ownerIdentity.telegram.userId) === senderId;
     }
-    if (platform === 'slack' && this.ceoIdentity.slack) {
-      return this.ceoIdentity.slack.userId === senderId;
+    if (platform === 'slack' && this.ownerIdentity.slack) {
+      return this.ownerIdentity.slack.userId === senderId;
     }
-    if (platform === 'whatsapp' && this.ceoIdentity.whatsapp) {
-      return this.ceoIdentity.whatsapp.phoneNumber === senderId;
+    if (platform === 'whatsapp' && this.ownerIdentity.whatsapp) {
+      return this.ownerIdentity.whatsapp.phoneNumber === senderId;
     }
     return false;
   }
@@ -95,7 +95,7 @@ export class AgentOrchestrator {
         conversationId,
         sourceNodeId: message.sourceNodeId,
         senderId: message.senderId,
-        senderIsCeo: message.senderIsCeo,
+        senderIsOwner: message.senderIsOwner,
         platform: message.platform,
         groupId: message.groupId,
         content: message.content,
@@ -157,19 +157,19 @@ export class AgentOrchestrator {
     }
   }
 
-  async handleCeoCommand(command: CEOCommand): Promise<void> {
+  async handleOwnerCommand(command: OwnerCommand): Promise<void> {
     const logger = getLogger();
 
     switch (command.type) {
       case 'instruct': {
         const node = this.findNodeByLabel(command.agentId) ?? this.findNode(command.agentId);
         if (!node) {
-          logger.warn('CEO instruct: agent not found', { agentId: command.agentId });
+          logger.warn('Owner instruct: agent not found', { agentId: command.agentId });
           return;
         }
         const group = this.findGroupForNode(node.id);
         await this.registry.sendTo(node.id, command.instruction, group);
-        logger.info('CEO instruct sent', { agentId: node.id });
+        logger.info('Owner instruct sent', { agentId: node.id });
         break;
       }
 
@@ -177,14 +177,14 @@ export class AgentOrchestrator {
         for (const ws of this.graph.workspaces) {
           await this.registry.sendToWorkspace(ws.id, command.message, this.graph);
         }
-        logger.info('CEO broadcast sent', { workspaces: this.graph.workspaces.length });
+        logger.info('Owner broadcast sent', { workspaces: this.graph.workspaces.length });
         break;
       }
 
       case 'promote': {
         const node = this.findNodeByLabel(command.agentId) ?? this.findNode(command.agentId);
         if (!node) {
-          logger.warn('CEO promote: agent not found', { agentId: command.agentId });
+          logger.warn('Owner promote: agent not found', { agentId: command.agentId });
           return;
         }
         // Update node autonomy in the mutable graph copy
@@ -194,7 +194,7 @@ export class AgentOrchestrator {
           mutableNodes[idx] = { ...node, autonomy: command.newAutonomy };
           this.graph = { ...this.graph, nodes: mutableNodes };
         }
-        logger.info('CEO promote: autonomy updated', {
+        logger.info('Owner promote: autonomy updated', {
           agentId: node.id,
           autonomy: command.newAutonomy,
         });
@@ -204,14 +204,14 @@ export class AgentOrchestrator {
       case 'reassign': {
         const node = this.findNodeByLabel(command.agentId) ?? this.findNode(command.agentId);
         if (!node) {
-          logger.warn('CEO reassign: agent not found', { agentId: command.agentId });
+          logger.warn('Owner reassign: agent not found', { agentId: command.agentId });
           return;
         }
         const targetWs = this.graph.workspaces.find(
           (w) => w.id === command.newWorkspaceId || w.name === command.newWorkspaceId,
         );
         if (!targetWs) {
-          logger.warn('CEO reassign: workspace not found', { workspaceId: command.newWorkspaceId });
+          logger.warn('Owner reassign: workspace not found', { workspaceId: command.newWorkspaceId });
           return;
         }
         const mutableNodes = [...this.graph.nodes] as AgentNode[];
@@ -220,7 +220,7 @@ export class AgentOrchestrator {
           mutableNodes[idx] = { ...node, workspaceId: targetWs.id };
           this.graph = { ...this.graph, nodes: mutableNodes };
         }
-        logger.info('CEO reassign: node moved', { agentId: node.id, workspaceId: targetWs.id });
+        logger.info('Owner reassign: node moved', { agentId: node.id, workspaceId: targetWs.id });
         break;
       }
 
@@ -229,7 +229,7 @@ export class AgentOrchestrator {
           (w) => w.id === command.workspaceId || w.name === command.workspaceId,
         );
         if (!ws) {
-          logger.warn('CEO pause: workspace not found', { workspaceId: command.workspaceId });
+          logger.warn('Owner pause: workspace not found', { workspaceId: command.workspaceId });
           return;
         }
         const wsNodes = this.graph.nodes.filter((n) => n.workspaceId === ws.id);
@@ -246,7 +246,7 @@ export class AgentOrchestrator {
           }
         }
         this.graph = { ...this.graph, nodes: mutableNodes };
-        logger.info('CEO pause: workspace paused', {
+        logger.info('Owner pause: workspace paused', {
           workspaceId: ws.id,
           nodeCount: wsNodes.length,
         });
@@ -256,7 +256,7 @@ export class AgentOrchestrator {
       case 'review': {
         const node = this.findNodeByLabel(command.agentId) ?? this.findNode(command.agentId);
         if (!node) {
-          logger.warn('CEO review: agent not found', { agentId: command.agentId });
+          logger.warn('Owner review: agent not found', { agentId: command.agentId });
           return;
         }
         let summary = `[Review] Agent: ${node.label} (${node.id})\nPlatform: ${node.platform}\nAutonomy: ${node.autonomy}\nRole: ${node.role}`;
@@ -264,9 +264,9 @@ export class AgentOrchestrator {
           const perf = this.kpiTracker.getPerformance(node.id);
           summary += `\nMessages: ${String(perf.messagesHandled)}\nTasks: ${String(perf.tasksCompleted)}\nAvg Response: ${String(Math.round(perf.avgResponseTimeMs))}ms`;
         }
-        // Send review to CEO's channel
+        // Send review to owner's channel
         for (const n of this.graph.nodes) {
-          if (this.isCeoChannelNode(n)) {
+          if (this.isOwnerChannelNode(n)) {
             try {
               await this.registry.sendTo(n.id, summary, null);
               break;
@@ -275,12 +275,12 @@ export class AgentOrchestrator {
             }
           }
         }
-        logger.info('CEO review sent', { agentId: node.id });
+        logger.info('Owner review sent', { agentId: node.id });
         break;
       }
 
       case 'hire': {
-        logger.info('CEO hire: placeholder — requires canvas UI integration', {
+        logger.info('Owner hire: placeholder — requires canvas UI integration', {
           platform: command.platform,
           workspace: command.workspace,
           role: command.role,
@@ -291,7 +291,7 @@ export class AgentOrchestrator {
       case 'fire': {
         const node = this.findNodeByLabel(command.agentId) ?? this.findNode(command.agentId);
         if (!node) {
-          logger.warn('CEO fire: agent not found', { agentId: command.agentId });
+          logger.warn('Owner fire: agent not found', { agentId: command.agentId });
           return;
         }
         try {
@@ -302,7 +302,7 @@ export class AgentOrchestrator {
         }
         const mutableNodes = this.graph.nodes.filter((n) => n.id !== node.id);
         this.graph = { ...this.graph, nodes: mutableNodes };
-        logger.info('CEO fire: agent removed', { agentId: node.id });
+        logger.info('Owner fire: agent removed', { agentId: node.id });
         break;
       }
     }
@@ -318,7 +318,7 @@ export class AgentOrchestrator {
       sourceNodeId: agentId,
       platform: (node?.platform ?? 'telegram') as Platform,
       senderId: 'system-approval',
-      senderIsCeo: true,
+      senderIsOwner: true,
       groupId: null,
       content: '[Approved action]',
       contentType: 'text',
@@ -418,7 +418,7 @@ export class AgentOrchestrator {
     const approvalId = this.checkpointManager.queueForApproval(
       node.id,
       node.workspaceId ?? '',
-      `${String(pendingApproval.length)} action(s) pending CEO approval`,
+      `${String(pendingApproval.length)} action(s) pending owner approval`,
       [...pendingApproval],
     );
 
@@ -428,10 +428,10 @@ export class AgentOrchestrator {
       count: pendingApproval.length,
     });
 
-    await this.notifyCeoOfPendingApproval(approvalId, pendingApproval);
+    await this.notifyOwnerOfPendingApproval(approvalId, pendingApproval);
   }
 
-  private async notifyCeoOfPendingApproval(
+  private async notifyOwnerOfPendingApproval(
     approvalId: string,
     actions: readonly RoutingAction[],
   ): Promise<void> {
@@ -441,11 +441,11 @@ export class AgentOrchestrator {
 
     const message = `[Approval Required] ID: ${approvalId}\n${summary}`;
 
-    // Find a CEO-connected channel to send notification
+    // Find an owner-connected channel to send notification
     for (const node of this.graph.nodes) {
-      if (node.platform === 'ceo') continue;
-      const isCeoChannel = this.isCeoChannelNode(node);
-      if (isCeoChannel) {
+      if (node.platform === 'owner') continue;
+      const isOwnerChannel = this.isOwnerChannelNode(node);
+      if (isOwnerChannel) {
         try {
           await this.registry.sendTo(node.id, message, null);
           return;
@@ -456,10 +456,10 @@ export class AgentOrchestrator {
     }
   }
 
-  private isCeoChannelNode(node: AgentNode): boolean {
-    if (node.platform === 'telegram' && this.ceoIdentity.telegram) return true;
-    if (node.platform === 'slack' && this.ceoIdentity.slack) return true;
-    if (node.platform === 'whatsapp' && this.ceoIdentity.whatsapp) return true;
+  private isOwnerChannelNode(node: AgentNode): boolean {
+    if (node.platform === 'telegram' && this.ownerIdentity.telegram) return true;
+    if (node.platform === 'slack' && this.ownerIdentity.slack) return true;
+    if (node.platform === 'whatsapp' && this.ownerIdentity.whatsapp) return true;
     return false;
   }
 

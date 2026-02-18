@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AgentOrchestrator } from '../orchestrator.js';
-import type { CanvasGraph, CEOIdentity } from '../types.js';
+import type { CanvasGraph, OwnerIdentity } from '../types.js';
 import { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '../types.js';
 import { ChannelRegistry } from '../../channels/registry.js';
 
@@ -44,25 +44,25 @@ function makeGraph(): CanvasGraph {
 describe('AgentOrchestrator', () => {
   let orchestrator: AgentOrchestrator;
   let registry: ChannelRegistry;
-  const ceoIdentity: CEOIdentity = { telegram: { userId: 123 } };
+  const ownerIdentity: OwnerIdentity = { telegram: { userId: 123 } };
 
   beforeEach(() => {
     registry = new ChannelRegistry();
     orchestrator = new AgentOrchestrator({
       registry,
       graph: makeGraph(),
-      ceoIdentity,
+      ownerIdentity,
     });
   });
 
-  it('detects CEO messages on telegram', () => {
-    const isCeo = orchestrator.isCeoSender('telegram', '123');
-    expect(isCeo).toBe(true);
+  it('detects owner messages on telegram', () => {
+    const isOwner = orchestrator.isOwnerSender('telegram', '123');
+    expect(isOwner).toBe(true);
   });
 
-  it('detects non-CEO messages', () => {
-    const isCeo = orchestrator.isCeoSender('telegram', '999');
-    expect(isCeo).toBe(false);
+  it('detects non-owner messages', () => {
+    const isOwner = orchestrator.isOwnerSender('telegram', '999');
+    expect(isOwner).toBe(false);
   });
 
   it('finds workspace for a node', () => {

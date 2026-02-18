@@ -6,7 +6,7 @@ import { KPITracker } from '../kpi-tracker.js';
 import { CheckpointManager } from '../checkpoint.js';
 import { ChannelRegistry } from '../../channels/registry.js';
 import type { Channel } from '../../channels/base.js';
-import type { CanvasGraph, CEOIdentity, InboundMessage, CEOCommand } from '../types.js';
+import type { CanvasGraph, OwnerIdentity, InboundMessage, OwnerCommand } from '../types.js';
 import { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '../types.js';
 import { applySchema } from '../../db/schema.js';
 
@@ -87,7 +87,7 @@ function makeMessage(overrides: Partial<InboundMessage> = {}): InboundMessage {
     sourceNodeId: 'n1',
     platform: 'telegram',
     senderId: '123',
-    senderIsCeo: true,
+    senderIsOwner: true,
     groupId: null,
     content: 'test message',
     contentType: 'text',
@@ -105,7 +105,7 @@ describe('Orchestrator Integration', () => {
   let agentMemory: AgentMemory;
   let kpiTracker: KPITracker;
   let checkpointManager: CheckpointManager;
-  const ceoIdentity: CEOIdentity = { telegram: { userId: 123 } };
+  const ownerIdentity: OwnerIdentity = { telegram: { userId: 123 } };
 
   beforeEach(() => {
     db = new Database(':memory:');
@@ -124,7 +124,7 @@ describe('Orchestrator Integration', () => {
     orchestrator = new AgentOrchestrator({
       registry,
       graph: makeGraph(),
-      ceoIdentity,
+      ownerIdentity,
       db,
       agentMemory,
       kpiTracker,
@@ -159,15 +159,15 @@ describe('Orchestrator Integration', () => {
     const approvalOrchestrator = new AgentOrchestrator({
       registry,
       graph: approvalGraph,
-      ceoIdentity,
+      ownerIdentity,
       db,
       agentMemory,
       kpiTracker,
       checkpointManager,
     });
 
-    // Non-CEO message should trigger approval
-    await approvalOrchestrator.handleInbound(makeMessage({ senderIsCeo: false, senderId: '999' }));
+    // Non-owner message should trigger approval
+    await approvalOrchestrator.handleInbound(makeMessage({ senderIsOwner: false, senderId: '999' }));
 
     const pending = checkpointManager.getPending();
     expect(pending.length).toBeGreaterThan(0);
@@ -194,41 +194,41 @@ describe('Orchestrator Integration', () => {
     expect(facts.length).toBe(1);
   });
 
-  it('CEO instruct command sends to target agent', async () => {
-    const command: CEOCommand = {
+  it('owner instruct command sends to target agent', async () => {
+    const command: OwnerCommand = {
       type: 'instruct',
       agentId: 'bot-alpha',
       instruction: 'Deploy now',
     };
-    await orchestrator.handleCeoCommand(command);
+    await orchestrator.handleOwnerCommand(command);
     expect(ch1.sendMessage).toHaveBeenCalledWith('Deploy now', null);
   });
 
-  it('CEO promote command changes autonomy level', async () => {
-    const command: CEOCommand = { type: 'promote', agentId: 'bot-alpha', newAutonomy: 'full' };
-    await orchestrator.handleCeoCommand(command);
+  it('owner promote command changes autonomy level', async () => {
+    const command: OwnerCommand = { type: 'promote', agentId: 'bot-alpha', newAutonomy: 'full' };
+    await orchestrator.handleOwnerCommand(command);
 
     const node = orchestrator.findNode('n1');
     expect(node?.autonomy).toBe('full');
   });
 
-  it('CEO fire command removes agent from graph', async () => {
-    const command: CEOCommand = { type: 'fire', agentId: 'bot-beta' };
-    await orchestrator.handleCeoCommand(command);
+  it('owner fire command removes agent from graph', async () => {
+    const command: OwnerCommand = { type: 'fire', agentId: 'bot-beta' };
+    await orchestrator.handleOwnerCommand(command);
 
     expect(orchestrator.findNode('n2')).toBeNull();
     expect(ch2.stop).toHaveBeenCalled();
   });
 
-  it('CEO review command sends performance summary', async () => {
+  it('owner review command sends performance summary', async () => {
     // Record some KPIs first
     kpiTracker.recordMessageHandled('n1', 150);
     kpiTracker.recordMessageHandled('n1', 250);
 
-    const command: CEOCommand = { type: 'review', agentId: 'bot-alpha' };
-    await orchestrator.handleCeoCommand(command);
+    const command: OwnerCommand = { type: 'review', agentId: 'bot-alpha' };
+    await orchestrator.handleOwnerCommand(command);
 
-    // Review is sent to CEO's telegram channel (n1)
+    // Review is sent to owner's telegram channel (n1)
     expect(ch1.sendMessage).toHaveBeenCalledWith(expect.stringContaining('[Review]'), null);
   });
 

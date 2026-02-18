@@ -33,7 +33,7 @@ export interface TelegramDeps {
   readonly pipeline: IngestPipeline;
   readonly transcription: TranscriptionService | null;
   readonly nodeId?: string;
-  readonly ceoUserId?: number;
+  readonly ownerId?: number;
   readonly onInbound?: (message: InboundMessage) => void;
   readonly instructions?: string;
 }
@@ -128,15 +128,15 @@ export class TelegramChannel implements Channel {
     const text = sanitizeChannelInput(rawText);
     await this.ingestText(text, 'telegram:text');
 
-    const { onInbound, nodeId, ceoUserId } = this.deps;
+    const { onInbound, nodeId, ownerId } = this.deps;
     if (onInbound && nodeId) {
       const senderId = String(ctx.from?.id ?? 'unknown');
-      const isCeo = Boolean(ceoUserId && ctx.from?.id === ceoUserId);
+      const isOwner = Boolean(ownerId && ctx.from?.id === ownerId);
       const inbound: InboundMessage = {
         sourceNodeId: nodeId,
         platform: 'telegram',
         senderId,
-        senderIsCeo: isCeo,
+        senderIsOwner: isOwner,
         groupId: ctx.chat?.id ? String(ctx.chat.id) : null,
         content: text,
         contentType: 'text',
@@ -179,15 +179,15 @@ export class TelegramChannel implements Channel {
 
     await this.ingestText(text, 'telegram:voice');
 
-    const { onInbound, nodeId, ceoUserId } = this.deps;
+    const { onInbound, nodeId, ownerId } = this.deps;
     if (onInbound && nodeId) {
       const senderId = String(ctx.from?.id ?? 'unknown');
-      const isCeo = Boolean(ceoUserId && ctx.from?.id === ceoUserId);
+      const isOwner = Boolean(ownerId && ctx.from?.id === ownerId);
       const inbound: InboundMessage = {
         sourceNodeId: nodeId,
         platform: 'telegram',
         senderId,
-        senderIsCeo: isCeo,
+        senderIsOwner: isOwner,
         groupId: ctx.chat?.id ? String(ctx.chat.id) : null,
         content: text,
         contentType: 'voice',

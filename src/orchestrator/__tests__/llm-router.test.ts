@@ -43,7 +43,7 @@ function buildMessage(overrides: Partial<InboundMessage> = {}): InboundMessage {
     sourceNodeId: 'n1',
     platform: 'telegram',
     senderId: 'user1',
-    senderIsCeo: false,
+    senderIsOwner: false,
     groupId: null,
     content: 'Hello, I need help with my order',
     contentType: 'text',

@@ -20,13 +20,13 @@ Agent calls openwind_get_entity("Marc") ->
 Agent drafts a perfect, contextual follow-up.
 ```
 
-**2. A multi-agent orchestrator.** The desktop app provides a visual canvas where you place AI agents, draw connections between them, and define routing rules. Messages flow through a queue with CEO priority, get routed by deterministic rules or LLM intelligence, and are filtered by autonomy levels before execution.
+**2. A multi-agent orchestrator.** The desktop app provides a visual canvas where you place AI agents, draw connections between them, and define routing rules. Messages flow through a queue with owner priority, get routed by deterministic rules or LLM intelligence, and are filtered by autonomy levels before execution.
 
 ```
-You (CEO) send a message to your Telegram research bot
+You send a message to your Telegram research bot
     |
     v
-MessageQueue (CEO priority) -> AgentOrchestrator
+MessageQueue (owner priority) -> AgentOrchestrator
     |
     ├── Edge rule: "always forward to Slack analyst bot"
     ├── LLM routing: "this needs the marketing team"
@@ -157,7 +157,7 @@ Data Sources (MCP)              Channels
 - **Local embeddings.** Vector search runs entirely on-device via `@huggingface/transformers`. No embedding API calls.
 - **Hybrid search.** FTS5 full-text + vector cosine similarity combined.
 - **Multi-agent.** Each agent gets its own channel instance, vault credentials, and autonomy level. Messages routed through deterministic rules or LLM intelligence.
-- **CEO priority.** Messages from the user (CEO) skip the queue and get processed first.
+- **Owner priority.** Messages from the owner skip the queue and get processed first.
 - **Canvas as config.** The visual canvas is the source of truth for agent topology. The daemon reads `canvas.json` and rebuilds channels on changes.
 
 ## Configuration

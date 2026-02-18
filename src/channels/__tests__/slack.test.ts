@@ -324,7 +324,7 @@ describe('SlackChannel', () => {
       expect(inbound.content).toBe('hello world');
       expect(inbound.contentType).toBe('text');
       expect(inbound.groupId).toBe('C001');
-      expect(inbound.senderIsCeo).toBe(false);
+      expect(inbound.senderIsOwner).toBe(false);
 
       await channel.stop();
     });
@@ -453,8 +453,8 @@ describe('SlackChannel', () => {
     });
   });
 
-  describe('CEO detection', () => {
-    it('marks messages from CEO user as senderIsCeo', async () => {
+  describe('owner detection', () => {
+    it('marks messages from owner as senderIsOwner', async () => {
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
           messages: [{ ts: '1700000000.000000', user: 'U001', text: 'init' }],
@@ -462,7 +462,7 @@ describe('SlackChannel', () => {
       );
 
       const onInbound = vi.fn<(message: InboundMessage) => void>();
-      const deps = createDeps({ onInbound, ceoUserId: 'UCEO' });
+      const deps = createDeps({ onInbound, ownerId: 'UCEO' });
       const channel = new SlackChannel(deps);
       await channel.start();
 
@@ -476,13 +476,13 @@ describe('SlackChannel', () => {
 
       expect(onInbound).toHaveBeenCalledOnce();
       const inbound = onInbound.mock.calls[0]![0] as InboundMessage;
-      expect(inbound.senderIsCeo).toBe(true);
+      expect(inbound.senderIsOwner).toBe(true);
       expect(inbound.senderId).toBe('UCEO');
 
       await channel.stop();
     });
 
-    it('marks messages from non-CEO user as not CEO', async () => {
+    it('marks messages from non-owner as not senderIsOwner', async () => {
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
           messages: [{ ts: '1700000000.000000', user: 'U001', text: 'init' }],
@@ -490,7 +490,7 @@ describe('SlackChannel', () => {
       );
 
       const onInbound = vi.fn<(message: InboundMessage) => void>();
-      const deps = createDeps({ onInbound, ceoUserId: 'UCEO' });
+      const deps = createDeps({ onInbound, ownerId: 'UCEO' });
       const channel = new SlackChannel(deps);
       await channel.start();
 
@@ -504,25 +504,25 @@ describe('SlackChannel', () => {
 
       expect(onInbound).toHaveBeenCalledOnce();
       const inbound = onInbound.mock.calls[0]![0] as InboundMessage;
-      expect(inbound.senderIsCeo).toBe(false);
+      expect(inbound.senderIsOwner).toBe(false);
 
       await channel.stop();
     });
 
-    it('logs CEO status in audit', async () => {
+    it('logs owner status in audit', async () => {
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
           messages: [{ ts: '1700000000.000000', user: 'U001', text: 'init' }],
         }),
       );
 
-      const deps = createDeps({ ceoUserId: 'UCEO' });
+      const deps = createDeps({ ownerId: 'UCEO' });
       const channel = new SlackChannel(deps);
       await channel.start();
 
       fetchSpy.mockResolvedValueOnce(
         createSlackResponse(true, {
-          messages: [{ ts: '1700000003.000000', user: 'UCEO', text: 'CEO order' }],
+          messages: [{ ts: '1700000003.000000', user: 'UCEO', text: 'owner order' }],
         }),
       );
 
@@ -531,7 +531,7 @@ describe('SlackChannel', () => {
       const audit = deps.audit as unknown as { logAction: ReturnType<typeof vi.fn> };
       expect(audit.logAction).toHaveBeenCalledWith(
         'slack:message_received',
-        expect.objectContaining({ isCeo: true, senderId: 'UCEO' }),
+        expect.objectContaining({ isOwner: true, senderId: 'UCEO' }),
       );
 
       await channel.stop();

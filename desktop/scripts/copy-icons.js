@@ -60,7 +60,7 @@ const lucideIcons = [
   'chevron-down',
   'chevron-up',
   'unlink',
-  'crown',
+  'user',
 ];
 
 for (const name of lucideIcons) {

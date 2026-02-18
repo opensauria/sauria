@@ -184,6 +184,7 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
     '',
     ruleActionsText,
     '',
+    `When generating reply content, respond in character as ${sourceNode.label} (${sourceNode.role ?? 'assistant'}). Never mention being Claude, an AI model, or a language model.`,
     ...(globalInstructions || sourceNode.instructions
       ? [
           'Response style instructions (apply to all reply content):',

@@ -36,7 +36,7 @@ export interface SlackDeps {
   readonly token: string;
   readonly signingSecret: string;
   readonly channelIds: readonly string[];
-  readonly ceoUserId?: string;
+  readonly ownerId?: string;
   readonly nodeId?: string;
   readonly audit: AuditLogger;
   readonly pipeline: IngestPipeline;
@@ -199,7 +199,7 @@ export class SlackChannel implements Channel {
   }
 
   private async processInboundMessage(channelId: string, message: SlackMessage): Promise<void> {
-    const { audit, pipeline, onInbound, ceoUserId, nodeId } = this.deps;
+    const { audit, pipeline, onInbound, ownerId, nodeId } = this.deps;
     const rawText = message.text ?? '';
 
     if (!rawText.trim()) return;
@@ -224,7 +224,7 @@ export class SlackChannel implements Channel {
       return;
     }
 
-    const isCeo = Boolean(ceoUserId && message.user === ceoUserId);
+    const isOwner = Boolean(ownerId && message.user === ownerId);
 
     try {
       await pipeline.ingestEvent('slack:message', {
@@ -244,7 +244,7 @@ export class SlackChannel implements Channel {
     audit.logAction('slack:message_received', {
       channelId,
       senderId: message.user ?? 'unknown',
-      isCeo,
+      isOwner,
       textLength: sanitizedText.length,
     });
 
@@ -253,7 +253,7 @@ export class SlackChannel implements Channel {
         sourceNodeId: nodeId ?? 'slack-default',
         platform: 'slack',
         senderId: message.user ?? 'unknown',
-        senderIsCeo: isCeo,
+        senderIsOwner: isOwner,
         groupId: channelId,
         content: sanitizedText,
         contentType: 'text',

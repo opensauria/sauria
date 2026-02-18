@@ -90,7 +90,7 @@ describe('AgentMemory', () => {
         conversationId,
         sourceNodeId: 'node1',
         senderId: 'user1',
-        senderIsCeo: false,
+        senderIsOwner: false,
         platform: 'telegram',
         groupId: 'group1',
         content: 'Hello there',
@@ -103,7 +103,7 @@ describe('AgentMemory', () => {
 
       expect(history).toHaveLength(1);
       expect(history[0]?.content).toBe('Hello there');
-      expect(history[0]?.senderIsCeo).toBe(false);
+      expect(history[0]?.senderIsOwner).toBe(false);
       expect(history[0]?.sourceNodeId).toBe('node1');
     });
 
@@ -114,7 +114,7 @@ describe('AgentMemory', () => {
         conversationId,
         sourceNodeId: 'node1',
         senderId: 'user1',
-        senderIsCeo: false,
+        senderIsOwner: false,
         platform: 'telegram',
         groupId: 'group1',
         content: 'First message',
@@ -125,7 +125,7 @@ describe('AgentMemory', () => {
         conversationId,
         sourceNodeId: 'node1',
         senderId: 'user1',
-        senderIsCeo: false,
+        senderIsOwner: false,
         platform: 'telegram',
         groupId: 'group1',
         content: 'Second message',
@@ -147,7 +147,7 @@ describe('AgentMemory', () => {
           conversationId,
           sourceNodeId: 'node1',
           senderId: 'user1',
-          senderIsCeo: false,
+          senderIsOwner: false,
           platform: 'telegram',
           groupId: null,
           content: `Message ${i}`,
@@ -170,7 +170,7 @@ describe('AgentMemory', () => {
         conversationId,
         sourceNodeId: 'node1',
         senderId: 'user1',
-        senderIsCeo: true,
+        senderIsOwner: true,
         platform: 'telegram',
         groupId: 'group1',
         content: 'Test',
