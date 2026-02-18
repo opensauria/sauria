@@ -757,25 +757,32 @@ export async function startDaemonContext(): Promise<DaemonContext> {
         const content = readFileSync(paths.ownerCommands, 'utf-8').trim();
         if (!content) return;
 
-        // Clear the file immediately to avoid reprocessing
-        writeFileSync(paths.ownerCommands, '', 'utf-8');
-
         const lines = content.split('\n').filter(Boolean);
+        const failedLines: string[] = [];
+
         for (const line of lines) {
           try {
             const parsed: unknown = JSON.parse(line);
             const result = OwnerCommandSchema.safeParse(parsed);
             if (!result.success) {
               logger.warn('Invalid owner command schema', { error: result.error.message });
+              failedLines.push(line);
               continue;
             }
             const command: OwnerCommand = result.data;
             audit.logAction('owner:command_received', { type: command.type });
             void orchestrator.handleOwnerCommand(command);
           } catch {
-            logger.warn('Invalid owner command line', { line });
+            logger.warn('Invalid owner command JSON', { line });
+            failedLines.push(line);
           }
         }
+
+        writeFileSync(
+          paths.ownerCommands,
+          failedLines.length > 0 ? failedLines.join('\n') + '\n' : '',
+          'utf-8',
+        );
       } catch (error) {
         logger.warn('Error reading owner commands', {
           error: error instanceof Error ? error.message : String(error),
