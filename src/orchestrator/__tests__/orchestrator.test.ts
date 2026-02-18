@@ -1,81 +1,88 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { writeFileSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import Database from 'better-sqlite3';
 import { applySchema } from '../../db/schema.js';
 import { AgentOrchestrator } from '../orchestrator.js';
 import { AgentMemory } from '../agent-memory.js';
-import type { CanvasGraph, OwnerIdentity, InboundMessage } from '../types.js';
+import type { CanvasGraph, InboundMessage, AgentNode } from '../types.js';
 import { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '../types.js';
 import { ChannelRegistry } from '../../channels/registry.js';
 
-function makeGraph(): CanvasGraph {
+// ─── Shared Fixtures ──────────────────────────────────────────────
+
+function makeWorkspace(overrides: Partial<CanvasGraph['workspaces'][0]> = {}): CanvasGraph['workspaces'][0] {
   return {
-    ...createEmptyGraph(),
-    workspaces: [
-      {
-        id: 'ws1',
-        name: 'Support',
-        color: '#ff0000',
-        purpose: 'Handle support',
-        topics: ['support'],
-        budget: { dailyLimitUsd: 5, preferCheap: true },
-        position: { x: 0, y: 0 },
-        size: { width: 400, height: 300 },
-        checkpoints: [],
-        groups: [],
-      },
-    ],
-    nodes: [
-      {
-        id: 'n1',
-        platform: 'telegram',
-        label: '@support_bot',
-        photo: null,
-        position: { x: 0, y: 0 },
-        status: 'connected',
-        credentials: 'key',
-        meta: {},
-        workspaceId: 'ws1',
-        role: 'assistant',
-        autonomy: 'supervised',
-        instructions: '',
-        groupBehavior: DEFAULT_GROUP_BEHAVIOR,
-      },
-    ],
+    id: 'ws1',
+    name: 'Support',
+    color: '#ff0000',
+    purpose: 'Handle support',
+    topics: ['support'],
+    budget: { dailyLimitUsd: 5, preferCheap: true },
+    position: { x: 0, y: 0 },
+    size: { width: 400, height: 300 },
+    checkpoints: [],
+    groups: [],
+    ...overrides,
   };
 }
+
+function makeNode(overrides: Partial<AgentNode> = {}): AgentNode {
+  return {
+    id: 'n1',
+    platform: 'telegram',
+    label: '@support_bot',
+    photo: null,
+    position: { x: 0, y: 0 },
+    status: 'connected',
+    credentials: 'key',
+    meta: {},
+    workspaceId: 'ws1',
+    role: 'assistant',
+    autonomy: 'supervised',
+    instructions: '',
+    groupBehavior: DEFAULT_GROUP_BEHAVIOR,
+    ...overrides,
+  };
+}
+
+function makeGraph(
+  nodes: AgentNode[] = [makeNode()],
+  workspaces: CanvasGraph['workspaces'] = [makeWorkspace()],
+): CanvasGraph {
+  return { ...createEmptyGraph(), nodes, workspaces };
+}
+
+// ─── Tests ────────────────────────────────────────────────────────
 
 describe('AgentOrchestrator', () => {
   let orchestrator: AgentOrchestrator;
   let registry: ChannelRegistry;
-  const ownerIdentity: OwnerIdentity = { telegram: { userId: 123 } };
 
   beforeEach(() => {
     registry = new ChannelRegistry();
     orchestrator = new AgentOrchestrator({
       registry,
       graph: makeGraph(),
-      ownerIdentity,
+      ownerIdentity: { telegram: { userId: 123 } },
     });
   });
 
   it('detects owner messages on telegram', () => {
-    const isOwner = orchestrator.isOwnerSender('telegram', '123');
-    expect(isOwner).toBe(true);
+    expect(orchestrator.isOwnerSender('telegram', '123')).toBe(true);
   });
 
   it('detects non-owner messages', () => {
-    const isOwner = orchestrator.isOwnerSender('telegram', '999');
-    expect(isOwner).toBe(false);
+    expect(orchestrator.isOwnerSender('telegram', '999')).toBe(false);
   });
 
   it('finds workspace for a node', () => {
-    const ws = orchestrator.findWorkspace('n1');
-    expect(ws?.name).toBe('Support');
+    expect(orchestrator.findWorkspace('n1')?.name).toBe('Support');
   });
 
   it('returns null workspace for unknown node', () => {
-    const ws = orchestrator.findWorkspace('unknown');
-    expect(ws).toBeNull();
+    expect(orchestrator.findWorkspace('unknown')).toBeNull();
   });
 });
 
@@ -84,70 +91,22 @@ describe('executeAction forward enrichment', () => {
   let registry: ChannelRegistry;
   let orchestrator: AgentOrchestrator;
 
-  const graph: CanvasGraph = {
-    ...createEmptyGraph(),
-    workspaces: [
-      {
-        id: 'ws1',
-        name: 'Support',
-        color: '#ff0000',
-        purpose: 'Handle support',
-        topics: ['support'],
-        budget: { dailyLimitUsd: 5, preferCheap: true },
-        position: { x: 0, y: 0 },
-        size: { width: 400, height: 300 },
-        checkpoints: [],
-        groups: [],
-      },
-    ],
-    nodes: [
-      {
-        id: 'n1',
-        platform: 'telegram',
-        label: '@support_bot',
-        photo: null,
-        position: { x: 0, y: 0 },
-        status: 'connected',
-        credentials: 'key',
-        meta: {},
-        workspaceId: 'ws1',
-        role: 'assistant',
-        autonomy: 'supervised',
-        instructions: '',
-        groupBehavior: DEFAULT_GROUP_BEHAVIOR,
-      },
-      {
-        id: 'n2',
-        platform: 'slack',
-        label: '@design_bot',
-        photo: null,
-        position: { x: 200, y: 0 },
-        status: 'connected',
-        credentials: 'key',
-        meta: {},
-        workspaceId: 'ws1',
-        role: 'specialist',
-        autonomy: 'supervised',
-        instructions: '',
-        groupBehavior: DEFAULT_GROUP_BEHAVIOR,
-      },
-    ],
-  };
+  const graph = makeGraph([
+    makeNode(),
+    makeNode({ id: 'n2', platform: 'slack', label: '@design_bot', role: 'specialist' }),
+  ]);
 
   beforeEach(() => {
     db = new Database(':memory:');
     applySchema(db);
     registry = new ChannelRegistry();
+    registry.sendTo = vi.fn().mockResolvedValue(undefined);
 
-    const sendTo = vi.fn().mockResolvedValue(undefined);
-    registry.sendTo = sendTo;
-
-    const agentMemory = new AgentMemory(db);
     orchestrator = new AgentOrchestrator({
       registry,
       graph,
       ownerIdentity: { telegram: { userId: 123 } },
-      agentMemory,
+      agentMemory: new AgentMemory(db),
     });
   });
 
@@ -202,5 +161,76 @@ describe('executeAction forward enrichment', () => {
     expect(sentContent).toContain('[Forwarded from @support_bot]');
     expect(sentContent).toContain('Schedule a meeting with design');
     expect(sentContent).toContain('Please handle design meeting');
+  });
+});
+
+describe('handleOwnerCommand graph persistence', () => {
+  let tmpDir: string;
+  let canvasPath: string;
+  let registry: ChannelRegistry;
+  let orchestrator: AgentOrchestrator;
+
+  const graphWithTwoNodes = makeGraph(
+    [
+      makeNode(),
+      makeNode({ id: 'n2', platform: 'slack', label: '@design_bot', role: 'specialist' }),
+    ],
+    [
+      makeWorkspace(),
+      makeWorkspace({ id: 'ws2', name: 'Design', color: '#00ff00', purpose: 'Handle design', topics: ['design'] }),
+    ],
+  );
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'openwind-test-'));
+    canvasPath = join(tmpDir, 'canvas.json');
+    writeFileSync(canvasPath, JSON.stringify(graphWithTwoNodes), 'utf-8');
+
+    registry = new ChannelRegistry();
+    orchestrator = new AgentOrchestrator({
+      registry,
+      graph: graphWithTwoNodes,
+      ownerIdentity: { telegram: { userId: 123 } },
+      canvasPath,
+    });
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('persists graph to canvas.json after promote', async () => {
+    await orchestrator.handleOwnerCommand({
+      type: 'promote',
+      agentId: 'n1',
+      newAutonomy: 'full',
+    });
+
+    const saved = JSON.parse(readFileSync(canvasPath, 'utf-8')) as CanvasGraph;
+    const node = saved.nodes.find((n) => n.id === 'n1');
+    expect(node?.autonomy).toBe('full');
+  });
+
+  it('persists graph to canvas.json after reassign', async () => {
+    await orchestrator.handleOwnerCommand({
+      type: 'reassign',
+      agentId: 'n1',
+      newWorkspaceId: 'ws2',
+    });
+
+    const saved = JSON.parse(readFileSync(canvasPath, 'utf-8')) as CanvasGraph;
+    const node = saved.nodes.find((n) => n.id === 'n1');
+    expect(node?.workspaceId).toBe('ws2');
+  });
+
+  it('persists graph to canvas.json after fire', async () => {
+    await orchestrator.handleOwnerCommand({
+      type: 'fire',
+      agentId: 'n2',
+    });
+
+    const saved = JSON.parse(readFileSync(canvasPath, 'utf-8')) as CanvasGraph;
+    expect(saved.nodes).toHaveLength(1);
+    expect(saved.nodes[0]?.id).toBe('n1');
   });
 });

@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import type BetterSqlite3 from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 import type {
@@ -28,6 +29,7 @@ interface OrchestratorDeps {
   readonly agentMemory?: AgentMemory;
   readonly kpiTracker?: KPITracker;
   readonly checkpointManager?: CheckpointManager;
+  readonly canvasPath?: string;
 }
 
 export class AgentOrchestrator {
@@ -40,6 +42,7 @@ export class AgentOrchestrator {
   private readonly agentMemory: AgentMemory | null;
   private readonly kpiTracker: KPITracker | null;
   private readonly checkpointManager: CheckpointManager | null;
+  private readonly canvasPath: string | null;
 
   constructor(deps: OrchestratorDeps) {
     this.registry = deps.registry;
@@ -50,6 +53,7 @@ export class AgentOrchestrator {
     this.agentMemory = deps.agentMemory ?? null;
     this.kpiTracker = deps.kpiTracker ?? null;
     this.checkpointManager = deps.checkpointManager ?? null;
+    this.canvasPath = deps.canvasPath ?? null;
   }
 
   updateGraph(graph: CanvasGraph): void {
@@ -159,10 +163,11 @@ export class AgentOrchestrator {
 
   async handleOwnerCommand(command: OwnerCommand): Promise<void> {
     const logger = getLogger();
+    let graphMutated = false;
 
     switch (command.type) {
       case 'instruct': {
-        const node = this.findNodeByLabel(command.agentId) ?? this.findNode(command.agentId);
+        const node = this.resolveAgent(command.agentId);
         if (!node) {
           logger.warn('Owner instruct: agent not found', { agentId: command.agentId });
           return;
@@ -182,18 +187,13 @@ export class AgentOrchestrator {
       }
 
       case 'promote': {
-        const node = this.findNodeByLabel(command.agentId) ?? this.findNode(command.agentId);
+        const node = this.resolveAgent(command.agentId);
         if (!node) {
           logger.warn('Owner promote: agent not found', { agentId: command.agentId });
           return;
         }
-        // Update node autonomy in the mutable graph copy
-        const mutableNodes = [...this.graph.nodes] as AgentNode[];
-        const idx = mutableNodes.findIndex((n) => n.id === node.id);
-        if (idx >= 0) {
-          mutableNodes[idx] = { ...node, autonomy: command.newAutonomy };
-          this.graph = { ...this.graph, nodes: mutableNodes };
-        }
+        this.updateNode(node.id, { autonomy: command.newAutonomy });
+        graphMutated = true;
         logger.info('Owner promote: autonomy updated', {
           agentId: node.id,
           autonomy: command.newAutonomy,
@@ -202,7 +202,7 @@ export class AgentOrchestrator {
       }
 
       case 'reassign': {
-        const node = this.findNodeByLabel(command.agentId) ?? this.findNode(command.agentId);
+        const node = this.resolveAgent(command.agentId);
         if (!node) {
           logger.warn('Owner reassign: agent not found', { agentId: command.agentId });
           return;
@@ -214,12 +214,8 @@ export class AgentOrchestrator {
           logger.warn('Owner reassign: workspace not found', { workspaceId: command.newWorkspaceId });
           return;
         }
-        const mutableNodes = [...this.graph.nodes] as AgentNode[];
-        const idx = mutableNodes.findIndex((n) => n.id === node.id);
-        if (idx >= 0) {
-          mutableNodes[idx] = { ...node, workspaceId: targetWs.id };
-          this.graph = { ...this.graph, nodes: mutableNodes };
-        }
+        this.updateNode(node.id, { workspaceId: targetWs.id });
+        graphMutated = true;
         logger.info('Owner reassign: node moved', { agentId: node.id, workspaceId: targetWs.id });
         break;
       }
@@ -232,29 +228,32 @@ export class AgentOrchestrator {
           logger.warn('Owner pause: workspace not found', { workspaceId: command.workspaceId });
           return;
         }
-        const wsNodes = this.graph.nodes.filter((n) => n.workspaceId === ws.id);
-        const mutableNodes = [...this.graph.nodes] as AgentNode[];
-        for (const wsNode of wsNodes) {
-          const idx = mutableNodes.findIndex((n) => n.id === wsNode.id);
-          if (idx >= 0) {
-            mutableNodes[idx] = { ...wsNode, status: 'disconnected' };
-          }
+        const wsNodeIds = this.graph.nodes
+          .filter((n) => n.workspaceId === ws.id)
+          .map((n) => n.id);
+        this.graph = {
+          ...this.graph,
+          nodes: this.graph.nodes.map((n) =>
+            wsNodeIds.includes(n.id) ? { ...n, status: 'disconnected' as const } : n,
+          ),
+        };
+        graphMutated = true;
+        for (const nodeId of wsNodeIds) {
           try {
-            await this.registry.stop(wsNode.id);
+            await this.registry.stop(nodeId);
           } catch {
             // Best-effort channel stop
           }
         }
-        this.graph = { ...this.graph, nodes: mutableNodes };
         logger.info('Owner pause: workspace paused', {
           workspaceId: ws.id,
-          nodeCount: wsNodes.length,
+          nodeCount: wsNodeIds.length,
         });
         break;
       }
 
       case 'review': {
-        const node = this.findNodeByLabel(command.agentId) ?? this.findNode(command.agentId);
+        const node = this.resolveAgent(command.agentId);
         if (!node) {
           logger.warn('Owner review: agent not found', { agentId: command.agentId });
           return;
@@ -264,7 +263,6 @@ export class AgentOrchestrator {
           const perf = this.kpiTracker.getPerformance(node.id);
           summary += `\nMessages: ${String(perf.messagesHandled)}\nTasks: ${String(perf.tasksCompleted)}\nAvg Response: ${String(Math.round(perf.avgResponseTimeMs))}ms`;
         }
-        // Send review to owner's channel
         for (const n of this.graph.nodes) {
           if (this.isOwnerChannelNode(n)) {
             try {
@@ -289,7 +287,7 @@ export class AgentOrchestrator {
       }
 
       case 'fire': {
-        const node = this.findNodeByLabel(command.agentId) ?? this.findNode(command.agentId);
+        const node = this.resolveAgent(command.agentId);
         if (!node) {
           logger.warn('Owner fire: agent not found', { agentId: command.agentId });
           return;
@@ -300,16 +298,44 @@ export class AgentOrchestrator {
         } catch {
           // Best-effort
         }
-        const mutableNodes = this.graph.nodes.filter((n) => n.id !== node.id);
-        this.graph = { ...this.graph, nodes: mutableNodes };
+        this.graph = { ...this.graph, nodes: this.graph.nodes.filter((n) => n.id !== node.id) };
+        graphMutated = true;
         logger.info('Owner fire: agent removed', { agentId: node.id });
         break;
       }
     }
+
+    if (graphMutated) {
+      this.persistGraph();
+    }
   }
 
-  private findNodeByLabel(label: string): AgentNode | null {
-    return this.graph.nodes.find((n) => n.label.toLowerCase() === label.toLowerCase()) ?? null;
+  private resolveAgent(agentId: string): AgentNode | null {
+    return (
+      this.graph.nodes.find((n) => n.label.toLowerCase() === agentId.toLowerCase()) ??
+      this.findNode(agentId)
+    );
+  }
+
+  private updateNode(nodeId: string, patch: Partial<AgentNode>): void {
+    this.graph = {
+      ...this.graph,
+      nodes: this.graph.nodes.map((n) =>
+        n.id === nodeId ? { ...n, ...patch } : n,
+      ),
+    };
+  }
+
+  private persistGraph(): void {
+    if (!this.canvasPath) return;
+    try {
+      writeFileSync(this.canvasPath, JSON.stringify(this.graph, null, 2), 'utf-8');
+    } catch (error) {
+      const logger = getLogger();
+      logger.warn('Failed to persist canvas graph', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   async executeApprovedActions(agentId: string, actions: RoutingAction[]): Promise<number> {
