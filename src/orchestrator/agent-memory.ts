@@ -8,7 +8,7 @@ export interface AgentMessage {
   readonly conversationId: string;
   readonly sourceNodeId: string;
   readonly senderId: string;
-  readonly senderIsCeo: boolean;
+  readonly senderIsOwner: boolean;
   readonly platform: string;
   readonly groupId: string | null;
   readonly content: string;
@@ -21,7 +21,7 @@ export interface RecordedMessage {
   readonly conversationId: string;
   readonly sourceNodeId: string;
   readonly senderId: string;
-  readonly senderIsCeo: boolean;
+  readonly senderIsOwner: boolean;
   readonly platform: string;
   readonly groupId: string | null;
   readonly content: string;
@@ -84,7 +84,7 @@ function toAgentMessage(row: AgentMessageRow): AgentMessage {
     conversationId: row.conversation_id,
     sourceNodeId: row.source_node_id,
     senderId: row.sender_id,
-    senderIsCeo: row.sender_is_ceo === 1,
+    senderIsOwner: row.sender_is_ceo === 1,
     platform: row.platform,
     groupId: row.group_id,
     content: row.content,
@@ -165,7 +165,7 @@ export class AgentMemory {
         message.conversationId,
         message.sourceNodeId,
         message.senderId,
-        message.senderIsCeo ? 1 : 0,
+        message.senderIsOwner ? 1 : 0,
         message.platform,
         message.groupId,
         message.content,

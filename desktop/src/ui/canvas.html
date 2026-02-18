@@ -76,14 +76,12 @@
 
         <div class="detail-section">
           <span class="detail-section-label">Autonomy</span>
-          <div class="autonomy-track">
-            <input type="range" id="agent-autonomy" min="0" max="3" step="1" value="1" />
-          </div>
-          <div class="autonomy-labels" id="autonomy-labels">
-            <span class="autonomy-label" data-level="0">Manual</span>
-            <span class="autonomy-label" data-level="1">Approval</span>
-            <span class="autonomy-label" data-level="2">Supervised</span>
-            <span class="autonomy-label" data-level="3">Full</span>
+          <div class="autonomy-segmented" id="autonomy-segmented">
+            <div class="autonomy-highlight" id="autonomy-highlight"></div>
+            <button class="autonomy-seg" data-level="0">Manual</button>
+            <button class="autonomy-seg" data-level="1">Approval</button>
+            <button class="autonomy-seg" data-level="2">Supervised</button>
+            <button class="autonomy-seg" data-level="3">Full</button>
           </div>
         </div>
 
@@ -106,8 +104,8 @@
             <button class="toggle-switch" id="toggle-proactive" type="button"></button>
           </div>
           <div class="toggle-row">
-            <span class="toggle-label">Respond to CEO</span>
-            <button class="toggle-switch" id="toggle-ceo-response" type="button"></button>
+            <span class="toggle-label">Respond to owner</span>
+            <button class="toggle-switch" id="toggle-owner-response" type="button"></button>
           </div>
           <div class="toggle-row">
             <span class="toggle-label">Peer collaboration</span>
@@ -355,38 +353,38 @@
         vpY = graph.viewport.y;
         vpZoom = graph.viewport.zoom;
 
-        /* Auto-create CEO node if not present */
-        var hasCeo = graph.nodes.some(function (n) {
-          return n.platform === 'ceo';
+        /* Auto-create owner node if not present */
+        var hasOwner = graph.nodes.some(function (n) {
+          return n.platform === 'owner';
         });
-        if (!hasCeo) {
-          var ceoProfile = { fullName: 'CEO', customInstructions: '' };
+        if (!hasOwner) {
+          var ownerProfile = { fullName: 'You', photo: null, customInstructions: '' };
           try {
-            ceoProfile = await window.openwind.getCeoProfile();
+            ownerProfile = await window.openwind.getOwnerProfile();
           } catch {
             /* fallback */
           }
           var cx = (window.innerWidth / 2 - vpX) / vpZoom - 60;
           graph.nodes.unshift({
-            id: 'ceo-' + generateId(),
-            platform: 'ceo',
-            label: ceoProfile.fullName || 'CEO',
-            photo: null,
+            id: 'owner-' + generateId(),
+            platform: 'owner',
+            label: ownerProfile.fullName || 'You',
+            photo: ownerProfile.photo || null,
             position: { x: Math.round(cx), y: 40 },
             status: 'connected',
             credentials: '',
             meta: {},
-            instructions: ceoProfile.customInstructions || '',
+            instructions: ownerProfile.customInstructions || '',
             role: 'lead',
             autonomy: 3,
           });
           saveGraph();
         }
 
-        /* Migrate: if globalInstructions exists but CEO node has no instructions, copy over */
-        var ceoNode = graph.nodes.find(function (n) { return n.platform === 'ceo'; });
-        if (ceoNode && !ceoNode.instructions && graph.globalInstructions) {
-          ceoNode.instructions = graph.globalInstructions;
+        /* Migrate: if globalInstructions exists but owner node has no instructions, copy over */
+        var ownerNode = graph.nodes.find(function (n) { return n.platform === 'owner'; });
+        if (ownerNode && !ownerNode.instructions && graph.globalInstructions) {
+          ownerNode.instructions = graph.globalInstructions;
           saveGraph();
         }
 
@@ -746,22 +744,26 @@
               '<button class="btn-cancel" data-action="disconnect">Disconnect</button>' +
               '<button class="btn-connect" data-action="close-edit">Done</button>' +
               '</div>';
-          } else if (node.platform === 'ceo') {
-            /* CEO card */
+          } else if (node.platform === 'owner') {
+            /* Owner card */
             card.className =
-              'agent-card ceo-card' + (node.id === selectedNodeId ? ' selected' : '');
+              'agent-card owner-card' + (node.id === selectedNodeId ? ' selected' : '');
+
+            var ownerAvatarInner = node.photo
+              ? '<img src="' + node.photo + '" alt="" />'
+              : '<span class="avatar-initials">' + getInitials(node.label) + '</span>';
 
             card.innerHTML =
               '<button class="card-gear" data-action="gear" title="Settings">' +
               GEAR_SVG +
               '</button>' +
-              '<div class="agent-avatar ceo-avatar">' +
-              '<img src="icons/crown.svg" alt="CEO" />' +
+              '<div class="agent-avatar owner-avatar">' +
+              ownerAvatarInner +
               '</div>' +
               '<div class="agent-name">' +
               escapeHtml(node.label) +
               '</div>' +
-              '<span class="platform-badge ceo">CEO</span>' +
+              '<span class="platform-badge owner">YOU</span>' +
               '<div class="port port-output" data-node-id="' +
               node.id +
               '" data-port="output"></div>';
@@ -1180,16 +1182,22 @@
             if (e.clientY >= dockRect.top) return;
           }
           e.preventDefault();
-          var rect = viewport.getBoundingClientRect();
-          var mx = e.clientX - rect.left;
-          var my = e.clientY - rect.top;
 
-          var delta = e.deltaY > 0 ? -0.1 : 0.1;
-          var newZoom = Math.max(0.25, Math.min(3, vpZoom + delta));
-
-          vpX = mx - (mx - vpX) * (newZoom / vpZoom);
-          vpY = my - (my - vpY) * (newZoom / vpZoom);
-          vpZoom = newZoom;
+          if (e.ctrlKey || e.metaKey) {
+            /* Pinch-to-zoom / Ctrl+scroll / Cmd+scroll → zoom at cursor */
+            var rect = viewport.getBoundingClientRect();
+            var mx = e.clientX - rect.left;
+            var my = e.clientY - rect.top;
+            var delta = -e.deltaY * 0.01;
+            var newZoom = Math.max(0.25, Math.min(3, vpZoom + delta));
+            vpX = mx - (mx - vpX) * (newZoom / vpZoom);
+            vpY = my - (my - vpY) * (newZoom / vpZoom);
+            vpZoom = newZoom;
+          } else {
+            /* Two-finger scroll → pan (including horizontal) */
+            vpX -= e.deltaX;
+            vpY -= e.deltaY;
+          }
 
           applyTransform();
           renderEdges();
@@ -1497,22 +1505,27 @@
         }
       }
 
-      /* Scroll on dock to change active card (debounced for trackpad) */
+      /* Scroll/swipe on dock to change active card — smooth trackpad support */
       var cfScrollAccum = 0;
-      var CF_SCROLL_THRESHOLD = 40;
+      var CF_SCROLL_THRESHOLD = 50;
+      var cfScrollTimer = null;
       cfDock.addEventListener(
         'wheel',
         function (e) {
           e.preventDefault();
           e.stopPropagation();
-          cfScrollAccum += e.deltaY;
-          if (Math.abs(cfScrollAccum) >= CF_SCROLL_THRESHOLD) {
-            if (cfScrollAccum > 0) {
-              cfActiveIndex = Math.min(cfActiveIndex + 1, cfPlatforms.length - 1);
-            } else {
-              cfActiveIndex = Math.max(cfActiveIndex - 1, 0);
-            }
+          /* Use horizontal delta when available (trackpad two-finger swipe), fall back to vertical */
+          var delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+          cfScrollAccum += delta;
+          /* Reset accumulator after scroll inertia settles */
+          if (cfScrollTimer) clearTimeout(cfScrollTimer);
+          cfScrollTimer = setTimeout(function () {
             cfScrollAccum = 0;
+          }, 150);
+          if (Math.abs(cfScrollAccum) >= CF_SCROLL_THRESHOLD) {
+            var steps = Math.round(cfScrollAccum / CF_SCROLL_THRESHOLD);
+            cfActiveIndex = Math.max(0, Math.min(cfPlatforms.length - 1, cfActiveIndex + steps));
+            cfScrollAccum = cfScrollAccum % CF_SCROLL_THRESHOLD;
             startCfAnimation();
           }
         },
@@ -1759,7 +1772,7 @@
         }
 
         if (action === 'gear') {
-          if (node.platform === 'ceo') {
+          if (node.platform === 'owner') {
             openAgentDetail(nodeId);
           } else {
             flipCard(card, function () {
@@ -1983,6 +1996,13 @@
           setZoom(1);
         }
 
+        if (isMod && e.key === 'l') {
+          e.preventDefault();
+          isDockCollapsed = !isDockCollapsed;
+          cfDock.classList.toggle('collapsed', isDockCollapsed);
+          dockToggle.classList.toggle('collapsed', isDockCollapsed);
+        }
+
         if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId && !isInputFocused()) {
           e.preventDefault();
           removeNode(selectedNodeId);
@@ -2003,7 +2023,7 @@
           return n.id === nodeId;
         });
         if (!node) return;
-        if (node.platform === 'ceo') return; /* CEO cannot be deleted */
+        if (node.platform === 'owner') return; /* Owner cannot be deleted */
         window.openwind.disconnectChannel(node.platform, nodeId);
 
         animateCardDelete(nodeId, function () {
@@ -2054,6 +2074,12 @@
         return d.innerHTML;
       }
 
+      function getInitials(name) {
+        var parts = (name || '').trim().split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        return (parts[0] || '?').slice(0, 2).toUpperCase();
+      }
+
       function capitalize(s) {
         return s.charAt(0).toUpperCase() + s.slice(1);
       }
@@ -2097,15 +2123,17 @@
 
         /* Populate identity */
         var identityEl = document.getElementById('agent-detail-identity');
-        var isCeo = node.platform === 'ceo';
-        var photoHtml = isCeo
-          ? '<img src="icons/crown.svg" alt="CEO" style="width:24px;height:24px;filter:brightness(0) invert(0.9);" />'
+        var isOwner = node.platform === 'owner';
+        var photoHtml = isOwner
+          ? (node.photo
+              ? '<img src="' + node.photo + '" alt="" />'
+              : '<span class="avatar-initials" style="font-size:12px;">' + getInitials(node.label) + '</span>')
           : node.photo
             ? '<img src="' + node.photo + '" alt="" />'
             : platformIcons[node.platform] || '';
-        var displayName = isCeo ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
-        var platformLabel = isCeo ? 'CEO — Organization Owner' : capitalize(node.platform);
-        var avatarClass = isCeo ? 'detail-avatar ceo-avatar' : 'detail-avatar';
+        var displayName = isOwner ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
+        var platformLabel = isOwner ? 'You — Organization Owner' : capitalize(node.platform);
+        var avatarClass = isOwner ? 'detail-avatar owner-avatar' : 'detail-avatar';
         identityEl.innerHTML =
           '<div class="' +
           avatarClass +
@@ -2129,13 +2157,15 @@
 
         /* Autonomy */
         var autonomy = typeof node.autonomy === 'number' ? node.autonomy : 1;
-        document.getElementById('agent-autonomy').value = autonomy;
-        updateAutonomyLabels(autonomy);
+        document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function (seg) {
+          seg.classList.toggle('active', parseInt(seg.dataset.level, 10) === autonomy);
+        });
+        moveAutonomyHighlight(autonomy, false);
 
         /* Instructions — dynamic label based on node type */
         var instructionsLabel = document.getElementById('instructions-label');
         var instructionsTextarea = document.getElementById('agent-instructions');
-        if (isCeo) {
+        if (isOwner) {
           instructionsLabel.textContent = 'Communication Style (all agents)';
           instructionsTextarea.placeholder = 'Define how all agents should respond...\n\nExample:\n- Plain text only, no markdown\n- Concise and direct\n- No emojis';
         } else {
@@ -2147,7 +2177,7 @@
         /* Toggles */
         var behavior = node.behavior || {};
         setToggle('toggle-proactive', behavior.proactive === true);
-        setToggle('toggle-ceo-response', behavior.ceoResponse !== false);
+        setToggle('toggle-owner-response', behavior.ownerResponse !== false);
         setToggle('toggle-peer', behavior.peer === true);
 
         agentDetailPanel.classList.add('open');
@@ -2176,24 +2206,36 @@
         });
       });
 
-      /* Autonomy slider */
-      document.getElementById('agent-autonomy').addEventListener('input', function () {
-        if (!detailNodeId) return;
-        var node = graph.nodes.find(function (n) {
-          return n.id === detailNodeId;
-        });
-        if (!node) return;
-        var val = parseInt(this.value, 10);
-        node.autonomy = val;
-        updateAutonomyLabels(val);
-        saveGraph();
-      });
-
-      function updateAutonomyLabels(level) {
-        document.querySelectorAll('#autonomy-labels .autonomy-label').forEach(function (label) {
-          label.classList.toggle('active', parseInt(label.dataset.level, 10) === level);
-        });
+      /* Autonomy segmented control */
+      function moveAutonomyHighlight(level, animate) {
+        var container = document.getElementById('autonomy-segmented');
+        var highlight = document.getElementById('autonomy-highlight');
+        var segs = container.querySelectorAll('.autonomy-seg');
+        var target = segs[level];
+        if (!target || !highlight) return;
+        highlight.style.transition = animate
+          ? 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+          : 'none';
+        highlight.style.left = target.offsetLeft + 'px';
+        highlight.style.width = target.offsetWidth + 'px';
       }
+
+      document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function (seg) {
+        seg.addEventListener('click', function () {
+          if (!detailNodeId) return;
+          var node = graph.nodes.find(function (n) {
+            return n.id === detailNodeId;
+          });
+          if (!node) return;
+          var val = parseInt(seg.dataset.level, 10);
+          node.autonomy = val;
+          document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function (s) {
+            s.classList.toggle('active', parseInt(s.dataset.level, 10) === val);
+          });
+          moveAutonomyHighlight(val, true);
+          saveGraph();
+        });
+      });
 
       /* Instructions textarea */
       document.getElementById('agent-instructions').addEventListener('input', function () {
@@ -2203,7 +2245,7 @@
         });
         if (!node) return;
         node.instructions = this.value;
-        if (node.platform === 'ceo') {
+        if (node.platform === 'owner') {
           graph.globalInstructions = this.value;
         }
         saveGraph();
@@ -2215,10 +2257,10 @@
         var node = graph.nodes.find(function (n) { return n.id === detailNodeId; });
         if (!node) return;
         var textarea = document.getElementById('agent-instructions');
-        var template = node.platform === 'ceo' ? CEO_TEMPLATE : BOT_TEMPLATE;
+        var template = node.platform === 'owner' ? CEO_TEMPLATE : BOT_TEMPLATE;
         textarea.value = template;
         node.instructions = template;
-        if (node.platform === 'ceo') graph.globalInstructions = template;
+        if (node.platform === 'owner') graph.globalInstructions = template;
         saveGraph();
       });
 
@@ -2248,7 +2290,7 @@
       }
 
       bindToggle('toggle-proactive', 'proactive');
-      bindToggle('toggle-ceo-response', 'ceoResponse');
+      bindToggle('toggle-owner-response', 'ownerResponse');
       bindToggle('toggle-peer', 'peer');
 
       /* ═══════════════════════════════════════════════

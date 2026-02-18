@@ -4,7 +4,7 @@ export type AgentRole = 'lead' | 'specialist' | 'observer' | 'bridge' | 'assista
 
 export type AutonomyLevel = 'full' | 'supervised' | 'approval' | 'manual';
 
-export type Platform = 'telegram' | 'slack' | 'whatsapp' | 'discord' | 'email' | 'ceo';
+export type Platform = 'telegram' | 'slack' | 'whatsapp' | 'discord' | 'email' | 'owner';
 
 // ─── Group Behavior ────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ export interface ProactiveBehavior {
   readonly announceTaskCompletion: boolean;
 }
 
-export interface CeoResponseBehavior {
+export interface OwnerResponseBehavior {
   readonly acknowledgeOrders: boolean;
   readonly askClarification: boolean;
   readonly reportProgress: boolean;
@@ -29,7 +29,7 @@ export interface PeerBehavior {
 
 export interface GroupBehavior {
   readonly proactive: ProactiveBehavior;
-  readonly ceoResponse: CeoResponseBehavior;
+  readonly ownerResponse: OwnerResponseBehavior;
   readonly peer: PeerBehavior;
 }
 
@@ -39,7 +39,7 @@ export interface WorkspaceGroup {
   readonly platform: Platform;
   readonly groupId: string;
   readonly name: string;
-  readonly ceoMemberId: string;
+  readonly ownerMemberId: string;
   readonly autoCreated: boolean;
 }
 
@@ -122,9 +122,9 @@ export interface CanvasGraph {
   readonly viewport: { readonly x: number; readonly y: number; readonly zoom: number };
 }
 
-// ─── CEO Identity ──────────────────────────────────────────────────
+// ─── Owner Identity ───────────────────────────────────────────────
 
-export interface CEOIdentity {
+export interface OwnerIdentity {
   readonly telegram?: { readonly userId: number };
   readonly slack?: { readonly userId: string };
   readonly whatsapp?: { readonly phoneNumber: string };
@@ -136,7 +136,7 @@ export interface InboundMessage {
   readonly sourceNodeId: string;
   readonly platform: Platform;
   readonly senderId: string;
-  readonly senderIsCeo: boolean;
+  readonly senderIsOwner: boolean;
   readonly groupId: string | null;
   readonly content: string;
   readonly contentType: 'text' | 'voice' | 'image';
@@ -182,9 +182,9 @@ export interface AgentPerformance {
   costIncurredUsd: number;
 }
 
-// ─── CEO Commands ──────────────────────────────────────────────────
+// ─── Owner Commands ───────────────────────────────────────────────
 
-export type CEOCommand =
+export type OwnerCommand =
   | { readonly type: 'instruct'; readonly agentId: string; readonly instruction: string }
   | { readonly type: 'reassign'; readonly agentId: string; readonly newWorkspaceId: string }
   | { readonly type: 'promote'; readonly agentId: string; readonly newAutonomy: AutonomyLevel }
@@ -208,7 +208,7 @@ export const DEFAULT_GROUP_BEHAVIOR: GroupBehavior = {
     askForHelp: true,
     announceTaskCompletion: true,
   },
-  ceoResponse: {
+  ownerResponse: {
     acknowledgeOrders: true,
     askClarification: true,
     reportProgress: true,

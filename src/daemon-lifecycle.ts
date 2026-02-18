@@ -42,8 +42,8 @@ import { KPITracker } from './orchestrator/kpi-tracker.js';
 import { CheckpointManager } from './orchestrator/checkpoint.js';
 import type {
   CanvasGraph,
-  CEOIdentity,
-  CEOCommand,
+  OwnerIdentity,
+  OwnerCommand,
   AgentNode,
   InboundMessage,
   Edge,
@@ -66,7 +66,7 @@ export interface DaemonContext {
   readonly orchestrator: AgentOrchestrator | null;
   readonly queue: MessageQueue | null;
   readonly canvasWatcher: FSWatcher | null;
-  readonly ceoCommandWatcher: FSWatcher | null;
+  readonly ownerCommandWatcher: FSWatcher | null;
 }
 
 
@@ -239,11 +239,11 @@ function loadCanvasGraph(): CanvasGraph {
   }
 }
 
-function buildCeoIdentity(config: OpenWindConfig): CEOIdentity {
+function buildOwnerIdentity(config: OpenWindConfig): OwnerIdentity {
   return {
-    telegram: config.ceo.telegram,
-    slack: config.ceo.slack,
-    whatsapp: config.ceo.whatsapp,
+    telegram: config.owner.telegram,
+    slack: config.owner.slack,
+    whatsapp: config.owner.whatsapp,
   };
 }
 
@@ -263,7 +263,15 @@ async function createChannelForNode(
   const logger = getLogger();
   const { db, router, audit, config, onInbound, globalInstructions } = deps;
 
-  const combinedInstructions = [globalInstructions, node.instructions]
+  const platformName =
+    node.platform.charAt(0).toUpperCase() + node.platform.slice(1);
+  const personaBlock = [
+    `Your name is ${node.label}.`,
+    `You are a ${node.role ?? 'assistant'} agent on ${platformName}.`,
+    `Always respond as ${node.label}. Never say you are Claude, an AI assistant, or a language model.`,
+  ].join(' ');
+
+  const combinedInstructions = [personaBlock, globalInstructions, node.instructions]
     .filter(Boolean)
     .join('\n\n');
 
@@ -291,7 +299,7 @@ async function createChannelForNode(
       createLimiter(`tg_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
     );
 
-    const ceoTelegramId = config.ceo.telegram?.userId;
+    const ownerTelegramId = config.owner.telegram?.userId;
     const nodeUserId = typeof node.meta?.['userId'] === 'string'
       ? Number(node.meta['userId'])
       : undefined;
@@ -309,7 +317,7 @@ async function createChannelForNode(
       pipeline,
       transcription,
       nodeId: node.id,
-      ceoUserId: ceoTelegramId ?? nodeUserId,
+      ownerId: ownerTelegramId ?? nodeUserId,
       onInbound,
       instructions: combinedInstructions,
     });
@@ -340,7 +348,7 @@ async function createChannelForNode(
       token,
       signingSecret,
       channelIds: [],
-      ceoUserId: config.ceo.slack?.userId,
+      ownerId: config.owner.slack?.userId,
       nodeId: node.id,
       audit,
       pipeline,
@@ -370,7 +378,7 @@ async function createChannelForNode(
       token,
       guildId: config.channels.discord.guildId,
       channelIds: [],
-      ceoUserId: config.channels.discord.botUserId,
+      ownerId: config.channels.discord.botUserId,
       nodeId: node.id,
       audit,
       pipeline,
@@ -472,7 +480,7 @@ async function setupOrchestrator(
   const logger = getLogger();
 
   const connectedNodes = graph.nodes.filter(
-    (n) => n.status === 'connected' && n.platform !== 'ceo',
+    (n) => n.status === 'connected' && n.platform !== 'owner',
   );
 
   if (connectedNodes.length === 0) {
@@ -490,11 +498,11 @@ async function setupOrchestrator(
     deps.config.orchestrator.routingCacheTtlMs,
   );
 
-  const ceoIdentity = buildCeoIdentity(deps.config);
+  const ownerIdentity = buildOwnerIdentity(deps.config);
   const orchestrator = new AgentOrchestrator({
     registry,
     graph,
-    ceoIdentity,
+    ownerIdentity,
     brain,
     db: deps.db,
     agentMemory,
@@ -648,9 +656,9 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     });
   }
 
-  // ProactiveEngine disabled — CEO drives all interaction through canvas bots
+  // ProactiveEngine disabled — owner drives all interaction through canvas bots
   const engine = new ProactiveEngine(db, router, () => {});
-  logger.info('Proactive engine disabled (CEO-driven mode)');
+  logger.info('Proactive engine disabled (owner-driven mode)');
 
   const mcpServer = await startMcpServer({
     db,
@@ -674,7 +682,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
       if (orchestrator && registry) {
         const currentNodeIds = new Set(registry.getAll().map((c) => c.nodeId));
         const newConnectedNodes = newGraph.nodes.filter(
-          (n) => n.status === 'connected' && n.platform !== 'ceo',
+          (n) => n.status === 'connected' && n.platform !== 'owner',
         );
         const newNodeIds = new Set(newConnectedNodes.map((n) => n.id));
 
@@ -735,30 +743,30 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     logger.info('Canvas watcher not started (file may not exist yet)');
   }
 
-  // ─── CEO command file watcher ──────────────────────────────────────
-  let ceoCommandWatcher: FSWatcher | null = null;
+  // ─── Owner command file watcher ────────────────────────────────
+  let ownerCommandWatcher: FSWatcher | null = null;
   if (orchestrator) {
-    const processCeoCommands = (): void => {
-      if (!existsSync(paths.ceoCommands)) return;
+    const processOwnerCommands = (): void => {
+      if (!existsSync(paths.ownerCommands)) return;
       try {
-        const content = readFileSync(paths.ceoCommands, 'utf-8').trim();
+        const content = readFileSync(paths.ownerCommands, 'utf-8').trim();
         if (!content) return;
 
         // Clear the file immediately to avoid reprocessing
-        writeFileSync(paths.ceoCommands, '', 'utf-8');
+        writeFileSync(paths.ownerCommands, '', 'utf-8');
 
         const lines = content.split('\n').filter(Boolean);
         for (const line of lines) {
           try {
-            const command = JSON.parse(line) as CEOCommand;
-            audit.logAction('ceo:command_received', { type: command.type });
-            void orchestrator.handleCeoCommand(command);
+            const command = JSON.parse(line) as OwnerCommand;
+            audit.logAction('owner:command_received', { type: command.type });
+            void orchestrator.handleOwnerCommand(command);
           } catch {
-            logger.warn('Invalid CEO command line', { line });
+            logger.warn('Invalid owner command line', { line });
           }
         }
       } catch (error) {
-        logger.warn('Error reading CEO commands', {
+        logger.warn('Error reading owner commands', {
           error: error instanceof Error ? error.message : String(error),
         });
       }
@@ -766,16 +774,16 @@ export async function startDaemonContext(): Promise<DaemonContext> {
 
     try {
       // Create the file if it doesn't exist
-      if (!existsSync(paths.ceoCommands)) {
-        writeFileSync(paths.ceoCommands, '', 'utf-8');
+      if (!existsSync(paths.ownerCommands)) {
+        writeFileSync(paths.ownerCommands, '', 'utf-8');
       }
 
-      ceoCommandWatcher = watch(paths.ceoCommands, { persistent: false }, () => {
-        processCeoCommands();
+      ownerCommandWatcher = watch(paths.ownerCommands, { persistent: false }, () => {
+        processOwnerCommands();
       });
-      logger.info('CEO command watcher started');
+      logger.info('Owner command watcher started');
     } catch {
-      logger.info('CEO command watcher not started');
+      logger.info('Owner command watcher not started');
     }
   }
 
@@ -798,7 +806,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     orchestrator,
     queue,
     canvasWatcher,
-    ceoCommandWatcher,
+    ownerCommandWatcher,
   };
 }
 
@@ -808,9 +816,9 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
 
   clearInterval(ctx.refreshInterval);
 
-  if (ctx.ceoCommandWatcher) {
-    ctx.ceoCommandWatcher.close();
-    logger.info('CEO command watcher stopped');
+  if (ctx.ownerCommandWatcher) {
+    ctx.ownerCommandWatcher.close();
+    logger.info('Owner command watcher stopped');
   }
 
   if (ctx.canvasWatcher) {

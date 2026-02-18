@@ -23,7 +23,7 @@ const baseMessage: InboundMessage = {
   sourceNodeId: 'n1',
   platform: 'telegram',
   senderId: 'u1',
-  senderIsCeo: false,
+  senderIsOwner: false,
   groupId: null,
   content: 'hello billing issue',
   contentType: 'text',

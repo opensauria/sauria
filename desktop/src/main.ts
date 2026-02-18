@@ -53,6 +53,23 @@ function machineId(): string {
     } catch {
       id = userInfo().username;
     }
+  } else if (platform() === 'linux') {
+    try {
+      id = readFileSync('/etc/machine-id', 'utf-8').trim();
+    } catch {
+      id = userInfo().username;
+    }
+  } else if (platform() === 'win32') {
+    try {
+      const raw = execSync(
+        'reg query "HKLM\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid',
+        { encoding: 'utf-8', timeout: 3000 },
+      );
+      const match = raw.match(/MachineGuid\s+REG_SZ\s+(\S+)/);
+      id = match ? match[1] : userInfo().username;
+    } catch {
+      id = userInfo().username;
+    }
   } else {
     id = userInfo().username;
   }
@@ -125,31 +142,49 @@ function isDaemonRunning(): boolean {
   return false;
 }
 
+function resolveLoginShell(): { shell: string; args: string[] } {
+  const os = platform();
+  if (os === 'win32') {
+    return { shell: 'cmd.exe', args: ['/c'] };
+  }
+  const candidates = os === 'darwin'
+    ? ['/bin/zsh', '/bin/bash']
+    : ['/bin/bash', '/bin/zsh', '/bin/sh'];
+  for (const sh of candidates) {
+    if (existsSync(sh)) return { shell: sh, args: ['-lc'] };
+  }
+  return { shell: '/bin/sh', args: ['-lc'] };
+}
+
 function resolveNodeBin(): { nodePath: string; openwindPath: string } {
   // Electron GUI doesn't inherit shell PATH. Resolve paths explicitly.
+  const { shell, args } = resolveLoginShell();
+  const whichCmd = platform() === 'win32' ? 'where' : 'which';
   try {
-    const openwindPath = execFileSync('/bin/zsh', ['-lc', 'which openwind'], {
+    const openwindPath = execFileSync(shell, [...args, `${whichCmd} openwind`], {
       encoding: 'utf-8',
       timeout: 5000,
-    }).trim();
-    const nodePath = execFileSync('/bin/zsh', ['-lc', 'which node'], {
+    }).trim().split('\n')[0];
+    const nodePath = execFileSync(shell, [...args, `${whichCmd} node`], {
       encoding: 'utf-8',
       timeout: 5000,
-    }).trim();
+    }).trim().split('\n')[0];
     return { nodePath, openwindPath };
   } catch {
-    // Fallback for common nvm setup
-    const home = homedir();
-    const nvmDir = join(home, '.nvm', 'versions', 'node');
-    if (existsSync(nvmDir)) {
-      const versions = require('fs').readdirSync(nvmDir) as string[];
-      const latest = versions.sort().reverse()[0];
-      if (latest) {
-        const binDir = join(nvmDir, latest, 'bin');
-        return {
-          nodePath: join(binDir, 'node'),
-          openwindPath: join(binDir, 'openwind'),
-        };
+    // Fallback for common nvm setup (Unix only)
+    if (platform() !== 'win32') {
+      const home = homedir();
+      const nvmDir = join(home, '.nvm', 'versions', 'node');
+      if (existsSync(nvmDir)) {
+        const versions = require('fs').readdirSync(nvmDir) as string[];
+        const latest = versions.sort().reverse()[0];
+        if (latest) {
+          const binDir = join(nvmDir, latest, 'bin');
+          return {
+            nodePath: join(binDir, 'node'),
+            openwindPath: join(binDir, 'openwind'),
+          };
+        }
       }
     }
     return { nodePath: 'node', openwindPath: 'openwind' };
@@ -1005,21 +1040,93 @@ ipcMain.handle('stop-daemon', () => {
   return { running: false };
 });
 
-// ─── CEO Profile ────────────────────────────────────────────────────────
+// ─── Owner Profile ──────────────────────────────────────────────────────
 
-ipcMain.handle('get-ceo-profile', () => {
-  let fullName = userInfo().username;
+function resolveOwnerFullName(): string {
+  const fallback = userInfo().username;
   try {
-    if (platform() === 'darwin') {
+    const os = platform();
+    if (os === 'darwin') {
       const name = execFileSync('/usr/bin/id', ['-F'], {
         encoding: 'utf-8',
         timeout: 3000,
       }).trim();
-      if (name) fullName = name;
+      if (name) return name;
+    } else if (os === 'linux') {
+      const gecos = execFileSync('/usr/bin/getent', ['passwd', fallback], {
+        encoding: 'utf-8',
+        timeout: 3000,
+      }).trim();
+      const field = gecos.split(':')[4]?.split(',')[0]?.trim();
+      if (field) return field;
+    } else if (os === 'win32') {
+      const raw = execFileSync('net', ['user', fallback], {
+        encoding: 'utf-8',
+        timeout: 3000,
+      });
+      const match = raw.match(/Full Name\s+(.*)/i);
+      const name = match?.[1]?.trim();
+      if (name) return name;
     }
   } catch {
     /* fallback to username */
   }
+  return fallback;
+}
+
+function resolveOwnerPhoto(): string | null {
+  try {
+    const os = platform();
+
+    if (os === 'darwin') {
+      const raw = execFileSync('/usr/bin/dscl', ['.', '-read', `/Users/${userInfo().username}`, 'JPEGPhoto'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+        maxBuffer: 2 * 1024 * 1024,
+      });
+      const hex = raw.split('\n').slice(1).join('').replace(/\s+/g, '');
+      if (hex.length > 0) {
+        return `data:image/jpeg;base64,${Buffer.from(hex, 'hex').toString('base64')}`;
+      }
+    } else if (os === 'linux') {
+      const facePath = join(homedir(), '.face');
+      if (existsSync(facePath)) {
+        const buf = readFileSync(facePath);
+        if (buf.length > 0) {
+          const isPng = buf[0] === 0x89 && buf[1] === 0x50;
+          const mime = isPng ? 'image/png' : 'image/jpeg';
+          return `data:${mime};base64,${buf.toString('base64')}`;
+        }
+      }
+    } else if (os === 'win32') {
+      const picDir = join(homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'AccountPictures');
+      if (existsSync(picDir)) {
+        const raw = execFileSync('powershell', [
+          '-NoProfile', '-Command',
+          `Get-ChildItem '${picDir}' -Filter *.accountpicture-ms | Sort-Object Length -Descending | Select-Object -First 1 -ExpandProperty FullName`,
+        ], { encoding: 'utf-8', timeout: 5000 }).trim();
+        if (raw && existsSync(raw)) {
+          const buf = readFileSync(raw);
+          const jpegStart = buf.indexOf(Buffer.from([0xFF, 0xD8, 0xFF]));
+          if (jpegStart >= 0) {
+            const jpegEnd = buf.indexOf(Buffer.from([0xFF, 0xD9]), jpegStart);
+            if (jpegEnd >= 0) {
+              const jpeg = buf.subarray(jpegStart, jpegEnd + 2);
+              return `data:image/jpeg;base64,${jpeg.toString('base64')}`;
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    /* no profile photo */
+  }
+  return null;
+}
+
+ipcMain.handle('get-owner-profile', () => {
+  const fullName = resolveOwnerFullName();
+  const photo = resolveOwnerPhoto();
 
   let customInstructions = '';
   const claudeMdPath = join(homedir(), '.claude', 'CLAUDE.md');
@@ -1031,7 +1138,7 @@ ipcMain.handle('get-ceo-profile', () => {
     }
   }
 
-  return { fullName, customInstructions };
+  return { fullName, photo, customInstructions };
 });
 
 // ─── Canvas Graph Persistence ───────────────────────────────────────────
@@ -1081,7 +1188,7 @@ interface CanvasWorkspace {
     platform: string;
     groupId: string;
     name: string;
-    ceoMemberId: string;
+    ownerMemberId: string;
     autoCreated: boolean;
   }>;
 }
@@ -1122,7 +1229,7 @@ ipcMain.handle('show-canvas', () => {
   showCanvasWindow();
 });
 
-ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
+ipcMain.handle('execute-owner-command', async (_event, command: string) => {
   const trimmed = command.trim();
   if (!trimmed) {
     return { parsed: true, type: 'unknown', target: null, message: trimmed };
@@ -1133,7 +1240,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
     type: string;
     target: string | null;
     message: string;
-    ceoCommand?: Record<string, unknown>;
+    ownerCommand?: Record<string, unknown>;
   };
 
   let result: ParsedCommand | null = null;
@@ -1151,7 +1258,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
       type: 'promote',
       target: promoteMatch[1] ?? null,
       message: promoteMatch[2] ?? '',
-      ceoCommand: cmd,
+      ownerCommand: cmd,
     };
   }
 
@@ -1165,7 +1272,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'reassign',
         target: reassignMatch[1] ?? null,
         message: reassignMatch[2] ?? '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1180,7 +1287,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'pause',
         target: pauseMatch[1] ?? null,
         message: '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1195,7 +1302,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'review',
         target: reviewMatch[1] ?? null,
         message: '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1215,7 +1322,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'hire',
         target: hireMatch[2] ?? null,
         message: `${hireMatch[1] ?? ''} ${hireMatch[3] ?? ''}`,
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1230,7 +1337,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'fire',
         target: fireMatch[1] ?? null,
         message: '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1245,7 +1352,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'instruct',
         target: agentMatch[1] ?? null,
         message: agentMatch[2] ?? '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1260,7 +1367,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'broadcast',
         target: wsMatch[1] ?? null,
         message: wsMatch[2] ?? '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1269,12 +1376,12 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
     return { parsed: true, type: 'unknown', target: null, message: trimmed };
   }
 
-  // Write CEO command to JSONL file for daemon to pick up
-  if (result.ceoCommand && isDaemonRunning()) {
+  // Write owner command to JSONL file for daemon to pick up
+  if (result.ownerCommand && isDaemonRunning()) {
     try {
-      const cmdLine = JSON.stringify(result.ceoCommand) + '\n';
+      const cmdLine = JSON.stringify(result.ownerCommand) + '\n';
       const { appendFileSync } = require('fs') as typeof import('fs');
-      const cmdPath = join(OPENWIND_HOME, 'ceo-commands.jsonl');
+      const cmdPath = join(OPENWIND_HOME, 'owner-commands.jsonl');
       appendFileSync(cmdPath, cmdLine, 'utf-8');
     } catch {
       // Best-effort — daemon may not be running

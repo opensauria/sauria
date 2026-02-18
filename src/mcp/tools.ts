@@ -118,7 +118,7 @@ export const TOOL_DEFS = {
     schema: rememberSchema,
   },
   openwind_pending_approvals: {
-    description: 'List all pending approval requests from agents that require CEO authorization',
+    description: 'List all pending approval requests from agents that require owner authorization',
     schema: pendingApprovalsSchema,
   },
   openwind_approve: {

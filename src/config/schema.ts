@@ -76,7 +76,7 @@ const EmailChannelSchema = z
   })
   .default({ enabled: false, imapPort: 993, smtpPort: 587, tls: true });
 
-const CEOIdentitySchema = z
+const OwnerIdentitySchema = z
   .object({
     telegram: z.object({ userId: z.number().int() }).optional(),
     slack: z.object({ userId: z.string() }).optional(),
@@ -172,7 +172,7 @@ export const OpenWindConfigSchema = z
       discord: { enabled: false },
       email: { enabled: false, imapPort: 993, smtpPort: 587, tls: true },
     }),
-    ceo: CEOIdentitySchema,
+    owner: OwnerIdentitySchema,
     orchestrator: OrchestratorConfigSchema,
   })
   .strict();
@@ -181,7 +181,7 @@ export type OpenWindConfig = z.infer<typeof OpenWindConfigSchema>;
 export type ModelConfig = z.infer<typeof ModelConfigSchema>;
 export type AuthConfig = z.infer<typeof AuthConfigSchema>;
 export type McpServerConfig = z.infer<typeof McpServerConfigSchema>;
-export type CEOIdentityConfig = z.infer<typeof CEOIdentitySchema>;
+export type OwnerIdentityConfig = z.infer<typeof OwnerIdentitySchema>;
 export type OrchestratorConfig = z.infer<typeof OrchestratorConfigSchema>;
 
 export { ModelConfigSchema, AuthConfigSchema, McpServerConfigSchema, ChannelsConfigSchema };
