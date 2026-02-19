@@ -119,12 +119,10 @@ export class AgentOrchestrator {
       await this.queuePendingApprovals(node, pendingApproval);
     }
 
-    // Step 3: If no rules matched and LLM edges exist, defer to LLM routing
-    const hasLlmEdges = this.graph.edges.some(
-      (e) => e.from === node.id && e.rules.some((r) => r.type === 'llm_decided'),
-    );
-
-    if (hasLlmEdges && ruleActions.length === 0 && this.brain) {
+    // Step 3: If no rules matched, defer to LLM routing brain as fallback
+    // The brain generates a direct reply even when no explicit LLM edges exist,
+    // ensuring the orchestrator never silently drops messages.
+    if (ruleActions.length === 0 && this.brain) {
       const workspace = this.findWorkspace(node.id);
       const teamNodes = workspace
         ? this.graph.nodes.filter((n) => n.workspaceId === workspace.id)
