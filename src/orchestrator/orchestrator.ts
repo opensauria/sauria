@@ -393,6 +393,23 @@ export class AgentOrchestrator {
       }
       case 'reply': {
         await this.registry.sendTo(source.sourceNodeId, action.content, source.groupId);
+        if (this.agentMemory) {
+          const conversationId = this.agentMemory.getOrCreateConversation(
+            source.platform,
+            source.groupId,
+            [source.sourceNodeId],
+          );
+          this.agentMemory.recordMessage({
+            conversationId,
+            sourceNodeId: source.sourceNodeId,
+            senderId: source.sourceNodeId,
+            senderIsOwner: false,
+            platform: source.platform,
+            groupId: source.groupId,
+            content: action.content,
+            contentType: 'text',
+          });
+        }
         break;
       }
       case 'group_message': {
