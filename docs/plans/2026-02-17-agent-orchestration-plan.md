@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Transform OpenWind from a single-channel Telegram bot into a multi-agent company engine where AI agents collaborate across platforms through group chats, shared knowledge, and task delegation, with the user as CEO.
+**Goal:** Transform OpenSauria from a single-channel Telegram bot into a multi-agent company engine where AI agents collaborate across platforms through group chats, shared knowledge, and task delegation, with the user as CEO.
 
 **Architecture:** Orchestrator pattern with ChannelRegistry, per-workspace message queues, hybrid local/cloud model routing, and worker thread isolation. Canvas UI gets workspace frames, agent detail panels, and CEO command bar.
 
@@ -441,23 +441,23 @@ Create: `src/config/__tests__/workspace-schema.test.ts`
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { OpenWindConfigSchema } from '../schema.js';
+import { OpenSauriaConfigSchema } from '../schema.js';
 
 describe('workspace config schema', () => {
   it('accepts config with ceo identity', () => {
-    const config = OpenWindConfigSchema.parse({
+    const config = OpenSauriaConfigSchema.parse({
       ceo: { telegram: { userId: 123456 } },
     });
     expect(config.ceo.telegram?.userId).toBe(123456);
   });
 
   it('defaults ceo to empty object', () => {
-    const config = OpenWindConfigSchema.parse({});
+    const config = OpenSauriaConfigSchema.parse({});
     expect(config.ceo).toEqual({});
   });
 
   it('accepts orchestrator config with model tiers', () => {
-    const config = OpenWindConfigSchema.parse({
+    const config = OpenSauriaConfigSchema.parse({
       orchestrator: {
         localModel: { engine: 'ollama', model: 'llama3.2', useGpu: true },
         maxConcurrentWorkspaces: 8,
@@ -468,7 +468,7 @@ describe('workspace config schema', () => {
   });
 
   it('defaults orchestrator settings', () => {
-    const config = OpenWindConfigSchema.parse({});
+    const config = OpenSauriaConfigSchema.parse({});
     expect(config.orchestrator.maxConcurrentWorkspaces).toBe(4);
   });
 });
@@ -508,7 +508,7 @@ const OrchestratorConfigSchema = z
   .default({});
 ```
 
-Add `ceo` and `orchestrator` to `OpenWindConfigSchema`:
+Add `ceo` and `orchestrator` to `OpenSauriaConfigSchema`:
 
 ```typescript
 ceo: CEOIdentitySchema,

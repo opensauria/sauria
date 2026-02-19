@@ -160,3 +160,12 @@ body {
 body.in-palette .palette-back {
   display: flex;
 }
+
+/* ── In-palette rounded window ─────────────────────────── */
+/* html background: transparent set via JS to prevent body bg propagation */
+
+body.in-palette {
+  border-radius: 12px;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  animation: fadeIn 0.15s ease;
+}

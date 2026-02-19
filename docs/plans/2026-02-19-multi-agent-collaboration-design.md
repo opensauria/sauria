@@ -1,7 +1,7 @@
 # Multi-Agent Collaboration Consolidation
 
 **Date:** 2026-02-19
-**Goal:** Make OpenWind's multi-agent architecture a real advantage over single-agent systems (OpenClaw) by enabling context sharing, shared memory, and conversation visibility between agents.
+**Goal:** Make OpenSauria's multi-agent architecture a real advantage over single-agent systems (OpenClaw) by enabling context sharing, shared memory, and conversation visibility between agents.
 
 ## Problem
 

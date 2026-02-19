@@ -930,7 +930,7 @@ textarea.brain-detail-value.editable {
 /* ── In-Palette Mode (frameless window, no titlebar inset) ─────────── */
 
 body.in-palette {
-  background: #0a0a0a !important;
+  /* transparent background handled by shared.css for corner radius */
 }
 
 .in-palette .brain-layout {

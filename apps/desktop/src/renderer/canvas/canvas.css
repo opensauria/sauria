@@ -1762,7 +1762,7 @@
 /* ── In-Palette Mode ────────────────────── */
 
 body.in-palette {
-  background: #0a0a0a !important;
+  /* transparent background handled by shared.css for corner radius */
 }
 
 body.in-palette .titlebar-drag {
