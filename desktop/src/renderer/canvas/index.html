@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="./canvas.css" />
   </head>
   <body>
+    <button class="palette-back" id="palette-back" title="Back">
+      <img src="/icons/chevron-left.svg" alt="" />
+    </button>
+
     <div class="titlebar-drag"></div>
 
     <div class="canvas-viewport" id="viewport">
@@ -2756,6 +2760,28 @@
         var b = parseInt(hex.slice(5, 7), 16);
         return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
       }
+
+      /* ── In-Palette Mode ────────────────────────── */
+      var isInPalette = new URLSearchParams(window.location.search).has('inPalette');
+      if (isInPalette) {
+        document.body.classList.add('in-palette');
+        document.getElementById('palette-back').addEventListener('click', function () {
+          window.openwind.navigateBack();
+        });
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && isInPalette) {
+          var agentPanel = document.getElementById('agent-detail-panel');
+          var wsPanel = document.getElementById('workspace-detail-panel');
+          var wsDialog = document.getElementById('ws-dialog-overlay');
+          if (agentPanel.classList.contains('open')) return;
+          if (wsPanel.classList.contains('open')) return;
+          if (wsDialog && wsDialog.classList.contains('open')) return;
+          e.preventDefault();
+          window.openwind.navigateBack();
+        }
+      });
 
       /* Boot */
       init();

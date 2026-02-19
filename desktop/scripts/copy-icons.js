@@ -73,6 +73,7 @@ const lucideIcons = [
   'calendar',
   'link',
   'database',
+  'share-2',
 ];
 
 for (const name of lucideIcons) {

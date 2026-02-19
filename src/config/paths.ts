@@ -16,6 +16,7 @@ export const paths = {
   canvas: join(OPENWIND_HOME, 'canvas.json'),
   ownerCommands: join(OPENWIND_HOME, 'owner-commands.jsonl'),
   pidFile: join(OPENWIND_HOME, 'daemon.pid'),
+  socket: join(OPENWIND_HOME, 'daemon.sock'),
 } as const;
 
 export type PathKey = keyof typeof paths;

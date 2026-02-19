@@ -141,3 +141,39 @@ body {
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
 }
+
+/* ── Palette Back Button (shared across all in-palette views) ─── */
+
+.palette-back {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 600;
+  padding: 0;
+  transition: background 0.15s ease;
+  -webkit-app-region: no-drag;
+}
+
+.palette-back:hover {
+  background: var(--surface-hover);
+}
+
+.palette-back img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert();
+  opacity: 0.6;
+}
+
+body.in-palette .palette-back {
+  display: flex;
+}
