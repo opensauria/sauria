@@ -29,56 +29,98 @@ Desktop (Electron) ──► Canvas UI (agent cards, edges, workspaces)
 
 - **Runtime**: Node.js 24+, ESM only
 - **Language**: TypeScript strict mode (`verbatimModuleSyntax`, `noUncheckedIndexedAccess`)
+- **Monorepo**: pnpm workspaces + Turborepo (`pnpm-workspace.yaml`, `turbo.json`)
 - **Database**: SQLite via `better-sqlite3` (encrypted at rest)
 - **AI Providers**: Anthropic (OAuth or API key), OpenAI, Google, Ollama (local)
 - **Desktop**: Electron + Electron Forge (no framework, vanilla HTML/CSS/JS)
-- **Build**: `tsdown` for CLI bundle, Vite (via `@electron-forge/plugin-vite`) for desktop
+- **Build**: `tsdown` for daemon CLI bundle, Vite (via `@electron-forge/plugin-vite`) for desktop
 - **Test**: Vitest
 - **Validation**: Zod schemas
 
 ## Project Structure
 
 ```
-src/
-  ai/              # Multi-provider router, extraction, reasoning
-  auth/            # OAuth PKCE, API key validation, onboarding
-  channels/        # Telegram, Slack, WhatsApp, Discord, Email, base interface, registry
-  config/          # Zod schema, loader, paths
-  db/              # SQLite schema, world-model queries, search
-  engine/          # Proactive alerts, deadlines, pattern detection
-  ingestion/       # Pipeline, normalizer, dedup, MCP/email/calendar sources
-  mcp/             # MCP server (7 tools), MCP client manager
-  orchestrator/    # Orchestrator, LLM router, autonomy, message queue, types
-  security/        # Vault, crypto, audit, rate limiter, PII scrubber, sanitize
-  setup/           # Silent setup, daemon service, MCP client detection
-  utils/           # Logger, budget tracker, version
-  cli.ts           # Commander CLI entry point
-  daemon.ts        # Daemon process entry point
-  daemon-lifecycle.ts  # Start/stop daemon context (main integration file)
+apps/
+  daemon/                          # Node.js daemon (CLI + background process)
+    src/
+      ai/                          # Multi-provider router, extraction, reasoning
+      auth/                        # OAuth PKCE, API key validation, onboarding
+      channels/                    # Telegram, Slack, WhatsApp, Discord, Email, registry
+      config/                      # Zod schema, loader (re-exports @openwind/config)
+      db/                          # SQLite schema, world-model queries, search
+      engine/                      # Proactive alerts, deadlines, pattern detection
+      ingestion/                   # Pipeline, normalizer, dedup, MCP/email/calendar
+      mcp/                         # MCP server (7 tools), MCP client manager
+      orchestrator/                # Orchestrator, LLM router, autonomy, message queue
+      security/                    # Audit, rate limiter, PII scrubber, sanitize
+      setup/                       # Silent setup, daemon service, MCP client detection
+      utils/                       # Logger, budget tracker, version
+      cli.ts                       # Commander CLI entry point
+      daemon.ts                    # Daemon process entry point
+      daemon-lifecycle.ts          # Start/stop daemon context
+    package.json  tsconfig.json  vitest.config.ts
 
-desktop/
-  src/
-    main.ts            # Electron main process, IPC handlers, vault
-    preload.ts         # Context bridge
-    window-canvas.ts   # Canvas window factory
-    window-palette.ts  # Command palette window
-    window-setup.ts    # Setup wizard window
-    renderer/
-      canvas/
-        index.html     # Agent canvas (inline JS, spring physics)
-        canvas.css     # Canvas styles
-        main.ts        # Module entry point (Phase 2)
-      palette/
-        index.html     # Command palette UI
-        main.ts        # Module entry point (Phase 2)
-      setup/
-        index.html     # Setup wizard UI
-        main.ts        # Module entry point (Phase 2)
-      shared.css       # Design tokens and shared components
-  public/
-    icons/             # Brand + UI icons (copied by build script)
-  scripts/
-    copy-icons.js      # Icon build pipeline
+  desktop/                         # Electron app
+    src/
+      main/                        # Main process (decomposed from monolithic main.ts)
+        app.ts                     # Lifecycle, tray, shortcuts (~145 lines)
+        daemon-manager.ts          # Spawn, kill, health check
+        ipc-setup.ts               # Setup/configure/validate handlers
+        ipc-oauth.ts               # OAuth PKCE flow (Anthropic)
+        ipc-canvas.ts              # Canvas graph handlers
+        ipc-channels.ts            # Channel connect/disconnect
+        ipc-commands.ts            # Palette command execution
+        ipc-brain.ts               # Brain query forwarding
+        channel-connectors.ts      # Platform-specific connector functions
+        daemon-client.ts           # Unix socket client
+        owner-profile.ts           # OS profile resolution
+        mcp-detection.ts           # MCP client detection
+        local-providers.ts         # Local AI provider detection
+      preload.ts                   # Context bridge
+      window-canvas.ts             # Canvas window factory
+      window-palette.ts            # Command palette window
+      window-setup.ts              # Setup wizard window
+      window-brain.ts              # Brain knowledge window
+      renderer/
+        canvas/index.html          # Agent canvas (inline JS, spring physics)
+        canvas/canvas.css          # Canvas styles
+        palette/index.html         # Command palette UI
+        setup/index.html           # Setup wizard UI
+        brain/index.html           # Brain knowledge graph UI
+        shared.css                 # Imports @openwind/design-tokens + shared components
+    public/icons/                  # Brand + UI icons (copied by build script)
+    scripts/copy-icons.js          # Icon build pipeline
+    package.json  forge.config.ts  vite.*.config.ts
+
+packages/
+  types/                           # @openwind/types (zero deps)
+    src/                           # CanvasGraph, AgentNode, Edge, auth, IPC types
+  config/                          # @openwind/config (deps: zod, @openwind/types)
+    src/                           # paths.ts, schema.ts, defaults.ts
+  vault/                           # @openwind/vault (deps: @openwind/config)
+    src/                           # machine-id, derive-password, crypto, fs-sandbox
+  ipc-protocol/                    # @openwind/ipc-protocol (deps: zod, @openwind/types)
+    src/                           # IPC methods, owner command parsing
+  design-tokens/                   # @openwind/design-tokens (zero deps)
+    src/tokens.ts                  # Typed source of truth
+    generated/tokens.css           # CSS custom properties (generated)
+    generated/tokens.json          # JSON (generated)
+
+pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
+```
+
+### Dependency Graph
+
+```
+                @openwind/types (zero deps)
+                /      |       \
+               /       |        \
+@openwind/config  @openwind/ipc-protocol  @openwind/design-tokens
+       |
+@openwind/vault
+       \              /
+        \            /
+     apps/daemon    apps/desktop
 ```
 
 ## Key Conventions
@@ -127,7 +169,7 @@ desktop/
   - Token endpoint expects **JSON body**, not form-urlencoded
   - Code from Anthropic is `code#state` — must split and send both in token exchange
   - Tokens stored in vault as `anthropic-oauth.enc`
-  - Constants defined in `desktop/src/main.ts` (`ANTHROPIC_OAUTH`) and `src/auth/oauth.ts`
+  - Constants defined in `apps/desktop/src/main/ipc-oauth.ts` (`ANTHROPIC_OAUTH`) and `apps/daemon/src/auth/oauth.ts`
 - **API key**: stored in vault as `<provider>-api-key.enc`
 - **Local**: no credentials needed (Ollama, LM Studio)
 - Desktop and daemon share the same vault format and key derivation
@@ -138,7 +180,7 @@ desktop/
 - Schema applied on startup via `applySchema(db)`
 - Tables: `entities`, `relations`, `events`, `observations`, `agent_messages`, `agent_conversations`, `agent_memory`, `agent_tasks`
 - FTS5 for full-text search
-- **Embeddings**: `src/ai/embeddings.ts` imports `@huggingface/transformers` but the package was removed from `package.json`. Semantic search is broken until embeddings are migrated (to local Python model or re-added as dependency).
+- **Embeddings**: `apps/daemon/src/ai/embeddings.ts` imports `@huggingface/transformers` but the package was removed from `package.json`. Semantic search is broken until embeddings are migrated (to local Python model or re-added as dependency).
 
 ### Channels
 
@@ -171,12 +213,16 @@ desktop/
 - Linux/Windows: `faster-whisper` (`large-v3-turbo`)
 - Python venv at `~/.openwind/venv/` (managed separately from Node.js deps)
 - Config: `channels.telegram.voice.model` defaults to `'auto'` (resolves per platform)
-- `TranscriptionService` in `src/channels/transcription.ts`
+- `TranscriptionService` in `apps/daemon/src/channels/transcription.ts`
 - Max audio size: 20 MB, configurable timeout via `maxDurationSeconds`
 
 ## Desktop UI Design
 
-### Design Tokens (shared.css)
+### Design Tokens (`@openwind/design-tokens`)
+
+Source of truth: `packages/design-tokens/src/tokens.ts` (typed `as const`).
+Generated outputs: `tokens.css` (CSS custom properties), `tokens.json`.
+Desktop `shared.css` imports via `@import '@openwind/design-tokens/tokens.css'`.
 
 ```
 --bg: #1a1a1a          --surface: rgba(255,255,255,0.04)
@@ -253,18 +299,28 @@ desktop/
 
 ## Electron Build
 
+- Entry point: `apps/desktop/src/main/app.ts` (thin lifecycle orchestrator)
 - Vite bundles main, preload, and renderer via `@electron-forge/plugin-vite`
-- `assets/icon.icns` is missing, so `electron-forge make` (DMG) fails
-- Dev: `cd desktop && npm run dev` (icons + electron-forge start with Vite HMR)
-- Package: `cd desktop && npm run package`
+- `assets/icon.icns` is missing, so `electron-forge make` (DMG) fails — use `package` instead
+- Dev: `cd apps/desktop && pnpm dev` (icons + electron-forge start with Vite HMR)
+- Package: `cd apps/desktop && pnpm run package`
 - Always kill all Electron processes before restart (see memory notes)
-- Daemon bundle must be rebuilt separately: `npm run build` at root (tsdown)
-- Renderer files live in `desktop/src/renderer/{canvas,palette,setup}/`
-- Icons are static assets in `desktop/public/icons/` (served at `/icons/`)
+- Daemon bundle must be rebuilt separately: `pnpm -F openwind-daemon build`
+- Renderer files live in `apps/desktop/src/renderer/{canvas,palette,setup,brain}/`
+- Icons are static assets in `apps/desktop/public/icons/` (served at `/icons/`)
 
 ## Build Checklist
 
-When changing daemon code (`src/`): `npm run build` at project root
-When changing desktop code (`desktop/src/*.ts`): Vite rebuilds automatically in dev mode
-When changing renderer files (`desktop/src/renderer/`): Vite hot-reloads in dev mode
-Full restart: kill Electron + daemon, rebuild daemon (`npm run build`), start desktop (`cd desktop && npm run dev`)
+```
+pnpm -r build                    # Build all packages + apps
+pnpm -F openwind-daemon build    # Rebuild daemon only
+pnpm -F openwind-desktop dev     # Start desktop in dev mode
+pnpm -F openwind-daemon test     # Run daemon tests
+pnpm -r typecheck                # Typecheck all packages
+```
+
+When changing shared packages (`packages/*`): rebuild with `pnpm -r build` (Turbo handles deps)
+When changing daemon code (`apps/daemon/src/`): `pnpm -F openwind-daemon build`
+When changing desktop main (`apps/desktop/src/main/`): Vite rebuilds automatically in dev mode
+When changing renderer files (`apps/desktop/src/renderer/`): Vite hot-reloads in dev mode
+Full restart: kill Electron + daemon, `pnpm -r build`, start desktop

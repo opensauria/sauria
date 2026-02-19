@@ -1,0 +1,53 @@
+{
+  "name": "@openwind/daemon",
+  "version": "1.0.0",
+  "description": "OpenWind daemon — security-first persistent cognitive kernel.",
+  "type": "module",
+  "bin": {
+    "openwind": "./dist/index.mjs"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsdown src/cli.ts src/index.ts --format esm --dts --define.OPENWIND_VERSION=\"'$npm_package_version'\"",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint:security": "grep -rn 'child_process\\|.exec(\\|eval(' src/ && exit 1 || echo 'No banned patterns'"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.76.0",
+    "@clack/prompts": "1.0.1",
+    "@modelcontextprotocol/sdk": "1.26.0",
+    "@openwind/config": "workspace:*",
+    "@openwind/ipc-protocol": "workspace:*",
+    "@openwind/types": "workspace:*",
+    "@openwind/vault": "workspace:*",
+    "better-sqlite3": "12.6.2",
+    "commander": "14.0.3",
+    "grammy": "1.40.0",
+    "imapflow": "1.2.9",
+    "json5": "2.2.3",
+    "nanoid": "5.1.6",
+    "nodemailer": "8.0.1",
+    "openai": "6.22.0",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13",
+    "@types/node": "24.10.13",
+    "@types/nodemailer": "7.0.10",
+    "tsdown": "0.20.3",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vitest": "4.0.18"
+  },
+  "license": "MIT"
+}

@@ -1,8 +1,10 @@
 {
-  "name": "openwind",
+  "name": "openwind-monorepo",
   "version": "1.0.0",
-  "description": "Security-first persistent cognitive kernel — your world, always with you.",
+  "private": true,
+  "description": "OpenWind monorepo — security-first personal AI operating system.",
   "type": "module",
+  "packageManager": "pnpm@9.15.4",
   "author": {
     "name": "Teo Bouancheau",
     "email": "t.bouancheau@gmail.com",
@@ -16,58 +18,25 @@
   "bugs": {
     "url": "https://github.com/teobouancheau/openwind/issues"
   },
-  "keywords": [
-    "cognitive-kernel",
-    "knowledge-graph",
-    "mcp",
-    "ai",
-    "personal-assistant",
-    "security-first"
-  ],
-  "bin": {
-    "openwind": "./dist/index.mjs"
-  },
   "engines": {
-    "node": ">=24"
+    "node": ">=24",
+    "pnpm": ">=9"
   },
-  "files": [
-    "dist",
-    "LICENSE",
-    "README.md"
-  ],
   "scripts": {
-    "build": "tsdown src/cli.ts src/index.ts --format esm --dts --define.OPENWIND_VERSION=\"'$npm_package_version'\"",
-    "dev": "tsx src/cli.ts",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "build": "turbo run build",
+    "build:daemon": "turbo run build --filter=@openwind/daemon",
+    "build:desktop": "turbo run build --filter=openwind-desktop",
+    "dev:daemon": "pnpm --filter @openwind/daemon run dev",
+    "dev:desktop": "pnpm --filter openwind-desktop run dev",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "lint:security": "grep -rn 'child_process\\|.exec(\\|eval(' src/ && exit 1 || echo 'No banned patterns'"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "0.76.0",
-    "@clack/prompts": "1.0.1",
-    "@modelcontextprotocol/sdk": "1.26.0",
-    "better-sqlite3": "12.6.2",
-    "commander": "14.0.3",
-    "grammy": "1.40.0",
-    "imapflow": "1.2.9",
-    "json5": "2.2.3",
-    "nanoid": "5.1.6",
-    "nodemailer": "8.0.1",
-    "openai": "6.22.0",
-    "zod": "4.3.6"
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "@types/better-sqlite3": "7.6.13",
-    "@types/node": "24.10.13",
-    "@types/nodemailer": "7.0.10",
     "prettier": "3.8.1",
-    "tsdown": "0.20.3",
-    "tsx": "4.21.0",
-    "typescript": "5.9.3",
-    "vitest": "4.0.18"
+    "turbo": "2.5.4",
+    "typescript": "5.9.3"
   },
   "license": "MIT"
 }
