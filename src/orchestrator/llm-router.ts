@@ -9,7 +9,8 @@ import type {
   Workspace,
 } from './types.js';
 import { RoutingCache, buildCacheKey } from './routing-cache.js';
-import { AgentMemory } from './agent-memory.js';
+import { AgentMemory, estimateTokens } from './agent-memory.js';
+import { searchByKeyword } from '../db/search.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ export class LLMRoutingBrain {
 
   constructor(
     private readonly router: ModelRouter,
-    db: BetterSqlite3.Database,
+    private readonly db: BetterSqlite3.Database,
     cacheTtlMs?: number,
   ) {
     this.cache = new RoutingCache(cacheTtlMs);
@@ -86,7 +87,7 @@ export class LLMRoutingBrain {
       return cached;
     }
 
-    const prompt = buildRoutingPrompt(context, this.memory);
+    const prompt = buildRoutingPrompt(context, this.memory, this.db);
     const decision = await this.callLLM(prompt, tier);
 
     this.cache.set(cacheKey, decision);
@@ -143,7 +144,11 @@ export class LLMRoutingBrain {
 
 // ─── Prompt Building ────────────────────────────────────────────────
 
-function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatMessage[] {
+function buildRoutingPrompt(
+  context: RoutingContext,
+  memory: AgentMemory,
+  db: BetterSqlite3.Database,
+): ChatMessage[] {
   const {
     message,
     sourceNode,
@@ -197,6 +202,24 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
     }
   }
 
+  let knowledgeGraphText = '';
+  const entities = searchByKeyword(db, message.content, 5);
+  if (entities.length > 0) {
+    const entityLines: string[] = [];
+    let tokenCount = 0;
+    const TOKEN_BUDGET_KNOWLEDGE = 400;
+    for (const entity of entities) {
+      const line = `- ${entity.name} (${entity.type}): ${entity.summary ?? 'no details'}`;
+      const lineTokens = estimateTokens(line);
+      if (tokenCount + lineTokens > TOKEN_BUDGET_KNOWLEDGE) break;
+      tokenCount += lineTokens;
+      entityLines.push(line);
+    }
+    if (entityLines.length > 0) {
+      knowledgeGraphText = ['Known entities:', ...entityLines].join('\n');
+    }
+  }
+
   const systemPrompt = [
     'You are the routing brain for a team of AI agents.',
     '',
@@ -215,6 +238,7 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
       : 'No prior conversation context.',
     '',
     ...(workspaceFactsText ? [workspaceFactsText, ''] : []),
+    ...(knowledgeGraphText ? [knowledgeGraphText, ''] : []),
     ...(peerMessagesText ? [peerMessagesText, ''] : []),
     ruleActionsText,
     '',
