@@ -44,7 +44,6 @@ import type {
   CanvasGraph,
   OwnerIdentity,
   OwnerCommand,
-  OwnerCommandSchema,
   AgentNode,
   InboundMessage,
   Edge,
@@ -52,7 +51,11 @@ import type {
   AutonomyLevel,
   AgentRole,
 } from './orchestrator/types.js';
-import { createEmptyGraph, DEFAULT_GROUP_BEHAVIOR } from './orchestrator/types.js';
+import {
+  createEmptyGraph,
+  DEFAULT_GROUP_BEHAVIOR,
+  OwnerCommandSchema,
+} from './orchestrator/types.js';
 
 export interface DaemonContext {
   readonly db: BetterSqlite3.Database;
