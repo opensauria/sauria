@@ -33,6 +33,7 @@ import { startMcpServer } from './mcp/server.js';
 import { getLogger } from './utils/logger.js';
 import { recordSpend, isOverBudget } from './utils/budget.js';
 import { paths } from './config/paths.js';
+import { startIpcServer, type DaemonIpcServer } from './daemon-ipc.js';
 import { ChannelRegistry } from './channels/registry.js';
 import { AgentOrchestrator } from './orchestrator/orchestrator.js';
 import { LLMRoutingBrain } from './orchestrator/llm-router.js';
@@ -69,6 +70,7 @@ export interface DaemonContext {
   readonly registry: ChannelRegistry | null;
   readonly orchestrator: AgentOrchestrator | null;
   readonly queue: MessageQueue | null;
+  readonly ipcServer: DaemonIpcServer;
   readonly canvasWatcher: FSWatcher | null;
   readonly ownerCommandWatcher: FSWatcher | null;
 }
@@ -672,6 +674,8 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   });
   logger.info('MCP server started on stdio');
 
+  const ipcServer = startIpcServer(paths.socket, db);
+
   const refreshInterval = setInterval(() => {
     void refreshOAuthTokenIfNeeded('anthropic');
   }, 1_800_000);
@@ -822,6 +826,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     engine,
     mcpServer,
     refreshInterval,
+    ipcServer,
     registry,
     orchestrator,
     queue,
@@ -861,6 +866,8 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
 
   await ctx.mcpClients.disconnectAll();
   logger.info('MCP clients disconnected');
+
+  await ctx.ipcServer.close();
 
   ctx.audit.logAction('daemon:stop', {});
   closeDatabase(ctx.db);

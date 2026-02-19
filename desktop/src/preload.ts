@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('openwind', {
   completeOAuth: (code: string) => ipcRenderer.invoke('complete-oauth', code),
   executeCommand: (id: string) => ipcRenderer.invoke('execute-command', id),
   hidePalette: () => ipcRenderer.invoke('hide-palette'),
+  navigateBack: () => ipcRenderer.invoke('navigate-back'),
   onCommandResult: (cb: (result: string) => void) =>
     ipcRenderer.on('command-result', (_event, result: string) => cb(result)),
   onPaletteShow: (cb: () => void) => ipcRenderer.on('palette-show', () => cb()),

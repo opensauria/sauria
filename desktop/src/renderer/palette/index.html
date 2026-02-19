@@ -436,6 +436,26 @@
         color: #34d399;
       }
 
+      /* ── Section header ───────────────── */
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px 4px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: rgba(255, 255, 255, 0.2);
+      }
+
+      .section-header .section-line {
+        flex: 1;
+        height: 0.5px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
       /* ── Footer ─────────────────────── */
 
       .footer {
@@ -477,6 +497,35 @@
         font-size: 10px;
         letter-spacing: 0.5px;
         color: rgba(255, 255, 255, 0.2);
+      }
+
+      .settings-btn {
+        width: 24px;
+        height: 24px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        margin-right: -4px;
+        transition: background 0.1s ease;
+        flex-shrink: 0;
+      }
+
+      .settings-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .settings-btn.active {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .settings-btn svg {
+        width: 14px;
+        height: 14px;
       }
 
       /* ── Provider status ────────────── */
@@ -648,19 +697,25 @@
         <span><kbd>&crarr;</kbd> Run</span>
         <span><kbd>esc</kbd></span>
         <span class="wind-label">OpenWind</span>
+        <button class="settings-btn" id="settings-btn" title="Developer settings">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+            <circle cx="12" cy="12" r="3" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          </svg>
+        </button>
       </div>
     </div>
 
     <script>
       var icons = {
         canvas:
-          '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><rect x="8" y="14" width="7" height="7" rx="1.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M10 6.5h4M17.5 10v4M11.5 14v-4" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 2"/></svg>',
+          '<svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="6" r="2.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><circle cx="19" cy="6" r="2.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><circle cx="12" cy="18" r="2.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M7.5 6h9M6.2 8.3l4.6 7.9M17.8 8.3l-4.6 7.9" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-linecap="round"/></svg>',
         status:
           '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M12 7v5l3 3" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
         telegram:
           '<svg viewBox="0 0 24 24"><path d="M9.04 15.6l-.39 5.36c.56 0 .8-.24 1.1-.52l2.63-2.5 5.45 3.97c1 .55 1.7.26 1.97-.92l3.57-16.67C23.71 2.7 22.85 2.14 21.9 2.5L1.4 10.17c-1.63.64-1.6 1.56-.28 1.98l5.1 1.58L19.5 5.8c.6-.38 1.15-.17.7.2L9.04 15.6z" fill="#27A7E7"/></svg>',
         setup:
-          '<svg viewBox="0 0 24 24" fill="none"><path d="M12 2a3 3 0 00-3 3v1a3 3 0 006 0V5a3 3 0 00-3-3z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M19 9h-2a3 3 0 000 6h2a3 3 0 000-6z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M5 15h2a3 3 0 000-6H5a3 3 0 000 6z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M12 18a3 3 0 00-3 3M12 18a3 3 0 013 3" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
+          '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13l.75 2.25L22 16l-2.25.75L19 19l-.75-2.25L16 16l2.25-.75L19 13z" stroke="rgba(255,255,255,0.35)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
         audit:
           '<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M9 7h6M9 11h6M9 15h4" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
         doctor:
@@ -668,21 +723,26 @@
         docs: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
         quit: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v9" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/><path d="M18.36 6.64A9 9 0 0112 21a9 9 0 01-6.36-2.36A9 9 0 015.64 6.64" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
         brain:
-          '<svg viewBox="0 0 24 24" fill="none"><path d="M12 2a7 7 0 00-4.6 12.3A2 2 0 006 16v1a2 2 0 002 2h8a2 2 0 002-2v-1a2 2 0 00-1.4-1.7A7 7 0 0012 2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M9 21v1M15 21v1M10 11h.01M14 11h.01" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
+          '<svg viewBox="0 0 24 24" fill="none"><path d="M12 5a3 3 0 10-5.997.125A4 4 0 003 9a4 4 0 001.4 3.04A3.5 3.5 0 005 15a3.5 3.5 0 002.84 3.44A3 3 0 0011 21h1a3 3 0 003.16-2.56A3.5 3.5 0 0019 15a3.5 3.5 0 00-.6-2.96A4 4 0 0021 9a4 4 0 00-2.99-3.87A3 3 0 0012 5z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 5v16" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-linecap="round"/><path d="M9.5 8a5.5 5.5 0 00-4.13 4M14.5 8a5.5 5.5 0 014.13 4" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-linecap="round"/></svg>',
       };
 
-      var commands = [
+      var mainCommands = [
         { id: 'canvas', label: 'Agent Canvas', hint: '' },
         { id: 'brain', label: 'Brain', hint: 'knowledge graph' },
         { id: 'telegram', label: 'Telegram', hint: 'channel' },
         { id: 'setup', label: 'AI Provider', hint: 'config' },
-        { id: 'status', label: 'Status', hint: 'system' },
-        { id: 'doctor', label: 'Health Check', hint: 'system' },
-        { id: 'audit', label: 'Audit Log', hint: 'security' },
-        { id: 'docs', label: 'Documentation', hint: 'help' },
         { id: 'quit', label: 'Quit', hint: '' },
       ];
 
+      var devCommands = [
+        { id: 'status', label: 'Daemon Status', hint: '' },
+        { id: 'doctor', label: 'Health Check', hint: '' },
+        { id: 'audit', label: 'Audit Log', hint: '' },
+        { id: 'docs', label: 'Documentation', hint: '' },
+      ];
+
+      var commands = mainCommands;
+      var devMode = false;
       var inSubView = false;
       var selectedIndex = 0;
       var filtered = commands.slice();
@@ -701,6 +761,18 @@
       var tgSubmit = document.getElementById('tg-submit');
       var tgCancel = document.getElementById('tg-cancel');
       var tgStatus = document.getElementById('tg-status');
+      var settingsBtn = document.getElementById('settings-btn');
+
+      function toggleDevMode() {
+        devMode = !devMode;
+        commands = devMode ? devCommands : mainCommands;
+        selectedIndex = 0;
+        searchEl.value = '';
+        settingsBtn.classList.toggle('active', devMode);
+        searchEl.placeholder = devMode ? 'Developer tools...' : 'Search commands...';
+        render();
+        searchEl.focus();
+      }
 
       function render() {
         var query = searchEl.value.toLowerCase();
@@ -719,28 +791,31 @@
         }
         listEl.style.display = 'block';
         emptyEl.style.display = 'none';
-        listEl.innerHTML = filtered
-          .map(function (c, i) {
-            var cls = 'command-row' + (i === selectedIndex ? ' selected' : '');
-            return (
-              '<div class="' +
-              cls +
-              '" data-index="' +
-              i +
-              '">' +
-              '<div class="icon">' +
-              icons[c.id] +
-              '</div>' +
-              '<div class="label">' +
-              c.label +
-              '</div>' +
-              '<div class="hint">' +
-              c.hint +
-              '</div>' +
-              '</div>'
-            );
-          })
-          .join('');
+        var header = devMode
+          ? '<div class="section-header"><span>Developer</span><span class="section-line"></span></div>'
+          : '';
+        listEl.innerHTML =
+          header +
+          filtered
+            .map(function (c, i) {
+              var cls = 'command-row' + (i === selectedIndex ? ' selected' : '');
+              return (
+                '<div class="' +
+                cls +
+                '" data-index="' +
+                i +
+                '">' +
+                '<div class="icon">' +
+                icons[c.id] +
+                '</div>' +
+                '<div class="label">' +
+                c.label +
+                '</div>' +
+                (c.hint ? '<div class="hint">' + c.hint + '</div>' : '') +
+                '</div>'
+              );
+            })
+            .join('');
       }
 
       function enterSubView() {
@@ -755,6 +830,12 @@
         backBtn.classList.add('hidden');
         tgForm.className = 'telegram-form';
         resultEl.className = 'result-panel';
+        if (devMode) {
+          devMode = false;
+          commands = mainCommands;
+          settingsBtn.classList.remove('active');
+          searchEl.placeholder = 'Search commands...';
+        }
         render();
         searchEl.focus();
       }
@@ -939,9 +1020,21 @@
         exitSubView();
       });
 
+      settingsBtn.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        if (inSubView) exitSubView();
+        toggleDevMode();
+      });
+
       searchEl.addEventListener('input', function () {
         selectedIndex = 0;
         if (inSubView) exitSubView();
+        if (devMode) {
+          devMode = false;
+          commands = mainCommands;
+          settingsBtn.classList.remove('active');
+          searchEl.placeholder = 'Search commands...';
+        }
         render();
       });
 
@@ -966,6 +1059,13 @@
           e.preventDefault();
           if (inSubView) {
             exitSubView();
+          } else if (devMode) {
+            devMode = false;
+            commands = mainCommands;
+            selectedIndex = 0;
+            settingsBtn.classList.remove('active');
+            searchEl.placeholder = 'Search commands...';
+            render();
           } else if (searchEl.value !== '') {
             searchEl.value = '';
             selectedIndex = 0;
@@ -1022,6 +1122,10 @@
       window.openwind.onPaletteReset(function () {
         searchEl.value = '';
         selectedIndex = 0;
+        devMode = false;
+        commands = mainCommands;
+        settingsBtn.classList.remove('active');
+        searchEl.placeholder = 'Search commands...';
         resultEl.className = 'result-panel';
         tgForm.className = 'telegram-form';
         render();
@@ -1048,7 +1152,7 @@
       refreshProviderStatus();
 
       window.openwind.getTelegramStatus().then(function (status) {
-        var tgCmd = commands.find(function (c) {
+        var tgCmd = mainCommands.find(function (c) {
           return c.id === 'telegram';
         });
         if (!tgCmd) return;
@@ -1058,7 +1162,7 @@
         }).length;
         if (count > 0) {
           tgCmd.hint = count === 1 ? 'connected' : count + ' bots';
-          render();
+          if (!devMode) render();
         }
       });
     </script>

@@ -9,6 +9,11 @@
         -webkit-app-region: drag;
       }
 
+      body.in-palette {
+        background: #0a0a0a !important;
+        -webkit-app-region: no-drag;
+      }
+
       .container {
         padding: 48px 40px 40px;
         height: 100vh;
@@ -290,6 +295,10 @@
     </style>
   </head>
   <body>
+    <button class="palette-back" id="palette-back" title="Back">
+      <img src="/icons/chevron-left.svg" alt="" />
+    </button>
+
     <div class="container">
       <!-- Step 1: Welcome -->
       <div class="step active" id="step-welcome">
@@ -619,7 +628,7 @@
         </p>
         <ul class="client-list" id="client-list"></ul>
         <div class="actions">
-          <button class="btn btn-primary" onclick="window.close()">Done</button>
+          <button class="btn btn-primary" onclick="handleDone()">Done</button>
         </div>
       </div>
     </div>
@@ -950,6 +959,29 @@
           } else {
             goTo('step-mode');
           }
+        }
+      }
+      /* ── In-Palette Mode ────────────────────────── */
+      var isInPalette = new URLSearchParams(window.location.search).has('inPalette');
+      if (isInPalette) {
+        document.body.classList.add('in-palette');
+        document.getElementById('palette-back').addEventListener('click', function () {
+          window.openwind.navigateBack();
+        });
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && isInPalette) {
+          e.preventDefault();
+          window.openwind.navigateBack();
+        }
+      });
+
+      function handleDone() {
+        if (isInPalette) {
+          window.openwind.navigateBack();
+        } else {
+          window.close();
         }
       }
     </script>
