@@ -1,8 +1,5 @@
 node_modules/
 dist/
-desktop/out/
-desktop/.vite/
-desktop/public/icons/
 *.tsbuildinfo
 .env
 .env.*
@@ -17,3 +14,14 @@ coverage/
 Thumbs.db
 *.log
 tmp/
+
+# Desktop (Electron)
+apps/desktop/out/
+apps/desktop/.vite/
+apps/desktop/public/icons/
+
+# Generated build outputs
+packages/design-tokens/generated/
+
+# Turbo
+.turbo/

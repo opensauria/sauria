@@ -1,0 +1,25 @@
+{
+  "name": "@openwind/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tokens.css": "./generated/tokens.css",
+    "./tokens.json": "./generated/tokens.json"
+  },
+  "scripts": {
+    "generate": "node --import tsx scripts/generate.ts",
+    "build": "pnpm run generate && tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsx": "4.19.4",
+    "typescript": "5.9.3"
+  }
+}

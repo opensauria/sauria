@@ -1,17 +1,21 @@
 # Stage 1: Build
 FROM node:24-alpine AS build
 
+RUN npm install -g pnpm@9
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
+COPY packages/ ./packages/
+COPY apps/daemon/package.json ./apps/daemon/
+RUN pnpm install --frozen-lockfile
 
-COPY tsconfig.json ./
-COPY src/ ./src/
-RUN npm run build
+COPY apps/daemon/ ./apps/daemon/
+RUN pnpm turbo run build --filter='./packages/*'
+RUN pnpm --filter @openwind/daemon run build
 
 # Remove devDependencies for production
-RUN npm ci --omit=dev
+RUN pnpm prune --prod
 
 # Stage 2: Production
 FROM node:24-alpine AS production
@@ -21,9 +25,9 @@ RUN addgroup -g 1000 openwind && \
 
 WORKDIR /app
 
-COPY --from=build --chown=openwind:openwind /app/dist ./dist
+COPY --from=build --chown=openwind:openwind /app/apps/daemon/dist ./dist
 COPY --from=build --chown=openwind:openwind /app/node_modules ./node_modules
-COPY --from=build --chown=openwind:openwind /app/package.json ./package.json
+COPY --from=build --chown=openwind:openwind /app/apps/daemon/package.json ./package.json
 
 RUN mkdir -p /home/openwind/.openwind/logs \
              /home/openwind/.openwind/tmp \

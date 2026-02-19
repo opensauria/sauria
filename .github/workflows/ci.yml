@@ -20,18 +20,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm turbo run build --filter='./packages/*'
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: pnpm turbo run typecheck
 
       - name: Format check
-        run: npx prettier --check .
+        run: pnpm run format:check
 
   test:
     name: Test
@@ -40,14 +45,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
-      - run: npx vitest run
+      - name: Build packages
+        run: pnpm turbo run build --filter='./packages/*'
+
+      - run: pnpm --filter @openwind/daemon run test
 
   security:
     name: Security
@@ -55,15 +65,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - name: Dependency audit
-        run: npm audit --omit=dev --audit-level=high
+        run: pnpm audit --prod --audit-level high
 
       - name: Banned pattern scan
         run: |
@@ -81,9 +93,14 @@ jobs:
           # - transcription.ts: execFile for Whisper voice transcription subprocess
           # - vault-key.ts: execSync for hardware UUID detection (ioreg)
           # - resolve.ts: execSync for API key resolution
+          # - machine-id.ts: execSync for hardware UUID detection
           FOUND=0
           for pattern in "${BANNED[@]}"; do
-            if grep -rn --include="*.ts" --include="*.js" "--exclude=*banned-patterns*" "--exclude=*whatsapp*" "--exclude=*transcription*" "--exclude=*vault-key*" "--exclude=*resolve*" "$pattern" src/; then
+            if grep -rn --include="*.ts" --include="*.js" \
+              "--exclude=*banned-patterns*" "--exclude=*whatsapp*" \
+              "--exclude=*transcription*" "--exclude=*vault-key*" \
+              "--exclude=*resolve*" "--exclude=*machine-id*" \
+              "$pattern" apps/daemon/src/ packages/; then
               echo "::error::Banned pattern found: $pattern"
               FOUND=1
             fi
