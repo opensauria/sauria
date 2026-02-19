@@ -12,7 +12,7 @@ import { openDatabase, closeDatabase } from './db/connection.js';
 import { applySchema } from './db/schema.js';
 import { loadConfig } from './config/loader.js';
 import { ensureConfigDir } from './config/loader.js';
-import type { OpenWindConfig } from './config/schema.js';
+import type { OpenSauriaConfig } from './config/schema.js';
 import { AuditLogger } from './security/audit.js';
 import { runSecurityChecks } from './security/startup-checks.js';
 import { ModelRouter } from './ai/router.js';
@@ -60,7 +60,7 @@ import {
 
 export interface DaemonContext {
   readonly db: BetterSqlite3.Database;
-  readonly config: OpenWindConfig;
+  readonly config: OpenSauriaConfig;
   readonly audit: AuditLogger;
   readonly router: ModelRouter;
   readonly mcpClients: McpClientManager;
@@ -76,7 +76,7 @@ export interface DaemonContext {
 }
 
 async function connectMcpSources(
-  config: OpenWindConfig,
+  config: OpenSauriaConfig,
   mcpClients: McpClientManager,
 ): Promise<void> {
   const logger = getLogger();
@@ -245,7 +245,7 @@ function loadCanvasGraph(): CanvasGraph {
   }
 }
 
-function buildOwnerIdentity(config: OpenWindConfig): OwnerIdentity {
+function buildOwnerIdentity(config: OpenSauriaConfig): OwnerIdentity {
   return {
     telegram: config.owner.telegram,
     slack: config.owner.slack,
@@ -261,7 +261,7 @@ async function createChannelForNode(
     db: BetterSqlite3.Database;
     router: ModelRouter;
     audit: AuditLogger;
-    config: OpenWindConfig;
+    config: OpenSauriaConfig;
     onInbound: (message: InboundMessage) => void;
     globalInstructions: string;
   },
@@ -477,7 +477,7 @@ async function setupOrchestrator(
     db: BetterSqlite3.Database;
     router: ModelRouter;
     audit: AuditLogger;
-    config: OpenWindConfig;
+    config: OpenSauriaConfig;
   },
   checkpointManager: CheckpointManager,
 ): Promise<OrchestratorBundle | null> {

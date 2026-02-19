@@ -1,17 +1,17 @@
-// Re-export from canonical @openwind/config package.
+// Re-export from canonical @opensauria/config package.
 export {
-  OpenWindConfigSchema,
+  OpenSauriaConfigSchema,
   ModelConfigSchema,
   AuthConfigSchema,
   McpServerConfigSchema,
   ChannelsConfigSchema,
-} from '@openwind/config';
+} from '@opensauria/config';
 
 export type {
-  OpenWindConfig,
+  OpenSauriaConfig,
   ModelConfig,
   AuthConfig,
   McpServerConfig,
   OwnerIdentityConfig,
   OrchestratorConfig,
-} from '@openwind/config';
+} from '@opensauria/config';

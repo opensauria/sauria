@@ -5,8 +5,8 @@
 import { ipcMain, shell } from 'electron';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash, randomBytes } from 'node:crypto';
-import { paths } from '@openwind/config';
-import { vaultStore } from '@openwind/vault';
+import { paths } from '@opensauria/config';
+import { vaultStore } from '@opensauria/vault';
 import { restartDaemon } from './daemon-manager';
 
 const ANTHROPIC_OAUTH = {

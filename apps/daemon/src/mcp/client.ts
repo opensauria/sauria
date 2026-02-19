@@ -54,7 +54,7 @@ export class McpClientManager {
       env: config.env ? { ...config.env } : undefined,
     });
 
-    const client = new Client({ name: 'openwind', version: '0.1.0' }, { capabilities: {} });
+    const client = new Client({ name: 'opensauria', version: '0.1.0' }, { capabilities: {} });
 
     await client.connect(transport);
 

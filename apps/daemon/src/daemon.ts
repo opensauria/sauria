@@ -37,7 +37,7 @@ export async function startDaemon(): Promise<void> {
 
   try {
     activeContext = await startDaemonContext();
-    process.stdout.write('OpenWind daemon running. Press Ctrl+C to stop.\n');
+    process.stdout.write('OpenSauria daemon running. Press Ctrl+C to stop.\n');
   } catch (err: unknown) {
     logger.fatal('Daemon failed to start', {
       error: err instanceof Error ? err.message : String(err),

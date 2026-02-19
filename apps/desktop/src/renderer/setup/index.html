@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>OpenWind</title>
+    <title>OpenSauria</title>
     <link rel="stylesheet" href="../shared.css" />
     <style>
       body {
@@ -302,10 +302,10 @@
     <div class="container">
       <!-- Step 1: Welcome -->
       <div class="step active" id="step-welcome">
-        <div class="brand">OpenWind</div>
+        <div class="brand">OpenSauria</div>
         <h1>Your world, always with you.</h1>
         <p class="subtitle">
-          OpenWind connects to your AI tools and makes them smarter. It builds a private knowledge
+          OpenSauria connects to your AI tools and makes them smarter. It builds a private knowledge
           graph from your data and shares context across your apps.
         </p>
         <p class="subtitle">Setup takes about 30 seconds.</p>
@@ -317,7 +317,7 @@
       <!-- Step 2: Connection Mode -->
       <div class="step" id="step-mode">
         <h1>Choose your AI provider</h1>
-        <p class="subtitle">OpenWind needs an AI provider to work. How do you want to connect?</p>
+        <p class="subtitle">OpenSauria needs an AI provider to work. How do you want to connect?</p>
         <div class="cards">
           <div class="card" data-mode="claude_desktop" onclick="selectMode(this)">
             <div class="card-icon">
@@ -381,7 +381,7 @@
       <div class="step" id="step-claude-desktop">
         <h1>Sign in to Anthropic</h1>
         <p class="subtitle">
-          OpenWind will connect to your Anthropic account to use Claude as its AI engine. No API key
+          OpenSauria will connect to your Anthropic account to use Claude as its AI engine. No API key
           needed.
         </p>
 
@@ -390,7 +390,7 @@
             style="color: var(--text-secondary); font-size: 13px; margin-top: 8px; line-height: 1.6"
           >
             1. Click the button below to open Anthropic's login page<br />
-            2. Log in and authorize OpenWind<br />
+            2. Log in and authorize OpenSauria<br />
             3. Copy the code shown on screen and paste it back here
           </p>
           <p class="error-msg" id="oauth-error" style="margin-top: 16px"></p>
@@ -622,9 +622,9 @@
       <!-- Step 6: Done -->
       <div class="step" id="step-done">
         <div class="success-icon">&#10003;</div>
-        <h1>OpenWind is ready</h1>
+        <h1>OpenSauria is ready</h1>
         <p class="subtitle">
-          Your AI provider is connected. OpenWind is running in the background.
+          Your AI provider is connected. OpenSauria is running in the background.
         </p>
         <ul class="client-list" id="client-list"></ul>
         <div class="actions">
@@ -673,7 +673,7 @@
         document.getElementById('oauth-error').textContent = '';
         document.getElementById('oauth-error').classList.remove('visible');
 
-        var result = await window.openwind.startOAuth();
+        var result = await window.opensauria.startOAuth();
         if (result.started) {
           document.getElementById('oauth-start').style.display = 'none';
           document.getElementById('oauth-code').style.display = 'block';
@@ -700,7 +700,7 @@
         document.getElementById('oauth-code').style.display = 'none';
         document.getElementById('oauth-loading').style.display = 'block';
 
-        var result = await window.openwind.completeOAuth(code);
+        var result = await window.opensauria.completeOAuth(code);
         if (result.success) {
           selectedProvider = 'anthropic';
           goTo('step-configuring');
@@ -771,7 +771,7 @@
           google: 'https://aistudio.google.com/apikey',
         };
         var url = urls[selectedProvider];
-        if (url) window.openwind.openExternal(url);
+        if (url) window.opensauria.openExternal(url);
       }
 
       function onKeyInput() {
@@ -791,7 +791,7 @@
         document.getElementById('local-subtitle').textContent =
           'Scanning your machine for running AI providers...';
 
-        var providers = await window.openwind.detectLocalProviders();
+        var providers = await window.opensauria.detectLocalProviders();
         var running = providers.filter(function (p) {
           return p.running;
         });
@@ -904,7 +904,7 @@
         try {
           // Validate API key (only for api_key mode)
           if (mode === 'api_key' && apiKey) {
-            var result = await window.openwind.validateKey(provider, apiKey);
+            var result = await window.opensauria.validateKey(provider, apiKey);
             if (!result.valid) {
               goTo('step-auth');
               var errEl = document.getElementById('auth-error');
@@ -916,7 +916,7 @@
           await completeStep('p-verify', 'p-store');
           await completeStep('p-store', 'p-config');
 
-          await window.openwind.configure({
+          await window.opensauria.configure({
             mode: mode,
             provider: provider,
             apiKey: apiKey,
@@ -932,7 +932,7 @@
           });
 
           var clientList = document.getElementById('client-list');
-          var clients = await window.openwind.detectClients();
+          var clients = await window.opensauria.detectClients();
           clientList.innerHTML = clients
             .filter(function (c) {
               return c.detected;
@@ -946,7 +946,7 @@
 
           if (clientList.innerHTML === '') {
             clientList.innerHTML =
-              '<li>No AI clients detected. Add OpenWind manually in your client settings.</li>';
+              '<li>No AI clients detected. Add OpenSauria manually in your client settings.</li>';
           }
 
           goTo('step-done');
@@ -966,20 +966,20 @@
       if (isInPalette) {
         document.body.classList.add('in-palette');
         document.getElementById('palette-back').addEventListener('click', function () {
-          window.openwind.navigateBack();
+          window.opensauria.navigateBack();
         });
       }
 
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && isInPalette) {
           e.preventDefault();
-          window.openwind.navigateBack();
+          window.opensauria.navigateBack();
         }
       });
 
       function handleDone() {
         if (isInPalette) {
-          window.openwind.navigateBack();
+          window.opensauria.navigateBack();
         } else {
           window.close();
         }

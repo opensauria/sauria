@@ -11,7 +11,7 @@
  */
 
 import { z } from 'zod';
-import type { OwnerCommand } from '@openwind/types';
+import type { OwnerCommand } from '@opensauria/types';
 
 // ─── Zod Validation Schema ────────────────────────────────────────
 

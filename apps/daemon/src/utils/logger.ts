@@ -50,7 +50,7 @@ function formatLogEntry(entry: LogEntry): string {
 
 function getLogFilePath(date: Date): string {
   const logsDir = safePath(paths.logs);
-  return join(logsDir, `openwind-${formatDate(date)}.log`);
+  return join(logsDir, `opensauria-${formatDate(date)}.log`);
 }
 
 function ensureLogsDir(): void {
@@ -72,8 +72,8 @@ function pruneOldLogs(): void {
   const cutoffStr = formatDate(cutoff);
 
   for (const file of files) {
-    if (!file.startsWith('openwind-') || !file.endsWith('.log')) continue;
-    const dateStr = file.slice('openwind-'.length, -'.log'.length);
+    if (!file.startsWith('opensauria-') || !file.endsWith('.log')) continue;
+    const dateStr = file.slice('opensauria-'.length, -'.log'.length);
     if (dateStr < cutoffStr) {
       try {
         unlinkSync(join(logsDir, file));
@@ -134,7 +134,7 @@ export class Logger {
     try {
       appendFileSync(filePath, `${line}\n`, 'utf-8');
     } catch {
-      process.stderr.write(`[openwind] Failed to write log: ${line}\n`);
+      process.stderr.write(`[opensauria] Failed to write log: ${line}\n`);
     }
 
     this.pruneIfNeeded(now);

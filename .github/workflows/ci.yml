@@ -57,7 +57,7 @@ jobs:
       - name: Build packages
         run: pnpm turbo run build --filter='./packages/*'
 
-      - run: pnpm --filter @openwind/daemon run test
+      - run: pnpm --filter @opensauria/daemon run test
 
   security:
     name: Security

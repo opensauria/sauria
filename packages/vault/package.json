@@ -1,5 +1,5 @@
 {
-  "name": "@openwind/vault",
+  "name": "@opensauria/vault",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@openwind/config": "workspace:*"
+    "@opensauria/config": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "24.10.13",

@@ -3,7 +3,7 @@ import { openDatabase, closeDatabase } from '../db/connection.js';
 import { applySchema } from '../db/schema.js';
 import { loadConfig, saveConfig, ensureConfigDir } from '../config/loader.js';
 import { vaultStore } from '../security/vault-key.js';
-import type { OpenWindConfig } from '../config/schema.js';
+import type { OpenSauriaConfig } from '../config/schema.js';
 import { validateCredential } from './validate.js';
 import {
   generateCodeVerifier,
@@ -183,7 +183,7 @@ async function setupLocal(): Promise<{
       'open-webui': 'http://localhost:3000',
     };
     baseUrl = urls[provider] ?? 'http://localhost:11434';
-    p.log.info(`Start ${provider} before running OpenWind.`);
+    p.log.info(`Start ${provider} before running OpenSauria.`);
   }
 
   // Store the base URL so the router knows where to connect
@@ -228,14 +228,14 @@ async function runPostSetup(
   if (daemon) {
     daemonSpin.stop(`Daemon ready (${daemon.platform}).`);
   } else {
-    daemonSpin.stop('Daemon: run `openwind daemon` manually.');
+    daemonSpin.stop('Daemon: run `opensauria daemon` manually.');
   }
 
   // Summary
   const lines = [
     `Provider:    ${provider} (${authMethod})`,
     formatPresetSummary(preset),
-    `Database:    ~/.openwind/world.db`,
+    `Database:    ~/.opensauria/world.db`,
   ];
 
   if (detected.length > 0) {
@@ -245,16 +245,16 @@ async function runPostSetup(
   p.note(lines.join('\n'), 'Setup Complete');
 
   if (detected.length > 0) {
-    p.outro('Restart your AI client and OpenWind is ready.');
+    p.outro('Restart your AI client and OpenSauria is ready.');
   } else {
-    p.outro('Run `openwind daemon` to start.');
+    p.outro('Run `opensauria daemon` to start.');
   }
 }
 
 // ─── Main ───────────────────────────────────────────────────────────────
 
 export async function runOnboarding(): Promise<void> {
-  p.intro('Welcome to OpenWind');
+  p.intro('Welcome to OpenSauria');
 
   const mode = await chooseConnectionMode();
 
@@ -287,7 +287,7 @@ export async function runOnboarding(): Promise<void> {
   // Config
   const preset = getModelPreset(provider);
   const config = await loadConfig();
-  const updatedConfig: OpenWindConfig = {
+  const updatedConfig: OpenSauriaConfig = {
     ...config,
     models: { ...preset },
     auth: { ...config.auth, [provider]: { method: authMethod } },

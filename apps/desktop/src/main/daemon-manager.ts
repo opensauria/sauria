@@ -6,7 +6,7 @@ import { existsSync, readFileSync, readdirSync, mkdirSync, openSync, unlinkSync 
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { paths } from '@openwind/config';
+import { paths } from '@opensauria/config';
 
 let daemonProcess: ChildProcess | null = null;
 let daemonRunning = false;
@@ -42,11 +42,11 @@ function resolveLoginShell(): { shell: string; args: string[] } {
   return { shell: '/bin/sh', args: ['-lc'] };
 }
 
-function resolveNodeBin(): { nodePath: string; openwindPath: string } {
+function resolveNodeBin(): { nodePath: string; opensauriaPath: string } {
   const { shell, args } = resolveLoginShell();
   const whichCmd = platform() === 'win32' ? 'where' : 'which';
   try {
-    const openwindPath = execFileSync(shell, [...args, `${whichCmd} openwind`], {
+    const opensauriaPath = execFileSync(shell, [...args, `${whichCmd} opensauria`], {
       encoding: 'utf-8',
       timeout: 5000,
     })
@@ -58,7 +58,7 @@ function resolveNodeBin(): { nodePath: string; openwindPath: string } {
     })
       .trim()
       .split('\n')[0];
-    return { nodePath, openwindPath };
+    return { nodePath, opensauriaPath };
   } catch {
     if (platform() !== 'win32') {
       const home = homedir();
@@ -70,12 +70,12 @@ function resolveNodeBin(): { nodePath: string; openwindPath: string } {
           const binDir = join(nvmDir, latest, 'bin');
           return {
             nodePath: join(binDir, 'node'),
-            openwindPath: join(binDir, 'openwind'),
+            opensauriaPath: join(binDir, 'opensauria'),
           };
         }
       }
     }
-    return { nodePath: 'node', openwindPath: 'openwind' };
+    return { nodePath: 'node', opensauriaPath: 'opensauria' };
   }
 }
 
@@ -114,10 +114,10 @@ export function startDaemon(): void {
 
   const errFd = openSync(join(logDir, 'daemon.err'), 'a');
 
-  daemonProcess = spawn(resolvedBins.nodePath, [resolvedBins.openwindPath, 'daemon'], {
+  daemonProcess = spawn(resolvedBins.nodePath, [resolvedBins.opensauriaPath, 'daemon'], {
     stdio: ['pipe', 'ignore', errFd],
     detached: false,
-    env: { ...process.env, OPENWIND_HOME: paths.home },
+    env: { ...process.env, OPENSAURIA_HOME: paths.home },
   });
 
   daemonRunning = true;

@@ -1,12 +1,12 @@
-# Contributing to OpenWind
+# Contributing to OpenSauria
 
-OpenWind is created and maintained by [Teo Bouancheau](https://github.com/teobouancheau). Contributions are welcome and appreciated.
+OpenSauria is created and maintained by [Teo Bouancheau](https://github.com/teobouancheau). Contributions are welcome and appreciated.
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/teobouancheau/openwind.git
-cd openwind
+git clone https://github.com/teobouancheau/opensauria.git
+cd opensauria
 npm install
 npm run typecheck
 ```
@@ -64,7 +64,7 @@ One logical change per commit. Imperative mood, max 72 characters.
 
 ## Security Rules
 
-OpenWind is security-first. These rules are non-negotiable:
+OpenSauria is security-first. These rules are non-negotiable:
 
 - **No `child_process`, `eval`, `Function()`, `vm.run`** in `src/`.
 - **No `createServer` or `.listen(`** in `src/`. Zero open ports.
@@ -111,4 +111,4 @@ npm run test:watch    # watch mode
 
 By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
 
-OpenWind is created by Teo Bouancheau. All contributors are credited in release notes.
+OpenSauria is created by Teo Bouancheau. All contributors are credited in release notes.

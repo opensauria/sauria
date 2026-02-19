@@ -1,5 +1,5 @@
-declare const OPENWIND_VERSION: string;
+declare const OPENSAURIA_VERSION: string;
 
 export function getVersion(): string {
-  return OPENWIND_VERSION;
+  return OPENSAURIA_VERSION;
 }

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>OpenWind &mdash; Brain</title>
+    <title>OpenSauria &mdash; Brain</title>
     <link rel="stylesheet" href="../shared.css" />
     <link rel="stylesheet" href="./brain.css" />
   </head>
@@ -90,7 +90,7 @@
           <div class="brain-graph-empty" id="graph-empty" style="display: none">
             <img class="icon-mono" src="/icons/share-2.svg" alt="" />
             <div>No entities yet</div>
-            <div style="font-size: 12px">Entities will appear here as OpenWind learns from your conversations</div>
+            <div style="font-size: 12px">Entities will appear here as OpenSauria learns from your conversations</div>
           </div>
 
           <!-- Library view (cover flow) -->
@@ -99,7 +99,7 @@
             <div class="brain-library-empty" id="library-empty" style="display: none">
               <img class="icon-mono" src="/icons/database.svg" alt="" />
               <div>No entities yet</div>
-              <div style="font-size: 12px">Entities will appear here as OpenWind learns from your conversations</div>
+              <div style="font-size: 12px">Entities will appear here as OpenSauria learns from your conversations</div>
             </div>
             <div class="brain-library-search" id="library-search">
               <img class="icon-mono" src="/icons/search.svg" alt="" />
@@ -126,7 +126,7 @@
             <img src="/icons/database.svg" alt="" />
             <div>No data yet</div>
             <div style="font-size: 12px">
-              This will fill up as OpenWind learns from your conversations
+              This will fill up as OpenSauria learns from your conversations
             </div>
           </div>
           <div class="brain-load-more" id="load-more" style="display: none">
@@ -166,7 +166,7 @@
     <script type="module" src="./main.ts"></script>
     <script>
       /* ── State ───────────────────────────────────────────────────────── */
-      const ow = window.openwind;
+      const ow = window.opensauria;
       let currentView = 'entities';
       let currentRows = [];
       let currentTotal = 0;
@@ -276,7 +276,7 @@
           renderStats();
           updateNavCounts();
         } catch {
-          statsBar.innerHTML = '<div class="brain-stat"><span style="color: var(--error)">Could not connect to OpenWind</span></div>';
+          statsBar.innerHTML = '<div class="brain-stat"><span style="color: var(--error)">Could not connect to OpenSauria</span></div>';
         }
       }
 
@@ -1379,7 +1379,7 @@
       if (isInPalette) {
         document.body.classList.add('in-palette');
         document.getElementById('palette-back').addEventListener('click', () => {
-          window.openwind.navigateBack();
+          window.opensauria.navigateBack();
         });
       }
 
@@ -1389,7 +1389,7 @@
           if (deleteDialog.classList.contains('visible')) return;
           if (detailPanel.classList.contains('open')) return;
           e.preventDefault();
-          window.openwind.navigateBack();
+          window.opensauria.navigateBack();
         }
       });
 
