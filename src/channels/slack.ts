@@ -4,6 +4,7 @@ import type { IngestPipeline } from '../ingestion/pipeline.js';
 import type { InboundMessage } from '../orchestrator/types.js';
 import { sanitizeChannelInput } from '../security/sanitize.js';
 import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
+import { secureFetch } from '../security/url-allowlist.js';
 import { formatAlert, type Channel } from './base.js';
 
 const SLACK_API_BASE = 'https://slack.com/api/';
@@ -306,7 +307,7 @@ export class SlackChannel implements Channel {
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     try {
-      const response = await fetch(url, {
+      const response = await secureFetch(url, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

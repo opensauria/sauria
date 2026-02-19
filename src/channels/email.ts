@@ -2,7 +2,8 @@ import type { ProactiveAlert } from '../engine/proactive.js';
 import type { AuditLogger } from '../security/audit.js';
 import type { IngestPipeline } from '../ingestion/pipeline.js';
 import type { InboundMessage } from '../orchestrator/types.js';
-import { sanitizeChannelInput } from '../security/sanitize.js';
+import { sanitizeChannelInput, InputTooLongError } from '../security/sanitize.js';
+import { scrubPII } from '../security/pii-scrubber.js';
 import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
 import { formatAlert, type Channel } from './base.js';
 
@@ -211,20 +212,27 @@ export class EmailChannel implements Channel {
       return;
     }
 
+    let sanitizedSubject: string;
+    try {
+      sanitizedSubject = sanitizeChannelInput(email.subject);
+    } catch (error: unknown) {
+      sanitizedSubject = error instanceof InputTooLongError ? email.subject.slice(0, 200) : '';
+    }
+
     try {
       await pipeline.ingestEvent('email:message', {
         content: sanitizedText,
         timestamp: email.date,
         from: email.from,
-        subject: email.subject,
+        subject: sanitizedSubject,
       });
     } catch (error) {
       audit.logAction('email:ingest_error', { error: String(error) }, { success: false });
     }
 
     audit.logAction('email:message_received', {
-      from: email.from,
-      subject: email.subject,
+      from: scrubPII(email.from),
+      subject: scrubPII(sanitizedSubject),
       textLength: sanitizedText.length,
     });
 
@@ -235,7 +243,7 @@ export class EmailChannel implements Channel {
         senderId: email.from,
         senderIsOwner: false,
         groupId: null,
-        content: `[${email.subject}] ${sanitizedText}`,
+        content: `[${sanitizedSubject}] ${sanitizedText}`,
         contentType: 'text',
         timestamp: email.date,
       };

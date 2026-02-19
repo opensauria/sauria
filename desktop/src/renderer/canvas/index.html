@@ -2,13 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:"
-    />
     <title>OpenWind &mdash; Agent Canvas</title>
-    <link rel="stylesheet" href="shared.css" />
-    <link rel="stylesheet" href="canvas.css" />
+    <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="./canvas.css" />
   </head>
   <body>
     <div class="titlebar-drag"></div>
@@ -21,27 +17,29 @@
 
     <div class="canvas-empty" id="empty-state">
       <div class="canvas-empty-icons">
-        <img src="icons/telegram.svg" alt="Telegram" />
-        <img src="icons/slack.svg" alt="Slack" />
-        <img src="icons/whatsapp.svg" alt="WhatsApp" />
+        <img src="/icons/telegram.svg" alt="Telegram" />
+        <img src="/icons/slack.svg" alt="Slack" />
+        <img src="/icons/whatsapp.svg" alt="WhatsApp" />
       </div>
       <h2>Add your first agent</h2>
       <p>Drag a platform card from the dock below onto the canvas</p>
     </div>
 
     <div class="canvas-toolbar" id="toolbar">
-      <button class="toolbar-btn" id="btn-zoom-out" title="Zoom out">
-        <img src="icons/zoom-out.svg" alt="Zoom out" />
-      </button>
-      <span class="zoom-display" id="zoom-display">100%</span>
-      <button class="toolbar-btn" id="btn-zoom-in" title="Zoom in">
-        <img src="icons/zoom-in.svg" alt="Zoom in" />
-      </button>
-      <button class="toolbar-btn" id="btn-zoom-reset" title="Reset zoom">
-        <img src="icons/maximize.svg" alt="Reset" />
-      </button>
+      <div class="toolbar-group">
+        <button class="toolbar-btn" id="btn-zoom-out" title="Zoom out (Cmd -)">
+          <img src="/icons/zoom-out.svg" alt="Zoom out" />
+        </button>
+        <span class="zoom-display" id="zoom-display">100%</span>
+        <button class="toolbar-btn" id="btn-zoom-in" title="Zoom in (Cmd +)">
+          <img src="/icons/zoom-in.svg" alt="Zoom in" />
+        </button>
+        <button class="toolbar-btn" id="btn-zoom-reset" title="Reset zoom (Cmd 0)">
+          <img src="/icons/maximize.svg" alt="Reset" />
+        </button>
+      </div>
       <button class="toolbar-btn" id="btn-add-workspace" title="Add workspace">
-        <img src="icons/square-plus.svg" alt="Add workspace" />
+        <img src="/icons/square-plus.svg" alt="Add workspace" />
       </button>
     </div>
 
@@ -92,7 +90,11 @@
             id="agent-instructions"
             placeholder="Standing orders for this agent..."
           ></textarea>
-          <button class="btn btn-secondary" id="insert-template-btn" style="margin-top:8px;font-size:12px;">
+          <button
+            class="btn btn-secondary"
+            id="insert-template-btn"
+            style="margin-top: 8px; font-size: 12px"
+          >
             Use Template
           </button>
         </div>
@@ -149,12 +151,21 @@
         <div class="detail-section">
           <span class="detail-section-label">Color</span>
           <div class="color-picker-row" id="ws-detail-colors">
-            <div class="color-swatch" data-color="#038B9A" style="background: #038B9A"></div>
+            <div class="color-swatch" data-color="#038B9A" style="background: #038b9a"></div>
             <div class="color-swatch" data-color="#27A7E7" style="background: #27a7e7"></div>
             <div class="color-swatch" data-color="#34d399" style="background: #34d399"></div>
             <div class="color-swatch" data-color="#f59e0b" style="background: #f59e0b"></div>
             <div class="color-swatch" data-color="#f87171" style="background: #f87171"></div>
             <div class="color-swatch" data-color="#a78bfa" style="background: #a78bfa"></div>
+            <div class="color-swatch color-swatch-custom" title="Custom color">
+              <span>+</span>
+              <input
+                type="color"
+                class="color-input-hidden"
+                id="ws-detail-color-input"
+                value="#038B9A"
+              />
+            </div>
           </div>
         </div>
 
@@ -176,14 +187,49 @@
 
         <div class="detail-section">
           <span class="detail-section-label">Daily Budget (USD)</span>
-          <input
-            class="detail-input"
-            id="ws-detail-budget"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="0"
-          />
+          <div class="number-stepper">
+            <button
+              class="stepper-btn stepper-minus"
+              data-target="ws-detail-budget"
+              aria-label="Decrease"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+            <input
+              class="stepper-input"
+              id="ws-detail-budget"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="0"
+            />
+            <button
+              class="stepper-btn stepper-plus"
+              data-target="ws-detail-budget"
+              aria-label="Increase"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -204,12 +250,21 @@
         <div class="cred-field">
           <label>Color</label>
           <div class="color-picker-row" id="ws-create-colors">
-            <div class="color-swatch active" data-color="#038B9A" style="background: #038B9A"></div>
+            <div class="color-swatch active" data-color="#038B9A" style="background: #038b9a"></div>
             <div class="color-swatch" data-color="#27A7E7" style="background: #27a7e7"></div>
             <div class="color-swatch" data-color="#34d399" style="background: #34d399"></div>
             <div class="color-swatch" data-color="#f59e0b" style="background: #f59e0b"></div>
             <div class="color-swatch" data-color="#f87171" style="background: #f87171"></div>
             <div class="color-swatch" data-color="#a78bfa" style="background: #a78bfa"></div>
+            <div class="color-swatch color-swatch-custom" title="Custom color">
+              <span>+</span>
+              <input
+                type="color"
+                class="color-input-hidden"
+                id="ws-create-color-input"
+                value="#038B9A"
+              />
+            </div>
           </div>
         </div>
         <div class="cred-field">
@@ -219,6 +274,61 @@
             id="ws-create-purpose"
             placeholder="What this workspace is for..."
           ></textarea>
+        </div>
+        <div class="cred-field">
+          <label>Topics</label>
+          <input
+            class="detail-input"
+            id="ws-create-topics"
+            type="text"
+            placeholder="Comma-separated topics..."
+          />
+        </div>
+        <div class="cred-field">
+          <label>Daily Budget (USD)</label>
+          <div class="number-stepper">
+            <button
+              class="stepper-btn stepper-minus"
+              data-target="ws-create-budget"
+              aria-label="Decrease"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+            <input
+              class="stepper-input"
+              id="ws-create-budget"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="0"
+            />
+            <button
+              class="stepper-btn stepper-plus"
+              data-target="ws-create-budget"
+              aria-label="Increase"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="panel-actions">
           <button class="panel-btn panel-btn-cancel" id="ws-create-cancel">Cancel</button>
@@ -234,7 +344,7 @@
 
     <!-- Dock Toggle -->
     <button class="dock-toggle" id="dock-toggle" title="Toggle dock">
-      <img src="icons/chevron-down.svg" alt="Toggle" />
+      <img src="/icons/chevron-down.svg" alt="Toggle" />
     </button>
 
     <script>
@@ -242,7 +352,13 @@
          State
          ═══════════════════════════════════════════════ */
 
-      var graph = { nodes: [], edges: [], workspaces: [], globalInstructions: '', viewport: { x: 0, y: 0, zoom: 1 } };
+      var graph = {
+        nodes: [],
+        edges: [],
+        workspaces: [],
+        globalInstructions: '',
+        viewport: { x: 0, y: 0, zoom: 1 },
+      };
       var selectedNodeId = null;
       var selectedWorkspaceId = null;
       var detailNodeId = null;
@@ -299,14 +415,14 @@
       var workspaceDetailPanel = document.getElementById('workspace-detail-panel');
       var wsDialogOverlay = document.getElementById('ws-dialog-overlay');
 
-      /* Platform icons — loaded from icons/ directory (simple-icons + lucide-static) */
+      /* Platform icons — loaded from /icons/ directory (simple-icons + lucide-static) */
       var platformIcons = {
-        telegram: '<img src="icons/telegram.svg" alt="Telegram" />',
-        slack: '<img src="icons/slack.svg" alt="Slack" />',
-        whatsapp: '<img src="icons/whatsapp.svg" alt="WhatsApp" />',
-        discord: '<img src="icons/discord.svg" alt="Discord" />',
-        gmail: '<img src="icons/gmail.svg" alt="Gmail" />',
-        email: '<img src="icons/email.svg" alt="Email" class="icon-mono" />',
+        telegram: '<img src="/icons/telegram.svg" alt="Telegram" />',
+        slack: '<img src="/icons/slack.svg" alt="Slack" />',
+        whatsapp: '<img src="/icons/whatsapp.svg" alt="WhatsApp" />',
+        discord: '<img src="/icons/discord.svg" alt="Discord" />',
+        gmail: '<img src="/icons/gmail.svg" alt="Gmail" />',
+        email: '<img src="/icons/email.svg" alt="Email" class="icon-mono" />',
       };
 
       /* Persona templates */
@@ -345,7 +461,13 @@
         try {
           graph = await window.openwind.getCanvasGraph();
         } catch {
-          graph = { nodes: [], edges: [], workspaces: [], globalInstructions: '', viewport: { x: 0, y: 0, zoom: 1 } };
+          graph = {
+            nodes: [],
+            edges: [],
+            workspaces: [],
+            globalInstructions: '',
+            viewport: { x: 0, y: 0, zoom: 1 },
+          };
         }
         if (!graph.workspaces) graph.workspaces = [];
         if (typeof graph.globalInstructions !== 'string') graph.globalInstructions = '';
@@ -382,7 +504,9 @@
         }
 
         /* Migrate: if globalInstructions exists but owner node has no instructions, copy over */
-        var ownerNode = graph.nodes.find(function (n) { return n.platform === 'owner'; });
+        var ownerNode = graph.nodes.find(function (n) {
+          return n.platform === 'owner';
+        });
         if (ownerNode && !ownerNode.instructions && graph.globalInstructions) {
           ownerNode.instructions = graph.globalInstructions;
           saveGraph();
@@ -456,6 +580,11 @@
             (ws.purpose
               ? '<span class="workspace-purpose">' + escapeHtml(ws.purpose) + '</span>'
               : '') +
+            '<button class="ws-gear" data-action="ws-gear" data-ws-id="' +
+            ws.id +
+            '" title="Edit workspace">' +
+            GEAR_SVG +
+            '</button>' +
             '</div>' +
             '<div class="workspace-resize workspace-resize-r" data-ws-id="' +
             ws.id +
@@ -567,7 +696,7 @@
         return fields[platform] || [];
       }
 
-      var GEAR_SVG = '<img src="icons/settings.svg" alt="Settings" />';
+      var GEAR_SVG = '<img src="/icons/settings.svg" alt="Settings" />';
 
       function renderNodes() {
         world.querySelectorAll('.agent-card').forEach(function (el) {
@@ -1218,6 +1347,15 @@
           return;
         }
 
+        /* Workspace gear button */
+        var wsGear = e.target.closest('.ws-gear');
+        if (wsGear) {
+          openWorkspaceDetail(wsGear.dataset.wsId);
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+
         /* Workspace resize handles */
         var resizeHandle = e.target.closest('.workspace-resize');
         if (resizeHandle && e.button === 0) {
@@ -1545,12 +1683,15 @@
 
       /* Dock collapse/expand toggle */
       var dockToggle = document.getElementById('dock-toggle');
+      var canvasToolbar = document.getElementById('toolbar');
       var isDockCollapsed = false;
-      dockToggle.addEventListener('click', function () {
+      function toggleDock() {
         isDockCollapsed = !isDockCollapsed;
         cfDock.classList.toggle('collapsed', isDockCollapsed);
         dockToggle.classList.toggle('collapsed', isDockCollapsed);
-      });
+        canvasToolbar.classList.toggle('dock-hidden', isDockCollapsed);
+      }
+      dockToggle.addEventListener('click', toggleDock);
 
       /* ═══════════════════════════════════════════════
          Edge Hover Delete Button
@@ -1558,7 +1699,7 @@
 
       var edgeDeleteBtn = document.createElement('button');
       edgeDeleteBtn.className = 'edge-delete-btn';
-      edgeDeleteBtn.innerHTML = '<img src="icons/unlink.svg" alt="Remove" />';
+      edgeDeleteBtn.innerHTML = '<img src="/icons/unlink.svg" alt="Remove" />';
       world.appendChild(edgeDeleteBtn);
 
       var hoveredEdgeId = null;
@@ -1998,9 +2139,7 @@
 
         if (isMod && e.key === 'l') {
           e.preventDefault();
-          isDockCollapsed = !isDockCollapsed;
-          cfDock.classList.toggle('collapsed', isDockCollapsed);
-          dockToggle.classList.toggle('collapsed', isDockCollapsed);
+          toggleDock();
         }
 
         if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId && !isInputFocused()) {
@@ -2125,13 +2264,17 @@
         var identityEl = document.getElementById('agent-detail-identity');
         var isOwner = node.platform === 'owner';
         var photoHtml = isOwner
-          ? (node.photo
-              ? '<img src="' + node.photo + '" alt="" />'
-              : '<span class="avatar-initials" style="font-size:12px;">' + getInitials(node.label) + '</span>')
+          ? node.photo
+            ? '<img src="' + node.photo + '" alt="" />'
+            : '<span class="avatar-initials" style="font-size:12px;">' +
+              getInitials(node.label) +
+              '</span>'
           : node.photo
             ? '<img src="' + node.photo + '" alt="" />'
             : platformIcons[node.platform] || '';
-        var displayName = isOwner ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
+        var displayName = isOwner
+          ? node.label
+          : node.meta.firstName || node.label.replace(/^@/, '');
         var platformLabel = isOwner ? 'You — Organization Owner' : capitalize(node.platform);
         var avatarClass = isOwner ? 'detail-avatar owner-avatar' : 'detail-avatar';
         identityEl.innerHTML =
@@ -2167,10 +2310,12 @@
         var instructionsTextarea = document.getElementById('agent-instructions');
         if (isOwner) {
           instructionsLabel.textContent = 'Communication Style (all agents)';
-          instructionsTextarea.placeholder = 'Define how all agents should respond...\n\nExample:\n- Plain text only, no markdown\n- Concise and direct\n- No emojis';
+          instructionsTextarea.placeholder =
+            'Define how all agents should respond...\n\nExample:\n- Plain text only, no markdown\n- Concise and direct\n- No emojis';
         } else {
           instructionsLabel.textContent = 'Agent Persona';
-          instructionsTextarea.placeholder = 'Describe this agent\'s role, personality, and behavior...';
+          instructionsTextarea.placeholder =
+            "Describe this agent's role, personality, and behavior...";
         }
         instructionsTextarea.value = node.instructions || '';
 
@@ -2254,7 +2399,9 @@
       /* Template button */
       document.getElementById('insert-template-btn').addEventListener('click', function () {
         if (!detailNodeId) return;
-        var node = graph.nodes.find(function (n) { return n.id === detailNodeId; });
+        var node = graph.nodes.find(function (n) {
+          return n.id === detailNodeId;
+        });
         if (!node) return;
         var textarea = document.getElementById('agent-instructions');
         var template = node.platform === 'owner' ? CEO_TEMPLATE : BOT_TEMPLATE;
@@ -2312,9 +2459,26 @@
         document.getElementById('ws-detail-budget').value = ws.budget || '';
 
         /* Color swatches */
+        var presetColors = ['#038B9A', '#27A7E7', '#34d399', '#f59e0b', '#f87171', '#a78bfa'];
+        var isPreset = presetColors.indexOf(ws.color) !== -1;
         document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s) {
+          if (s.classList.contains('color-swatch-custom')) return;
           s.classList.toggle('active', s.dataset.color === ws.color);
         });
+        /* Custom swatch state */
+        var customSwatch = document.querySelector('#ws-detail-colors .color-swatch-custom');
+        if (customSwatch) {
+          if (!isPreset && ws.color) {
+            customSwatch.style.background = ws.color;
+            customSwatch.querySelector('span').style.display = 'none';
+            customSwatch.classList.add('active');
+            document.getElementById('ws-detail-color-input').value = ws.color;
+          } else {
+            customSwatch.style.background = '';
+            customSwatch.querySelector('span').style.display = '';
+            customSwatch.classList.remove('active');
+          }
+        }
 
         /* Tags */
         renderWsTags(ws.topics || []);
@@ -2347,17 +2511,49 @@
       document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (swatch) {
         swatch.addEventListener('click', function () {
           if (!detailWorkspaceId) return;
+          if (swatch.classList.contains('color-swatch-custom')) {
+            document.getElementById('ws-detail-color-input').click();
+            return;
+          }
           var ws = graph.workspaces.find(function (w) {
             return w.id === detailWorkspaceId;
           });
           if (!ws) return;
           ws.color = swatch.dataset.color;
           document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s) {
+            if (s.classList.contains('color-swatch-custom')) return;
             s.classList.toggle('active', s.dataset.color === ws.color);
           });
+          /* Reset custom swatch */
+          var customSwatch = document.querySelector('#ws-detail-colors .color-swatch-custom');
+          if (customSwatch) {
+            customSwatch.style.background = '';
+            customSwatch.querySelector('span').style.display = '';
+            customSwatch.classList.remove('active');
+          }
           renderWorkspaces();
           saveGraph();
         });
+      });
+
+      document.getElementById('ws-detail-color-input').addEventListener('input', function () {
+        if (!detailWorkspaceId) return;
+        var ws = graph.workspaces.find(function (w) {
+          return w.id === detailWorkspaceId;
+        });
+        if (!ws) return;
+        ws.color = this.value;
+        document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s) {
+          s.classList.remove('active');
+        });
+        var customSwatch = document.querySelector('#ws-detail-colors .color-swatch-custom');
+        if (customSwatch) {
+          customSwatch.style.background = ws.color;
+          customSwatch.querySelector('span').style.display = 'none';
+          customSwatch.classList.add('active');
+        }
+        renderWorkspaces();
+        saveGraph();
       });
 
       /* Workspace purpose */
@@ -2381,6 +2577,21 @@
         if (!ws) return;
         ws.budget = parseFloat(this.value) || 0;
         saveGraph();
+      });
+
+      /* Number stepper buttons (generic) */
+      document.querySelectorAll('.stepper-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var input = document.getElementById(btn.dataset.target);
+          if (!input) return;
+          var step = parseFloat(input.step) || 1;
+          var min = input.min !== '' ? parseFloat(input.min) : -Infinity;
+          var current = parseFloat(input.value) || 0;
+          var next = btn.classList.contains('stepper-plus') ? current + step : current - step;
+          if (next < min) next = min;
+          input.value = next;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
       });
 
       /* Workspace tags */
@@ -2439,10 +2650,19 @@
         wsDialogOverlay.classList.add('open');
         document.getElementById('ws-create-name').value = '';
         document.getElementById('ws-create-purpose').value = '';
+        document.getElementById('ws-create-topics').value = '';
+        document.getElementById('ws-create-budget').value = '';
         wsCreateColor = '#038B9A';
         document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s) {
           s.classList.toggle('active', s.dataset.color === '#038B9A');
         });
+        /* Reset custom swatch appearance */
+        var customSwatch = document.querySelector('#ws-create-colors .color-swatch-custom');
+        if (customSwatch) {
+          customSwatch.style.background = '';
+          customSwatch.querySelector('span').style.display = '';
+          customSwatch.classList.remove('active');
+        }
         document.getElementById('ws-create-name').focus();
       });
 
@@ -2452,17 +2672,51 @@
 
       document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (swatch) {
         swatch.addEventListener('click', function () {
+          if (swatch.classList.contains('color-swatch-custom')) {
+            document.getElementById('ws-create-color-input').click();
+            return;
+          }
           wsCreateColor = swatch.dataset.color;
           document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s) {
             s.classList.toggle('active', s.dataset.color === wsCreateColor);
           });
+          /* Reset custom swatch */
+          var customSwatch = document.querySelector('#ws-create-colors .color-swatch-custom');
+          if (customSwatch) {
+            customSwatch.style.background = '';
+            customSwatch.querySelector('span').style.display = '';
+            customSwatch.classList.remove('active');
+          }
         });
+      });
+
+      document.getElementById('ws-create-color-input').addEventListener('input', function () {
+        wsCreateColor = this.value;
+        document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s) {
+          s.classList.remove('active');
+        });
+        var customSwatch = document.querySelector('#ws-create-colors .color-swatch-custom');
+        if (customSwatch) {
+          customSwatch.style.background = wsCreateColor;
+          customSwatch.querySelector('span').style.display = 'none';
+          customSwatch.classList.add('active');
+        }
       });
 
       document.getElementById('ws-create-submit').addEventListener('click', function () {
         var name = document.getElementById('ws-create-name').value.trim();
         if (!name) return;
         var purpose = document.getElementById('ws-create-purpose').value.trim();
+        var topicsRaw = document.getElementById('ws-create-topics').value.trim();
+        var topics = topicsRaw
+          ? topicsRaw
+              .split(',')
+              .map(function (t) {
+                return t.trim();
+              })
+              .filter(Boolean)
+          : [];
+        var budgetVal = parseFloat(document.getElementById('ws-create-budget').value) || 0;
 
         var cx = (window.innerWidth / 2 - vpX) / vpZoom - 200;
         var cy = (window.innerHeight / 2 - vpY) / vpZoom - 160;
@@ -2472,8 +2726,8 @@
           name: name,
           color: wsCreateColor,
           purpose: purpose,
-          topics: [],
-          budget: 0,
+          topics: topics,
+          budget: budgetVal,
           position: { x: Math.round(cx), y: Math.round(cy) },
           size: { w: 400, h: 320 },
           checkpoints: [],
@@ -2506,5 +2760,6 @@
       /* Boot */
       init();
     </script>
+    <script type="module" src="./main.ts"></script>
   </body>
 </html>

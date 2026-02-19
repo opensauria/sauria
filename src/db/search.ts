@@ -6,7 +6,7 @@ const DEFAULT_LIMIT = 20;
 
 const FTS5_SPECIAL = /[?"'*+\-(){}^:]/g;
 
-function sanitizeFtsQuery(raw: string): string {
+export function sanitizeFtsQuery(raw: string): string {
   const cleaned = raw.replace(FTS5_SPECIAL, ' ').trim();
   const terms = cleaned.split(/\s+/).filter((t) => t.length > 0);
   if (terms.length === 0) return '';
@@ -149,9 +149,7 @@ export function hybridSearch(
 ): Entity[] {
   const scores = new Map<string, { fts: number; vector: number }>();
   const ftsQuery = sanitizeFtsQuery(query);
-  const ftsRows = ftsQuery
-    ? (db.prepare(FTS_SQL).all(ftsQuery, limit * 2) as unknown[])
-    : [];
+  const ftsRows = ftsQuery ? (db.prepare(FTS_SQL).all(ftsQuery, limit * 2) as unknown[]) : [];
   const rankedFts = ftsRows.filter(isFtsRankRow);
 
   let minRank = 0;

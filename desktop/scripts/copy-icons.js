@@ -1,6 +1,6 @@
 /**
  * Copies only the icons we need from simple-icons and lucide-static
- * into src/ui/icons/ for use in the Electron renderer.
+ * into public/icons/ for use as static assets in the Vite renderer.
  *
  * Brand icons get their official color injected as fill attribute.
  * Lucide icons use currentColor (inherited from CSS).
@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const OUT = path.join(__dirname, '..', 'src', 'ui', 'icons');
+const OUT = path.join(__dirname, '..', 'public', 'icons');
 const SI = path.join(__dirname, '..', 'node_modules', 'simple-icons', 'icons');
 const LU = path.join(__dirname, '..', 'node_modules', 'lucide-static', 'icons');
 
@@ -61,6 +61,7 @@ const lucideIcons = [
   'chevron-up',
   'unlink',
   'user',
+  'crown',
 ];
 
 for (const name of lucideIcons) {

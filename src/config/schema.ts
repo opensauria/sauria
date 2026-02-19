@@ -31,12 +31,12 @@ const McpServerConfigSchema = z.object({
 const TelegramVoiceConfigSchema = z
   .object({
     enabled: z.boolean().default(true),
-    model: z.string().default('onnx-community/whisper-small'),
+    model: z.string().default('auto'),
     maxDurationSeconds: z.number().int().min(1).max(300).default(120),
   })
   .default({
     enabled: true,
-    model: 'onnx-community/whisper-small',
+    model: 'auto',
     maxDurationSeconds: 120,
   });
 
@@ -117,7 +117,7 @@ const ChannelsConfigSchema = z.object({
       allowedUserIds: [],
       voice: {
         enabled: true,
-        model: 'onnx-community/whisper-small',
+        model: 'auto',
         maxDurationSeconds: 120,
       },
     }),
@@ -163,7 +163,7 @@ export const OpenWindConfigSchema = z
         allowedUserIds: [],
         voice: {
           enabled: true,
-          model: 'onnx-community/whisper-small',
+          model: 'auto',
           maxDurationSeconds: 120,
         },
       },

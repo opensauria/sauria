@@ -32,7 +32,7 @@ Desktop (Electron) ──► Canvas UI (agent cards, edges, workspaces)
 - **Database**: SQLite via `better-sqlite3` (encrypted at rest)
 - **AI Providers**: Anthropic (OAuth or API key), OpenAI, Google, Ollama (local)
 - **Desktop**: Electron + Electron Forge (no framework, vanilla HTML/CSS/JS)
-- **Build**: `tsdown` for CLI bundle, `tsc` for desktop
+- **Build**: `tsdown` for CLI bundle, Vite (via `@electron-forge/plugin-vite`) for desktop
 - **Test**: Vitest
 - **Validation**: Zod schemas
 
@@ -63,13 +63,20 @@ desktop/
     window-canvas.ts   # Canvas window factory
     window-palette.ts  # Command palette window
     window-setup.ts    # Setup wizard window
-    ui/
-      canvas.html      # Agent canvas (inline JS, spring physics)
-      canvas.css       # Canvas styles
-      palette.html     # Command palette UI
-      setup.html       # Setup wizard UI
+    renderer/
+      canvas/
+        index.html     # Agent canvas (inline JS, spring physics)
+        canvas.css     # Canvas styles
+        main.ts        # Module entry point (Phase 2)
+      palette/
+        index.html     # Command palette UI
+        main.ts        # Module entry point (Phase 2)
+      setup/
+        index.html     # Setup wizard UI
+        main.ts        # Module entry point (Phase 2)
       shared.css       # Design tokens and shared components
-      icons/           # Brand + UI icons (copied by build script)
+  public/
+    icons/             # Brand + UI icons (copied by build script)
   scripts/
     copy-icons.js      # Icon build pipeline
 ```
@@ -111,6 +118,7 @@ desktop/
 - PII scrubber before logging
 - Rate limiting on every channel (per-minute caps)
 - No secrets in code, all from vault
+- Only `execFile` for subprocess execution (voice transcription). No `exec()`, no `eval()`, no shell interpolation.
 - NEVER commit credentials, API keys, client IDs, tokens, passwords, or any sensitive values anywhere in the codebase — not in code, comments, docs, CLAUDE.md, or tests. Reference constants by variable name only.
 
 ### Authentication
@@ -129,7 +137,8 @@ desktop/
 - SQLite with `better-sqlite3` (synchronous reads, async-wrapped writes)
 - Schema applied on startup via `applySchema(db)`
 - Tables: `entities`, `relations`, `events`, `observations`, `agent_messages`, `agent_conversations`, `agent_memory`, `agent_tasks`
-- FTS5 for full-text search, vector embeddings for semantic search
+- FTS5 for full-text search
+- **Embeddings**: `src/ai/embeddings.ts` imports `@huggingface/transformers` but the package was removed from `package.json`. Semantic search is broken until embeddings are migrated (to local Python model or re-added as dependency).
 
 ### Channels
 
@@ -146,6 +155,24 @@ desktop/
 - `evaluateEdgeRules()` for deterministic routing, `LLMRoutingBrain` for intelligent routing
 - `AutonomyEnforcer` filters actions based on agent autonomy level
 - `ChannelRegistry` maps nodeId to channel instances
+
+### Agent Collaboration
+
+- **Shared Conversation Window**: forwards/notifies enriched with N most recent messages from source conversation (~150-200 tokens). `AgentMemory.getRecentMessagesForContext()` provides formatted context.
+- **Workspace Memory Pool**: `agent_memory` table has `workspace_id` column. `AgentMemory.getWorkspaceFacts()` retrieves facts scoped to a workspace. LLM routing prompt injects up to 5 workspace facts (~100 tokens).
+- **Peer Messages in Routing**: `buildRoutingPrompt()` includes recent messages from other nodes in the same workspace (~100 tokens). Total additional overhead: ~350-400 tokens per routing decision (negligible vs base ~2000-4000).
+- **Graph Persistence**: owner commands (`promote`, `reassign`, `fire`, `pause`) persist mutations to `canvas.json` via `persistGraph()`.
+- Design doc: `docs/plans/2026-02-19-multi-agent-collaboration-design.md`
+
+### Voice Transcription
+
+- Platform-specific Whisper via Python subprocess (`execFile`, no shell)
+- macOS: `mlx-whisper` (Apple Silicon optimized, `mlx-community/whisper-large-v3-turbo`)
+- Linux/Windows: `faster-whisper` (`large-v3-turbo`)
+- Python venv at `~/.openwind/venv/` (managed separately from Node.js deps)
+- Config: `channels.telegram.voice.model` defaults to `'auto'` (resolves per platform)
+- `TranscriptionService` in `src/channels/transcription.ts`
+- Max audio size: 20 MB, configurable timeout via `maxDurationSeconds`
 
 ## Desktop UI Design
 
@@ -226,15 +253,18 @@ desktop/
 
 ## Electron Build
 
-- `assets/icon.icns` is missing, so `electron-forge make` fails
-- Use `npm run icons && npx tsc && rm -rf dist/ui && cp -r src/ui dist/ui && npx electron-forge start`
+- Vite bundles main, preload, and renderer via `@electron-forge/plugin-vite`
+- `assets/icon.icns` is missing, so `electron-forge make` (DMG) fails
+- Dev: `cd desktop && npm run dev` (icons + electron-forge start with Vite HMR)
+- Package: `cd desktop && npm run package`
 - Always kill all Electron processes before restart (see memory notes)
 - Daemon bundle must be rebuilt separately: `npm run build` at root (tsdown)
-- Desktop `npx tsc` only rebuilds desktop TypeScript, NOT the daemon CLI bundle
+- Renderer files live in `desktop/src/renderer/{canvas,palette,setup}/`
+- Icons are static assets in `desktop/public/icons/` (served at `/icons/`)
 
 ## Build Checklist
 
 When changing daemon code (`src/`): `npm run build` at project root
-When changing desktop code (`desktop/src/`): `cd desktop && npx tsc`
-When changing UI files (`desktop/src/ui/`): `rm -rf dist/ui && cp -r src/ui dist/ui`
-Full restart: kill Electron + daemon, rebuild both, copy UI, start Electron
+When changing desktop code (`desktop/src/*.ts`): Vite rebuilds automatically in dev mode
+When changing renderer files (`desktop/src/renderer/`): Vite hot-reloads in dev mode
+Full restart: kill Electron + daemon, rebuild daemon (`npm run build`), start desktop (`cd desktop && npm run dev`)

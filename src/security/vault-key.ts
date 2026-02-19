@@ -28,10 +28,10 @@ function machineId(): string {
   let id: string;
   if (platform() === 'darwin') {
     try {
-      const raw = execSync(
-        'ioreg -rd1 -c IOPlatformExpertDevice | grep IOPlatformUUID',
-        { encoding: 'utf-8', timeout: 3000 },
-      );
+      const raw = execSync('ioreg -rd1 -c IOPlatformExpertDevice | grep IOPlatformUUID', {
+        encoding: 'utf-8',
+        timeout: 3000,
+      });
       const match = raw.match(/"([A-F0-9-]{36})"/);
       id = match?.[1] ?? userInfo().username;
     } catch {
@@ -40,6 +40,17 @@ function machineId(): string {
   } else if (platform() === 'linux') {
     try {
       id = readFileSync('/etc/machine-id', 'utf-8').trim();
+    } catch {
+      id = userInfo().username;
+    }
+  } else if (platform() === 'win32') {
+    try {
+      const raw = execSync(
+        'powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystemProduct).UUID"',
+        { encoding: 'utf-8', timeout: 5000 },
+      );
+      const uuid = raw.trim();
+      id = uuid.length > 0 ? uuid : userInfo().username;
     } catch {
       id = userInfo().username;
     }

@@ -25,6 +25,12 @@ export const INJECTION_PATTERNS: ReadonlyArray<RegExp> = [
   /<\|end_of_text\|>/gi,
   /<\|eot_id\|>/gi,
   /<\|start_header_id\|>/gi,
+  /<s>/gi,
+  /<\/s>/gi,
+  /\n\nHuman:/g,
+  /\n\nAssistant:/g,
+  /```system\b/gi,
+  /[\u202E\u200F\u200E\u2066\u2067\u2068\u2069\u202A\u202B\u202C\u202D]/g,
 ];
 
 const CONTROL_CHAR_REGEX = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
