@@ -81,7 +81,7 @@ export class LLMRoutingBrain {
       return { actions: [] };
     }
 
-    const cacheKey = buildCacheKey(message.sourceNodeId, message.content);
+    const cacheKey = buildCacheKey(message.sourceNodeId, message.content, context.conversationId);
     const cached = this.cache.get(cacheKey);
     if (cached) {
       return cached;
