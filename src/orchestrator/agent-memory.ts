@@ -94,6 +94,12 @@ function toAgentMessage(row: AgentMessageRow): AgentMessage {
   };
 }
 
+// ─── Utilities ──────────────────────────────────────────────────────
+
+export function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
 // ─── AgentMemory ────────────────────────────────────────────────────
 
 export class AgentMemory {
@@ -152,6 +158,32 @@ export class AgentMemory {
         : (nodeLabels.get(msg.sourceNodeId) ?? msg.sourceNodeId);
       return `[${sender}] ${msg.content}`;
     });
+  }
+
+  getHistoryWithinBudget(conversationId: string, maxTokens: number): AgentMessage[] {
+    if (maxTokens <= 0) return [];
+
+    const rows: unknown[] = this.db
+      .prepare(
+        `SELECT * FROM agent_messages
+         WHERE conversation_id = ?
+         ORDER BY rowid DESC
+         LIMIT 50`,
+      )
+      .all(conversationId);
+
+    const allMessages = rows.filter(isAgentMessageRow).map(toAgentMessage);
+    const result: AgentMessage[] = [];
+    let tokenCount = 0;
+
+    for (const msg of allMessages) {
+      const msgTokens = estimateTokens(msg.content);
+      if (tokenCount + msgTokens > maxTokens) break;
+      tokenCount += msgTokens;
+      result.push(msg);
+    }
+
+    return result.reverse();
   }
 
   getConversationHistory(conversationId: string, limit: number): AgentMessage[] {
