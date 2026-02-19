@@ -144,7 +144,15 @@ export class LLMRoutingBrain {
 // ─── Prompt Building ────────────────────────────────────────────────
 
 function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatMessage[] {
-  const { message, sourceNode, workspace, teamNodes, ruleActions, conversationId, globalInstructions } = context;
+  const {
+    message,
+    sourceNode,
+    workspace,
+    teamNodes,
+    ruleActions,
+    conversationId,
+    globalInstructions,
+  } = context;
 
   const agentList = teamNodes
     .map((node) => `- ${node.label} (${node.role}) on ${node.platform}`)
@@ -169,10 +177,7 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
   if (workspace) {
     const facts = memory.getWorkspaceFacts(workspace.id, 5);
     if (facts.length > 0) {
-      workspaceFactsText = [
-        'Workspace knowledge:',
-        ...facts.map((f) => `- ${f}`),
-      ].join('\n');
+      workspaceFactsText = ['Workspace knowledge:', ...facts.map((f) => `- ${f}`)].join('\n');
     }
   }
 
@@ -181,21 +186,14 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
     const peerLines: string[] = [];
     for (const peerNode of teamNodes) {
       if (peerNode.id === sourceNode.id) continue;
-      const peerConvId = memory.getOrCreateConversation(
-        peerNode.platform,
-        null,
-        [peerNode.id],
-      );
+      const peerConvId = memory.getOrCreateConversation(peerNode.platform, null, [peerNode.id]);
       const peerHistory = memory.getConversationHistory(peerConvId, 2);
       for (const msg of peerHistory) {
         peerLines.push(`[${peerNode.label}] ${msg.content}`);
       }
     }
     if (peerLines.length > 0) {
-      peerMessagesText = [
-        'Recent peer activity:',
-        ...peerLines.slice(0, 5),
-      ].join('\n');
+      peerMessagesText = ['Recent peer activity:', ...peerLines.slice(0, 5)].join('\n');
     }
   }
 

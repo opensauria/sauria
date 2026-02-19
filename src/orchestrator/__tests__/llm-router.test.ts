@@ -248,7 +248,13 @@ describe('LLMRoutingBrain', () => {
 
     it('includes workspace facts in the routing prompt', async () => {
       const agentMemory = new AgentMemory(db);
-      agentMemory.storeFact('n1', 'ws1', 'Design team prefers async standups', ['process'], 'conversation');
+      agentMemory.storeFact(
+        'n1',
+        'ws1',
+        'Design team prefers async standups',
+        ['process'],
+        'conversation',
+      );
       agentMemory.storeFact('n2', 'ws1', 'Hiring approved for Q2', ['finance'], 'conversation');
 
       const responseJson = JSON.stringify({
@@ -265,8 +271,9 @@ describe('LLMRoutingBrain', () => {
 
       await brain.decideRouting(context);
 
-      const reasonCall = (router.reason as ReturnType<typeof vi.fn>).mock.calls[0];
-      const messages = reasonCall[0] as Array<{ role: string; content: string }>;
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
       const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
       expect(systemPrompt).toContain('Workspace knowledge');
       expect(systemPrompt).toContain('Design team prefers async standups');
@@ -309,8 +316,9 @@ describe('LLMRoutingBrain', () => {
 
       await brain.decideRouting(context);
 
-      const reasonCall = (router.reason as ReturnType<typeof vi.fn>).mock.calls[0];
-      const messages = reasonCall[0] as Array<{ role: string; content: string }>;
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
       const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
       expect(systemPrompt).toContain('Recent peer activity');
       expect(systemPrompt).toContain('Design review completed for landing page');

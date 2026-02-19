@@ -70,7 +70,6 @@ export interface DaemonContext {
   readonly ownerCommandWatcher: FSWatcher | null;
 }
 
-
 async function connectMcpSources(
   config: OpenWindConfig,
   mcpClients: McpClientManager,
@@ -229,7 +228,8 @@ function loadCanvasGraph(): CanvasGraph {
     const parsed = JSON.parse(raw) as RawGraph;
     return {
       version: 2,
-      globalInstructions: typeof parsed.globalInstructions === 'string' ? parsed.globalInstructions : '',
+      globalInstructions:
+        typeof parsed.globalInstructions === 'string' ? parsed.globalInstructions : '',
       nodes: (parsed.nodes ?? []).map(normalizeNode),
       edges: (parsed.edges ?? []).map(normalizeEdge),
       workspaces: (parsed.workspaces ?? []).map(normalizeWorkspace),
@@ -264,11 +264,8 @@ async function createChannelForNode(
   const logger = getLogger();
   const { db, router, audit, config, onInbound, globalInstructions } = deps;
 
-  const platformName =
-    node.platform.charAt(0).toUpperCase() + node.platform.slice(1);
-  const displayName = node.meta?.['firstName']
-    || node.label.replace(/^@/, '')
-    || node.label;
+  const platformName = node.platform.charAt(0).toUpperCase() + node.platform.slice(1);
+  const displayName = node.meta?.['firstName'] || node.label.replace(/^@/, '') || node.label;
   const personaBlock = [
     `Your name is ${displayName}.`,
     `You are a ${node.role ?? 'assistant'} agent on ${platformName}.`,
@@ -304,13 +301,11 @@ async function createChannelForNode(
     );
 
     const ownerTelegramId = config.owner.telegram?.userId;
-    const nodeUserId = typeof node.meta?.['userId'] === 'string'
-      ? Number(node.meta['userId'])
-      : undefined;
+    const nodeUserId =
+      typeof node.meta?.['userId'] === 'string' ? Number(node.meta['userId']) : undefined;
     const configUserIds = config.channels.telegram.allowedUserIds;
-    const allowedUserIds = configUserIds.length > 0
-      ? configUserIds
-      : nodeUserId ? [nodeUserId] : [];
+    const allowedUserIds =
+      configUserIds.length > 0 ? configUserIds : nodeUserId ? [nodeUserId] : [];
 
     return new TelegramChannel({
       token,
@@ -717,7 +712,11 @@ export async function startDaemonContext(): Promise<DaemonContext> {
           if (!currentNodeIds.has(node.id)) {
             void (async () => {
               try {
-                const channel = await createChannelForNode(node, { ...channelDeps, onInbound, globalInstructions: newGraph.globalInstructions });
+                const channel = await createChannelForNode(node, {
+                  ...channelDeps,
+                  onInbound,
+                  globalInstructions: newGraph.globalInstructions,
+                });
                 if (channel) {
                   registry.register(node.id, channel);
                   await channel.start();
