@@ -211,7 +211,9 @@ export class AgentOrchestrator {
           (w) => w.id === command.newWorkspaceId || w.name === command.newWorkspaceId,
         );
         if (!targetWs) {
-          logger.warn('Owner reassign: workspace not found', { workspaceId: command.newWorkspaceId });
+          logger.warn('Owner reassign: workspace not found', {
+            workspaceId: command.newWorkspaceId,
+          });
           return;
         }
         this.updateNode(node.id, { workspaceId: targetWs.id });
@@ -228,9 +230,7 @@ export class AgentOrchestrator {
           logger.warn('Owner pause: workspace not found', { workspaceId: command.workspaceId });
           return;
         }
-        const wsNodeIds = this.graph.nodes
-          .filter((n) => n.workspaceId === ws.id)
-          .map((n) => n.id);
+        const wsNodeIds = this.graph.nodes.filter((n) => n.workspaceId === ws.id).map((n) => n.id);
         this.graph = {
           ...this.graph,
           nodes: this.graph.nodes.map((n) =>
@@ -320,9 +320,7 @@ export class AgentOrchestrator {
   private updateNode(nodeId: string, patch: Partial<AgentNode>): void {
     this.graph = {
       ...this.graph,
-      nodes: this.graph.nodes.map((n) =>
-        n.id === nodeId ? { ...n, ...patch } : n,
-      ),
+      nodes: this.graph.nodes.map((n) => (n.id === nodeId ? { ...n, ...patch } : n)),
     };
   }
 
@@ -515,15 +513,11 @@ export class AgentOrchestrator {
     const sourceNode = this.findNode(sourceNodeId);
     if (!sourceNode) return '';
 
-    const conversationId = this.agentMemory.getOrCreateConversation(
-      platform,
-      groupId,
-      [sourceNodeId],
-    );
+    const conversationId = this.agentMemory.getOrCreateConversation(platform, groupId, [
+      sourceNodeId,
+    ]);
 
-    const nodeLabels = new Map(
-      this.graph.nodes.map((n) => [n.id, n.label]),
-    );
+    const nodeLabels = new Map(this.graph.nodes.map((n) => [n.id, n.label]));
     const recentMessages = this.agentMemory.getRecentMessagesForContext(
       conversationId,
       5,

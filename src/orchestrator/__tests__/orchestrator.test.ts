@@ -12,7 +12,9 @@ import { ChannelRegistry } from '../../channels/registry.js';
 
 // ─── Shared Fixtures ──────────────────────────────────────────────
 
-function makeWorkspace(overrides: Partial<CanvasGraph['workspaces'][0]> = {}): CanvasGraph['workspaces'][0] {
+function makeWorkspace(
+  overrides: Partial<CanvasGraph['workspaces'][0]> = {},
+): CanvasGraph['workspaces'][0] {
   return {
     id: 'ws1',
     name: 'Support',
@@ -156,7 +158,7 @@ describe('executeAction forward enrichment', () => {
 
     const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
     expect(sendTo).toHaveBeenCalledOnce();
-    const sentContent = sendTo.mock.calls[0][1] as string;
+    const sentContent = sendTo.mock.calls[0]![1] as string;
 
     expect(sentContent).toContain('[Forwarded from @support_bot]');
     expect(sentContent).toContain('Schedule a meeting with design');
@@ -177,7 +179,13 @@ describe('handleOwnerCommand graph persistence', () => {
     ],
     [
       makeWorkspace(),
-      makeWorkspace({ id: 'ws2', name: 'Design', color: '#00ff00', purpose: 'Handle design', topics: ['design'] }),
+      makeWorkspace({
+        id: 'ws2',
+        name: 'Design',
+        color: '#00ff00',
+        purpose: 'Handle design',
+        topics: ['design'],
+      }),
     ],
   );
 
