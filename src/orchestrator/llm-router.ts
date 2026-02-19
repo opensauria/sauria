@@ -168,9 +168,10 @@ function buildRoutingPrompt(
       ? `Already-scheduled actions from rules:\n${JSON.stringify(ruleActions, null, 2)}`
       : 'No rule-based actions were triggered.';
 
+  const TOKEN_BUDGET_HISTORY = 1500;
   let conversationContext = '';
   if (conversationId) {
-    const recentMessages = memory.getConversationHistory(conversationId, 5);
+    const recentMessages = memory.getHistoryWithinBudget(conversationId, TOKEN_BUDGET_HISTORY);
     if (recentMessages.length > 0) {
       conversationContext = recentMessages
         .map((msg) => `[${msg.sourceNodeId}] ${msg.content}`)

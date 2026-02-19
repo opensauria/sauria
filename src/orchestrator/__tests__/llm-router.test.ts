@@ -280,6 +280,45 @@ describe('LLMRoutingBrain', () => {
       expect(systemPrompt).toContain('Hiring approved for Q2');
     });
 
+    it('includes token-budget-aware conversation history in the routing prompt', async () => {
+      const agentMemory = new AgentMemory(db);
+      const conversationId = agentMemory.getOrCreateConversation('telegram', null, ['n1']);
+
+      for (let i = 0; i < 8; i++) {
+        agentMemory.recordMessage({
+          conversationId,
+          sourceNodeId: 'n1',
+          senderId: 'user1',
+          senderIsOwner: i % 2 === 0,
+          platform: 'telegram',
+          groupId: null,
+          content: `Conversation message number ${i}`,
+          contentType: 'text',
+        });
+      }
+
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({
+          content: 'What were we discussing earlier today?',
+        }),
+        conversationId,
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).toContain('Conversation message number');
+      expect(systemPrompt).toContain('Recent conversation context');
+    });
+
     it('includes agent-level facts in the routing prompt', async () => {
       const agentMemory = new AgentMemory(db);
       agentMemory.storeFact('n1', null, 'Customer prefers email communication', ['preferences'], 'conversation');
