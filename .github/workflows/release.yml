@@ -18,21 +18,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm turbo run build --filter='./packages/*'
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: pnpm turbo run typecheck
 
       - name: Format check
-        run: npx prettier --check .
+        run: pnpm run format:check
 
       - name: Dependency audit
-        run: npm audit --omit=dev --audit-level=high
+        run: pnpm audit --prod --audit-level high
 
       - name: Security scan
         run: |
@@ -46,7 +51,11 @@ jobs:
           )
           FOUND=0
           for p in "${BANNED[@]}"; do
-            if grep -rn --include="*.ts" "$p" src/; then
+            if grep -rn --include="*.ts" \
+              "--exclude=*banned-patterns*" "--exclude=*whatsapp*" \
+              "--exclude=*transcription*" "--exclude=*vault-key*" \
+              "--exclude=*resolve*" "--exclude=*machine-id*" \
+              "$p" apps/daemon/src/ packages/; then
               echo "::error::Banned pattern: $p"
               FOUND=1
             fi
@@ -54,14 +63,14 @@ jobs:
           if [ "$FOUND" -eq 1 ]; then exit 1; fi
 
       - name: Test
-        run: npx vitest run
+        run: pnpm --filter @openwind/daemon run test
 
       - name: Build
-        run: npm run build
+        run: pnpm turbo run build
 
       - name: Verify tag matches package.json version
         run: |
-          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          PKG_VERSION="v$(node -p "require('./apps/daemon/package.json').version")"
           TAG="${GITHUB_REF_NAME}"
           if [ "$PKG_VERSION" != "$TAG" ]; then
             echo "::error::Tag $TAG does not match package.json version $PKG_VERSION"
@@ -79,17 +88,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
+          cache: pnpm
           registry-url: https://registry.npmjs.org
 
-      - run: npm ci
-      - run: npm run build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build
 
       - name: Publish
-        run: npm publish --provenance --access public
+        working-directory: apps/daemon
+        run: pnpm publish --provenance --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

@@ -30,37 +30,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
+          cache: pnpm
 
-      # Build the core CLI first
-      - name: Install core dependencies
-        run: npm ci
+      - run: pnpm install --frozen-lockfile
 
-      - name: Build core
-        run: npm run build
+      # Build shared packages first
+      - name: Build packages
+        run: pnpm turbo run build --filter='./packages/*'
+
+      # Build the daemon
+      - name: Build daemon
+        run: pnpm --filter @openwind/daemon run build
 
       # Build desktop app
-      - name: Install desktop dependencies
-        working-directory: desktop
-        run: npm ci
-
       - name: Build desktop
-        working-directory: desktop
-        run: npm run build
+        working-directory: apps/desktop
+        run: pnpm run build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: openwind-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
-            desktop/out/make/**/*.dmg
-            desktop/out/make/**/*.exe
-            desktop/out/make/**/*.deb
-            desktop/out/make/**/*.rpm
-            desktop/out/make/**/*.zip
+            apps/desktop/out/make/**/*.dmg
+            apps/desktop/out/make/**/*.exe
+            apps/desktop/out/make/**/*.deb
+            apps/desktop/out/make/**/*.rpm
+            apps/desktop/out/make/**/*.zip
           if-no-files-found: warn
 
   release:
