@@ -237,16 +237,23 @@ export class TelegramChannel implements Channel {
       .join('\n');
     try {
       const answer = await reasonAbout(router, context, question, this.deps.instructions);
-      audit.logAction('telegram:ask', { question: scrubPII(question), entityCount: entities.length });
+      audit.logAction('telegram:ask', {
+        question: scrubPII(question),
+        entityCount: entities.length,
+      });
       await ctx.reply(answer);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       const errStack = error instanceof Error ? error.stack : '';
       process.stderr.write(`[telegram:ask_error] ${errMsg}\n${errStack}\n`);
-      audit.logAction('telegram:ask_error', {
-        question: scrubPII(question),
-        error: errMsg,
-      }, { success: false });
+      audit.logAction(
+        'telegram:ask_error',
+        {
+          question: scrubPII(question),
+          error: errMsg,
+        },
+        { success: false },
+      );
       await ctx.reply('Sorry, I could not process that request right now.');
     }
   }
@@ -337,7 +344,9 @@ export class TelegramChannel implements Channel {
     });
     void this.bot.start({
       onStart: () => {
-        process.stderr.write(`[telegram:polling] Bot polling started for nodeId=${this.deps.nodeId ?? 'none'}\n`);
+        process.stderr.write(
+          `[telegram:polling] Bot polling started for nodeId=${this.deps.nodeId ?? 'none'}\n`,
+        );
       },
     });
   }
