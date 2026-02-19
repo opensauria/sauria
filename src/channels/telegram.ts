@@ -33,8 +33,9 @@ export interface TelegramDeps {
   readonly pipeline: IngestPipeline;
   readonly transcription: TranscriptionService | null;
   readonly nodeId?: string;
-  readonly ceoUserId?: number;
+  readonly ownerId?: number;
   readonly onInbound?: (message: InboundMessage) => void;
+  readonly instructions?: string;
 }
 
 function countRows(db: BetterSqlite3.Database, sql: string): number {
@@ -62,7 +63,13 @@ export class TelegramChannel implements Channel {
 
   private setupMiddleware(): void {
     this.bot.use(async (ctx, next) => {
-      if (!ctx.from?.id || !this.allowedUsers.has(ctx.from.id)) return;
+      const fromId = ctx.from?.id;
+      if (!fromId || !this.allowedUsers.has(fromId)) {
+        process.stderr.write(
+          `[telegram:auth] Rejected user ${String(fromId)} — allowed: [${[...this.allowedUsers].join(',')}]\n`,
+        );
+        return;
+      }
       if (!this.limiter.tryConsume()) {
         await ctx.reply('Rate limit reached. Please wait a moment.');
         return;
@@ -121,22 +128,21 @@ export class TelegramChannel implements Channel {
     const text = sanitizeChannelInput(rawText);
     await this.ingestText(text, 'telegram:text');
 
-    const { onInbound, nodeId, ceoUserId } = this.deps;
+    const { onInbound, nodeId, ownerId } = this.deps;
     if (onInbound && nodeId) {
       const senderId = String(ctx.from?.id ?? 'unknown');
-      const isCeo = Boolean(ceoUserId && ctx.from?.id === ceoUserId);
+      const isOwner = Boolean(ownerId && ctx.from?.id === ownerId);
       const inbound: InboundMessage = {
         sourceNodeId: nodeId,
         platform: 'telegram',
         senderId,
-        senderIsCeo: isCeo,
+        senderIsOwner: isOwner,
         groupId: ctx.chat?.id ? String(ctx.chat.id) : null,
         content: text,
         contentType: 'text',
         timestamp: new Date().toISOString(),
       };
       onInbound(inbound);
-      return;
     }
 
     await this.handleAsk(ctx, text);
@@ -173,22 +179,21 @@ export class TelegramChannel implements Channel {
 
     await this.ingestText(text, 'telegram:voice');
 
-    const { onInbound, nodeId, ceoUserId } = this.deps;
+    const { onInbound, nodeId, ownerId } = this.deps;
     if (onInbound && nodeId) {
       const senderId = String(ctx.from?.id ?? 'unknown');
-      const isCeo = Boolean(ceoUserId && ctx.from?.id === ceoUserId);
+      const isOwner = Boolean(ownerId && ctx.from?.id === ownerId);
       const inbound: InboundMessage = {
         sourceNodeId: nodeId,
         platform: 'telegram',
         senderId,
-        senderIsCeo: isCeo,
+        senderIsOwner: isOwner,
         groupId: ctx.chat?.id ? String(ctx.chat.id) : null,
         content: text,
         contentType: 'voice',
         timestamp: new Date().toISOString(),
       };
       onInbound(inbound);
-      return;
     }
 
     await this.handleAsk(ctx, text);
@@ -220,9 +225,20 @@ export class TelegramChannel implements Channel {
     const context = entities
       .map((e) => `[${e.type}] ${e.name}: ${e.summary ?? 'no summary'}`)
       .join('\n');
-    const answer = await reasonAbout(router, context, question);
-    audit.logAction('telegram:ask', { question, entityCount: entities.length });
-    await ctx.reply(answer);
+    try {
+      const answer = await reasonAbout(router, context, question, this.deps.instructions);
+      audit.logAction('telegram:ask', { question, entityCount: entities.length });
+      await ctx.reply(answer);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const errStack = error instanceof Error ? error.stack : '';
+      process.stderr.write(`[telegram:ask_error] ${errMsg}\n${errStack}\n`);
+      audit.logAction('telegram:ask_error', {
+        question,
+        error: errMsg,
+      }, { success: false });
+      await ctx.reply('Sorry, I could not process that request right now.');
+    }
   }
 
   private async handleStatus(ctx: Context): Promise<void> {
@@ -302,10 +318,18 @@ export class TelegramChannel implements Channel {
 
   async start(): Promise<void> {
     this.deps.audit.logAction('telegram:start', {});
+    process.stderr.write(
+      `[telegram:start] nodeId=${this.deps.nodeId ?? 'none'} allowedUsers=[${[...this.allowedUsers].join(',')}]\n`,
+    );
     this.bot.catch((err) => {
+      process.stderr.write(`[telegram:bot_error] ${String(err)}\n`);
       this.deps.audit.logAction('telegram:error', { error: String(err) }, { success: false });
     });
-    void this.bot.start();
+    void this.bot.start({
+      onStart: () => {
+        process.stderr.write(`[telegram:polling] Bot polling started for nodeId=${this.deps.nodeId ?? 'none'}\n`);
+      },
+    });
   }
 
   async stop(): Promise<void> {

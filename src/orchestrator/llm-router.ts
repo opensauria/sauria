@@ -22,6 +22,7 @@ export interface RoutingContext {
   readonly teamNodes: readonly AgentNode[];
   readonly ruleActions: readonly RoutingAction[];
   readonly conversationId: string | null;
+  readonly globalInstructions: string;
 }
 
 interface LLMRoutingResponse {
@@ -143,7 +144,15 @@ export class LLMRoutingBrain {
 // ─── Prompt Building ────────────────────────────────────────────────
 
 function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatMessage[] {
-  const { message, sourceNode, workspace, teamNodes, ruleActions, conversationId } = context;
+  const {
+    message,
+    sourceNode,
+    workspace,
+    teamNodes,
+    ruleActions,
+    conversationId,
+    globalInstructions,
+  } = context;
 
   const agentList = teamNodes
     .map((node) => `- ${node.label} (${node.role}) on ${node.platform}`)
@@ -164,6 +173,30 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
     }
   }
 
+  let workspaceFactsText = '';
+  if (workspace) {
+    const facts = memory.getWorkspaceFacts(workspace.id, 5);
+    if (facts.length > 0) {
+      workspaceFactsText = ['Workspace knowledge:', ...facts.map((f) => `- ${f}`)].join('\n');
+    }
+  }
+
+  let peerMessagesText = '';
+  if (teamNodes.length > 1) {
+    const peerLines: string[] = [];
+    for (const peerNode of teamNodes) {
+      if (peerNode.id === sourceNode.id) continue;
+      const peerConvId = memory.getOrCreateConversation(peerNode.platform, null, [peerNode.id]);
+      const peerHistory = memory.getConversationHistory(peerConvId, 2);
+      for (const msg of peerHistory) {
+        peerLines.push(`[${peerNode.label}] ${msg.content}`);
+      }
+    }
+    if (peerLines.length > 0) {
+      peerMessagesText = ['Recent peer activity:', ...peerLines.slice(0, 5)].join('\n');
+    }
+  }
+
   const systemPrompt = [
     'You are the routing brain for a team of AI agents.',
     '',
@@ -181,8 +214,19 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
       ? `Recent conversation context:\n${conversationContext}`
       : 'No prior conversation context.',
     '',
+    ...(workspaceFactsText ? [workspaceFactsText, ''] : []),
+    ...(peerMessagesText ? [peerMessagesText, ''] : []),
     ruleActionsText,
     '',
+    `When generating reply content, respond in character as ${sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '')} (${sourceNode.role ?? 'assistant'}). Never mention being Claude, an AI model, or a language model.`,
+    ...(globalInstructions || sourceNode.instructions
+      ? [
+          'Response style instructions (apply to all reply content):',
+          ...(globalInstructions ? [globalInstructions] : []),
+          ...(sourceNode.instructions ? [sourceNode.instructions] : []),
+          '',
+        ]
+      : []),
     'Decide what actions to take. Return ONLY valid JSON:',
     '{"actions": [{"type": "reply", "content": "..."}, ...]}',
     '',

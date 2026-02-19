@@ -73,7 +73,7 @@ async function setupClaudeSubscription(): Promise<{
 
   const code = await p.text({
     message: 'Paste the authorization code:',
-    validate: (v) => (v.length < 10 ? 'Code seems too short' : undefined),
+    validate: (v) => (!v || v.length < 10 ? 'Code seems too short' : undefined),
   });
   if (p.isCancel(code)) handleCancel();
 
@@ -105,7 +105,7 @@ async function setupApiKey(): Promise<{
 
   const key = await p.password({
     message: `Enter your ${provider} API key:`,
-    validate: (v) => (v.length < 8 ? 'API key seems too short' : undefined),
+    validate: (v) => (!v || v.length < 8 ? 'API key seems too short' : undefined),
   });
   if (p.isCancel(key)) handleCancel();
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:"
     />
     <title>OpenWind</title>
     <link rel="stylesheet" href="shared.css" />
@@ -309,23 +309,25 @@
       .add-bot-btn {
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 8px;
-        padding: 8px 12px;
+        padding: 10px 12px;
         background: transparent;
-        border: 1px dashed rgba(255, 255, 255, 0.1);
+        border: 1.5px dashed rgba(255, 255, 255, 0.08);
         border-radius: 10px;
-        color: rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.25);
         font-size: 12px;
+        font-weight: 500;
         cursor: pointer;
-        transition: all 0.12s ease;
+        transition: all 0.15s ease;
         width: 100%;
         margin-top: 4px;
       }
 
       .add-bot-btn:hover {
-        border-color: rgba(255, 255, 255, 0.2);
-        color: rgba(255, 255, 255, 0.5);
-        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(39, 167, 231, 0.3);
+        color: rgba(39, 167, 231, 0.7);
+        background: rgba(39, 167, 231, 0.04);
       }
 
       .add-bot-btn svg {
@@ -390,7 +392,7 @@
 
       .form-btn {
         padding: 6px 14px;
-        border-radius: 6px;
+        border-radius: 9999px;
         font-size: 12px;
         font-weight: 500;
         border: none;
@@ -479,6 +481,42 @@
         font-size: 10px;
         letter-spacing: 0.5px;
         color: rgba(255, 255, 255, 0.2);
+      }
+
+      /* ── Provider status ────────────── */
+
+      .provider-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.35);
+      }
+
+      .pulse-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #34d399;
+        flex-shrink: 0;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      .pulse-dot.offline {
+        background: rgba(255, 255, 255, 0.15);
+        animation: none;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+          box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4);
+        }
+        50% {
+          opacity: 0.7;
+          box-shadow: 0 0 0 4px rgba(52, 211, 153, 0);
+        }
       }
 
       .empty-state {
@@ -583,7 +621,13 @@
         <div class="tg-connect-form" id="tg-form-fields">
           <div class="form-field">
             <label>Your User ID</label>
-            <input type="number" id="tg-userid" placeholder="123456789" min="1" step="1" />
+            <input
+              type="text"
+              id="tg-userid"
+              placeholder="123456789"
+              inputmode="numeric"
+              autocomplete="off"
+            />
             <div class="field-hint">Get from @userinfobot on Telegram</div>
           </div>
           <div class="form-field">
@@ -600,9 +644,13 @@
       </div>
 
       <div class="footer">
-        <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> Navigate</span>
+        <div class="provider-status" id="provider-status">
+          <span class="pulse-dot offline"></span>
+          <span id="provider-label">No provider</span>
+        </div>
+        <span><kbd>&uarr;</kbd><kbd>&darr;</kbd></span>
         <span><kbd>&crarr;</kbd> Run</span>
-        <span><kbd>esc</kbd> Close</span>
+        <span><kbd>esc</kbd></span>
         <span class="wind-label">OpenWind</span>
       </div>
     </div>
@@ -615,8 +663,8 @@
           '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M12 7v5l3 3" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
         telegram:
           '<svg viewBox="0 0 24 24"><path d="M9.04 15.6l-.39 5.36c.56 0 .8-.24 1.1-.52l2.63-2.5 5.45 3.97c1 .55 1.7.26 1.97-.92l3.57-16.67C23.71 2.7 22.85 2.14 21.9 2.5L1.4 10.17c-1.63.64-1.6 1.56-.28 1.98l5.1 1.58L19.5 5.8c.6-.38 1.15-.17.7.2L9.04 15.6z" fill="#27A7E7"/></svg>',
-        settings:
-          '<svg viewBox="0 0 24 24" fill="none"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><circle cx="12" cy="12" r="3" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/></svg>',
+        setup:
+          '<svg viewBox="0 0 24 24" fill="none"><path d="M12 2a3 3 0 00-3 3v1a3 3 0 006 0V5a3 3 0 00-3-3z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M19 9h-2a3 3 0 000 6h2a3 3 0 000-6z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M5 15h2a3 3 0 000-6H5a3 3 0 000 6z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M12 18a3 3 0 00-3 3M12 18a3 3 0 013 3" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
         audit:
           '<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M9 7h6M9 11h6M9 15h4" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
         doctor:
@@ -626,14 +674,14 @@
       };
 
       var commands = [
-        { id: 'canvas', label: 'Agent Canvas', hint: 'orchestrate' },
-        { id: 'status', label: 'OpenWind Status', hint: 'status' },
-        { id: 'telegram', label: 'Connect Telegram', hint: 'channel' },
-        { id: 'settings', label: 'Settings', hint: 'config' },
-        { id: 'audit', label: 'View Audit Log', hint: 'security' },
-        { id: 'doctor', label: 'Health Check', hint: 'doctor' },
-        { id: 'docs', label: 'Documentation', hint: 'web' },
-        { id: 'quit', label: 'Quit OpenWind', hint: 'system' },
+        { id: 'canvas', label: 'Agent Canvas', hint: '' },
+        { id: 'telegram', label: 'Telegram', hint: 'channel' },
+        { id: 'setup', label: 'AI Provider', hint: 'config' },
+        { id: 'status', label: 'Status', hint: 'system' },
+        { id: 'doctor', label: 'Health Check', hint: 'system' },
+        { id: 'audit', label: 'Audit Log', hint: 'security' },
+        { id: 'docs', label: 'Documentation', hint: 'help' },
+        { id: 'quit', label: 'Quit', hint: '' },
       ];
 
       var inSubView = false;
@@ -723,17 +771,19 @@
       var trashSvg =
         '<svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-      function renderBotCard(profile, daemonRunning) {
-        var photoHtml =
-          profile && profile.photo ? '<img src="' + profile.photo + '" alt="" />' : tgIconSvg;
-        var name = profile ? '@' + profile.username : 'Telegram Bot';
-        var isOnline = daemonRunning;
+      function renderBotCard(bot) {
+        var photo = bot.photo || (bot.profile && bot.profile.photo);
+        var photoHtml = photo ? '<img src="' + photo + '" alt="" />' : tgIconSvg;
+        var name = bot.label || (bot.profile ? '@' + bot.profile.username : 'Telegram Bot');
+        var isOnline = bot.connected;
         var dotClass = isOnline ? 'bot-status-dot' : 'bot-status-dot offline';
         var statusText = isOnline ? 'Online' : 'Offline';
-        var userId = profile ? profile.userId : '';
+        var nodeId = bot.nodeId || '';
 
         return (
-          '<div class="bot-card">' +
+          '<div class="bot-card" data-node-id="' +
+          nodeId +
+          '">' +
           '<div class="bot-avatar">' +
           photoHtml +
           '</div>' +
@@ -746,11 +796,12 @@
           dotClass +
           '"></span>' +
           statusText +
-          (userId ? ' &middot; User ' + userId : '') +
           '</div>' +
           '</div>' +
           '<div class="bot-actions">' +
-          '<button class="bot-action-btn danger" id="tg-disconnect" title="Disconnect">' +
+          '<button class="bot-action-btn danger tg-disconnect-btn" data-node-id="' +
+          nodeId +
+          '" title="Disconnect">' +
           trashSvg +
           '</button>' +
           '</div>' +
@@ -766,20 +817,28 @@
         enterSubView();
 
         var status = await window.openwind.getTelegramStatus();
-        if (status.connected) {
-          tgBotList.innerHTML = renderBotCard(status.profile, true);
+        var bots = status.bots || [];
+        var connectedBots = bots.filter(function (b) {
+          return b.connected;
+        });
+
+        if (connectedBots.length > 0) {
+          tgBotList.innerHTML = connectedBots.map(renderBotCard).join('');
           tgFormFields.className = 'tg-connect-form';
           tgAddBtn.style.display = '';
 
-          // Bind disconnect
-          var discBtn = document.getElementById('tg-disconnect');
-          if (discBtn) {
-            discBtn.addEventListener('mousedown', async function (e) {
+          // Bind disconnect buttons
+          var discBtns = tgBotList.querySelectorAll('.tg-disconnect-btn');
+          discBtns.forEach(function (btn) {
+            btn.addEventListener('mousedown', async function (e) {
               e.preventDefault();
-              await window.openwind.disconnectTelegram();
-              showTelegramForm();
+              var nid = btn.getAttribute('data-node-id');
+              if (nid) {
+                await window.openwind.disconnectChannel('telegram', nid);
+                showTelegramForm();
+              }
             });
-          }
+          });
         } else {
           tgBotList.innerHTML = '';
           tgAddBtn.style.display = 'none';
@@ -842,7 +901,10 @@
         tgStatus.textContent = 'Connecting...';
         tgStatus.className = 'form-status visible';
         try {
-          var result = await window.openwind.connectTelegram(tgToken.value.trim(), parsedId);
+          var result = await window.openwind.connectChannel('telegram', {
+            token: tgToken.value.trim(),
+            userId: parsedId,
+          });
           if (result.success) {
             tgStatus.textContent = 'Connected to @' + result.botUsername;
             tgStatus.className = 'form-status visible success';
@@ -945,6 +1007,7 @@
       });
 
       window.openwind.onPaletteShow(function () {
+        refreshProviderStatus();
         if (tgForm.classList.contains('visible')) {
           var firstEmpty = !tgUserId.value.trim()
             ? tgUserId
@@ -968,18 +1031,34 @@
 
       render();
 
+      function refreshProviderStatus() {
+        window.openwind.getStatus().then(function (status) {
+          var dot = document.querySelector('#provider-status .pulse-dot');
+          var label = document.getElementById('provider-label');
+          if (status.connected && status.provider) {
+            dot.className = 'pulse-dot';
+            var method = status.authMethod === 'oauth' ? 'subscription' : 'API key';
+            label.textContent = status.provider + ' (' + method + ')';
+          } else {
+            dot.className = 'pulse-dot offline';
+            label.textContent = 'No provider';
+          }
+        });
+      }
+
+      refreshProviderStatus();
+
       window.openwind.getTelegramStatus().then(function (status) {
         var tgCmd = commands.find(function (c) {
           return c.id === 'telegram';
         });
         if (!tgCmd) return;
-        if (status.connected && status.profile) {
-          tgCmd.label = '@' + status.profile.username;
-          tgCmd.hint = 'connected';
-          render();
-        } else if (status.connected) {
-          tgCmd.label = 'Telegram';
-          tgCmd.hint = 'connected';
+        var bots = status.bots || [];
+        var count = bots.filter(function (b) {
+          return b.connected;
+        }).length;
+        if (count > 0) {
+          tgCmd.hint = count === 1 ? 'connected' : count + ' bots';
           render();
         }
       });

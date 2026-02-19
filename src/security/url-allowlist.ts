@@ -21,6 +21,7 @@ export const OUTBOUND_ALLOWLIST: ReadonlySet<string> = new Set([
   'login.microsoftonline.com',
   'claude.ai',
   'console.anthropic.com',
+  'platform.claude.com',
   'registry.npmjs.org',
   'slack.com',
 ]);

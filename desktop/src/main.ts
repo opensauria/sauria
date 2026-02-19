@@ -8,11 +8,11 @@ import {
   globalShortcut,
   BrowserWindow,
 } from 'electron';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync, unlinkSync } from 'fs';
 import { createHash, createCipheriv, pbkdf2Sync, randomBytes } from 'crypto';
 import { join, dirname } from 'path';
-import { homedir, hostname, platform, userInfo } from 'os';
-import { execFile, execFileSync, spawn, type ChildProcess } from 'child_process';
+import { homedir, platform, userInfo } from 'os';
+import { execFile, execFileSync, execSync, spawn, type ChildProcess } from 'child_process';
 import { promisify } from 'util';
 import {
   createPaletteWindow,
@@ -21,8 +21,8 @@ import {
   sendCommandResult,
   getPaletteWindow,
 } from './window-palette';
-import { createSetupWindow, getSetupWindow } from './window-setup';
 import { createCanvasWindow, showCanvasWindow } from './window-canvas';
+import { createSetupWindow } from './window-setup';
 
 const execFileAsync = promisify(execFile);
 
@@ -32,9 +32,56 @@ const COMMAND_TIMEOUT = 10_000;
 
 // ─── Vault Crypto (mirrors src/security/vault-key.ts + crypto.ts) ────
 
+function machineId(): string {
+  const cacheDir = join(OPENWIND_HOME, 'vault');
+  const cachePath = join(cacheDir, '.machine-id');
+
+  if (existsSync(cachePath)) {
+    const cached = readFileSync(cachePath, 'utf-8').trim();
+    if (cached.length > 0) return cached;
+  }
+
+  let id: string;
+  if (platform() === 'darwin') {
+    try {
+      const raw = execSync('ioreg -rd1 -c IOPlatformExpertDevice | grep IOPlatformUUID', {
+        encoding: 'utf-8',
+        timeout: 3000,
+      });
+      const match = raw.match(/"([A-F0-9-]{36})"/);
+      id = match ? match[1] : userInfo().username;
+    } catch {
+      id = userInfo().username;
+    }
+  } else if (platform() === 'linux') {
+    try {
+      id = readFileSync('/etc/machine-id', 'utf-8').trim();
+    } catch {
+      id = userInfo().username;
+    }
+  } else if (platform() === 'win32') {
+    try {
+      const raw = execSync(
+        'reg query "HKLM\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid',
+        { encoding: 'utf-8', timeout: 3000 },
+      );
+      const match = raw.match(/MachineGuid\s+REG_SZ\s+(\S+)/);
+      id = match ? match[1] : userInfo().username;
+    } catch {
+      id = userInfo().username;
+    }
+  } else {
+    id = userInfo().username;
+  }
+
+  if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
+  writeFileSync(cachePath, id, 'utf-8');
+  return id;
+}
+
 function deriveVaultPassword(): string {
   return createHash('sha256')
-    .update(`${hostname()}:${userInfo().username}:openwind-vault`)
+    .update(`${machineId()}:${userInfo().username}:openwind-vault`)
     .digest('hex');
 }
 
@@ -61,6 +108,7 @@ const ALLOWED_COMMANDS = new Set([
   'status',
   'telegram',
   'settings',
+  'setup',
   'audit',
   'doctor',
   'docs',
@@ -76,34 +124,67 @@ let daemonProcess: ChildProcess | null = null;
 let daemonRunning = false;
 
 function isDaemonRunning(): boolean {
-  return daemonRunning && daemonProcess !== null && !daemonProcess.killed;
+  if (daemonRunning && daemonProcess !== null && !daemonProcess.killed) return true;
+
+  // Also check the PID file to prevent spawning a duplicate
+  const pidPath = join(OPENWIND_HOME, 'daemon.pid');
+  if (existsSync(pidPath)) {
+    const pid = parseInt(readFileSync(pidPath, 'utf-8').trim(), 10);
+    if (!isNaN(pid)) {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        // Process doesn't exist — stale PID file
+      }
+    }
+  }
+  return false;
+}
+
+function resolveLoginShell(): { shell: string; args: string[] } {
+  const os = platform();
+  if (os === 'win32') {
+    return { shell: 'cmd.exe', args: ['/c'] };
+  }
+  const candidates = os === 'darwin'
+    ? ['/bin/zsh', '/bin/bash']
+    : ['/bin/bash', '/bin/zsh', '/bin/sh'];
+  for (const sh of candidates) {
+    if (existsSync(sh)) return { shell: sh, args: ['-lc'] };
+  }
+  return { shell: '/bin/sh', args: ['-lc'] };
 }
 
 function resolveNodeBin(): { nodePath: string; openwindPath: string } {
   // Electron GUI doesn't inherit shell PATH. Resolve paths explicitly.
+  const { shell, args } = resolveLoginShell();
+  const whichCmd = platform() === 'win32' ? 'where' : 'which';
   try {
-    const openwindPath = execFileSync('/bin/zsh', ['-lc', 'which openwind'], {
+    const openwindPath = execFileSync(shell, [...args, `${whichCmd} openwind`], {
       encoding: 'utf-8',
       timeout: 5000,
-    }).trim();
-    const nodePath = execFileSync('/bin/zsh', ['-lc', 'which node'], {
+    }).trim().split('\n')[0];
+    const nodePath = execFileSync(shell, [...args, `${whichCmd} node`], {
       encoding: 'utf-8',
       timeout: 5000,
-    }).trim();
+    }).trim().split('\n')[0];
     return { nodePath, openwindPath };
   } catch {
-    // Fallback for common nvm setup
-    const home = homedir();
-    const nvmDir = join(home, '.nvm', 'versions', 'node');
-    if (existsSync(nvmDir)) {
-      const versions = require('fs').readdirSync(nvmDir) as string[];
-      const latest = versions.sort().reverse()[0];
-      if (latest) {
-        const binDir = join(nvmDir, latest, 'bin');
-        return {
-          nodePath: join(binDir, 'node'),
-          openwindPath: join(binDir, 'openwind'),
-        };
+    // Fallback for common nvm setup (Unix only)
+    if (platform() !== 'win32') {
+      const home = homedir();
+      const nvmDir = join(home, '.nvm', 'versions', 'node');
+      if (existsSync(nvmDir)) {
+        const versions = require('fs').readdirSync(nvmDir) as string[];
+        const latest = versions.sort().reverse()[0];
+        if (latest) {
+          const binDir = join(nvmDir, latest, 'bin');
+          return {
+            nodePath: join(binDir, 'node'),
+            openwindPath: join(binDir, 'openwind'),
+          };
+        }
       }
     }
     return { nodePath: 'node', openwindPath: 'openwind' };
@@ -114,9 +195,11 @@ const resolvedBins = resolveNodeBin();
 
 let daemonRestarts = 0;
 const MAX_RESTARTS = 5;
+let daemonStarting = false;
 
 function startDaemon(): void {
-  if (isDaemonRunning()) return;
+  if (daemonStarting || isDaemonRunning()) return;
+  daemonStarting = true;
 
   const logDir = join(OPENWIND_HOME, 'logs');
   if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
@@ -131,6 +214,7 @@ function startDaemon(): void {
   });
 
   daemonRunning = true;
+  daemonStarting = false;
   daemonRestarts = 0;
   updateTrayMenu();
 
@@ -149,9 +233,47 @@ function startDaemon(): void {
 
   daemonProcess.on('error', () => {
     daemonRunning = false;
+    daemonStarting = false;
     daemonProcess = null;
     updateTrayMenu();
   });
+}
+
+function killOrphanDaemon(): void {
+  const pidPath = join(OPENWIND_HOME, 'daemon.pid');
+  if (!existsSync(pidPath)) return;
+  const pid = parseInt(readFileSync(pidPath, 'utf-8').trim(), 10);
+  if (isNaN(pid)) return;
+  try {
+    process.kill(pid, 'SIGTERM');
+  } catch {
+    // Already dead
+  }
+  try {
+    unlinkSync(pidPath);
+  } catch {
+    // Best effort
+  }
+}
+
+function restartDaemon(): void {
+  if (daemonProcess && !daemonProcess.killed) {
+    const oldProcess = daemonProcess;
+    oldProcess.removeAllListeners('exit');
+    oldProcess.kill('SIGTERM');
+    daemonRunning = false;
+    daemonProcess = null;
+    oldProcess.on('exit', () => {
+      startDaemon();
+    });
+    setTimeout(() => {
+      if (!isDaemonRunning()) startDaemon();
+    }, 3000);
+  } else {
+    // Kill orphan daemon not spawned by this Electron instance
+    killOrphanDaemon();
+    setTimeout(() => startDaemon(), 1000);
+  }
 }
 
 function stopDaemon(): void {
@@ -160,6 +282,25 @@ function stopDaemon(): void {
   daemonRunning = false;
   daemonProcess = null;
   updateTrayMenu();
+}
+
+// Health check: restart daemon if it dies unexpectedly
+let healthCheckTimer: ReturnType<typeof setInterval> | null = null;
+
+function startDaemonHealthCheck(): void {
+  if (healthCheckTimer) return;
+  healthCheckTimer = setInterval(() => {
+    if (!isDaemonRunning() && isConfigured()) {
+      startDaemon();
+    }
+  }, 10_000);
+}
+
+function stopDaemonHealthCheck(): void {
+  if (healthCheckTimer) {
+    clearInterval(healthCheckTimer);
+    healthCheckTimer = null;
+  }
 }
 
 function isConfigured(): boolean {
@@ -199,10 +340,6 @@ function updateTrayMenu(): void {
     {
       label: 'Agent Canvas',
       click: () => showCanvasWindow(),
-    },
-    {
-      label: 'Setup Wizard',
-      click: () => createSetupWindow(),
     },
     { type: 'separator' },
     {
@@ -277,6 +414,11 @@ async function handleCommand(id: string): Promise<void> {
       break;
     }
     case 'settings': {
+      hidePaletteWindow();
+      showCanvasWindow();
+      break;
+    }
+    case 'setup': {
       hidePaletteWindow();
       createSetupWindow();
       break;
@@ -432,11 +574,44 @@ async function detectLocalProviders(): Promise<LocalProvider[]> {
 
 // ─── IPC Handlers ──────────────────────────────────────────────────────
 
-ipcMain.handle('get-status', () => ({
-  configured: isConfigured(),
-  configPath: CONFIG_PATH,
-  home: OPENWIND_HOME,
-}));
+ipcMain.handle('get-status', () => {
+  let provider: string | null = null;
+  let authMethod: string | null = null;
+
+  if (existsSync(CONFIG_PATH)) {
+    try {
+      const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as Record<string, unknown>;
+      const auth = (config['auth'] ?? {}) as Record<string, unknown>;
+      const anthropicAuth = (auth['anthropic'] ?? {}) as Record<string, unknown>;
+      if (anthropicAuth['method'] === 'oauth') {
+        provider = 'Anthropic';
+        authMethod = 'oauth';
+      } else {
+        const models = (config['models'] ?? {}) as Record<string, unknown>;
+        const reasoning = (models['reasoning'] ?? {}) as Record<string, unknown>;
+        if (typeof reasoning['provider'] === 'string') {
+          provider = reasoning['provider'] as string;
+          provider = provider.charAt(0).toUpperCase() + provider.slice(1);
+          authMethod = 'api_key';
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  // Check if OAuth token file exists
+  const hasOAuthToken = existsSync(join(OPENWIND_HOME, 'vault', 'anthropic-oauth.enc'));
+
+  return {
+    configured: isConfigured(),
+    configPath: CONFIG_PATH,
+    home: OPENWIND_HOME,
+    provider,
+    authMethod,
+    connected: hasOAuthToken || isConfigured(),
+  };
+});
 
 ipcMain.handle('detect-clients', () => {
   const clients = detectMcpClients();
@@ -615,7 +790,15 @@ ipcMain.handle(
         },
       };
 
-      const authMethod = isLocal || mode === 'claude_desktop' ? 'none' : 'encrypted_file';
+      // OAuth tokens may have been stored by complete-oauth before configure is called
+      const hasOAuthToken = existsSync(join(OPENWIND_HOME, 'vault', 'anthropic-oauth.enc'));
+      const authMethod = isLocal
+        ? 'none'
+        : mode === 'claude_desktop'
+          ? hasOAuthToken
+            ? 'oauth'
+            : 'none'
+          : 'encrypted_file';
 
       // Preserve existing settings (channels, mcp) when reconfiguring
       let existing: Record<string, unknown> = {};
@@ -674,15 +857,114 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle('open-external', (_event, url: string) => {
+// ─── OAuth Flow (PKCE with official redirect URI) ───────────────────────
+
+const ANTHROPIC_OAUTH = {
+  authorizeUrl: 'https://claude.ai/oauth/authorize',
+  tokenUrl: 'https://platform.claude.com/v1/oauth/token',
+  clientId: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
+  scopes: 'user:inference user:profile',
+  redirectUri: 'https://platform.claude.com/oauth/code/callback',
+} as const;
+
+let pendingOAuthVerifier: string | null = null;
+let pendingOAuthState: string | null = null;
+
+ipcMain.handle('start-oauth', () => {
+  const verifier = randomBytes(48).toString('base64url');
+  const challenge = createHash('sha256').update(verifier).digest('base64url');
+  const state = randomBytes(16).toString('hex');
+  pendingOAuthVerifier = verifier;
+  pendingOAuthState = state;
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: ANTHROPIC_OAUTH.clientId,
+    redirect_uri: ANTHROPIC_OAUTH.redirectUri,
+    scope: ANTHROPIC_OAUTH.scopes,
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    state,
+  });
+  const url = `${ANTHROPIC_OAUTH.authorizeUrl}?${params.toString()}`;
   shell.openExternal(url);
+  return { started: true };
 });
 
-ipcMain.handle('finish', () => {
-  const setupWin = getSetupWindow();
-  if (setupWin) {
-    setupWin.close();
+ipcMain.handle('complete-oauth', async (_event, code: string) => {
+  if (!pendingOAuthVerifier) {
+    return { success: false, error: 'No pending OAuth flow. Click "Sign in" first.' };
   }
+
+  try {
+    // Anthropic returns code in format "code#state" — split to extract both
+    const parts = code.split('#');
+    const actualCode = parts[0];
+    const codeState = parts[1] ?? pendingOAuthState;
+    const verifier = pendingOAuthVerifier;
+    pendingOAuthVerifier = null;
+    pendingOAuthState = null;
+
+    const tokenRes = await fetch(ANTHROPIC_OAUTH.tokenUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        client_id: ANTHROPIC_OAUTH.clientId,
+        code: actualCode,
+        state: codeState,
+        redirect_uri: ANTHROPIC_OAUTH.redirectUri,
+        code_verifier: verifier,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+
+    if (!tokenRes.ok) {
+      const text = await tokenRes.text();
+      console.error('[OAuth] Token exchange failed:', tokenRes.status, text.slice(0, 500));
+      return {
+        success: false,
+        error: `Token exchange failed (${tokenRes.status}): ${text.slice(0, 200)}`,
+      };
+    }
+
+    const tokens = (await tokenRes.json()) as {
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+    };
+
+    const credential = JSON.stringify({
+      kind: 'oauth',
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresAt: Date.now() + tokens.expires_in * 1000,
+    });
+    vaultStore('anthropic-oauth', credential);
+
+    // Update config to use oauth auth method
+    let config: Record<string, unknown> = {};
+    if (existsSync(CONFIG_PATH)) {
+      try {
+        config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as Record<string, unknown>;
+      } catch {
+        config = {};
+      }
+    }
+    config['auth'] = { anthropic: { method: 'oauth' } };
+    writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+
+    restartDaemon();
+
+    return { success: true };
+  } catch (err) {
+    pendingOAuthVerifier = null;
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+});
+
+ipcMain.handle('open-external', (_event, url: string) => {
+  shell.openExternal(url);
 });
 
 ipcMain.handle('execute-command', async (_event, id: string) => {
@@ -695,38 +977,52 @@ ipcMain.handle('hide-palette', () => {
 
 ipcMain.handle('get-telegram-status', () => {
   try {
-    const tokenPath = join(OPENWIND_HOME, 'vault', 'telegram_bot_token.enc');
-    const hasToken = existsSync(tokenPath);
-
-    let enabled = false;
-    let allowedUserIds: number[] = [];
-
-    if (existsSync(CONFIG_PATH)) {
-      const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as Record<string, unknown>;
-      const channels = (config['channels'] ?? {}) as Record<string, unknown>;
-      const telegram = (channels['telegram'] ?? {}) as Record<string, unknown>;
-      enabled = telegram['enabled'] === true;
-      allowedUserIds = (telegram['allowedUserIds'] ?? []) as number[];
-    }
-
-    let profile: Record<string, unknown> | null = null;
     const profilePath = join(OPENWIND_HOME, 'bot-profiles.json');
+    let profiles: Record<string, unknown> = {};
     if (existsSync(profilePath)) {
       try {
-        const profiles = JSON.parse(readFileSync(profilePath, 'utf-8')) as Record<string, unknown>;
-        profile = (profiles['telegram'] ?? null) as Record<string, unknown> | null;
+        profiles = JSON.parse(readFileSync(profilePath, 'utf-8')) as Record<string, unknown>;
       } catch {
-        profile = null;
+        profiles = {};
       }
     }
 
+    // Read canvas graph to find telegram nodes
+    const canvasPath = join(OPENWIND_HOME, 'canvas.json');
+    let canvasNodes: Array<Record<string, unknown>> = [];
+    if (existsSync(canvasPath)) {
+      try {
+        const canvas = JSON.parse(readFileSync(canvasPath, 'utf-8')) as Record<string, unknown>;
+        canvasNodes = ((canvas['nodes'] ?? []) as Array<Record<string, unknown>>).filter(
+          (n) => n['platform'] === 'telegram',
+        );
+      } catch {
+        canvasNodes = [];
+      }
+    }
+
+    // Build bots list from canvas nodes + their per-node profiles
+    const bots: Array<Record<string, unknown>> = [];
+    for (const node of canvasNodes) {
+      const nid = String(node['id'] ?? '');
+      const status = String(node['status'] ?? 'setup');
+      const profile = (profiles[nid] ?? null) as Record<string, unknown> | null;
+      const hasToken = existsSync(join(OPENWIND_HOME, 'vault', `channel_token_${nid}.enc`));
+      bots.push({
+        nodeId: nid,
+        connected: status === 'connected' && hasToken,
+        label: node['label'] ?? 'Telegram Bot',
+        photo: node['photo'] ?? profile?.['photo'] ?? null,
+        profile,
+      });
+    }
+
     return {
-      connected: hasToken && enabled,
-      userId: allowedUserIds[0] ?? null,
-      profile,
+      connected: bots.some((b) => b['connected']),
+      bots,
     };
   } catch {
-    return { connected: false, userId: null, profile: null };
+    return { connected: false, bots: [] };
   }
 });
 
@@ -744,161 +1040,93 @@ ipcMain.handle('stop-daemon', () => {
   return { running: false };
 });
 
-ipcMain.handle('disconnect-telegram', () => {
+// ─── Owner Profile ──────────────────────────────────────────────────────
+
+function resolveOwnerFullName(): string {
+  const fallback = userInfo().username;
   try {
-    // Stop daemon first since Telegram is being removed
-    stopDaemon();
-
-    const tokenPath = join(OPENWIND_HOME, 'vault', 'telegram_bot_token.enc');
-    if (existsSync(tokenPath)) {
-      // Overwrite with random bytes before deleting (secure wipe)
-      const size = readFileSync(tokenPath).length;
-      writeFileSync(tokenPath, randomBytes(size));
-      require('fs').unlinkSync(tokenPath);
-    }
-
-    if (existsSync(CONFIG_PATH)) {
-      const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as Record<string, unknown>;
-      const channels = (config['channels'] ?? {}) as Record<string, unknown>;
-      channels['telegram'] = { enabled: false, allowedUserIds: [] };
-      config['channels'] = channels;
-      writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
-    }
-
-    return { success: true };
-  } catch {
-    return { success: false };
-  }
-});
-
-ipcMain.handle('connect-telegram', async (_event, token: string, userId: number) => {
-  try {
-    const parsedUserId = Number(userId);
-    if (!Number.isFinite(parsedUserId) || parsedUserId <= 0) {
-      return { success: false, error: 'Invalid User ID: must be a positive number' };
-    }
-
-    const tgApi = `https://api.telegram.org/bot${token}`;
-    const res = await fetch(`${tgApi}/getMe`, { signal: AbortSignal.timeout(10_000) });
-    const body = (await res.json()) as {
-      ok: boolean;
-      result?: { id: number; username?: string; first_name: string };
-    };
-
-    if (!body.ok || !body.result) {
-      return { success: false, error: 'Invalid bot token' };
-    }
-
-    const { id: botId, username, first_name: firstName } = body.result;
-    const botUsername = username ?? firstName;
-
-    // Fetch bot profile photo
-    let photoBase64: string | null = null;
-    try {
-      const photosRes = await fetch(
-        `${tgApi}/getUserProfilePhotos?user_id=${String(botId)}&limit=1`,
-        { signal: AbortSignal.timeout(10_000) },
-      );
-      const photosBody = (await photosRes.json()) as {
-        ok: boolean;
-        result?: { photos: Array<Array<{ file_id: string; width: number }>> };
-      };
-
-      if (photosBody.ok && photosBody.result && photosBody.result.photos.length > 0) {
-        const sizes = photosBody.result.photos[0];
-        // Pick smallest size for thumbnail
-        const smallest = sizes?.reduce((a, b) => (a.width < b.width ? a : b));
-        if (smallest) {
-          const fileRes = await fetch(`${tgApi}/getFile?file_id=${smallest.file_id}`, {
-            signal: AbortSignal.timeout(10_000),
-          });
-          const fileBody = (await fileRes.json()) as {
-            ok: boolean;
-            result?: { file_path: string };
-          };
-          if (fileBody.ok && fileBody.result?.file_path) {
-            const imgRes = await fetch(
-              `https://api.telegram.org/file/bot${token}/${fileBody.result.file_path}`,
-              { signal: AbortSignal.timeout(10_000) },
-            );
-            const imgBuf = Buffer.from(await imgRes.arrayBuffer());
-            photoBase64 = `data:image/jpeg;base64,${imgBuf.toString('base64')}`;
-          }
-        }
-      }
-    } catch {
-      // Photo fetch is best-effort, don't fail the connection
-    }
-
-    // Store token in vault (encrypted, same format as CLI)
-    vaultStore('telegram_bot_token', token);
-
-    // Store bot profile metadata
-    const profilePath = join(OPENWIND_HOME, 'bot-profiles.json');
-    let profiles: Record<string, unknown> = {};
-    if (existsSync(profilePath)) {
-      try {
-        profiles = JSON.parse(readFileSync(profilePath, 'utf-8')) as Record<string, unknown>;
-      } catch {
-        profiles = {};
-      }
-    }
-    profiles['telegram'] = {
-      botId,
-      username: botUsername,
-      firstName,
-      photo: photoBase64,
-      userId: parsedUserId,
-      connectedAt: new Date().toISOString(),
-    };
-    writeFileSync(profilePath, JSON.stringify(profiles, null, 2), 'utf-8');
-
-    // Update config
-    let config: Record<string, unknown> = {};
-    if (existsSync(CONFIG_PATH)) {
-      try {
-        config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as Record<string, unknown>;
-      } catch {
-        config = {};
-      }
-    }
-
-    const channels = (config['channels'] ?? {}) as Record<string, unknown>;
-    channels['telegram'] = {
-      enabled: true,
-      allowedUserIds: [parsedUserId],
-    };
-    config['channels'] = channels;
-    writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
-
-    // Restart daemon to pick up new Telegram config
-    stopDaemon();
-    startDaemon();
-
-    return { success: true, botUsername, photo: photoBase64 };
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Connection failed',
-    };
-  }
-});
-
-// ─── CEO Profile ────────────────────────────────────────────────────────
-
-ipcMain.handle('get-ceo-profile', () => {
-  let fullName = userInfo().username;
-  try {
-    if (platform() === 'darwin') {
+    const os = platform();
+    if (os === 'darwin') {
       const name = execFileSync('/usr/bin/id', ['-F'], {
         encoding: 'utf-8',
         timeout: 3000,
       }).trim();
-      if (name) fullName = name;
+      if (name) return name;
+    } else if (os === 'linux') {
+      const gecos = execFileSync('/usr/bin/getent', ['passwd', fallback], {
+        encoding: 'utf-8',
+        timeout: 3000,
+      }).trim();
+      const field = gecos.split(':')[4]?.split(',')[0]?.trim();
+      if (field) return field;
+    } else if (os === 'win32') {
+      const raw = execFileSync('net', ['user', fallback], {
+        encoding: 'utf-8',
+        timeout: 3000,
+      });
+      const match = raw.match(/Full Name\s+(.*)/i);
+      const name = match?.[1]?.trim();
+      if (name) return name;
     }
   } catch {
     /* fallback to username */
   }
+  return fallback;
+}
+
+function resolveOwnerPhoto(): string | null {
+  try {
+    const os = platform();
+
+    if (os === 'darwin') {
+      const raw = execFileSync('/usr/bin/dscl', ['.', '-read', `/Users/${userInfo().username}`, 'JPEGPhoto'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+        maxBuffer: 2 * 1024 * 1024,
+      });
+      const hex = raw.split('\n').slice(1).join('').replace(/\s+/g, '');
+      if (hex.length > 0) {
+        return `data:image/jpeg;base64,${Buffer.from(hex, 'hex').toString('base64')}`;
+      }
+    } else if (os === 'linux') {
+      const facePath = join(homedir(), '.face');
+      if (existsSync(facePath)) {
+        const buf = readFileSync(facePath);
+        if (buf.length > 0) {
+          const isPng = buf[0] === 0x89 && buf[1] === 0x50;
+          const mime = isPng ? 'image/png' : 'image/jpeg';
+          return `data:${mime};base64,${buf.toString('base64')}`;
+        }
+      }
+    } else if (os === 'win32') {
+      const picDir = join(homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'AccountPictures');
+      if (existsSync(picDir)) {
+        const raw = execFileSync('powershell', [
+          '-NoProfile', '-Command',
+          `Get-ChildItem '${picDir}' -Filter *.accountpicture-ms | Sort-Object Length -Descending | Select-Object -First 1 -ExpandProperty FullName`,
+        ], { encoding: 'utf-8', timeout: 5000 }).trim();
+        if (raw && existsSync(raw)) {
+          const buf = readFileSync(raw);
+          const jpegStart = buf.indexOf(Buffer.from([0xFF, 0xD8, 0xFF]));
+          if (jpegStart >= 0) {
+            const jpegEnd = buf.indexOf(Buffer.from([0xFF, 0xD9]), jpegStart);
+            if (jpegEnd >= 0) {
+              const jpeg = buf.subarray(jpegStart, jpegEnd + 2);
+              return `data:image/jpeg;base64,${jpeg.toString('base64')}`;
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    /* no profile photo */
+  }
+  return null;
+}
+
+ipcMain.handle('get-owner-profile', () => {
+  const fullName = resolveOwnerFullName();
+  const photo = resolveOwnerPhoto();
 
   let customInstructions = '';
   const claudeMdPath = join(homedir(), '.claude', 'CLAUDE.md');
@@ -910,7 +1138,7 @@ ipcMain.handle('get-ceo-profile', () => {
     }
   }
 
-  return { fullName, customInstructions };
+  return { fullName, photo, customInstructions };
 });
 
 // ─── Canvas Graph Persistence ───────────────────────────────────────────
@@ -960,7 +1188,7 @@ interface CanvasWorkspace {
     platform: string;
     groupId: string;
     name: string;
-    ceoMemberId: string;
+    ownerMemberId: string;
     autoCreated: boolean;
   }>;
 }
@@ -1001,7 +1229,7 @@ ipcMain.handle('show-canvas', () => {
   showCanvasWindow();
 });
 
-ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
+ipcMain.handle('execute-owner-command', async (_event, command: string) => {
   const trimmed = command.trim();
   if (!trimmed) {
     return { parsed: true, type: 'unknown', target: null, message: trimmed };
@@ -1012,7 +1240,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
     type: string;
     target: string | null;
     message: string;
-    ceoCommand?: Record<string, unknown>;
+    ownerCommand?: Record<string, unknown>;
   };
 
   let result: ParsedCommand | null = null;
@@ -1030,7 +1258,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
       type: 'promote',
       target: promoteMatch[1] ?? null,
       message: promoteMatch[2] ?? '',
-      ceoCommand: cmd,
+      ownerCommand: cmd,
     };
   }
 
@@ -1044,7 +1272,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'reassign',
         target: reassignMatch[1] ?? null,
         message: reassignMatch[2] ?? '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1059,7 +1287,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'pause',
         target: pauseMatch[1] ?? null,
         message: '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1074,7 +1302,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'review',
         target: reviewMatch[1] ?? null,
         message: '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1094,7 +1322,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'hire',
         target: hireMatch[2] ?? null,
         message: `${hireMatch[1] ?? ''} ${hireMatch[3] ?? ''}`,
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1109,7 +1337,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'fire',
         target: fireMatch[1] ?? null,
         message: '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1124,7 +1352,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'instruct',
         target: agentMatch[1] ?? null,
         message: agentMatch[2] ?? '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1139,7 +1367,7 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
         type: 'broadcast',
         target: wsMatch[1] ?? null,
         message: wsMatch[2] ?? '',
-        ceoCommand: cmd,
+        ownerCommand: cmd,
       };
     }
   }
@@ -1148,12 +1376,12 @@ ipcMain.handle('execute-ceo-command', async (_event, command: string) => {
     return { parsed: true, type: 'unknown', target: null, message: trimmed };
   }
 
-  // Write CEO command to JSONL file for daemon to pick up
-  if (result.ceoCommand && isDaemonRunning()) {
+  // Write owner command to JSONL file for daemon to pick up
+  if (result.ownerCommand && isDaemonRunning()) {
     try {
-      const cmdLine = JSON.stringify(result.ceoCommand) + '\n';
+      const cmdLine = JSON.stringify(result.ownerCommand) + '\n';
       const { appendFileSync } = require('fs') as typeof import('fs');
-      const cmdPath = join(OPENWIND_HOME, 'ceo-commands.jsonl');
+      const cmdPath = join(OPENWIND_HOME, 'owner-commands.jsonl');
       appendFileSync(cmdPath, cmdLine, 'utf-8');
     } catch {
       // Best-effort — daemon may not be running
@@ -1227,13 +1455,43 @@ ipcMain.handle(
           // Photo fetch is best-effort
         }
 
-        vaultStore('telegram_bot_token', token);
-        const nodeId = credentials['nodeId'] ? String(credentials['nodeId']) : null;
-        if (nodeId) {
-          vaultStore(`channel_token_${nodeId}`, token);
+        // Generate nodeId if not provided (palette flow creates canvas node)
+        let nodeId = credentials['nodeId'] ? String(credentials['nodeId']) : null;
+        if (!nodeId) {
+          nodeId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+          // Create canvas node
+          const canvasPath = join(OPENWIND_HOME, 'canvas.json');
+          let canvas: Record<string, unknown> = { nodes: [], edges: [], workspaces: [] };
+          if (existsSync(canvasPath)) {
+            try {
+              canvas = JSON.parse(readFileSync(canvasPath, 'utf-8')) as Record<string, unknown>;
+            } catch {
+              canvas = { nodes: [], edges: [], workspaces: [] };
+            }
+          }
+          const nodes = (canvas['nodes'] ?? []) as Array<Record<string, unknown>>;
+          nodes.push({
+            id: nodeId,
+            platform: 'telegram',
+            label: `@${botUsername}`,
+            photo: photoBase64,
+            position: { x: 200, y: 200 },
+            status: 'connected',
+            credentials: `channel_token_${nodeId}`,
+            meta: {
+              botId: String(botId),
+              userId: String(userId),
+              firstName,
+            },
+          });
+          canvas['nodes'] = nodes;
+          writeFileSync(canvasPath, JSON.stringify(canvas, null, 2), 'utf-8');
         }
 
-        // Store bot profile
+        // Store token per-node in vault
+        vaultStore(`channel_token_${nodeId}`, token);
+
+        // Store bot profile keyed by nodeId
         const profilePath = join(OPENWIND_HOME, 'bot-profiles.json');
         let profiles: Record<string, unknown> = {};
         if (existsSync(profilePath)) {
@@ -1243,7 +1501,8 @@ ipcMain.handle(
             profiles = {};
           }
         }
-        profiles['telegram'] = {
+        profiles[nodeId] = {
+          platform: 'telegram',
           botId,
           username: botUsername,
           firstName,
@@ -1253,7 +1512,7 @@ ipcMain.handle(
         };
         writeFileSync(profilePath, JSON.stringify(profiles, null, 2), 'utf-8');
 
-        // Update config
+        // Update config — aggregate userIds from all connected telegram bots
         let config: Record<string, unknown> = {};
         if (existsSync(CONFIG_PATH)) {
           try {
@@ -1262,15 +1521,21 @@ ipcMain.handle(
             config = {};
           }
         }
+        const allUserIds = new Set<number>([userId]);
+        for (const [, prof] of Object.entries(profiles)) {
+          const p = prof as Record<string, unknown>;
+          if (p['platform'] === 'telegram' && typeof p['userId'] === 'number') {
+            allUserIds.add(p['userId'] as number);
+          }
+        }
         const channels = (config['channels'] ?? {}) as Record<string, unknown>;
-        channels['telegram'] = { enabled: true, allowedUserIds: [userId] };
+        channels['telegram'] = { enabled: true, allowedUserIds: [...allUserIds] };
         config['channels'] = channels;
         writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
 
-        stopDaemon();
-        startDaemon();
+        restartDaemon();
 
-        return { success: true, botUsername, firstName, photo: photoBase64, botId };
+        return { success: true, botUsername, firstName, photo: photoBase64, botId, nodeId };
       }
 
       if (platform === 'slack') {
@@ -1326,8 +1591,7 @@ ipcMain.handle(
         config['channels'] = channels;
         writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
 
-        stopDaemon();
-        startDaemon();
+        restartDaemon();
 
         return {
           success: true,
@@ -1397,8 +1661,7 @@ ipcMain.handle(
         config['channels'] = channels;
         writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
 
-        stopDaemon();
-        startDaemon();
+        restartDaemon();
 
         return {
           success: true,
@@ -1462,8 +1725,7 @@ ipcMain.handle(
         config['channels'] = channels;
         writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
 
-        stopDaemon();
-        startDaemon();
+        restartDaemon();
 
         return {
           success: true,
@@ -1512,8 +1774,7 @@ ipcMain.handle(
         config['channels'] = channels;
         writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
 
-        stopDaemon();
-        startDaemon();
+        restartDaemon();
 
         return {
           success: true,
@@ -1542,24 +1803,13 @@ ipcMain.handle('disconnect-channel', (_event, platform: string, nodeId: string) 
   try {
     stopDaemon();
 
-    const vaultFiles: Record<string, string[]> = {
-      telegram: ['telegram_bot_token.enc'],
-      slack: ['slack_bot_token.enc', 'slack_signing_secret.enc'],
-      whatsapp: ['whatsapp_access_token.enc'],
-      discord: ['discord_bot_token.enc'],
-      email: ['email_password.enc'],
-    };
-
-    const files = vaultFiles[platform] ?? [];
-    // Also remove per-node vault entries
-    if (nodeId) {
-      files.push(`channel_token_${nodeId}.enc`);
-      if (platform === 'slack') {
-        files.push(`channel_signing_${nodeId}.enc`);
-      }
+    // Remove per-node vault tokens
+    const vaultFiles = [`channel_token_${nodeId}.enc`];
+    if (platform === 'slack') {
+      vaultFiles.push(`channel_signing_${nodeId}.enc`);
     }
 
-    for (const file of files) {
+    for (const file of vaultFiles) {
       const filePath = join(OPENWIND_HOME, 'vault', file);
       if (existsSync(filePath)) {
         const size = readFileSync(filePath).length;
@@ -1568,11 +1818,68 @@ ipcMain.handle('disconnect-channel', (_event, platform: string, nodeId: string) 
       }
     }
 
+    // Remove per-node profile from bot-profiles.json
+    const profileKey = nodeId;
+    const profilePath = join(OPENWIND_HOME, 'bot-profiles.json');
+    if (existsSync(profilePath)) {
+      try {
+        const profiles = JSON.parse(readFileSync(profilePath, 'utf-8')) as Record<string, unknown>;
+        delete profiles[profileKey];
+        writeFileSync(profilePath, JSON.stringify(profiles, null, 2), 'utf-8');
+      } catch {
+        // ignore parse errors
+      }
+    }
+
+    // Update canvas node status to disconnected
+    const canvasPath = join(OPENWIND_HOME, 'canvas.json');
+    if (existsSync(canvasPath)) {
+      try {
+        const canvas = JSON.parse(readFileSync(canvasPath, 'utf-8')) as Record<string, unknown>;
+        const nodes = (canvas['nodes'] ?? []) as Array<Record<string, unknown>>;
+        const node = nodes.find((n) => n['id'] === nodeId);
+        if (node) {
+          node['status'] = 'setup';
+          node['photo'] = null;
+          node['label'] = platform.charAt(0).toUpperCase() + platform.slice(1);
+          node['credentials'] = '';
+          node['meta'] = {};
+        }
+        writeFileSync(canvasPath, JSON.stringify(canvas, null, 2), 'utf-8');
+      } catch {
+        // ignore canvas errors
+      }
+    }
+
+    // Recalculate config from remaining profiles
     if (existsSync(CONFIG_PATH)) {
       const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as Record<string, unknown>;
       const channels = (config['channels'] ?? {}) as Record<string, unknown>;
+
       if (platform === 'telegram') {
-        channels['telegram'] = { enabled: false, allowedUserIds: [] };
+        // Check if other telegram bots remain
+        let remainingProfiles: Record<string, unknown> = {};
+        if (existsSync(profilePath)) {
+          try {
+            remainingProfiles = JSON.parse(readFileSync(profilePath, 'utf-8')) as Record<
+              string,
+              unknown
+            >;
+          } catch {
+            remainingProfiles = {};
+          }
+        }
+        const remainingUserIds: number[] = [];
+        for (const [, prof] of Object.entries(remainingProfiles)) {
+          const p = prof as Record<string, unknown>;
+          if (p['platform'] === 'telegram' && typeof p['userId'] === 'number') {
+            remainingUserIds.push(p['userId'] as number);
+          }
+        }
+        channels['telegram'] = {
+          enabled: remainingUserIds.length > 0,
+          allowedUserIds: remainingUserIds,
+        };
       } else if (platform === 'slack') {
         channels['slack'] = { enabled: false };
       } else if (platform === 'whatsapp') {
@@ -1600,22 +1907,19 @@ app.whenReady().then(() => {
   createTray();
   registerGlobalShortcut();
 
-  if (isConfigured()) {
-    // Auto-start daemon if already configured
-    startDaemon();
-  } else {
-    createSetupWindow();
-  }
+  startDaemon();
+  startDaemonHealthCheck();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createSetupWindow();
+      showCanvasWindow();
     }
   });
 });
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  stopDaemonHealthCheck();
   stopDaemon();
 });
 

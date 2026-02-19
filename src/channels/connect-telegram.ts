@@ -1,5 +1,7 @@
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import * as p from '@clack/prompts';
 import { loadConfig, saveConfig } from '../config/loader.js';
+import { paths } from '../config/paths.js';
 import { secureFetch } from '../security/url-allowlist.js';
 import { vaultStore } from '../security/vault-key.js';
 
@@ -31,6 +33,10 @@ async function validateBotToken(token: string): Promise<TelegramUser> {
   return body.result;
 }
 
+function generateNodeId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
 export async function connectTelegram(): Promise<void> {
   p.intro('Connect Telegram');
 
@@ -55,6 +61,7 @@ export async function connectTelegram(): Promise<void> {
   const userIdInput = await p.text({
     message: 'Enter your Telegram user ID (numeric, from @userinfobot)',
     validate: (value) => {
+      if (!value) return 'Required';
       const parsed = parseInt(value, 10);
       if (Number.isNaN(parsed) || parsed <= 0) return 'Must be a positive integer';
       return undefined;
@@ -66,7 +73,41 @@ export async function connectTelegram(): Promise<void> {
 
   s.start('Storing credentials...');
 
-  await vaultStore('telegram_bot_token', token);
+  const nodeId = generateNodeId();
+  await vaultStore(`channel_token_${nodeId}`, token);
+
+  // Create canvas node for the bot
+  interface CanvasGraph {
+    nodes: Array<Record<string, unknown>>;
+    edges: Array<Record<string, unknown>>;
+    workspaces: Array<Record<string, unknown>>;
+  }
+
+  let canvas: CanvasGraph = { nodes: [], edges: [], workspaces: [] };
+  if (existsSync(paths.canvas)) {
+    try {
+      canvas = JSON.parse(readFileSync(paths.canvas, 'utf-8')) as CanvasGraph;
+    } catch {
+      canvas = { nodes: [], edges: [], workspaces: [] };
+    }
+  }
+
+  const botUsername = botUser.username ?? botUser.first_name;
+  canvas.nodes.push({
+    id: nodeId,
+    platform: 'telegram',
+    label: `@${botUsername}`,
+    photo: null,
+    position: { x: 200, y: 200 },
+    status: 'connected',
+    credentials: `channel_token_${nodeId}`,
+    meta: {
+      botId: String(botUser.id),
+      userId: String(userId),
+      firstName: botUser.first_name,
+    },
+  });
+  writeFileSync(paths.canvas, JSON.stringify(canvas, null, 2), 'utf-8');
 
   const config = await loadConfig();
   const updatedConfig = {
@@ -81,11 +122,12 @@ export async function connectTelegram(): Promise<void> {
     },
   };
   await saveConfig(updatedConfig);
-  s.stop('Credentials stored in vault, config updated');
+  s.stop('Credentials stored in vault, canvas node created');
 
   p.note(
     [
-      `Bot: @${botUser.username ?? botUser.first_name}`,
+      `Bot: @${botUsername}`,
+      `Node ID: ${nodeId}`,
       `Allowed user: ${String(userId)}`,
       `Voice transcription: ${config.channels.telegram.voice.enabled ? 'enabled' : 'disabled'}`,
       '',

@@ -76,24 +76,25 @@
 
         <div class="detail-section">
           <span class="detail-section-label">Autonomy</span>
-          <div class="autonomy-track">
-            <input type="range" id="agent-autonomy" min="0" max="3" step="1" value="1" />
-          </div>
-          <div class="autonomy-labels" id="autonomy-labels">
-            <span class="autonomy-label" data-level="0">Manual</span>
-            <span class="autonomy-label" data-level="1">Approval</span>
-            <span class="autonomy-label" data-level="2">Supervised</span>
-            <span class="autonomy-label" data-level="3">Full</span>
+          <div class="autonomy-segmented" id="autonomy-segmented">
+            <div class="autonomy-highlight" id="autonomy-highlight"></div>
+            <button class="autonomy-seg" data-level="0">Manual</button>
+            <button class="autonomy-seg" data-level="1">Approval</button>
+            <button class="autonomy-seg" data-level="2">Supervised</button>
+            <button class="autonomy-seg" data-level="3">Full</button>
           </div>
         </div>
 
         <div class="detail-section">
-          <span class="detail-section-label">Instructions</span>
+          <span class="detail-section-label" id="instructions-label">Instructions</span>
           <textarea
             class="detail-textarea"
             id="agent-instructions"
             placeholder="Standing orders for this agent..."
           ></textarea>
+          <button class="btn btn-secondary" id="insert-template-btn" style="margin-top:8px;font-size:12px;">
+            Use Template
+          </button>
         </div>
 
         <div class="detail-section">
@@ -103,8 +104,8 @@
             <button class="toggle-switch" id="toggle-proactive" type="button"></button>
           </div>
           <div class="toggle-row">
-            <span class="toggle-label">Respond to CEO</span>
-            <button class="toggle-switch" id="toggle-ceo-response" type="button"></button>
+            <span class="toggle-label">Respond to owner</span>
+            <button class="toggle-switch" id="toggle-owner-response" type="button"></button>
           </div>
           <div class="toggle-row">
             <span class="toggle-label">Peer collaboration</span>
@@ -148,7 +149,7 @@
         <div class="detail-section">
           <span class="detail-section-label">Color</span>
           <div class="color-picker-row" id="ws-detail-colors">
-            <div class="color-swatch" data-color="#7c6bf5" style="background: #7c6bf5"></div>
+            <div class="color-swatch" data-color="#038B9A" style="background: #038B9A"></div>
             <div class="color-swatch" data-color="#27A7E7" style="background: #27a7e7"></div>
             <div class="color-swatch" data-color="#34d399" style="background: #34d399"></div>
             <div class="color-swatch" data-color="#f59e0b" style="background: #f59e0b"></div>
@@ -203,7 +204,7 @@
         <div class="cred-field">
           <label>Color</label>
           <div class="color-picker-row" id="ws-create-colors">
-            <div class="color-swatch active" data-color="#7c6bf5" style="background: #7c6bf5"></div>
+            <div class="color-swatch active" data-color="#038B9A" style="background: #038B9A"></div>
             <div class="color-swatch" data-color="#27A7E7" style="background: #27a7e7"></div>
             <div class="color-swatch" data-color="#34d399" style="background: #34d399"></div>
             <div class="color-swatch" data-color="#f59e0b" style="background: #f59e0b"></div>
@@ -241,7 +242,7 @@
          State
          ═══════════════════════════════════════════════ */
 
-      var graph = { nodes: [], edges: [], workspaces: [], viewport: { x: 0, y: 0, zoom: 1 } };
+      var graph = { nodes: [], edges: [], workspaces: [], globalInstructions: '', viewport: { x: 0, y: 0, zoom: 1 } };
       var selectedNodeId = null;
       var selectedWorkspaceId = null;
       var detailNodeId = null;
@@ -308,6 +309,34 @@
         email: '<img src="icons/email.svg" alt="Email" class="icon-mono" />',
       };
 
+      /* Persona templates */
+      var CEO_TEMPLATE = [
+        '## Response Format',
+        'Plain text only. No markdown formatting, no emojis, no asterisks.',
+        '',
+        '## Tone',
+        'Concise, direct, professional.',
+        '',
+        '## Language',
+        'English.',
+      ].join('\n');
+
+      var BOT_TEMPLATE = [
+        '## Role',
+        '[What this agent does — e.g., Customer support for billing]',
+        '',
+        '## Personality',
+        '[How this agent communicates — e.g., Friendly, patient, empathetic]',
+        '',
+        '## Response Style',
+        '- [e.g., Use simple language]',
+        '- [e.g., Ask clarifying questions when needed]',
+        '',
+        '## Constraints',
+        '- [e.g., Never share internal policies]',
+        '- [e.g., Escalate to human for complex issues]',
+      ].join('\n');
+
       /* ═══════════════════════════════════════════════
          Init: load graph
          ═══════════════════════════════════════════════ */
@@ -316,38 +345,46 @@
         try {
           graph = await window.openwind.getCanvasGraph();
         } catch {
-          graph = { nodes: [], edges: [], workspaces: [], viewport: { x: 0, y: 0, zoom: 1 } };
+          graph = { nodes: [], edges: [], workspaces: [], globalInstructions: '', viewport: { x: 0, y: 0, zoom: 1 } };
         }
         if (!graph.workspaces) graph.workspaces = [];
+        if (typeof graph.globalInstructions !== 'string') graph.globalInstructions = '';
         vpX = graph.viewport.x;
         vpY = graph.viewport.y;
         vpZoom = graph.viewport.zoom;
 
-        /* Auto-create CEO node if not present */
-        var hasCeo = graph.nodes.some(function (n) {
-          return n.platform === 'ceo';
+        /* Auto-create owner node if not present */
+        var hasOwner = graph.nodes.some(function (n) {
+          return n.platform === 'owner';
         });
-        if (!hasCeo) {
-          var ceoProfile = { fullName: 'CEO', customInstructions: '' };
+        if (!hasOwner) {
+          var ownerProfile = { fullName: 'You', photo: null, customInstructions: '' };
           try {
-            ceoProfile = await window.openwind.getCeoProfile();
+            ownerProfile = await window.openwind.getOwnerProfile();
           } catch {
             /* fallback */
           }
           var cx = (window.innerWidth / 2 - vpX) / vpZoom - 60;
           graph.nodes.unshift({
-            id: 'ceo-' + generateId(),
-            platform: 'ceo',
-            label: ceoProfile.fullName || 'CEO',
-            photo: null,
+            id: 'owner-' + generateId(),
+            platform: 'owner',
+            label: ownerProfile.fullName || 'You',
+            photo: ownerProfile.photo || null,
             position: { x: Math.round(cx), y: 40 },
             status: 'connected',
             credentials: '',
             meta: {},
-            instructions: ceoProfile.customInstructions || '',
+            instructions: ownerProfile.customInstructions || '',
             role: 'lead',
             autonomy: 3,
           });
+          saveGraph();
+        }
+
+        /* Migrate: if globalInstructions exists but owner node has no instructions, copy over */
+        var ownerNode = graph.nodes.find(function (n) { return n.platform === 'owner'; });
+        if (ownerNode && !ownerNode.instructions && graph.globalInstructions) {
+          ownerNode.instructions = graph.globalInstructions;
           saveGraph();
         }
 
@@ -707,22 +744,26 @@
               '<button class="btn-cancel" data-action="disconnect">Disconnect</button>' +
               '<button class="btn-connect" data-action="close-edit">Done</button>' +
               '</div>';
-          } else if (node.platform === 'ceo') {
-            /* CEO card */
+          } else if (node.platform === 'owner') {
+            /* Owner card */
             card.className =
-              'agent-card ceo-card' + (node.id === selectedNodeId ? ' selected' : '');
+              'agent-card owner-card' + (node.id === selectedNodeId ? ' selected' : '');
+
+            var ownerAvatarInner = node.photo
+              ? '<img src="' + node.photo + '" alt="" />'
+              : '<span class="avatar-initials">' + getInitials(node.label) + '</span>';
 
             card.innerHTML =
               '<button class="card-gear" data-action="gear" title="Settings">' +
               GEAR_SVG +
               '</button>' +
-              '<div class="agent-avatar ceo-avatar">' +
-              '<img src="icons/crown.svg" alt="CEO" />' +
+              '<div class="agent-avatar owner-avatar">' +
+              ownerAvatarInner +
               '</div>' +
               '<div class="agent-name">' +
               escapeHtml(node.label) +
               '</div>' +
-              '<span class="platform-badge ceo">CEO</span>' +
+              '<span class="platform-badge owner">YOU</span>' +
               '<div class="port port-output" data-node-id="' +
               node.id +
               '" data-port="output"></div>';
@@ -1071,6 +1112,9 @@
           saveViewport();
         }
         if (isDragging) {
+          var dragDist = Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY);
+          var clickedNodeId = dragNodeId;
+
           /* Snap agent to workspace */
           var node = graph.nodes.find(function (n) {
             return n.id === dragNodeId;
@@ -1104,6 +1148,11 @@
           dragNodeId = null;
           renderWorkspaces();
           saveGraph();
+
+          /* Click (not drag): open agent detail panel */
+          if (dragDist < 5 && clickedNodeId) {
+            openAgentDetail(clickedNodeId);
+          }
         }
         if (isEdgeDragging) {
           finishEdgeDrag(e);
@@ -1133,16 +1182,22 @@
             if (e.clientY >= dockRect.top) return;
           }
           e.preventDefault();
-          var rect = viewport.getBoundingClientRect();
-          var mx = e.clientX - rect.left;
-          var my = e.clientY - rect.top;
 
-          var delta = e.deltaY > 0 ? -0.1 : 0.1;
-          var newZoom = Math.max(0.25, Math.min(3, vpZoom + delta));
-
-          vpX = mx - (mx - vpX) * (newZoom / vpZoom);
-          vpY = my - (my - vpY) * (newZoom / vpZoom);
-          vpZoom = newZoom;
+          if (e.ctrlKey || e.metaKey) {
+            /* Pinch-to-zoom / Ctrl+scroll / Cmd+scroll → zoom at cursor */
+            var rect = viewport.getBoundingClientRect();
+            var mx = e.clientX - rect.left;
+            var my = e.clientY - rect.top;
+            var delta = -e.deltaY * 0.01;
+            var newZoom = Math.max(0.25, Math.min(3, vpZoom + delta));
+            vpX = mx - (mx - vpX) * (newZoom / vpZoom);
+            vpY = my - (my - vpY) * (newZoom / vpZoom);
+            vpZoom = newZoom;
+          } else {
+            /* Two-finger scroll → pan (including horizontal) */
+            vpX -= e.deltaX;
+            vpY -= e.deltaY;
+          }
 
           applyTransform();
           renderEdges();
@@ -1450,22 +1505,27 @@
         }
       }
 
-      /* Scroll on dock to change active card (debounced for trackpad) */
+      /* Scroll/swipe on dock to change active card — smooth trackpad support */
       var cfScrollAccum = 0;
-      var CF_SCROLL_THRESHOLD = 40;
+      var CF_SCROLL_THRESHOLD = 50;
+      var cfScrollTimer = null;
       cfDock.addEventListener(
         'wheel',
         function (e) {
           e.preventDefault();
           e.stopPropagation();
-          cfScrollAccum += e.deltaY;
-          if (Math.abs(cfScrollAccum) >= CF_SCROLL_THRESHOLD) {
-            if (cfScrollAccum > 0) {
-              cfActiveIndex = Math.min(cfActiveIndex + 1, cfPlatforms.length - 1);
-            } else {
-              cfActiveIndex = Math.max(cfActiveIndex - 1, 0);
-            }
+          /* Use horizontal delta when available (trackpad two-finger swipe), fall back to vertical */
+          var delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+          cfScrollAccum += delta;
+          /* Reset accumulator after scroll inertia settles */
+          if (cfScrollTimer) clearTimeout(cfScrollTimer);
+          cfScrollTimer = setTimeout(function () {
             cfScrollAccum = 0;
+          }, 150);
+          if (Math.abs(cfScrollAccum) >= CF_SCROLL_THRESHOLD) {
+            var steps = Math.round(cfScrollAccum / CF_SCROLL_THRESHOLD);
+            cfActiveIndex = Math.max(0, Math.min(cfPlatforms.length - 1, cfActiveIndex + steps));
+            cfScrollAccum = cfScrollAccum % CF_SCROLL_THRESHOLD;
             startCfAnimation();
           }
         },
@@ -1712,7 +1772,7 @@
         }
 
         if (action === 'gear') {
-          if (node.platform === 'ceo') {
+          if (node.platform === 'owner') {
             openAgentDetail(nodeId);
           } else {
             flipCard(card, function () {
@@ -1789,21 +1849,23 @@
             renderNodes();
             return;
           }
-          credentials = { token: (formData.token || '').trim(), userId: parsedId };
+          credentials = { token: (formData.token || '').trim(), userId: parsedId, nodeId: node.id };
         } else if (platform === 'slack') {
           credentials = {
             token: (formData.token || '').trim(),
             signingSecret: (formData.signingSecret || '').trim(),
+            nodeId: node.id,
           };
         } else if (platform === 'whatsapp') {
           credentials = {
             phoneNumberId: (formData.phoneNumberId || '').trim(),
             accessToken: (formData.accessToken || '').trim(),
+            nodeId: node.id,
           };
         } else if (platform === 'discord') {
-          credentials = { token: (formData.token || '').trim() };
+          credentials = { token: (formData.token || '').trim(), nodeId: node.id };
         } else if (platform === 'gmail') {
-          credentials = { oauth: true };
+          credentials = { oauth: true, nodeId: node.id };
         } else if (platform === 'email') {
           credentials = {
             imapHost: (formData.imapHost || '').trim(),
@@ -1812,6 +1874,7 @@
             smtpPort: parseInt(formData.smtpPort, 10) || 587,
             username: (formData.username || '').trim(),
             password: (formData.password || '').trim(),
+            nodeId: node.id,
           };
         }
 
@@ -1831,7 +1894,7 @@
             if (platform === 'telegram') {
               node.label = '@' + (result.botUsername || 'TelegramBot');
               node.photo = result.photo || null;
-              node.credentials = 'telegram_bot_token';
+              node.credentials = 'channel_token_' + nodeId;
               node.meta = {
                 botId: String(result.botId || ''),
                 userId: String(credentials.userId),
@@ -1933,6 +1996,13 @@
           setZoom(1);
         }
 
+        if (isMod && e.key === 'l') {
+          e.preventDefault();
+          isDockCollapsed = !isDockCollapsed;
+          cfDock.classList.toggle('collapsed', isDockCollapsed);
+          dockToggle.classList.toggle('collapsed', isDockCollapsed);
+        }
+
         if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId && !isInputFocused()) {
           e.preventDefault();
           removeNode(selectedNodeId);
@@ -1953,7 +2023,7 @@
           return n.id === nodeId;
         });
         if (!node) return;
-        if (node.platform === 'ceo') return; /* CEO cannot be deleted */
+        if (node.platform === 'owner') return; /* Owner cannot be deleted */
         window.openwind.disconnectChannel(node.platform, nodeId);
 
         animateCardDelete(nodeId, function () {
@@ -2004,6 +2074,12 @@
         return d.innerHTML;
       }
 
+      function getInitials(name) {
+        var parts = (name || '').trim().split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        return (parts[0] || '?').slice(0, 2).toUpperCase();
+      }
+
       function capitalize(s) {
         return s.charAt(0).toUpperCase() + s.slice(1);
       }
@@ -2026,14 +2102,6 @@
          ═══════════════════════════════════════════════ */
 
       world.addEventListener('dblclick', function (e) {
-        var card = e.target.closest('.agent-card');
-        if (card) {
-          openAgentDetail(card.dataset.nodeId);
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
-
         var wsHeader = e.target.closest('.workspace-header');
         if (wsHeader) {
           openWorkspaceDetail(wsHeader.dataset.workspaceId);
@@ -2055,15 +2123,17 @@
 
         /* Populate identity */
         var identityEl = document.getElementById('agent-detail-identity');
-        var isCeo = node.platform === 'ceo';
-        var photoHtml = isCeo
-          ? '<img src="icons/crown.svg" alt="CEO" style="width:24px;height:24px;filter:brightness(0) invert(0.9);" />'
+        var isOwner = node.platform === 'owner';
+        var photoHtml = isOwner
+          ? (node.photo
+              ? '<img src="' + node.photo + '" alt="" />'
+              : '<span class="avatar-initials" style="font-size:12px;">' + getInitials(node.label) + '</span>')
           : node.photo
             ? '<img src="' + node.photo + '" alt="" />'
             : platformIcons[node.platform] || '';
-        var displayName = isCeo ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
-        var platformLabel = isCeo ? 'CEO — Organization Owner' : capitalize(node.platform);
-        var avatarClass = isCeo ? 'detail-avatar ceo-avatar' : 'detail-avatar';
+        var displayName = isOwner ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
+        var platformLabel = isOwner ? 'You — Organization Owner' : capitalize(node.platform);
+        var avatarClass = isOwner ? 'detail-avatar owner-avatar' : 'detail-avatar';
         identityEl.innerHTML =
           '<div class="' +
           avatarClass +
@@ -2087,16 +2157,27 @@
 
         /* Autonomy */
         var autonomy = typeof node.autonomy === 'number' ? node.autonomy : 1;
-        document.getElementById('agent-autonomy').value = autonomy;
-        updateAutonomyLabels(autonomy);
+        document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function (seg) {
+          seg.classList.toggle('active', parseInt(seg.dataset.level, 10) === autonomy);
+        });
+        moveAutonomyHighlight(autonomy, false);
 
-        /* Instructions */
-        document.getElementById('agent-instructions').value = node.instructions || '';
+        /* Instructions — dynamic label based on node type */
+        var instructionsLabel = document.getElementById('instructions-label');
+        var instructionsTextarea = document.getElementById('agent-instructions');
+        if (isOwner) {
+          instructionsLabel.textContent = 'Communication Style (all agents)';
+          instructionsTextarea.placeholder = 'Define how all agents should respond...\n\nExample:\n- Plain text only, no markdown\n- Concise and direct\n- No emojis';
+        } else {
+          instructionsLabel.textContent = 'Agent Persona';
+          instructionsTextarea.placeholder = 'Describe this agent\'s role, personality, and behavior...';
+        }
+        instructionsTextarea.value = node.instructions || '';
 
         /* Toggles */
         var behavior = node.behavior || {};
         setToggle('toggle-proactive', behavior.proactive === true);
-        setToggle('toggle-ceo-response', behavior.ceoResponse !== false);
+        setToggle('toggle-owner-response', behavior.ownerResponse !== false);
         setToggle('toggle-peer', behavior.peer === true);
 
         agentDetailPanel.classList.add('open');
@@ -2125,24 +2206,36 @@
         });
       });
 
-      /* Autonomy slider */
-      document.getElementById('agent-autonomy').addEventListener('input', function () {
-        if (!detailNodeId) return;
-        var node = graph.nodes.find(function (n) {
-          return n.id === detailNodeId;
-        });
-        if (!node) return;
-        var val = parseInt(this.value, 10);
-        node.autonomy = val;
-        updateAutonomyLabels(val);
-        saveGraph();
-      });
-
-      function updateAutonomyLabels(level) {
-        document.querySelectorAll('#autonomy-labels .autonomy-label').forEach(function (label) {
-          label.classList.toggle('active', parseInt(label.dataset.level, 10) === level);
-        });
+      /* Autonomy segmented control */
+      function moveAutonomyHighlight(level, animate) {
+        var container = document.getElementById('autonomy-segmented');
+        var highlight = document.getElementById('autonomy-highlight');
+        var segs = container.querySelectorAll('.autonomy-seg');
+        var target = segs[level];
+        if (!target || !highlight) return;
+        highlight.style.transition = animate
+          ? 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+          : 'none';
+        highlight.style.left = target.offsetLeft + 'px';
+        highlight.style.width = target.offsetWidth + 'px';
       }
+
+      document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function (seg) {
+        seg.addEventListener('click', function () {
+          if (!detailNodeId) return;
+          var node = graph.nodes.find(function (n) {
+            return n.id === detailNodeId;
+          });
+          if (!node) return;
+          var val = parseInt(seg.dataset.level, 10);
+          node.autonomy = val;
+          document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function (s) {
+            s.classList.toggle('active', parseInt(s.dataset.level, 10) === val);
+          });
+          moveAutonomyHighlight(val, true);
+          saveGraph();
+        });
+      });
 
       /* Instructions textarea */
       document.getElementById('agent-instructions').addEventListener('input', function () {
@@ -2152,6 +2245,22 @@
         });
         if (!node) return;
         node.instructions = this.value;
+        if (node.platform === 'owner') {
+          graph.globalInstructions = this.value;
+        }
+        saveGraph();
+      });
+
+      /* Template button */
+      document.getElementById('insert-template-btn').addEventListener('click', function () {
+        if (!detailNodeId) return;
+        var node = graph.nodes.find(function (n) { return n.id === detailNodeId; });
+        if (!node) return;
+        var textarea = document.getElementById('agent-instructions');
+        var template = node.platform === 'owner' ? CEO_TEMPLATE : BOT_TEMPLATE;
+        textarea.value = template;
+        node.instructions = template;
+        if (node.platform === 'owner') graph.globalInstructions = template;
         saveGraph();
       });
 
@@ -2181,7 +2290,7 @@
       }
 
       bindToggle('toggle-proactive', 'proactive');
-      bindToggle('toggle-ceo-response', 'ceoResponse');
+      bindToggle('toggle-owner-response', 'ownerResponse');
       bindToggle('toggle-peer', 'peer');
 
       /* ═══════════════════════════════════════════════
@@ -2324,15 +2433,15 @@
          Workspace Creation Dialog
          ═══════════════════════════════════════════════ */
 
-      var wsCreateColor = '#7c6bf5';
+      var wsCreateColor = '#038B9A';
 
       document.getElementById('btn-add-workspace').addEventListener('click', function () {
         wsDialogOverlay.classList.add('open');
         document.getElementById('ws-create-name').value = '';
         document.getElementById('ws-create-purpose').value = '';
-        wsCreateColor = '#7c6bf5';
+        wsCreateColor = '#038B9A';
         document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s) {
-          s.classList.toggle('active', s.dataset.color === '#7c6bf5');
+          s.classList.toggle('active', s.dataset.color === '#038B9A');
         });
         document.getElementById('ws-create-name').focus();
       });

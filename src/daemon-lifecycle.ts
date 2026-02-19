@@ -1,4 +1,11 @@
-import { readFileSync, writeFileSync, existsSync, watch, type FSWatcher } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  unlinkSync,
+  watch,
+  type FSWatcher,
+} from 'node:fs';
 import type BetterSqlite3 from 'better-sqlite3';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { openDatabase, closeDatabase } from './db/connection.js';
@@ -13,7 +20,6 @@ import { resolveApiKey } from './auth/resolve.js';
 import { refreshOAuthTokenIfNeeded } from './auth/oauth.js';
 import { McpClientManager } from './mcp/client.js';
 import { ProactiveEngine } from './engine/proactive.js';
-import type { ProactiveAlert } from './engine/proactive.js';
 import type { Channel } from './channels/base.js';
 import { TelegramChannel } from './channels/telegram.js';
 import { SlackChannel } from './channels/slack.js';
@@ -36,8 +42,9 @@ import { KPITracker } from './orchestrator/kpi-tracker.js';
 import { CheckpointManager } from './orchestrator/checkpoint.js';
 import type {
   CanvasGraph,
-  CEOIdentity,
-  CEOCommand,
+  OwnerIdentity,
+  OwnerCommand,
+  OwnerCommandSchema,
   AgentNode,
   InboundMessage,
   Edge,
@@ -54,25 +61,13 @@ export interface DaemonContext {
   readonly router: ModelRouter;
   readonly mcpClients: McpClientManager;
   readonly engine: ProactiveEngine;
-  readonly telegram: TelegramChannel | null;
   readonly mcpServer: McpServer;
   readonly refreshInterval: ReturnType<typeof setInterval>;
   readonly registry: ChannelRegistry | null;
   readonly orchestrator: AgentOrchestrator | null;
   readonly queue: MessageQueue | null;
   readonly canvasWatcher: FSWatcher | null;
-  readonly ceoCommandWatcher: FSWatcher | null;
-}
-
-function handleAlert(alert: ProactiveAlert, telegram: TelegramChannel | null): void {
-  const logger = getLogger();
-  logger.info(`Alert: [${alert.type}] ${alert.title}`, {
-    priority: alert.priority,
-    entityIds: alert.entityIds,
-  });
-  if (telegram) {
-    void telegram.sendAlert(alert);
-  }
+  readonly ownerCommandWatcher: FSWatcher | null;
 }
 
 async function connectMcpSources(
@@ -148,6 +143,7 @@ interface RawWorkspace {
 
 interface RawGraph {
   readonly version?: number;
+  readonly globalInstructions?: string;
   readonly nodes?: readonly RawNode[];
   readonly edges?: readonly RawEdge[];
   readonly workspaces?: readonly RawWorkspace[];
@@ -232,6 +228,8 @@ function loadCanvasGraph(): CanvasGraph {
     const parsed = JSON.parse(raw) as RawGraph;
     return {
       version: 2,
+      globalInstructions:
+        typeof parsed.globalInstructions === 'string' ? parsed.globalInstructions : '',
       nodes: (parsed.nodes ?? []).map(normalizeNode),
       edges: (parsed.edges ?? []).map(normalizeEdge),
       workspaces: (parsed.workspaces ?? []).map(normalizeWorkspace),
@@ -242,11 +240,11 @@ function loadCanvasGraph(): CanvasGraph {
   }
 }
 
-function buildCeoIdentity(config: OpenWindConfig): CEOIdentity {
+function buildOwnerIdentity(config: OpenWindConfig): OwnerIdentity {
   return {
-    telegram: config.ceo.telegram,
-    slack: config.ceo.slack,
-    whatsapp: config.ceo.whatsapp,
+    telegram: config.owner.telegram,
+    slack: config.owner.slack,
+    whatsapp: config.owner.whatsapp,
   };
 }
 
@@ -260,16 +258,28 @@ async function createChannelForNode(
     audit: AuditLogger;
     config: OpenWindConfig;
     onInbound: (message: InboundMessage) => void;
+    globalInstructions: string;
   },
 ): Promise<Channel | null> {
   const logger = getLogger();
-  const { db, router, audit, config, onInbound } = deps;
+  const { db, router, audit, config, onInbound, globalInstructions } = deps;
 
-  // Try per-node token first, fall back to legacy global key
+  const platformName = node.platform.charAt(0).toUpperCase() + node.platform.slice(1);
+  const displayName = node.meta?.['firstName'] || node.label.replace(/^@/, '') || node.label;
+  const personaBlock = [
+    `Your name is ${displayName}.`,
+    `You are a ${node.role ?? 'assistant'} agent on ${platformName}.`,
+    `Always respond as ${displayName}. Never say you are Claude, an AI assistant, or a language model.`,
+  ].join(' ');
+
+  const combinedInstructions = [personaBlock, globalInstructions, node.instructions]
+    .filter(Boolean)
+    .join('\n\n');
+
   const nodeToken = await vaultGet(`channel_token_${node.id}`);
 
   if (node.platform === 'telegram') {
-    const token = nodeToken ?? (await vaultGet('telegram_bot_token'));
+    const token = nodeToken;
     if (!token) {
       logger.warn(`Skipping node ${node.id}: no telegram token in vault`);
       return null;
@@ -290,18 +300,25 @@ async function createChannelForNode(
       createLimiter(`tg_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
     );
 
-    const ceoTelegramId = config.ceo.telegram?.userId;
+    const ownerTelegramId = config.owner.telegram?.userId;
+    const nodeUserId =
+      typeof node.meta?.['userId'] === 'string' ? Number(node.meta['userId']) : undefined;
+    const configUserIds = config.channels.telegram.allowedUserIds;
+    const allowedUserIds =
+      configUserIds.length > 0 ? configUserIds : nodeUserId ? [nodeUserId] : [];
+
     return new TelegramChannel({
       token,
-      allowedUserIds: config.channels.telegram.allowedUserIds,
+      allowedUserIds,
       db,
       router,
       audit,
       pipeline,
       transcription,
       nodeId: node.id,
-      ceoUserId: ceoTelegramId,
+      ownerId: ownerTelegramId ?? nodeUserId,
       onInbound,
+      instructions: combinedInstructions,
     });
   }
 
@@ -330,7 +347,7 @@ async function createChannelForNode(
       token,
       signingSecret,
       channelIds: [],
-      ceoUserId: config.ceo.slack?.userId,
+      ownerId: config.owner.slack?.userId,
       nodeId: node.id,
       audit,
       pipeline,
@@ -360,7 +377,7 @@ async function createChannelForNode(
       token,
       guildId: config.channels.discord.guildId,
       channelIds: [],
-      ceoUserId: config.channels.discord.botUserId,
+      ownerId: config.channels.discord.botUserId,
       nodeId: node.id,
       audit,
       pipeline,
@@ -462,7 +479,7 @@ async function setupOrchestrator(
   const logger = getLogger();
 
   const connectedNodes = graph.nodes.filter(
-    (n) => n.status === 'connected' && n.platform !== 'ceo',
+    (n) => n.status === 'connected' && n.platform !== 'owner',
   );
 
   if (connectedNodes.length === 0) {
@@ -480,16 +497,17 @@ async function setupOrchestrator(
     deps.config.orchestrator.routingCacheTtlMs,
   );
 
-  const ceoIdentity = buildCeoIdentity(deps.config);
+  const ownerIdentity = buildOwnerIdentity(deps.config);
   const orchestrator = new AgentOrchestrator({
     registry,
     graph,
-    ceoIdentity,
+    ownerIdentity,
     brain,
     db: deps.db,
     agentMemory,
     kpiTracker,
     checkpointManager,
+    canvasPath: paths.canvas,
   });
 
   const queue = new MessageQueue((msg: InboundMessage) => orchestrator.handleInbound(msg), {
@@ -502,10 +520,23 @@ async function setupOrchestrator(
     queue.enqueue(msg);
   };
 
-  const channelDeps = { ...deps, onInbound };
+  const channelDeps = { ...deps, onInbound, globalInstructions: graph.globalInstructions };
   const startedChannels: OrchestratorBundle['startedChannels'] = [];
+  const usedTokens = new Set<string>();
 
   for (const node of connectedNodes) {
+    // Prevent duplicate polling instances for the same token (e.g. Telegram 409)
+    const resolvedToken = await vaultGet(`channel_token_${node.id}`);
+    if (resolvedToken) {
+      if (usedTokens.has(resolvedToken)) {
+        logger.warn(
+          `Skipping node ${node.id}: token already in use by another node. Each bot needs a unique token.`,
+        );
+        continue;
+      }
+      usedTokens.add(resolvedToken);
+    }
+
     const channel = await createChannelForNode(node, channelDeps);
     if (!channel) continue;
 
@@ -535,9 +566,51 @@ async function setupOrchestrator(
 
 // ─── Daemon Lifecycle ─────────────────────────────────────────────────
 
+function acquirePidLock(): void {
+  const { pidFile } = paths;
+
+  if (existsSync(pidFile)) {
+    const existingPid = parseInt(readFileSync(pidFile, 'utf-8').trim(), 10);
+    if (!isNaN(existingPid)) {
+      try {
+        // Signal 0 checks if process exists without killing it
+        process.kill(existingPid, 0);
+        throw new Error(
+          `Another daemon is already running (PID ${existingPid}). ` +
+            `Remove ${pidFile} if the process is stale.`,
+        );
+      } catch (error: unknown) {
+        if (error instanceof Error && 'code' in error && error.code === 'ESRCH') {
+          // Process doesn't exist — stale PID file, safe to overwrite
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  writeFileSync(pidFile, String(process.pid), 'utf-8');
+}
+
+function releasePidLock(): void {
+  try {
+    const { pidFile } = paths;
+    if (existsSync(pidFile)) {
+      const storedPid = parseInt(readFileSync(pidFile, 'utf-8').trim(), 10);
+      if (storedPid === process.pid) {
+        unlinkSync(pidFile);
+      }
+    }
+  } catch {
+    // Best-effort cleanup
+  }
+}
+
 export async function startDaemonContext(): Promise<DaemonContext> {
   const logger = getLogger();
   logger.info('Daemon starting');
+
+  acquirePidLock();
 
   await runSecurityChecks();
   logger.info('Security checks passed');
@@ -568,7 +641,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   // ─── Canvas-based orchestrator setup ────────────────────────────────
   const graph = loadCanvasGraph();
   const checkpointManager = new CheckpointManager(db);
-  const channelDeps = { db, router, audit, config };
+  const channelDeps = { db, router, audit, config, globalInstructions: graph.globalInstructions };
 
   const bundle = await setupOrchestrator(graph, channelDeps, checkpointManager);
   const registry: ChannelRegistry | null = bundle?.registry ?? null;
@@ -583,53 +656,9 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     });
   }
 
-  // ─── Legacy single-bot fallback ─────────────────────────────────────
-  // If no orchestrator was set up but legacy telegram config is enabled,
-  // keep backward-compatible single-bot mode.
-  let telegram: TelegramChannel | null = null;
-  const hasOrchestratorTelegram =
-    bundle?.startedChannels.some((c) => c.channel.name === 'telegram') ?? false;
-
-  if (!hasOrchestratorTelegram && config.channels.telegram.enabled) {
-    const token = await vaultGet('telegram_bot_token');
-    if (token) {
-      const { voice } = config.channels.telegram;
-      const transcription = voice.enabled
-        ? new TranscriptionService({
-            model: voice.model,
-            maxDurationSeconds: voice.maxDurationSeconds,
-          })
-        : null;
-      const pipeline = new IngestPipeline(
-        db,
-        router,
-        audit,
-        createLimiter('telegram_ingest', SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
-      );
-      telegram = new TelegramChannel({
-        token,
-        allowedUserIds: config.channels.telegram.allowedUserIds,
-        db,
-        router,
-        audit,
-        pipeline,
-        transcription,
-      });
-    } else {
-      logger.warn(
-        'Telegram enabled but bot token not found in vault. Run: openwind connect telegram',
-      );
-    }
-  }
-
-  const engine = new ProactiveEngine(db, router, (alert) => handleAlert(alert, telegram));
-  engine.start();
-  logger.info('Proactive engine started');
-
-  if (telegram) {
-    await telegram.start();
-    logger.info('Telegram bot started (legacy single-bot mode)');
-  }
+  // ProactiveEngine disabled — owner drives all interaction through canvas bots
+  const engine = new ProactiveEngine(db, router, () => {});
+  logger.info('Proactive engine disabled (owner-driven mode)');
 
   const mcpServer = await startMcpServer({
     db,
@@ -653,7 +682,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
       if (orchestrator && registry) {
         const currentNodeIds = new Set(registry.getAll().map((c) => c.nodeId));
         const newConnectedNodes = newGraph.nodes.filter(
-          (n) => n.status === 'connected' && n.platform !== 'ceo',
+          (n) => n.status === 'connected' && n.platform !== 'owner',
         );
         const newNodeIds = new Set(newConnectedNodes.map((n) => n.id));
 
@@ -683,7 +712,11 @@ export async function startDaemonContext(): Promise<DaemonContext> {
           if (!currentNodeIds.has(node.id)) {
             void (async () => {
               try {
-                const channel = await createChannelForNode(node, { ...channelDeps, onInbound });
+                const channel = await createChannelForNode(node, {
+                  ...channelDeps,
+                  onInbound,
+                  globalInstructions: newGraph.globalInstructions,
+                });
                 if (channel) {
                   registry.register(node.id, channel);
                   await channel.start();
@@ -714,30 +747,43 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     logger.info('Canvas watcher not started (file may not exist yet)');
   }
 
-  // ─── CEO command file watcher ──────────────────────────────────────
-  let ceoCommandWatcher: FSWatcher | null = null;
+  // ─── Owner command file watcher ────────────────────────────────
+  let ownerCommandWatcher: FSWatcher | null = null;
   if (orchestrator) {
-    const processCeoCommands = (): void => {
-      if (!existsSync(paths.ceoCommands)) return;
+    const processOwnerCommands = (): void => {
+      if (!existsSync(paths.ownerCommands)) return;
       try {
-        const content = readFileSync(paths.ceoCommands, 'utf-8').trim();
+        const content = readFileSync(paths.ownerCommands, 'utf-8').trim();
         if (!content) return;
 
-        // Clear the file immediately to avoid reprocessing
-        writeFileSync(paths.ceoCommands, '', 'utf-8');
-
         const lines = content.split('\n').filter(Boolean);
+        const failedLines: string[] = [];
+
         for (const line of lines) {
           try {
-            const command = JSON.parse(line) as CEOCommand;
-            audit.logAction('ceo:command_received', { type: command.type });
-            void orchestrator.handleCeoCommand(command);
+            const parsed: unknown = JSON.parse(line);
+            const result = OwnerCommandSchema.safeParse(parsed);
+            if (!result.success) {
+              logger.warn('Invalid owner command schema', { error: result.error.message });
+              failedLines.push(line);
+              continue;
+            }
+            const command: OwnerCommand = result.data;
+            audit.logAction('owner:command_received', { type: command.type });
+            void orchestrator.handleOwnerCommand(command);
           } catch {
-            logger.warn('Invalid CEO command line', { line });
+            logger.warn('Invalid owner command JSON', { line });
+            failedLines.push(line);
           }
         }
+
+        writeFileSync(
+          paths.ownerCommands,
+          failedLines.length > 0 ? failedLines.join('\n') + '\n' : '',
+          'utf-8',
+        );
       } catch (error) {
-        logger.warn('Error reading CEO commands', {
+        logger.warn('Error reading owner commands', {
           error: error instanceof Error ? error.message : String(error),
         });
       }
@@ -745,16 +791,16 @@ export async function startDaemonContext(): Promise<DaemonContext> {
 
     try {
       // Create the file if it doesn't exist
-      if (!existsSync(paths.ceoCommands)) {
-        writeFileSync(paths.ceoCommands, '', 'utf-8');
+      if (!existsSync(paths.ownerCommands)) {
+        writeFileSync(paths.ownerCommands, '', 'utf-8');
       }
 
-      ceoCommandWatcher = watch(paths.ceoCommands, { persistent: false }, () => {
-        processCeoCommands();
+      ownerCommandWatcher = watch(paths.ownerCommands, { persistent: false }, () => {
+        processOwnerCommands();
       });
-      logger.info('CEO command watcher started');
+      logger.info('Owner command watcher started');
     } catch {
-      logger.info('CEO command watcher not started');
+      logger.info('Owner command watcher not started');
     }
   }
 
@@ -771,14 +817,13 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     router,
     mcpClients,
     engine,
-    telegram,
     mcpServer,
     refreshInterval,
     registry,
     orchestrator,
     queue,
     canvasWatcher,
-    ceoCommandWatcher,
+    ownerCommandWatcher,
   };
 }
 
@@ -788,9 +833,9 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
 
   clearInterval(ctx.refreshInterval);
 
-  if (ctx.ceoCommandWatcher) {
-    ctx.ceoCommandWatcher.close();
-    logger.info('CEO command watcher stopped');
+  if (ctx.ownerCommandWatcher) {
+    ctx.ownerCommandWatcher.close();
+    logger.info('Owner command watcher stopped');
   }
 
   if (ctx.canvasWatcher) {
@@ -811,16 +856,13 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
   ctx.engine.stop();
   logger.info('Proactive engine stopped');
 
-  if (ctx.telegram) {
-    await ctx.telegram.stop();
-    logger.info('Telegram bot stopped');
-  }
-
   await ctx.mcpClients.disconnectAll();
   logger.info('MCP clients disconnected');
 
   ctx.audit.logAction('daemon:stop', {});
   closeDatabase(ctx.db);
   logger.info('Database closed');
+
+  releasePidLock();
   logger.info('Daemon stopped');
 }

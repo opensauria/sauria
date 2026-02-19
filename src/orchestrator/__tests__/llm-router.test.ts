@@ -6,6 +6,7 @@ import type { RoutingContext } from '../llm-router.js';
 import type { InboundMessage, AgentNode, Workspace } from '../types.js';
 import { DEFAULT_GROUP_BEHAVIOR } from '../types.js';
 import type { ModelRouter } from '../../ai/router.js';
+import { AgentMemory } from '../agent-memory.js';
 
 // ─── Fixtures ───────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ function buildMessage(overrides: Partial<InboundMessage> = {}): InboundMessage {
     sourceNodeId: 'n1',
     platform: 'telegram',
     senderId: 'user1',
-    senderIsCeo: false,
+    senderIsOwner: false,
     groupId: null,
     content: 'Hello, I need help with my order',
     contentType: 'text',
@@ -60,6 +61,7 @@ function buildContext(overrides: Partial<RoutingContext> = {}): RoutingContext {
     teamNodes: [baseNode],
     ruleActions: [],
     conversationId: null,
+    globalInstructions: '',
     ...overrides,
   };
 }
@@ -242,6 +244,84 @@ describe('LLMRoutingBrain', () => {
       const decision = await brain.decideRouting(context);
 
       expect(decision.actions).toHaveLength(0);
+    });
+
+    it('includes workspace facts in the routing prompt', async () => {
+      const agentMemory = new AgentMemory(db);
+      agentMemory.storeFact(
+        'n1',
+        'ws1',
+        'Design team prefers async standups',
+        ['process'],
+        'conversation',
+      );
+      agentMemory.storeFact('n2', 'ws1', 'Hiring approved for Q2', ['finance'], 'conversation');
+
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({
+          content: 'What do we know about the team preferences and hiring plans?',
+        }),
+        workspace: baseWorkspace,
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).toContain('Workspace knowledge');
+      expect(systemPrompt).toContain('Design team prefers async standups');
+      expect(systemPrompt).toContain('Hiring approved for Q2');
+    });
+
+    it('includes peer messages from other workspace nodes in the routing prompt', async () => {
+      const agentMemory = new AgentMemory(db);
+      const peerNode: AgentNode = {
+        ...baseNode,
+        id: 'n2',
+        label: '@design-bot',
+        role: 'specialist',
+      };
+
+      const peerConvId = agentMemory.getOrCreateConversation('telegram', null, ['n2']);
+      agentMemory.recordMessage({
+        conversationId: peerConvId,
+        sourceNodeId: 'n2',
+        senderId: 'user2',
+        senderIsOwner: false,
+        platform: 'telegram',
+        groupId: null,
+        content: 'Design review completed for landing page',
+        contentType: 'text',
+      });
+
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({
+          content: 'What is the status of the design review?',
+        }),
+        teamNodes: [baseNode, peerNode],
+        workspace: baseWorkspace,
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).toContain('Recent peer activity');
+      expect(systemPrompt).toContain('Design review completed for landing page');
     });
   });
 });

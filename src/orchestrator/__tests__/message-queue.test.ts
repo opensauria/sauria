@@ -7,7 +7,7 @@ function makeMessage(content: string): InboundMessage {
     sourceNodeId: 'node-1',
     platform: 'telegram',
     senderId: 'user-1',
-    senderIsCeo: false,
+    senderIsOwner: false,
     groupId: null,
     content,
     contentType: 'text',
@@ -17,10 +17,10 @@ function makeMessage(content: string): InboundMessage {
 
 describe('MessageQueue', () => {
   let queue: MessageQueue;
-  let handler: ReturnType<typeof vi.fn>;
+  let handler: (message: InboundMessage) => Promise<void>;
 
   beforeEach(() => {
-    handler = vi.fn().mockResolvedValue(undefined);
+    handler = vi.fn<(message: InboundMessage) => Promise<void>>().mockResolvedValue(undefined);
     queue = new MessageQueue(handler, { maxConcurrent: 2, maxQueueSize: 10 });
   });
 
@@ -48,16 +48,16 @@ describe('MessageQueue', () => {
     small.stop();
   });
 
-  it('prioritizes CEO messages', async () => {
+  it('prioritizes owner messages', async () => {
     const order: string[] = [];
     const slowHandler = vi.fn().mockImplementation(async (msg: InboundMessage) => {
       order.push(msg.content);
     });
     const q = new MessageQueue(slowHandler, { maxConcurrent: 1, maxQueueSize: 10 });
     q.enqueue(makeMessage('normal'));
-    q.enqueue({ ...makeMessage('ceo'), senderIsCeo: true });
+    q.enqueue({ ...makeMessage('owner-msg'), senderIsOwner: true });
     await q.flush();
-    expect(order[0]).toBe('ceo');
+    expect(order[0]).toBe('owner-msg');
     q.stop();
   });
 });

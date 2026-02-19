@@ -90,7 +90,7 @@ describe('AgentMemory', () => {
         conversationId,
         sourceNodeId: 'node1',
         senderId: 'user1',
-        senderIsCeo: false,
+        senderIsOwner: false,
         platform: 'telegram',
         groupId: 'group1',
         content: 'Hello there',
@@ -103,7 +103,7 @@ describe('AgentMemory', () => {
 
       expect(history).toHaveLength(1);
       expect(history[0]?.content).toBe('Hello there');
-      expect(history[0]?.senderIsCeo).toBe(false);
+      expect(history[0]?.senderIsOwner).toBe(false);
       expect(history[0]?.sourceNodeId).toBe('node1');
     });
 
@@ -114,7 +114,7 @@ describe('AgentMemory', () => {
         conversationId,
         sourceNodeId: 'node1',
         senderId: 'user1',
-        senderIsCeo: false,
+        senderIsOwner: false,
         platform: 'telegram',
         groupId: 'group1',
         content: 'First message',
@@ -125,7 +125,7 @@ describe('AgentMemory', () => {
         conversationId,
         sourceNodeId: 'node1',
         senderId: 'user1',
-        senderIsCeo: false,
+        senderIsOwner: false,
         platform: 'telegram',
         groupId: 'group1',
         content: 'Second message',
@@ -147,7 +147,7 @@ describe('AgentMemory', () => {
           conversationId,
           sourceNodeId: 'node1',
           senderId: 'user1',
-          senderIsCeo: false,
+          senderIsOwner: false,
           platform: 'telegram',
           groupId: null,
           content: `Message ${i}`,
@@ -170,7 +170,7 @@ describe('AgentMemory', () => {
         conversationId,
         sourceNodeId: 'node1',
         senderId: 'user1',
-        senderIsCeo: true,
+        senderIsOwner: true,
         platform: 'telegram',
         groupId: 'group1',
         content: 'Test',
@@ -225,6 +225,82 @@ describe('AgentMemory', () => {
       const id1 = memory.getOrCreateConversation('telegram', null, ['node2', 'node1']);
       const id2 = memory.getOrCreateConversation('telegram', null, ['node1', 'node2']);
       expect(id1).toBe(id2);
+    });
+  });
+
+  describe('getRecentMessagesForContext', () => {
+    it('returns formatted messages with sender labels', () => {
+      const conversationId = memory.getOrCreateConversation('telegram', 'g1', ['node1']);
+
+      memory.recordMessage({
+        conversationId,
+        sourceNodeId: 'node1',
+        senderId: 'user1',
+        senderIsOwner: true,
+        platform: 'telegram',
+        groupId: 'g1',
+        content: 'Schedule a meeting with design',
+        contentType: 'text',
+      });
+
+      memory.recordMessage({
+        conversationId,
+        sourceNodeId: 'node1',
+        senderId: 'bot1',
+        senderIsOwner: false,
+        platform: 'telegram',
+        groupId: 'g1',
+        content: 'I will coordinate with the design workspace',
+        contentType: 'text',
+      });
+
+      const nodeLabels = new Map([['node1', '@SupportBot']]);
+      const result = memory.getRecentMessagesForContext(conversationId, 5, nodeLabels);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toBe('[Owner] Schedule a meeting with design');
+      expect(result[1]).toBe('[@SupportBot] I will coordinate with the design workspace');
+    });
+
+    it('returns empty array when no messages exist', () => {
+      const result = memory.getRecentMessagesForContext('nonexistent', 5, new Map());
+      expect(result).toHaveLength(0);
+    });
+
+    it('respects limit parameter', () => {
+      const conversationId = memory.getOrCreateConversation('telegram', null, ['node1']);
+      for (let i = 0; i < 10; i++) {
+        memory.recordMessage({
+          conversationId,
+          sourceNodeId: 'node1',
+          senderId: 'user1',
+          senderIsOwner: false,
+          platform: 'telegram',
+          groupId: null,
+          content: `Message ${i}`,
+          contentType: 'text',
+        });
+      }
+
+      const result = memory.getRecentMessagesForContext(conversationId, 3, new Map());
+      expect(result).toHaveLength(3);
+    });
+
+    it('falls back to sourceNodeId when label not in map', () => {
+      const conversationId = memory.getOrCreateConversation('telegram', null, ['node1']);
+      memory.recordMessage({
+        conversationId,
+        sourceNodeId: 'node1',
+        senderId: 'user1',
+        senderIsOwner: false,
+        platform: 'telegram',
+        groupId: null,
+        content: 'Hello',
+        contentType: 'text',
+      });
+
+      const result = memory.getRecentMessagesForContext(conversationId, 5, new Map());
+      expect(result).toEqual(['[node1] Hello']);
     });
   });
 });
