@@ -13,13 +13,25 @@ const DECISION_B: RoutingDecision = {
 describe('buildCacheKey', () => {
   it('combines sourceNodeId and truncated content', () => {
     const key = buildCacheKey('node1', 'hello world');
-    expect(key).toBe('node1:hello world');
+    expect(key).toBe('node1::hello world');
   });
 
   it('truncates content to 100 characters', () => {
     const longContent = 'a'.repeat(200);
     const key = buildCacheKey('node1', longContent);
-    expect(key).toBe(`node1:${'a'.repeat(100)}`);
+    expect(key).toBe(`node1::${'a'.repeat(100)}`);
+  });
+
+  it('includes conversationId in cache key', () => {
+    const key1 = buildCacheKey('node1', 'hello', 'conv1');
+    const key2 = buildCacheKey('node1', 'hello', 'conv2');
+    expect(key1).not.toBe(key2);
+  });
+
+  it('handles null conversationId', () => {
+    const key1 = buildCacheKey('node1', 'hello', null);
+    const key2 = buildCacheKey('node1', 'hello', null);
+    expect(key1).toBe(key2);
   });
 });
 
