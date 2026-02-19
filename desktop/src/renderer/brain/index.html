@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>OpenWind &mdash; Brain</title>
+    <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="./brain.css" />
+  </head>
+  <body>
+    <div class="brain-layout">
+      <!-- Sidebar -->
+      <nav class="brain-sidebar">
+        <div class="brain-sidebar-header">Brain</div>
+
+        <div class="brain-sidebar-section">
+          <div class="brain-sidebar-section-label">Knowledge</div>
+          <div class="brain-nav-item active" data-view="entities">
+            <img class="icon-mono" src="/icons/user.svg" alt="" />
+            Entities
+            <span class="brain-nav-count" id="nav-count-entities">0</span>
+          </div>
+          <div class="brain-nav-item" data-view="relations">
+            <img class="icon-mono" src="/icons/link.svg" alt="" />
+            Relations
+            <span class="brain-nav-count" id="nav-count-relations">0</span>
+          </div>
+          <div class="brain-nav-item" data-view="events">
+            <img class="icon-mono" src="/icons/calendar.svg" alt="" />
+            Events
+            <span class="brain-nav-count" id="nav-count-events">0</span>
+          </div>
+          <div class="brain-nav-item" data-view="observations">
+            <img class="icon-mono" src="/icons/lightbulb.svg" alt="" />
+            Observations
+            <span class="brain-nav-count" id="nav-count-observations">0</span>
+          </div>
+        </div>
+
+        <div class="brain-sidebar-section">
+          <div class="brain-sidebar-section-label">Activity</div>
+          <div class="brain-nav-item" data-view="conversations">
+            <img class="icon-mono" src="/icons/message-square.svg" alt="" />
+            Conversations
+            <span class="brain-nav-count" id="nav-count-conversations">0</span>
+          </div>
+          <div class="brain-nav-item" data-view="facts">
+            <img class="icon-mono" src="/icons/brain.svg" alt="" />
+            Agent Memory
+            <span class="brain-nav-count" id="nav-count-facts">0</span>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Content Area -->
+      <main class="brain-content" id="brain-content">
+        <!-- Toolbar -->
+        <div class="brain-toolbar">
+          <div class="brain-search">
+            <img src="/icons/search.svg" alt="" />
+            <input type="text" id="search-input" placeholder="Search..." />
+          </div>
+          <select class="brain-filter" id="filter-select" style="display: none">
+            <option value="">All types</option>
+          </select>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="brain-stats" id="stats-bar"></div>
+
+        <!-- Table Container -->
+        <div class="brain-table-wrap" id="table-wrap">
+          <table class="brain-table" id="data-table">
+            <thead id="table-head"></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+          <div class="brain-empty" id="empty-state" style="display: none">
+            <img src="/icons/database.svg" alt="" />
+            <div>No data yet</div>
+            <div style="font-size: 12px">
+              The daemon populates this as it processes information
+            </div>
+          </div>
+          <div class="brain-load-more" id="load-more" style="display: none">
+            <button id="load-more-btn">Load more</button>
+          </div>
+        </div>
+      </main>
+
+      <!-- Detail Panel -->
+      <aside class="brain-detail" id="detail-panel">
+        <div class="brain-detail-header">
+          <span class="brain-detail-title" id="detail-title"></span>
+          <div class="brain-detail-close" id="detail-close">
+            <img src="/icons/x.svg" alt="Close" />
+          </div>
+        </div>
+        <div class="brain-detail-body" id="detail-body"></div>
+        <div class="brain-detail-actions" id="detail-actions">
+          <button class="btn btn-danger" id="detail-delete">Delete</button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Delete Confirmation Dialog -->
+    <div class="brain-dialog-overlay" id="delete-dialog">
+      <div class="brain-dialog">
+        <div class="brain-dialog-title">Confirm Delete</div>
+        <div class="brain-dialog-text" id="delete-dialog-text"></div>
+        <div class="brain-dialog-warning" id="delete-dialog-warning"></div>
+        <div class="brain-dialog-actions">
+          <button class="btn btn-secondary" id="delete-cancel">Cancel</button>
+          <button class="btn btn-danger" id="delete-confirm">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+    <script>
+      /* ── State ───────────────────────────────────────────────────────── */
+      const ow = window.openwind;
+      let currentView = 'entities';
+      let currentRows = [];
+      let currentTotal = 0;
+      let currentOffset = 0;
+      const PAGE_SIZE = 50;
+      let selectedId = null;
+      let searchTimeout = null;
+      let stats = null;
+
+      /* ── DOM refs ────────────────────────────────────────────────────── */
+      const navItems = document.querySelectorAll('.brain-nav-item');
+      const searchInput = document.getElementById('search-input');
+      const filterSelect = document.getElementById('filter-select');
+      const statsBar = document.getElementById('stats-bar');
+      const tableHead = document.getElementById('table-head');
+      const tableBody = document.getElementById('table-body');
+      const emptyState = document.getElementById('empty-state');
+      const loadMore = document.getElementById('load-more');
+      const loadMoreBtn = document.getElementById('load-more-btn');
+      const detailPanel = document.getElementById('detail-panel');
+      const detailTitle = document.getElementById('detail-title');
+      const detailBody = document.getElementById('detail-body');
+      const detailDelete = document.getElementById('detail-delete');
+      const detailClose = document.getElementById('detail-close');
+      const deleteDialog = document.getElementById('delete-dialog');
+      const deleteDialogText = document.getElementById('delete-dialog-text');
+      const deleteDialogWarning = document.getElementById('delete-dialog-warning');
+      const deleteCancel = document.getElementById('delete-cancel');
+      const deleteConfirm = document.getElementById('delete-confirm');
+
+      /* ── Helpers ─────────────────────────────────────────────────────── */
+      function formatTs(ts) {
+        if (!ts) return '-';
+        const d = new Date(ts.includes('T') ? ts : ts + 'Z');
+        if (isNaN(d.getTime())) return ts;
+        const now = new Date();
+        const diff = now - d;
+        if (diff < 60000) return 'just now';
+        if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+        if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+        if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+
+      function escHtml(str) {
+        if (!str) return '';
+        const d = document.createElement('div');
+        d.textContent = String(str);
+        return d.innerHTML;
+      }
+
+      function truncate(str, len) {
+        if (!str) return '';
+        const s = String(str);
+        return s.length > len ? s.slice(0, len) + '...' : s;
+      }
+
+      function parseJson(raw) {
+        if (!raw) return null;
+        if (typeof raw === 'object') return raw;
+        try { return JSON.parse(raw); } catch { return null; }
+      }
+
+      /* ── Stats ───────────────────────────────────────────────────────── */
+      async function loadStats() {
+        try {
+          stats = await ow.brain.getStats();
+          renderStats();
+          updateNavCounts();
+        } catch {
+          statsBar.innerHTML = '<div class="brain-stat"><span style="color: var(--error)">Database not available</span></div>';
+        }
+      }
+
+      function renderStats() {
+        if (!stats) return;
+        statsBar.innerHTML = `
+          <div class="brain-stat"><span class="brain-stat-value">${stats.entities}</span> entities</div>
+          <div class="brain-stat"><span class="brain-stat-value">${stats.relations}</span> relations</div>
+          <div class="brain-stat"><span class="brain-stat-value">${stats.events}</span> events</div>
+          <div class="brain-stat"><span class="brain-stat-value">${stats.observations}</span> observations</div>
+          <div class="brain-stat"><span class="brain-stat-value">${stats.conversations}</span> conversations</div>
+          <div class="brain-stat"><span class="brain-stat-value">${stats.facts}</span> facts</div>
+        `;
+      }
+
+      function updateNavCounts() {
+        if (!stats) return;
+        document.getElementById('nav-count-entities').textContent = stats.entities;
+        document.getElementById('nav-count-relations').textContent = stats.relations;
+        document.getElementById('nav-count-events').textContent = stats.events;
+        document.getElementById('nav-count-observations').textContent = stats.observations;
+        document.getElementById('nav-count-conversations').textContent = stats.conversations;
+        document.getElementById('nav-count-facts').textContent = stats.facts;
+      }
+
+      /* ── View Configuration ──────────────────────────────────────────── */
+      const viewConfig = {
+        entities: {
+          columns: ['Name', 'Type', 'Importance', 'Mentions', 'Last Updated'],
+          filterOptions: [
+            { value: '', label: 'All types' },
+            { value: 'person', label: 'Person' },
+            { value: 'project', label: 'Project' },
+            { value: 'company', label: 'Company' },
+            { value: 'event', label: 'Event' },
+            { value: 'document', label: 'Document' },
+            { value: 'goal', label: 'Goal' },
+            { value: 'place', label: 'Place' },
+            { value: 'concept', label: 'Concept' },
+          ],
+          hasSearch: true,
+          hasFilter: true,
+          renderRow(r) {
+            const score = typeof r.importance_score === 'number' ? Math.round(r.importance_score * 100) : 0;
+            return `
+              <td>${escHtml(r.name)}</td>
+              <td><span class="type-badge type-${escHtml(r.type)}">${escHtml(r.type)}</span></td>
+              <td><span class="confidence-bar"><span class="confidence-fill" style="width: ${score}%"></span></span> ${score}%</td>
+              <td>${r.mention_count ?? 0}</td>
+              <td class="ts">${formatTs(r.last_updated_at)}</td>
+            `;
+          },
+          async load(opts) { return ow.brain.listEntities(opts); },
+          tableName: 'entities',
+        },
+        relations: {
+          columns: ['From', 'Type', 'To', 'Strength', 'Updated'],
+          filterOptions: [],
+          hasSearch: false,
+          hasFilter: false,
+          renderRow(r) {
+            const strength = typeof r.strength === 'number' ? Math.round(r.strength * 100) : 0;
+            return `
+              <td>${escHtml(r.from_name || r.from_entity_id)}</td>
+              <td><span class="type-badge type-pattern">${escHtml(r.type)}</span></td>
+              <td>${escHtml(r.to_name || r.to_entity_id)}</td>
+              <td><span class="confidence-bar"><span class="confidence-fill" style="width: ${strength}%"></span></span> ${strength}%</td>
+              <td class="ts">${formatTs(r.last_updated_at)}</td>
+            `;
+          },
+          async load(opts) { return ow.brain.listRelations(opts); },
+          tableName: 'relations',
+        },
+        events: {
+          columns: ['Source', 'Type', 'Importance', 'Timestamp'],
+          filterOptions: [],
+          hasSearch: false,
+          hasFilter: false,
+          renderRow(r) {
+            const imp = typeof r.importance === 'number' ? Math.round(r.importance * 100) : 0;
+            return `
+              <td>${escHtml(r.source)}</td>
+              <td>${escHtml(r.event_type)}</td>
+              <td><span class="confidence-bar"><span class="confidence-fill" style="width: ${imp}%"></span></span> ${imp}%</td>
+              <td class="ts">${formatTs(r.timestamp)}</td>
+            `;
+          },
+          async load(opts) { return ow.brain.listEvents(opts); },
+          tableName: 'events',
+        },
+        observations: {
+          columns: ['Content', 'Type', 'Confidence', 'Created'],
+          filterOptions: [
+            { value: '', label: 'All types' },
+            { value: 'pattern', label: 'Pattern' },
+            { value: 'insight', label: 'Insight' },
+            { value: 'prediction', label: 'Prediction' },
+            { value: 'preference', label: 'Preference' },
+            { value: 'fact', label: 'Fact' },
+          ],
+          hasSearch: true,
+          hasFilter: true,
+          renderRow(r) {
+            const conf = typeof r.confidence === 'number' ? Math.round(r.confidence * 100) : 0;
+            return `
+              <td>${escHtml(truncate(r.content, 80))}</td>
+              <td><span class="type-badge type-${escHtml(r.type)}">${escHtml(r.type)}</span></td>
+              <td><span class="confidence-bar"><span class="confidence-fill" style="width: ${conf}%"></span></span> ${conf}%</td>
+              <td class="ts">${formatTs(r.created_at)}</td>
+            `;
+          },
+          async load(opts) { return ow.brain.listObservations(opts); },
+          tableName: 'observations',
+        },
+        conversations: {
+          columns: ['Platform', 'Messages', 'Last Message'],
+          filterOptions: [],
+          hasSearch: false,
+          hasFilter: false,
+          renderRow(r) {
+            return `
+              <td>${escHtml(r.platform)}</td>
+              <td>${r.message_count ?? 0}</td>
+              <td class="ts">${formatTs(r.last_message_at)}</td>
+            `;
+          },
+          async load(opts) { return ow.brain.listConversations(opts); },
+          tableName: 'agent_conversations',
+        },
+        facts: {
+          columns: ['Fact', 'Node', 'Workspace', 'Created'],
+          filterOptions: [],
+          hasSearch: false,
+          hasFilter: false,
+          renderRow(r) {
+            return `
+              <td>${escHtml(truncate(r.fact, 80))}</td>
+              <td>${escHtml(r.node_id || '-')}</td>
+              <td>${escHtml(r.workspace_id || '-')}</td>
+              <td class="ts">${formatTs(r.created_at)}</td>
+            `;
+          },
+          async load(opts) { return ow.brain.listFacts(opts); },
+          tableName: 'agent_memory',
+        },
+      };
+
+      /* ── Navigation ──────────────────────────────────────────────────── */
+      navItems.forEach(item => {
+        item.addEventListener('click', () => {
+          const view = item.dataset.view;
+          if (view === currentView) return;
+          switchView(view);
+        });
+      });
+
+      function switchView(view) {
+        currentView = view;
+        currentOffset = 0;
+        currentRows = [];
+        selectedId = null;
+        closeDetail();
+
+        navItems.forEach(n => n.classList.toggle('active', n.dataset.view === view));
+
+        const cfg = viewConfig[view];
+        searchInput.value = '';
+        searchInput.placeholder = cfg.hasSearch ? `Search ${view}...` : 'Search...';
+        searchInput.disabled = !cfg.hasSearch;
+
+        if (cfg.hasFilter && cfg.filterOptions.length > 0) {
+          filterSelect.style.display = '';
+          filterSelect.innerHTML = cfg.filterOptions.map(o =>
+            `<option value="${escHtml(o.value)}">${escHtml(o.label)}</option>`
+          ).join('');
+        } else {
+          filterSelect.style.display = 'none';
+        }
+
+        renderTableHead(cfg.columns);
+        loadData();
+      }
+
+      /* ── Table Rendering ─────────────────────────────────────────────── */
+      function renderTableHead(columns) {
+        tableHead.innerHTML = '<tr>' + columns.map(c => `<th>${escHtml(c)}</th>`).join('') + '</tr>';
+      }
+
+      function renderTableRows(rows, append) {
+        const cfg = viewConfig[currentView];
+        if (!append) tableBody.innerHTML = '';
+
+        for (const r of rows) {
+          const tr = document.createElement('tr');
+          tr.dataset.id = r.id;
+          tr.innerHTML = cfg.renderRow(r);
+          if (r.id === selectedId) tr.classList.add('selected');
+          tr.addEventListener('click', () => handleRowClick(r));
+          tableBody.appendChild(tr);
+        }
+
+        emptyState.style.display = currentRows.length === 0 ? 'flex' : 'none';
+        loadMore.style.display = currentRows.length < currentTotal ? '' : 'none';
+      }
+
+      /* ── Data Loading ────────────────────────────────────────────────── */
+      async function loadData(append) {
+        const cfg = viewConfig[currentView];
+        const opts = { offset: currentOffset, limit: PAGE_SIZE };
+
+        if (cfg.hasSearch && searchInput.value.trim()) {
+          opts.search = searchInput.value.trim();
+        }
+        if (cfg.hasFilter && filterSelect.value) {
+          if (currentView === 'entities') opts.type = filterSelect.value;
+          else if (currentView === 'observations') opts.type = filterSelect.value;
+          else if (currentView === 'events') opts.source = filterSelect.value;
+          else if (currentView === 'conversations') opts.platform = filterSelect.value;
+        }
+
+        try {
+          const result = await cfg.load(opts);
+          if (append) {
+            currentRows = currentRows.concat(result.rows);
+          } else {
+            currentRows = result.rows;
+          }
+          currentTotal = result.total;
+          renderTableRows(append ? result.rows : currentRows, append);
+        } catch (err) {
+          if (!append) {
+            tableBody.innerHTML = '';
+            emptyState.style.display = 'flex';
+            emptyState.querySelector('div').textContent = 'Failed to load data';
+          }
+        }
+      }
+
+      /* ── Search ──────────────────────────────────────────────────────── */
+      searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          currentOffset = 0;
+          loadData();
+        }, 300);
+      });
+
+      filterSelect.addEventListener('change', () => {
+        currentOffset = 0;
+        loadData();
+      });
+
+      loadMoreBtn.addEventListener('click', () => {
+        currentOffset += PAGE_SIZE;
+        loadData(true);
+      });
+
+      /* ── Row Click → Detail ──────────────────────────────────────────── */
+      function handleRowClick(row) {
+        selectedId = row.id;
+        tableBody.querySelectorAll('tr').forEach(tr =>
+          tr.classList.toggle('selected', tr.dataset.id === row.id)
+        );
+
+        if (currentView === 'entities') showEntityDetail(row.id);
+        else if (currentView === 'conversations') showConversationDetail(row);
+        else showGenericDetail(row);
+      }
+
+      /* ── Entity Detail ───────────────────────────────────────────────── */
+      async function showEntityDetail(id) {
+        const data = await ow.brain.getEntity(id);
+        if (!data) return;
+        const { entity: e, relations, events } = data;
+
+        detailTitle.textContent = e.name;
+        detailDelete.dataset.table = 'entities';
+        detailDelete.dataset.id = e.id;
+        detailDelete.dataset.name = e.name;
+
+        let html = `
+          <div class="brain-detail-section">
+            <div class="brain-detail-field">
+              <div class="brain-detail-label">Name</div>
+              <input class="brain-detail-value editable" id="edit-name" value="${escHtml(e.name)}" />
+            </div>
+            <div class="brain-detail-field">
+              <div class="brain-detail-label">Type</div>
+              <span class="type-badge type-${escHtml(e.type)}">${escHtml(e.type)}</span>
+            </div>
+            <div class="brain-detail-field">
+              <div class="brain-detail-label">Summary</div>
+              <textarea class="brain-detail-value editable" id="edit-summary" rows="3">${escHtml(e.summary || '')}</textarea>
+            </div>
+        `;
+
+        const props = parseJson(e.properties);
+        if (props && Object.keys(props).length > 0) {
+          html += '<div class="brain-detail-field"><div class="brain-detail-label">Properties</div>';
+          for (const [k, v] of Object.entries(props)) {
+            html += `<div class="brain-detail-value" style="font-size: 12px; margin-bottom: 4px"><strong>${escHtml(k)}:</strong> ${escHtml(String(v))}</div>`;
+          }
+          html += '</div>';
+        }
+
+        html += `
+            <div class="brain-detail-field">
+              <div class="brain-detail-label">Importance</div>
+              <div class="brain-detail-value">${Math.round((e.importance_score ?? 0) * 100)}%</div>
+            </div>
+            <div class="brain-detail-field">
+              <div class="brain-detail-label">Mentions</div>
+              <div class="brain-detail-value">${e.mention_count ?? 0}</div>
+            </div>
+            <div class="brain-detail-field">
+              <div class="brain-detail-label">First Seen</div>
+              <div class="brain-detail-value ts">${formatTs(e.first_seen_at)}</div>
+            </div>
+          </div>
+        `;
+
+        if (relations.length > 0) {
+          html += '<div class="brain-detail-section"><div class="brain-detail-section-title">Relations</div>';
+          for (const r of relations) {
+            const isFrom = r.from_entity_id === e.id;
+            const otherName = isFrom ? (r.to_name || r.to_entity_id) : (r.from_name || r.from_entity_id);
+            const otherId = isFrom ? r.to_entity_id : r.from_entity_id;
+            const arrow = isFrom ? '→' : '←';
+            html += `<div class="brain-relation-item" data-entity-id="${escHtml(otherId)}">
+              ${arrow} <span class="brain-relation-type">${escHtml(r.type)}</span>
+              <span class="brain-relation-name">${escHtml(otherName)}</span>
+            </div>`;
+          }
+          html += '</div>';
+        }
+
+        if (events.length > 0) {
+          html += '<div class="brain-detail-section"><div class="brain-detail-section-title">Recent Events</div>';
+          for (const ev of events) {
+            const parsed = parseJson(ev.parsed_data);
+            const text = parsed?.summary || parsed?.title || ev.event_type;
+            html += `<div class="brain-event-item">
+              <span class="brain-event-time">${formatTs(ev.timestamp)}</span>
+              <span class="brain-event-text">${escHtml(truncate(String(text), 60))}</span>
+            </div>`;
+          }
+          html += '</div>';
+        }
+
+        detailBody.innerHTML = html;
+        openDetail();
+
+        // Wire inline editing
+        const editName = document.getElementById('edit-name');
+        const editSummary = document.getElementById('edit-summary');
+        let saveTimeout = null;
+
+        function saveEntity() {
+          clearTimeout(saveTimeout);
+          saveTimeout = setTimeout(async () => {
+            await ow.brain.updateEntity(e.id, {
+              name: editName.value.trim() || e.name,
+              summary: editSummary.value.trim() || null,
+            });
+            detailTitle.textContent = editName.value.trim() || e.name;
+            // Refresh list
+            currentOffset = 0;
+            loadData();
+            loadStats();
+          }, 500);
+        }
+
+        editName.addEventListener('input', saveEntity);
+        editSummary.addEventListener('input', saveEntity);
+
+        // Wire relation clicks
+        detailBody.querySelectorAll('.brain-relation-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const eid = item.dataset.entityId;
+            if (eid) showEntityDetail(eid);
+          });
+        });
+      }
+
+      /* ── Conversation Detail ─────────────────────────────────────────── */
+      async function showConversationDetail(conv) {
+        detailTitle.textContent = `${conv.platform} conversation`;
+        detailDelete.dataset.table = 'agent_conversations';
+        detailDelete.dataset.id = conv.id;
+        detailDelete.dataset.name = `${conv.platform} conversation`;
+
+        const result = await ow.brain.getConversation(conv.id, { offset: 0, limit: 100 });
+        let html = `
+          <div class="brain-detail-section">
+            <div class="brain-detail-field">
+              <div class="brain-detail-label">Platform</div>
+              <div class="brain-detail-value">${escHtml(conv.platform)}</div>
+            </div>
+            <div class="brain-detail-field">
+              <div class="brain-detail-label">Messages</div>
+              <div class="brain-detail-value">${conv.message_count ?? 0}</div>
+            </div>
+            <div class="brain-detail-field">
+              <div class="brain-detail-label">Last Message</div>
+              <div class="brain-detail-value ts">${formatTs(conv.last_message_at)}</div>
+            </div>
+          </div>
+        `;
+
+        if (result.rows.length > 0) {
+          html += '<div class="brain-detail-section"><div class="brain-detail-section-title">Messages</div>';
+          for (const m of result.rows) {
+            const isCeo = m.sender_is_ceo === 1;
+            html += `<div class="brain-message">
+              <div class="brain-message-header">
+                <span class="brain-message-sender ${isCeo ? 'is-ceo' : ''}">${escHtml(m.sender_id)}</span>
+                <span class="brain-message-time">${formatTs(m.created_at)}</span>
+              </div>
+              <div class="brain-message-content">${escHtml(m.content)}</div>
+            </div>`;
+          }
+          html += '</div>';
+        }
+
+        detailBody.innerHTML = html;
+        openDetail();
+      }
+
+      /* ── Generic Detail (events, observations, relations, facts) ─── */
+      function showGenericDetail(row) {
+        const cfg = viewConfig[currentView];
+        detailDelete.dataset.table = cfg.tableName;
+        detailDelete.dataset.id = row.id;
+
+        let title = '';
+        let html = '<div class="brain-detail-section">';
+
+        for (const [key, val] of Object.entries(row)) {
+          if (key === 'id') continue;
+          const displayKey = key.replace(/_/g, ' ');
+          let displayVal = val;
+
+          if (typeof val === 'string' && val.length > 200) {
+            displayVal = val;
+            title = title || truncate(val, 40);
+          } else if (typeof val === 'object' && val !== null) {
+            displayVal = JSON.stringify(val, null, 2);
+          }
+
+          if (!title && (key === 'name' || key === 'content' || key === 'fact' || key === 'type')) {
+            title = truncate(String(val), 40);
+          }
+
+          html += `<div class="brain-detail-field">
+            <div class="brain-detail-label">${escHtml(displayKey)}</div>
+            <div class="brain-detail-value" style="white-space: pre-wrap; word-break: break-word; user-select: text">${escHtml(String(displayVal ?? '-'))}</div>
+          </div>`;
+        }
+
+        html += '</div>';
+        detailTitle.textContent = title || row.id;
+        detailDelete.dataset.name = title || row.id;
+        detailBody.innerHTML = html;
+        openDetail();
+      }
+
+      /* ── Detail Panel Toggle ─────────────────────────────────────────── */
+      function openDetail() {
+        detailPanel.classList.add('open');
+      }
+
+      function closeDetail() {
+        detailPanel.classList.remove('open');
+        selectedId = null;
+        tableBody.querySelectorAll('tr.selected').forEach(tr => tr.classList.remove('selected'));
+      }
+
+      detailClose.addEventListener('click', closeDetail);
+
+      /* ── Delete Flow ─────────────────────────────────────────────────── */
+      detailDelete.addEventListener('click', () => {
+        const table = detailDelete.dataset.table;
+        const id = detailDelete.dataset.id;
+        const name = detailDelete.dataset.name || id;
+
+        deleteDialogText.innerHTML = `Delete <span class="brain-dialog-name">${escHtml(name)}</span>?`;
+        deleteDialogWarning.textContent = table === 'entities'
+          ? 'This will also delete all related relations and embeddings.'
+          : table === 'agent_conversations'
+            ? 'This will also delete all messages in this conversation.'
+            : '';
+
+        deleteDialog.classList.add('visible');
+        deleteConfirm.dataset.table = table;
+        deleteConfirm.dataset.id = id;
+      });
+
+      deleteCancel.addEventListener('click', () => {
+        deleteDialog.classList.remove('visible');
+      });
+
+      deleteConfirm.addEventListener('click', async () => {
+        const table = deleteConfirm.dataset.table;
+        const id = deleteConfirm.dataset.id;
+        deleteDialog.classList.remove('visible');
+
+        await ow.brain.delete(table, id);
+        closeDetail();
+        currentOffset = 0;
+        await loadData();
+        await loadStats();
+      });
+
+      /* ── Keyboard ────────────────────────────────────────────────────── */
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (deleteDialog.classList.contains('visible')) {
+            deleteDialog.classList.remove('visible');
+          } else if (detailPanel.classList.contains('open')) {
+            closeDetail();
+          }
+        }
+
+        if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+          e.preventDefault();
+          searchInput.focus();
+          searchInput.select();
+        }
+      });
+
+      /* ── Init ────────────────────────────────────────────────────────── */
+      async function init() {
+        await loadStats();
+        switchView('entities');
+      }
+
+      init();
+    </script>
+  </body>
+</html>

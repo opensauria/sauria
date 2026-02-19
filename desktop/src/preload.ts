@@ -38,4 +38,35 @@ contextBridge.exposeInMainWorld('openwind', {
     ipcRenderer.on('canvas-update', (_event, graph: unknown) => cb(graph)),
   showCanvas: () => ipcRenderer.invoke('show-canvas'),
   executeOwnerCommand: (command: string) => ipcRenderer.invoke('execute-owner-command', command),
+
+  // Brain IPC
+  brain: {
+    listEntities: (opts: { type?: string; search?: string; offset?: number; limit?: number }) =>
+      ipcRenderer.invoke('brain:list-entities', opts),
+    getEntity: (id: string) => ipcRenderer.invoke('brain:get-entity', id),
+    listRelations: (opts: { type?: string; offset?: number; limit?: number }) =>
+      ipcRenderer.invoke('brain:list-relations', opts),
+    listObservations: (opts: {
+      type?: string;
+      search?: string;
+      offset?: number;
+      limit?: number;
+    }) => ipcRenderer.invoke('brain:list-observations', opts),
+    listEvents: (opts: { source?: string; offset?: number; limit?: number }) =>
+      ipcRenderer.invoke('brain:list-events', opts),
+    listConversations: (opts: { platform?: string; offset?: number; limit?: number }) =>
+      ipcRenderer.invoke('brain:list-conversations', opts),
+    getConversation: (id: string, opts: { offset?: number; limit?: number }) =>
+      ipcRenderer.invoke('brain:get-conversation', id, opts),
+    listFacts: (opts: {
+      nodeId?: string;
+      workspaceId?: string;
+      offset?: number;
+      limit?: number;
+    }) => ipcRenderer.invoke('brain:list-facts', opts),
+    getStats: () => ipcRenderer.invoke('brain:get-stats'),
+    delete: (table: string, id: string) => ipcRenderer.invoke('brain:delete', table, id),
+    updateEntity: (id: string, fields: { name?: string; summary?: string | null; type?: string }) =>
+      ipcRenderer.invoke('brain:update-entity', id, fields),
+  },
 });
