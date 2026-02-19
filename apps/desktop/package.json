@@ -1,33 +1,25 @@
 {
   "name": "opensauria-desktop",
   "version": "1.0.0",
-  "description": "OpenSauria — Setup & System Tray",
+  "description": "OpenSauria — Personal AI Operating System",
   "private": true,
-  "main": ".vite/build/app.js",
   "scripts": {
     "icons": "node scripts/copy-icons.js",
-    "dev": "pnpm run icons && electron-forge start",
-    "build": "pnpm run icons && electron-forge package",
-    "package": "pnpm run icons && electron-forge package",
+    "dev": "pnpm run icons && tauri dev",
+    "build": "pnpm run icons && tauri build",
+    "dev:vite": "vite",
+    "build:vite": "vite build",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@opensauria/config": "workspace:*",
     "@opensauria/design-tokens": "workspace:*",
-    "@opensauria/ipc-protocol": "workspace:*",
-    "@opensauria/types": "workspace:*",
-    "@opensauria/vault": "workspace:*",
-    "electron-squirrel-startup": "1.0.1"
+    "@tauri-apps/api": "2.5.0",
+    "@tauri-apps/plugin-global-shortcut": "2.2.0",
+    "@tauri-apps/plugin-shell": "2.2.0",
+    "@tauri-apps/plugin-opener": "2.2.0"
   },
   "devDependencies": {
-    "@electron-forge/cli": "7.11.1",
-    "@electron-forge/maker-deb": "7.11.1",
-    "@electron-forge/maker-dmg": "7.11.1",
-    "@electron-forge/maker-rpm": "7.11.1",
-    "@electron-forge/maker-squirrel": "7.11.1",
-    "@electron-forge/maker-zip": "7.11.1",
-    "@electron-forge/plugin-vite": "^7.11.1",
-    "electron": "40.4.1",
+    "@tauri-apps/cli": "2.5.0",
     "lucide-static": "0.574.0",
     "simple-icons": "16.9.0",
     "typescript": "5.9.3",
