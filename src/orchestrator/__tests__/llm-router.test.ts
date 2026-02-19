@@ -280,6 +280,32 @@ describe('LLMRoutingBrain', () => {
       expect(systemPrompt).toContain('Hiring approved for Q2');
     });
 
+    it('includes knowledge graph entities in the routing prompt when db has matches', async () => {
+      db.prepare(
+        `INSERT INTO entities (id, type, name, summary, importance_score) VALUES (?, ?, ?, ?, ?)`,
+      ).run('e1', 'person', 'Alice', 'Head of design team', 5);
+
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({
+          content: 'Alice design team',
+        }),
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).toContain('Known entities');
+      expect(systemPrompt).toContain('Alice');
+    });
+
     it('includes peer messages from other workspace nodes in the routing prompt', async () => {
       const agentMemory = new AgentMemory(db);
       const peerNode: AgentNode = {
