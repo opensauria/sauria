@@ -44,6 +44,7 @@ import type {
   CanvasGraph,
   OwnerIdentity,
   OwnerCommand,
+  OwnerCommandSchema,
   AgentNode,
   InboundMessage,
   Edge,
@@ -68,7 +69,6 @@ export interface DaemonContext {
   readonly canvasWatcher: FSWatcher | null;
   readonly ownerCommandWatcher: FSWatcher | null;
 }
-
 
 async function connectMcpSources(
   config: OpenWindConfig,
@@ -228,7 +228,8 @@ function loadCanvasGraph(): CanvasGraph {
     const parsed = JSON.parse(raw) as RawGraph;
     return {
       version: 2,
-      globalInstructions: typeof parsed.globalInstructions === 'string' ? parsed.globalInstructions : '',
+      globalInstructions:
+        typeof parsed.globalInstructions === 'string' ? parsed.globalInstructions : '',
       nodes: (parsed.nodes ?? []).map(normalizeNode),
       edges: (parsed.edges ?? []).map(normalizeEdge),
       workspaces: (parsed.workspaces ?? []).map(normalizeWorkspace),
@@ -263,12 +264,12 @@ async function createChannelForNode(
   const logger = getLogger();
   const { db, router, audit, config, onInbound, globalInstructions } = deps;
 
-  const platformName =
-    node.platform.charAt(0).toUpperCase() + node.platform.slice(1);
+  const platformName = node.platform.charAt(0).toUpperCase() + node.platform.slice(1);
+  const displayName = node.meta?.['firstName'] || node.label.replace(/^@/, '') || node.label;
   const personaBlock = [
-    `Your name is ${node.label}.`,
+    `Your name is ${displayName}.`,
     `You are a ${node.role ?? 'assistant'} agent on ${platformName}.`,
-    `Always respond as ${node.label}. Never say you are Claude, an AI assistant, or a language model.`,
+    `Always respond as ${displayName}. Never say you are Claude, an AI assistant, or a language model.`,
   ].join(' ');
 
   const combinedInstructions = [personaBlock, globalInstructions, node.instructions]
@@ -300,13 +301,11 @@ async function createChannelForNode(
     );
 
     const ownerTelegramId = config.owner.telegram?.userId;
-    const nodeUserId = typeof node.meta?.['userId'] === 'string'
-      ? Number(node.meta['userId'])
-      : undefined;
+    const nodeUserId =
+      typeof node.meta?.['userId'] === 'string' ? Number(node.meta['userId']) : undefined;
     const configUserIds = config.channels.telegram.allowedUserIds;
-    const allowedUserIds = configUserIds.length > 0
-      ? configUserIds
-      : nodeUserId ? [nodeUserId] : [];
+    const allowedUserIds =
+      configUserIds.length > 0 ? configUserIds : nodeUserId ? [nodeUserId] : [];
 
     return new TelegramChannel({
       token,
@@ -508,6 +507,7 @@ async function setupOrchestrator(
     agentMemory,
     kpiTracker,
     checkpointManager,
+    canvasPath: paths.canvas,
   });
 
   const queue = new MessageQueue((msg: InboundMessage) => orchestrator.handleInbound(msg), {
@@ -712,7 +712,11 @@ export async function startDaemonContext(): Promise<DaemonContext> {
           if (!currentNodeIds.has(node.id)) {
             void (async () => {
               try {
-                const channel = await createChannelForNode(node, { ...channelDeps, onInbound, globalInstructions: newGraph.globalInstructions });
+                const channel = await createChannelForNode(node, {
+                  ...channelDeps,
+                  onInbound,
+                  globalInstructions: newGraph.globalInstructions,
+                });
                 if (channel) {
                   registry.register(node.id, channel);
                   await channel.start();
@@ -752,19 +756,32 @@ export async function startDaemonContext(): Promise<DaemonContext> {
         const content = readFileSync(paths.ownerCommands, 'utf-8').trim();
         if (!content) return;
 
-        // Clear the file immediately to avoid reprocessing
-        writeFileSync(paths.ownerCommands, '', 'utf-8');
-
         const lines = content.split('\n').filter(Boolean);
+        const failedLines: string[] = [];
+
         for (const line of lines) {
           try {
-            const command = JSON.parse(line) as OwnerCommand;
+            const parsed: unknown = JSON.parse(line);
+            const result = OwnerCommandSchema.safeParse(parsed);
+            if (!result.success) {
+              logger.warn('Invalid owner command schema', { error: result.error.message });
+              failedLines.push(line);
+              continue;
+            }
+            const command: OwnerCommand = result.data;
             audit.logAction('owner:command_received', { type: command.type });
             void orchestrator.handleOwnerCommand(command);
           } catch {
-            logger.warn('Invalid owner command line', { line });
+            logger.warn('Invalid owner command JSON', { line });
+            failedLines.push(line);
           }
         }
+
+        writeFileSync(
+          paths.ownerCommands,
+          failedLines.length > 0 ? failedLines.join('\n') + '\n' : '',
+          'utf-8',
+        );
       } catch (error) {
         logger.warn('Error reading owner commands', {
           error: error instanceof Error ? error.message : String(error),
