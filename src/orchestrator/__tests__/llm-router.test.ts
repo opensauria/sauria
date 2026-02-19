@@ -321,7 +321,13 @@ describe('LLMRoutingBrain', () => {
 
     it('includes agent-level facts in the routing prompt', async () => {
       const agentMemory = new AgentMemory(db);
-      agentMemory.storeFact('n1', null, 'Customer prefers email communication', ['preferences'], 'conversation');
+      agentMemory.storeFact(
+        'n1',
+        null,
+        'Customer prefers email communication',
+        ['preferences'],
+        'conversation',
+      );
       agentMemory.storeFact('n1', null, 'Handles enterprise accounts', ['scope'], 'conversation');
 
       const responseJson = JSON.stringify({
