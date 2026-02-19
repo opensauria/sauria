@@ -178,6 +178,12 @@ function buildRoutingPrompt(
     }
   }
 
+  let agentFactsText = '';
+  const agentFacts = memory.getAgentFacts(sourceNode.id, 5);
+  if (agentFacts.length > 0) {
+    agentFactsText = ['Agent knowledge:', ...agentFacts.map((f) => `- ${f}`)].join('\n');
+  }
+
   let workspaceFactsText = '';
   if (workspace) {
     const facts = memory.getWorkspaceFacts(workspace.id, 5);
@@ -238,6 +244,7 @@ function buildRoutingPrompt(
       : 'No prior conversation context.',
     '',
     ...(workspaceFactsText ? [workspaceFactsText, ''] : []),
+    ...(agentFactsText ? [agentFactsText, ''] : []),
     ...(knowledgeGraphText ? [knowledgeGraphText, ''] : []),
     ...(peerMessagesText ? [peerMessagesText, ''] : []),
     ruleActionsText,
