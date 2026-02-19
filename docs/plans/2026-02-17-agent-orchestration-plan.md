@@ -1427,7 +1427,6 @@ git commit -m "feat: migrate canvas graph to v2 with workspaces and agent roles"
 3. **Agent snap-to-workspace** — when dragging an agent card and releasing it inside a workspace frame, set `node.workspaceId = workspace.id`. Visual feedback: workspace frame highlights on hover during drag.
 
 4. **Agent detail panel** — click an agent card to open a side panel (right side, similar to add-agent panel):
-
    - Role selector (dropdown: lead, specialist, observer, bridge, assistant)
    - Autonomy slider (manual → approval → supervised → full)
    - Standing instructions (textarea)
@@ -1435,7 +1434,6 @@ git commit -m "feat: migrate canvas graph to v2 with workspaces and agent roles"
    - KPI display (placeholder for now)
 
 5. **Workspace detail panel** — click a workspace frame header to open detail panel:
-
    - Purpose editor (textarea)
    - Topics list (tag input)
    - Budget config (daily limit number input)
