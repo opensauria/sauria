@@ -20,9 +20,12 @@ import {
   hidePaletteWindow,
   sendCommandResult,
   getPaletteWindow,
+  navigatePaletteTo,
+  navigatePaletteBack,
 } from './window-palette';
-import { createCanvasWindow, showCanvasWindow } from './window-canvas';
-import { createSetupWindow } from './window-setup';
+import { showCanvasWindow } from './window-canvas';
+import { showBrainWindow } from './window-brain';
+import { registerBrainHandlers, cleanupBrainDb } from './ipc-brain';
 
 const execFileAsync = promisify(execFile);
 
@@ -114,6 +117,7 @@ const ALLOWED_COMMANDS = new Set([
   'docs',
   'quit',
   'canvas',
+  'brain',
 ]);
 
 let tray: Tray | null = null;
@@ -344,6 +348,10 @@ function updateTrayMenu(): void {
       label: 'Agent Canvas',
       click: () => showCanvasWindow(),
     },
+    {
+      label: 'Brain',
+      click: () => showBrainWindow(),
+    },
     { type: 'separator' },
     {
       label: 'Documentation',
@@ -417,13 +425,11 @@ async function handleCommand(id: string): Promise<void> {
       break;
     }
     case 'settings': {
-      hidePaletteWindow();
-      showCanvasWindow();
+      navigatePaletteTo('canvas');
       break;
     }
     case 'setup': {
-      hidePaletteWindow();
-      createSetupWindow();
+      navigatePaletteTo('setup');
       break;
     }
     case 'docs': {
@@ -432,8 +438,11 @@ async function handleCommand(id: string): Promise<void> {
       break;
     }
     case 'canvas': {
-      hidePaletteWindow();
-      showCanvasWindow();
+      navigatePaletteTo('canvas');
+      break;
+    }
+    case 'brain': {
+      navigatePaletteTo('brain');
       break;
     }
     case 'quit': {
@@ -987,6 +996,10 @@ ipcMain.handle('execute-command', async (_event, id: string) => {
 
 ipcMain.handle('hide-palette', () => {
   hidePaletteWindow();
+});
+
+ipcMain.handle('navigate-back', () => {
+  navigatePaletteBack();
 });
 
 ipcMain.handle('get-telegram-status', () => {
@@ -1933,9 +1946,11 @@ ipcMain.handle('disconnect-channel', (_event, platform: string, nodeId: string) 
 // ─── App Lifecycle ─────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
+  registerBrainHandlers();
   createPaletteWindow();
   createTray();
   registerGlobalShortcut();
+  globalShortcut.register('CommandOrControl+Shift+B', showBrainWindow);
 
   startDaemon();
   startDaemonHealthCheck();
@@ -1951,6 +1966,7 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   stopDaemonHealthCheck();
   stopDaemon();
+  cleanupBrainDb();
 });
 
 app.on('window-all-closed', () => {

@@ -11,12 +11,19 @@ export const SECURE_WEB_PREFERENCES: Electron.WebPreferences = {
   sandbox: true,
 };
 
-export function loadRendererPage(win: BrowserWindow, page: string): void {
+export function loadRendererPage(
+  win: BrowserWindow,
+  page: string,
+  query?: Record<string, string>,
+): void {
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/src/renderer/${page}/index.html`);
+    const base = `${MAIN_WINDOW_VITE_DEV_SERVER_URL}/src/renderer/${page}/index.html`;
+    const url = query ? `${base}?${new URLSearchParams(query).toString()}` : base;
+    win.loadURL(url);
   } else {
     win.loadFile(
       join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/src/renderer/${page}/index.html`),
+      query ? { query } : undefined,
     );
   }
 }

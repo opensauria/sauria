@@ -62,6 +62,18 @@ const lucideIcons = [
   'unlink',
   'user',
   'crown',
+  'brain',
+  'search',
+  'trash-2',
+  'edit-3',
+  'chevron-left',
+  'chevron-right',
+  'message-square',
+  'lightbulb',
+  'calendar',
+  'link',
+  'database',
+  'share-2',
 ];
 
 for (const name of lucideIcons) {
