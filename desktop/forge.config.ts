@@ -1,4 +1,5 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
+import { VitePlugin } from '@electron-forge/plugin-vite';
 import MakerDMG from '@electron-forge/maker-dmg';
 import MakerSquirrel from '@electron-forge/maker-squirrel';
 import MakerDeb from '@electron-forge/maker-deb';
@@ -14,6 +15,15 @@ const config: ForgeConfig = {
     asar: true,
     extraResource: ['../dist', '../package.json'],
   },
+  plugins: [
+    new VitePlugin({
+      build: [
+        { entry: 'src/main.ts', config: 'vite.main.config.ts' },
+        { entry: 'src/preload.ts', config: 'vite.preload.config.ts' },
+      ],
+      renderer: [{ name: 'main_window', config: 'vite.renderer.config.ts' }],
+    }),
+  ],
   makers: [
     new MakerDMG({
       format: 'ULFO',

@@ -4,6 +4,7 @@ import type { IngestPipeline } from '../ingestion/pipeline.js';
 import type { InboundMessage } from '../orchestrator/types.js';
 import { sanitizeChannelInput } from '../security/sanitize.js';
 import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
+import { secureFetch } from '../security/url-allowlist.js';
 import { formatAlert, type Channel } from './base.js';
 
 const DISCORD_API_BASE = 'https://discord.com/api/v10';
@@ -294,7 +295,7 @@ export class DiscordChannel implements Channel {
     const { token } = this.deps;
     const url = `${DISCORD_API_BASE}${path}`;
 
-    const response = await fetch(url, {
+    const response = await secureFetch(url, {
       method: init?.method ?? 'GET',
       headers: {
         Authorization: `Bot ${token}`,

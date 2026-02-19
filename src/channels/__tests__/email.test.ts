@@ -186,7 +186,7 @@ describe('EmailChannel', () => {
     expect(audit.logAction).toHaveBeenCalledWith(
       'email:message_received',
       expect.objectContaining({
-        from: 'sender@example.com',
+        from: '[EMAIL_REDACTED]',
         subject: 'Test Subject',
       }),
     );

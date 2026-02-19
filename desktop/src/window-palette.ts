@@ -1,5 +1,5 @@
 import { BrowserWindow, screen } from 'electron';
-import { join } from 'path';
+import { loadRendererPage, SECURE_WEB_PREFERENCES } from './window-utils.js';
 
 let win: BrowserWindow | null = null;
 
@@ -31,15 +31,10 @@ export function createPaletteWindow(): void {
     skipTaskbar: true,
     show: false,
     backgroundColor: '#00000000',
-    webPreferences: {
-      preload: join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
+    webPreferences: SECURE_WEB_PREFERENCES,
   });
 
-  win.loadFile(join(__dirname, 'ui', 'palette.html'));
+  loadRendererPage(win, 'palette');
 
   win.on('blur', () => {
     hidePaletteWindow();

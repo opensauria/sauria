@@ -6,6 +6,7 @@ import type { IngestPipeline } from '../ingestion/pipeline.js';
 import type { InboundMessage } from '../orchestrator/types.js';
 import { sanitizeChannelInput } from '../security/sanitize.js';
 import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
+import { scrubPII } from '../security/pii-scrubber.js';
 import { formatAlert, type Channel } from './base.js';
 
 const GRAPH_API_BASE = 'https://graph.facebook.com/v18.0/';
@@ -279,7 +280,7 @@ export class WhatsAppChannel implements Channel {
           }
 
           audit.logAction('whatsapp:message_received', {
-            from: msg.from,
+            from: scrubPII(msg.from),
             messageId: msg.id,
           });
         }

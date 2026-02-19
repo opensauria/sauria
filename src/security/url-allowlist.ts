@@ -22,8 +22,8 @@ export const OUTBOUND_ALLOWLIST: ReadonlySet<string> = new Set([
   'claude.ai',
   'console.anthropic.com',
   'platform.claude.com',
-  'registry.npmjs.org',
   'slack.com',
+  'discord.com',
 ]);
 
 function isAllowedHostname(hostname: string): boolean {

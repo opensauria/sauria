@@ -79,3 +79,33 @@ export class RateLimiter {
 export function createLimiter(_name: string, maxPerPeriod: number, periodMs: number): RateLimiter {
   return new RateLimiter(maxPerPeriod, maxPerPeriod, periodMs);
 }
+
+export function createPerSenderLimiter(
+  maxPerPeriod: number,
+  periodMs: number,
+): (senderId: string) => boolean {
+  const limiters = new Map<string, RateLimiter>();
+  const TTL_MS = periodMs * 2;
+  const timestamps = new Map<string, number>();
+
+  return (senderId: string): boolean => {
+    const now = Date.now();
+
+    // Evict stale entries
+    for (const [id, ts] of timestamps) {
+      if (now - ts > TTL_MS) {
+        limiters.delete(id);
+        timestamps.delete(id);
+      }
+    }
+
+    let limiter = limiters.get(senderId);
+    if (!limiter) {
+      limiter = new RateLimiter(maxPerPeriod, maxPerPeriod, periodMs);
+      limiters.set(senderId, limiter);
+    }
+    timestamps.set(senderId, now);
+
+    return limiter.tryConsume();
+  };
+}

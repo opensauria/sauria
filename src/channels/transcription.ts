@@ -1,11 +1,17 @@
-import type {
-  AutomaticSpeechRecognitionPipeline,
-  AutomaticSpeechRecognitionOutput,
-} from '@huggingface/transformers';
+import { execFile } from 'node:child_process';
+import { access } from 'node:fs/promises';
+import { writeFile, unlink } from 'node:fs/promises';
+import { homedir, tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
-const WHISPER_SAMPLE_RATE = 16_000;
-const DEFAULT_OGG_SAMPLE_RATE = 48_000;
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
+const VENV_PYTHON = join(homedir(), '.openwind', 'venv', 'bin', 'python3');
+const AUTO_MODELS: Record<string, string> = {
+  darwin: 'mlx-community/whisper-large-v3-turbo',
+  linux: 'large-v3-turbo',
+  win32: 'large-v3-turbo',
+};
 
 export interface TranscriptionConfig {
   readonly model: string;
@@ -13,92 +19,88 @@ export interface TranscriptionConfig {
 }
 
 export class TranscriptionService {
-  private pipeline: AutomaticSpeechRecognitionPipeline | null = null;
+  private readonly resolvedModel: string;
 
-  constructor(private readonly config: TranscriptionConfig) {}
-
-  async init(): Promise<void> {
-    if (this.pipeline) return;
-
-    const { pipeline } = await import('@huggingface/transformers');
-    this.pipeline = (await pipeline(
-      'automatic-speech-recognition',
-      this.config.model,
-    )) as AutomaticSpeechRecognitionPipeline;
+  constructor(private readonly config: TranscriptionConfig) {
+    this.resolvedModel =
+      config.model === 'auto' ? (AUTO_MODELS[process.platform] ?? 'large-v3-turbo') : config.model;
   }
 
   async transcribeVoice(oggBuffer: Buffer): Promise<string> {
     if (oggBuffer.byteLength > MAX_AUDIO_BYTES) {
-      throw new Error(`Audio file exceeds ${String(MAX_AUDIO_BYTES)} byte limit`);
+      throw new Error(`Audio exceeds ${String(MAX_AUDIO_BYTES)} byte limit`);
     }
 
-    const pcm = await this.decodeOggOpus(oggBuffer);
-    return this.transcribe(pcm);
-  }
-
-  private async transcribe(pcm: Float32Array): Promise<string> {
-    await this.init();
-
-    const maxSamples = this.config.maxDurationSeconds * WHISPER_SAMPLE_RATE;
-    const input = pcm.length > maxSamples ? pcm.slice(0, maxSamples) : pcm;
-
-    const result = (await this.pipeline!(input, {
-      chunk_length_s: 30,
-      stride_length_s: 5,
-    })) as AutomaticSpeechRecognitionOutput;
-
-    return result.text.trim();
-  }
-
-  private async decodeOggOpus(oggBuffer: Buffer): Promise<Float32Array> {
-    const { OggOpusDecoder } = await import('ogg-opus-decoder');
-
-    const decoder = new OggOpusDecoder();
-    await decoder.ready;
-
-    const decoded = await decoder.decodeFile(new Uint8Array(oggBuffer));
-    decoder.free();
-
-    const mono = mixToMono(decoded.channelData);
-    return downsample(mono, DEFAULT_OGG_SAMPLE_RATE, WHISPER_SAMPLE_RATE);
-  }
-}
-
-function mixToMono(channelData: Float32Array[]): Float32Array {
-  const first = channelData[0];
-  if (!first) throw new Error('No audio channel data');
-  if (channelData.length === 1) return first;
-
-  const { length } = first;
-  const mono = new Float32Array(length);
-  const channelCount = channelData.length;
-  const scale = 1 / channelCount;
-
-  for (let i = 0; i < length; i++) {
-    let sum = 0;
-    for (let ch = 0; ch < channelCount; ch++) {
-      sum += channelData[ch]?.[i] ?? 0;
+    const tmpPath = join(tmpdir(), `openwind-${randomUUID()}.ogg`);
+    try {
+      await writeFile(tmpPath, oggBuffer);
+      return await this.runWhisper(tmpPath);
+    } finally {
+      await unlink(tmpPath).catch(() => {});
     }
-    mono[i] = sum * scale;
   }
 
-  return mono;
-}
-
-function downsample(input: Float32Array, inputRate: number, outputRate: number): Float32Array {
-  if (inputRate === outputRate) return input;
-
-  const ratio = inputRate / outputRate;
-  const outputLength = Math.floor(input.length / ratio);
-  const output = new Float32Array(outputLength);
-
-  for (let i = 0; i < outputLength; i++) {
-    const srcIndex = i * ratio;
-    const lower = Math.floor(srcIndex);
-    const upper = Math.min(lower + 1, input.length - 1);
-    const fraction = srcIndex - lower;
-    output[i] = (input[lower] ?? 0) * (1 - fraction) + (input[upper] ?? 0) * fraction;
+  private async runWhisper(audioPath: string): Promise<string> {
+    switch (process.platform) {
+      case 'darwin':
+        return this.runMLXWhisper(audioPath);
+      case 'linux':
+      case 'win32':
+        return this.runFasterWhisper(audioPath);
+      default:
+        throw new Error(`Unsupported platform for transcription: ${process.platform}`);
+    }
   }
 
-  return output;
+  private runMLXWhisper(audioPath: string): Promise<string> {
+    const script = [
+      'import sys',
+      'import mlx_whisper',
+      'result = mlx_whisper.transcribe(sys.argv[1], path_or_hf_repo=sys.argv[2])',
+      'print(result["text"].strip())',
+    ].join('\n');
+
+    return this.execPython(script, [audioPath, this.resolvedModel]);
+  }
+
+  private runFasterWhisper(audioPath: string): Promise<string> {
+    const script = [
+      'import sys',
+      'from faster_whisper import WhisperModel',
+      'model = WhisperModel(sys.argv[2], compute_type="auto")',
+      'segments, _ = model.transcribe(sys.argv[1])',
+      'print(" ".join(s.text for s in segments).strip())',
+    ].join('\n');
+
+    return this.execPython(script, [audioPath, this.resolvedModel]);
+  }
+
+  private async resolvePython(): Promise<string> {
+    try {
+      await access(VENV_PYTHON);
+      return VENV_PYTHON;
+    } catch {
+      return 'python3';
+    }
+  }
+
+  private async execPython(script: string, args: readonly string[]): Promise<string> {
+    const python = await this.resolvePython();
+    const timeoutMs = this.config.maxDurationSeconds * 1000;
+
+    return new Promise((resolve, reject) => {
+      execFile(python, ['-c', script, ...args], { timeout: timeoutMs }, (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(`Whisper transcription failed: ${stderr || error.message}`));
+          return;
+        }
+        const text = stdout.trim();
+        if (!text) {
+          reject(new Error('Whisper returned empty transcription'));
+          return;
+        }
+        resolve(text);
+      });
+    });
+  }
 }

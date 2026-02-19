@@ -1,6 +1,7 @@
 import type BetterSqlite3 from 'better-sqlite3';
 import { isEntityRow, isRelationRow, isEventRow, toEntity, toRelation, toEvent } from './types.js';
 import type { Entity, EntityType, Event, ObservationType, Relation } from './types.js';
+import { sanitizeFtsQuery } from './search.js';
 
 export type {
   Entity,
@@ -184,6 +185,8 @@ export function getEntityTimeline(
 }
 
 export function searchEntities(db: BetterSqlite3.Database, query: string): Entity[] {
+  const ftsQuery = sanitizeFtsQuery(query);
+  if (!ftsQuery) return [];
   const rows: unknown[] = db
     .prepare(
       `
@@ -194,6 +197,6 @@ export function searchEntities(db: BetterSqlite3.Database, query: string): Entit
     LIMIT 50
   `,
     )
-    .all(query);
+    .all(ftsQuery);
   return rows.filter(isEntityRow).map(toEntity);
 }

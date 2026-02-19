@@ -14,8 +14,9 @@
   inset: 0;
   overflow: hidden;
   cursor: grab;
-  background: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.03) 1px, transparent 0);
-  background-size: 32px 32px;
+  background: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0);
+  background-size: 24px 24px;
+  background-color: #1a1a1a;
 }
 
 .canvas-viewport.grabbing {
@@ -300,22 +301,54 @@
   filter: brightness(0) invert(0.8);
 }
 
-/* ── Toolbar ─────────────────────────────────── */
+/* ── Toolbar (bottom-left, above dock) ──────── */
 
 .canvas-toolbar {
   position: fixed;
-  top: 48px;
-  left: 24px;
+  bottom: 200px;
+  left: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
   z-index: 200;
+  transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.canvas-toolbar.dock-hidden {
+  bottom: 16px;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  gap: 0;
+  background: rgba(30, 30, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0 2px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.toolbar-group .toolbar-btn {
+  width: 32px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.toolbar-group .toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .toolbar-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(30, 30, 30, 0.9);
   backdrop-filter: blur(16px);
@@ -326,6 +359,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.12s ease;
+  padding: 0;
 }
 
 .toolbar-btn:hover {
@@ -334,13 +368,13 @@
 }
 
 .toolbar-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .toolbar-btn img {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   filter: brightness(0) invert(0.5);
   transition: filter 0.12s ease;
 }
@@ -361,10 +395,11 @@
 
 .zoom-display {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
-  min-width: 40px;
+  color: rgba(255, 255, 255, 0.35);
+  min-width: 36px;
   text-align: center;
   font-variant-numeric: tabular-nums;
+  line-height: 36px;
 }
 
 /* ── Cover Flow Dock ─────────────────────────── */
@@ -462,11 +497,11 @@
 
 .dock-toggle {
   position: fixed;
-  bottom: 16px;
-  left: 16px;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  bottom: 200px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(30, 30, 30, 0.9);
   backdrop-filter: blur(16px);
@@ -475,9 +510,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 160;
+  z-index: 200;
   transition: all 0.2s ease;
   padding: 0;
+}
+
+.dock-toggle.collapsed {
+  bottom: 16px;
 }
 
 .dock-toggle:hover {
@@ -1134,6 +1173,42 @@
   min-width: 0;
 }
 
+.ws-gear {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: all 0.12s ease;
+  margin-left: auto;
+}
+
+.workspace-frame:hover .ws-gear {
+  opacity: 1;
+}
+
+.ws-gear:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ws-gear img {
+  width: 14px;
+  height: 14px;
+  filter: brightness(0) invert(0.4);
+  transition: filter 0.12s ease;
+}
+
+.ws-gear:hover img {
+  filter: brightness(0) invert(0.7);
+}
+
 .workspace-resize {
   position: absolute;
   z-index: 2;
@@ -1289,7 +1364,9 @@
   bottom: 2px;
   border-radius: 6px;
   background: rgba(3, 139, 154, 0.15);
-  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
 }
 
@@ -1451,6 +1528,39 @@
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
+.color-swatch-custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.color-swatch-custom span {
+  font-size: 16px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1;
+}
+
+.color-swatch-custom:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.color-swatch-custom:hover span {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.color-input-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .detail-input {
   width: 100%;
   padding: 10px 12px;
@@ -1469,6 +1579,75 @@
 }
 
 .detail-input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Number Stepper ─────────────────────────── */
+
+.number-stepper {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.number-stepper:focus-within {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.stepper-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+  padding: 0;
+}
+
+.stepper-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.stepper-btn:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.stepper-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.stepper-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  text-align: center;
+  outline: none;
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+}
+
+.stepper-input::-webkit-inner-spin-button,
+.stepper-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.stepper-input::placeholder {
   color: rgba(255, 255, 255, 0.2);
 }
 
