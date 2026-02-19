@@ -166,6 +166,55 @@ describe('executeAction forward enrichment', () => {
   });
 });
 
+describe('executeAction reply recording', () => {
+  let db: Database.Database;
+  let registry: ChannelRegistry;
+  let orchestrator: AgentOrchestrator;
+
+  const graph = makeGraph();
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    applySchema(db);
+    registry = new ChannelRegistry();
+    registry.sendTo = vi.fn().mockResolvedValue(undefined);
+
+    orchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory: new AgentMemory(db),
+    });
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('records bot reply in agent memory', async () => {
+    const agentMemory = new AgentMemory(db);
+    const conversationId = agentMemory.getOrCreateConversation('telegram', null, ['n1']);
+
+    const source: InboundMessage = {
+      sourceNodeId: 'n1',
+      platform: 'telegram',
+      senderId: 'user123',
+      senderIsOwner: true,
+      groupId: null,
+      content: 'Hello bot',
+      contentType: 'text',
+      timestamp: new Date().toISOString(),
+    };
+
+    await orchestrator.executeAction({ type: 'reply', content: 'Hello human' }, source);
+
+    const history = agentMemory.getConversationHistory(conversationId, 10);
+    expect(history).toHaveLength(1);
+    expect(history[0]?.content).toBe('Hello human');
+    expect(history[0]?.senderIsOwner).toBe(false);
+  });
+});
+
 describe('handleOwnerCommand graph persistence', () => {
   let tmpDir: string;
   let canvasPath: string;
