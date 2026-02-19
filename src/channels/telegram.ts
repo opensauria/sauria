@@ -147,6 +147,7 @@ export class TelegramChannel implements Channel {
       return;
     }
 
+    // Legacy single-bot mode: no orchestrator, respond directly
     await this.handleAsk(ctx, text);
   }
 
@@ -200,6 +201,7 @@ export class TelegramChannel implements Channel {
         return;
       }
 
+      // Legacy single-bot mode: no orchestrator, respond directly
       await this.handleAsk(ctx, text);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
