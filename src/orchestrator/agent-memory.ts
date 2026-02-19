@@ -140,6 +140,20 @@ export class AgentMemory {
     return rows.filter(isAgentFactRow).map((row) => row.fact);
   }
 
+  getRecentMessagesForContext(
+    conversationId: string,
+    limit: number,
+    nodeLabels: ReadonlyMap<string, string>,
+  ): string[] {
+    const messages = this.getConversationHistory(conversationId, limit);
+    return messages.map((msg) => {
+      const sender = msg.senderIsOwner
+        ? 'Owner'
+        : (nodeLabels.get(msg.sourceNodeId) ?? msg.sourceNodeId);
+      return `[${sender}] ${msg.content}`;
+    });
+  }
+
   getConversationHistory(conversationId: string, limit: number): AgentMessage[] {
     const rows: unknown[] = this.db
       .prepare(
