@@ -228,6 +228,80 @@ describe('AgentMemory', () => {
     });
   });
 
+  describe('getHistoryWithinBudget', () => {
+    it('returns messages up to the token budget', () => {
+      const conversationId = memory.getOrCreateConversation('telegram', null, ['node1']);
+      for (let i = 0; i < 10; i++) {
+        memory.recordMessage({
+          conversationId,
+          sourceNodeId: 'node1',
+          senderId: 'user1',
+          senderIsOwner: false,
+          platform: 'telegram',
+          groupId: null,
+          content: `Message number ${i} with some content`,
+          contentType: 'text',
+        });
+      }
+
+      // Each message is roughly ~10 tokens. Budget of 30 tokens should return ~3 messages.
+      const result = memory.getHistoryWithinBudget(conversationId, 30);
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.length).toBeLessThan(10);
+    });
+
+    it('returns messages in chronological order', () => {
+      const conversationId = memory.getOrCreateConversation('telegram', null, ['node1']);
+      memory.recordMessage({
+        conversationId,
+        sourceNodeId: 'node1',
+        senderId: 'user1',
+        senderIsOwner: false,
+        platform: 'telegram',
+        groupId: null,
+        content: 'First',
+        contentType: 'text',
+      });
+      memory.recordMessage({
+        conversationId,
+        sourceNodeId: 'node1',
+        senderId: 'user1',
+        senderIsOwner: false,
+        platform: 'telegram',
+        groupId: null,
+        content: 'Second',
+        contentType: 'text',
+      });
+
+      const result = memory.getHistoryWithinBudget(conversationId, 500);
+      expect(result).toHaveLength(2);
+      expect(result[0]?.content).toBe('First');
+      expect(result[1]?.content).toBe('Second');
+    });
+
+    it('returns empty array for unknown conversation', () => {
+      const result = memory.getHistoryWithinBudget('nonexistent', 500);
+      expect(result).toHaveLength(0);
+    });
+
+    it('returns empty array for zero budget', () => {
+      const conversationId = memory.getOrCreateConversation('telegram', null, ['node1']);
+      memory.recordMessage({
+        conversationId,
+        sourceNodeId: 'node1',
+        senderId: 'user1',
+        senderIsOwner: false,
+        platform: 'telegram',
+        groupId: null,
+        content: 'Hello',
+        contentType: 'text',
+      });
+
+      const result = memory.getHistoryWithinBudget(conversationId, 0);
+      expect(result).toHaveLength(0);
+    });
+  });
+
   describe('getRecentMessagesForContext', () => {
     it('returns formatted messages with sender labels', () => {
       const conversationId = memory.getOrCreateConversation('telegram', 'g1', ['node1']);
