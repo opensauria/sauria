@@ -239,7 +239,7 @@ describe('handleOwnerCommand graph persistence', () => {
   );
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'openwind-test-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'opensauria-test-'));
     canvasPath = join(tmpDir, 'canvas.json');
     writeFileSync(canvasPath, JSON.stringify(graphWithTwoNodes), 'utf-8');
 

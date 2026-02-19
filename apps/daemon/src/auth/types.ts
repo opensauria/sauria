@@ -1,8 +1,8 @@
-// Re-export from canonical @openwind/types package.
+// Re-export from canonical @opensauria/types package.
 export type {
   ApiKeyCredential,
   OAuthCredential,
   Credential,
   OAuthTokenResponse,
   ValidationResult,
-} from '@openwind/types';
+} from '@opensauria/types';

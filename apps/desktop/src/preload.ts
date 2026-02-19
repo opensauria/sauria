@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-contextBridge.exposeInMainWorld('openwind', {
+contextBridge.exposeInMainWorld('opensauria', {
   getStatus: () => ipcRenderer.invoke('get-status'),
   detectClients: () => ipcRenderer.invoke('detect-clients'),
   detectLocalProviders: () => ipcRenderer.invoke('detect-local-providers'),

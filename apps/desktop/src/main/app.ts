@@ -44,7 +44,7 @@ let tray: Tray | null = null;
 function createTray(): void {
   const icon = nativeImage.createFromPath(join(__dirname, '..', 'assets', 'trayTemplate.png'));
   tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon);
-  tray.setToolTip('OpenWind');
+  tray.setToolTip('OpenSauria');
   updateTrayMenu();
 }
 
@@ -82,7 +82,7 @@ function updateTrayMenu(): void {
     { type: 'separator' },
     {
       label: 'Documentation',
-      click: () => shell.openExternal('https://openwind.ai/docs'),
+      click: () => shell.openExternal('https://opensauria.ai/docs'),
     },
     { type: 'separator' },
     {
@@ -92,7 +92,7 @@ function updateTrayMenu(): void {
   ]);
 
   tray.setContextMenu(contextMenu);
-  tray.setToolTip(running ? 'OpenWind — Running' : 'OpenWind — Stopped');
+  tray.setToolTip(running ? 'OpenSauria — Running' : 'OpenSauria — Stopped');
 }
 
 // ─── Global Shortcut ──────────────────────────────────────────────

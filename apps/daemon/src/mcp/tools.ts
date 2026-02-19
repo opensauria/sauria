@@ -83,49 +83,49 @@ const rememberSchema = z.object({
 });
 
 export const TOOL_DEFS = {
-  openwind_query: {
+  opensauria_query: {
     description: 'Ask a natural language question about your world model',
     schema: querySchema,
   },
-  openwind_get_entity: {
+  opensauria_get_entity: {
     description:
       'Get detailed information about a specific entity including relations and timeline',
     schema: getEntitySchema,
   },
-  openwind_search: {
+  opensauria_search: {
     description: 'Search the world model using hybrid semantic + keyword search',
     schema: searchSchema,
   },
-  openwind_get_upcoming: {
+  opensauria_get_upcoming: {
     description: 'Get upcoming deadlines, meetings, and events',
     schema: getUpcomingSchema,
   },
-  openwind_get_insights: {
+  opensauria_get_insights: {
     description: 'Get recent AI-generated insights and observations',
     schema: getInsightsSchema,
   },
-  openwind_get_context_for: {
+  opensauria_get_context_for: {
     description: 'Get comprehensive context dump for a topic or entity',
     schema: getContextForSchema,
   },
-  openwind_add_event: {
+  opensauria_add_event: {
     description: 'Feed a new event into the world model (requires authorization)',
     schema: addEventSchema,
   },
-  openwind_remember: {
+  opensauria_remember: {
     description:
       'Store structured knowledge: entities (people, projects, companies, etc.) and their relations. Use this whenever you learn something new about the user or their world.',
     schema: rememberSchema,
   },
-  openwind_pending_approvals: {
+  opensauria_pending_approvals: {
     description: 'List all pending approval requests from agents that require owner authorization',
     schema: pendingApprovalsSchema,
   },
-  openwind_approve: {
+  opensauria_approve: {
     description: 'Approve a pending action by ID and execute the queued actions',
     schema: approveSchema,
   },
-  openwind_reject: {
+  opensauria_reject: {
     description: 'Reject a pending action by ID, discarding the queued actions',
     schema: rejectSchema,
   },

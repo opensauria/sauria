@@ -1,11 +1,11 @@
 #Requires -Version 5.1
 $ErrorActionPreference = "Stop"
 
-# OpenWind - zero-friction installer for Windows
-# Usage: irm https://openwind.ai/install.ps1 | iex
+# OpenSauria - zero-friction installer for Windows
+# Usage: irm https://opensauria.ai/install.ps1 | iex
 
 $RequiredNodeMajor = 22
-$TaskName = "OpenWind"
+$TaskName = "OpenSauria"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName Microsoft.VisualBasic
@@ -16,7 +16,7 @@ $nodePath = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodePath) {
     [System.Windows.Forms.MessageBox]::Show(
         "Node.js >= $RequiredNodeMajor is required.`n`nDownload it from nodejs.org",
-        "OpenWind Setup",
+        "OpenSauria Setup",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Warning
     )
@@ -29,7 +29,7 @@ $major = [int]($nodeVersion -replace "v", "" -split "\.")[0]
 if ($major -lt $RequiredNodeMajor) {
     [System.Windows.Forms.MessageBox]::Show(
         "Node.js >= $RequiredNodeMajor required.`nFound: $nodeVersion`n`nPlease upgrade.",
-        "OpenWind Setup",
+        "OpenSauria Setup",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Warning
     )
@@ -38,15 +38,15 @@ if ($major -lt $RequiredNodeMajor) {
 
 # --- 2. Install package ---
 
-& npm install -g openwind@latest --silent 2>$null
+& npm install -g opensauria@latest --silent 2>$null
 if ($LASTEXITCODE -ne 0) {
-    & npm install -g openwind --silent
+    & npm install -g opensauria --silent
 }
 
 # --- 3. Choose provider (native dialog) ---
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "OpenWind Setup"
+$form.Text = "OpenSauria Setup"
 $form.Size = New-Object System.Drawing.Size(400, 280)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
@@ -92,12 +92,12 @@ if ($Provider -ne "ollama") {
 
     $ApiKey = [Microsoft.VisualBasic.Interaction]::InputBox(
         "Paste your $Provider API key:",
-        "OpenWind Setup",
+        "OpenSauria Setup",
         ""
     )
 
     if ([string]::IsNullOrEmpty($ApiKey)) {
-        [System.Windows.Forms.MessageBox]::Show("No API key provided. Setup cancelled.", "OpenWind")
+        [System.Windows.Forms.MessageBox]::Show("No API key provided. Setup cancelled.", "OpenSauria")
         exit 0
     }
 }
@@ -107,11 +107,11 @@ if ($Provider -ne "ollama") {
 $setupArgs = "setup --provider $Provider"
 if ($ApiKey) { $setupArgs += " --api-key $ApiKey" }
 
-$setupResult = & openwind $setupArgs.Split(" ") 2>&1
+$setupResult = & opensauria $setupArgs.Split(" ") 2>&1
 if ($LASTEXITCODE -ne 0) {
     [System.Windows.Forms.MessageBox]::Show(
-        "Setup failed. Run 'openwind onboard' manually.",
-        "OpenWind",
+        "Setup failed. Run 'opensauria onboard' manually.",
+        "OpenSauria",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Error
     )
@@ -120,7 +120,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # --- 6. Start daemon ---
 
-$taskXml = Join-Path $env:USERPROFILE ".openwind" "service" "openwind-task.xml"
+$taskXml = Join-Path $env:USERPROFILE ".opensauria" "service" "opensauria-task.xml"
 if (Test-Path $taskXml) {
     try { schtasks /delete /tn $TaskName /f 2>$null } catch { }
     schtasks /create /tn $TaskName /xml $taskXml 2>$null
@@ -129,8 +129,8 @@ if (Test-Path $taskXml) {
 # --- 7. Done ---
 
 [System.Windows.Forms.MessageBox]::Show(
-    "OpenWind is ready!`n`nYour AI clients have been configured automatically.`nRestart Claude Desktop or Cursor to get started.`n`nhttps://openwind.ai",
-    "OpenWind",
+    "OpenSauria is ready!`n`nYour AI clients have been configured automatically.`nRestart Claude Desktop or Cursor to get started.`n`nhttps://opensauria.ai",
+    "OpenSauria",
     [System.Windows.Forms.MessageBoxButtons]::OK,
     [System.Windows.Forms.MessageBoxIcon]::Information
 )

@@ -95,9 +95,9 @@ export function registerMcpInClient(client: McpClient): string {
   }
 
   const servers = (config['mcpServers'] ?? {}) as Record<string, unknown>;
-  if (servers['openwind']) return 'already_registered';
+  if (servers['opensauria']) return 'already_registered';
 
-  servers['openwind'] = { command: 'openwind', args: ['mcp-server'] };
+  servers['opensauria'] = { command: 'opensauria', args: ['mcp-server'] };
   config['mcpServers'] = servers;
 
   const dir = dirname(client.configPath);

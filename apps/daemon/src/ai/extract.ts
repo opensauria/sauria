@@ -60,5 +60,5 @@ export async function extractEntities(
 }
 
 function logWarning(message: string): void {
-  process.stderr.write(`[openwind:extract] WARNING: ${message}\n`);
+  process.stderr.write(`[opensauria:extract] WARNING: ${message}\n`);
 }

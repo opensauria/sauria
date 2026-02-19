@@ -12,8 +12,8 @@ interface McpConfig {
   [key: string]: unknown;
 }
 
-const OPENWIND_MCP_ENTRY: McpServerEntry = {
-  command: 'openwind',
+const OPENSAURIA_MCP_ENTRY: McpServerEntry = {
+  command: 'opensauria',
   args: ['mcp-server'],
 };
 
@@ -51,13 +51,13 @@ export function registerMcpInClient(client: McpClient): RegistrationResult {
 
   const config = readJsonSafe(client.configPath);
 
-  if (config.mcpServers?.['openwind']) {
+  if (config.mcpServers?.['opensauria']) {
     return { client: client.name, status: 'already_registered' };
   }
 
   config.mcpServers = {
     ...config.mcpServers,
-    openwind: OPENWIND_MCP_ENTRY,
+    opensauria: OPENSAURIA_MCP_ENTRY,
   };
 
   writeJsonPretty(client.configPath, config);

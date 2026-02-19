@@ -2,9 +2,9 @@ import { connect, type Socket } from 'node:net';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-const SOCKET_PATH = process.env['OPENWIND_HOME']
-  ? join(process.env['OPENWIND_HOME'], 'daemon.sock')
-  : join(homedir(), '.openwind', 'daemon.sock');
+const SOCKET_PATH = process.env['OPENSAURIA_HOME']
+  ? join(process.env['OPENSAURIA_HOME'], 'daemon.sock')
+  : join(homedir(), '.opensauria', 'daemon.sock');
 
 const CONNECT_TIMEOUT_MS = 2_000;
 const REQUEST_TIMEOUT_MS = 5_000;

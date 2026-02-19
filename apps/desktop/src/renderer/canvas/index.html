@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>OpenWind &mdash; Agent Canvas</title>
+    <title>OpenSauria &mdash; Agent Canvas</title>
     <link rel="stylesheet" href="../shared.css" />
     <link rel="stylesheet" href="./canvas.css" />
   </head>
@@ -463,7 +463,7 @@
 
       async function init() {
         try {
-          graph = await window.openwind.getCanvasGraph();
+          graph = await window.opensauria.getCanvasGraph();
         } catch {
           graph = {
             nodes: [],
@@ -486,7 +486,7 @@
         if (!hasOwner) {
           var ownerProfile = { fullName: 'You', photo: null, customInstructions: '' };
           try {
-            ownerProfile = await window.openwind.getOwnerProfile();
+            ownerProfile = await window.opensauria.getOwnerProfile();
           } catch {
             /* fallback */
           }
@@ -1939,7 +1939,7 @@
         }
 
         if (action === 'disconnect') {
-          window.openwind.disconnectChannel(node.platform, nodeId);
+          window.opensauria.disconnectChannel(node.platform, nodeId);
           animateCardDelete(nodeId, function () {
             graph.nodes = graph.nodes.filter(function (n) {
               return n.id !== nodeId;
@@ -2029,7 +2029,7 @@
         renderNodes();
 
         try {
-          var result = await window.openwind.connectChannel(platform, credentials);
+          var result = await window.opensauria.connectChannel(platform, credentials);
           if (result.success) {
             node.status = 'connected';
             node._statusMsg = '';
@@ -2167,7 +2167,7 @@
         });
         if (!node) return;
         if (node.platform === 'owner') return; /* Owner cannot be deleted */
-        window.openwind.disconnectChannel(node.platform, nodeId);
+        window.opensauria.disconnectChannel(node.platform, nodeId);
 
         animateCardDelete(nodeId, function () {
           graph.nodes = graph.nodes.filter(function (n) {
@@ -2191,7 +2191,7 @@
         graph.viewport = { x: vpX, y: vpY, zoom: vpZoom };
         if (saveTimeout) clearTimeout(saveTimeout);
         saveTimeout = setTimeout(function () {
-          window.openwind.saveCanvasGraph(graph);
+          window.opensauria.saveCanvasGraph(graph);
         }, 300);
       }
 
@@ -2199,7 +2199,7 @@
         graph.viewport = { x: vpX, y: vpY, zoom: vpZoom };
         if (saveTimeout) clearTimeout(saveTimeout);
         saveTimeout = setTimeout(function () {
-          window.openwind.saveCanvasGraph(graph);
+          window.opensauria.saveCanvasGraph(graph);
         }, 500);
       }
 
@@ -2231,7 +2231,7 @@
          Listen for external updates
          ═══════════════════════════════════════════════ */
 
-      window.openwind.onCanvasUpdate(function (updated) {
+      window.opensauria.onCanvasUpdate(function (updated) {
         graph = updated;
         if (!graph.workspaces) graph.workspaces = [];
         vpX = graph.viewport.x;
@@ -2766,7 +2766,7 @@
       if (isInPalette) {
         document.body.classList.add('in-palette');
         document.getElementById('palette-back').addEventListener('click', function () {
-          window.openwind.navigateBack();
+          window.opensauria.navigateBack();
         });
       }
 
@@ -2779,7 +2779,7 @@
           if (wsPanel.classList.contains('open')) return;
           if (wsDialog && wsDialog.classList.contains('open')) return;
           e.preventDefault();
-          window.openwind.navigateBack();
+          window.opensauria.navigateBack();
         }
       });
 

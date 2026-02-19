@@ -26,8 +26,8 @@ export type {
   KPI,
   AgentPerformance,
   OwnerCommand,
-} from '@openwind/types';
+} from '@opensauria/types';
 
-export { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '@openwind/types';
+export { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '@opensauria/types';
 
-export { OwnerCommandSchema } from '@openwind/ipc-protocol';
+export { OwnerCommandSchema } from '@opensauria/ipc-protocol';

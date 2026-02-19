@@ -4,8 +4,8 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import { paths } from '@openwind/config';
-import { vaultStore } from '@openwind/vault';
+import { paths } from '@opensauria/config';
+import { vaultStore } from '@opensauria/vault';
 import { restartDaemon } from './daemon-manager';
 
 export function readConfig(): Record<string, unknown> {

@@ -1,7 +1,7 @@
 {
-  "name": "openwind-desktop",
+  "name": "opensauria-desktop",
   "version": "1.0.0",
-  "description": "OpenWind — Setup & System Tray",
+  "description": "OpenSauria — Setup & System Tray",
   "private": true,
   "main": ".vite/build/app.js",
   "scripts": {
@@ -12,11 +12,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@openwind/config": "workspace:*",
-    "@openwind/design-tokens": "workspace:*",
-    "@openwind/ipc-protocol": "workspace:*",
-    "@openwind/types": "workspace:*",
-    "@openwind/vault": "workspace:*",
+    "@opensauria/config": "workspace:*",
+    "@opensauria/design-tokens": "workspace:*",
+    "@opensauria/ipc-protocol": "workspace:*",
+    "@opensauria/types": "workspace:*",
+    "@opensauria/vault": "workspace:*",
     "electron-squirrel-startup": "1.0.1"
   },
   "devDependencies": {

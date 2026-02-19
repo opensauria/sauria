@@ -45,7 +45,7 @@ jobs:
 
       # Build the daemon
       - name: Build daemon
-        run: pnpm --filter @openwind/daemon run build
+        run: pnpm --filter @opensauria/daemon run build
 
       # Build desktop app
       - name: Build desktop
@@ -55,7 +55,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: openwind-${{ matrix.platform }}-${{ matrix.arch }}
+          name: opensauria-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             apps/desktop/out/make/**/*.dmg
             apps/desktop/out/make/**/*.exe

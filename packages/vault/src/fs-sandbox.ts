@@ -1,17 +1,17 @@
 /**
  * Filesystem sandbox — all vault file operations must go through these
- * to prevent path traversal attacks escaping OPENWIND_HOME.
+ * to prevent path traversal attacks escaping OPENSAURIA_HOME.
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve, sep } from 'node:path';
-import { paths } from '@openwind/config';
+import { paths } from '@opensauria/config';
 
 export class PathTraversalError extends Error {
   override readonly name = 'PathTraversalError';
 
   constructor(requestedPath: string) {
-    super(`Path traversal blocked: "${requestedPath}" is outside OPENWIND_HOME`);
+    super(`Path traversal blocked: "${requestedPath}" is outside OPENSAURIA_HOME`);
   }
 }
 

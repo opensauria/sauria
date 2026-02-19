@@ -1,5 +1,5 @@
 {
-  "name": "@openwind/ipc-protocol",
+  "name": "@opensauria/ipc-protocol",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@openwind/types": "workspace:*",
+    "@opensauria/types": "workspace:*",
     "zod": "4.3.6"
   },
   "devDependencies": {

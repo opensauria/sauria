@@ -4,8 +4,8 @@
 
 import { ipcMain } from 'electron';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { paths } from '@openwind/config';
-import { vaultDelete } from '@openwind/vault';
+import { paths } from '@opensauria/config';
+import { vaultDelete } from '@opensauria/vault';
 import { stopDaemon, startDaemon } from './daemon-manager';
 import {
   connectTelegram,

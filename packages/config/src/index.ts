@@ -2,7 +2,7 @@ export { paths } from './paths.js';
 export type { PathKey } from './paths.js';
 
 export {
-  OpenWindConfigSchema,
+  OpenSauriaConfigSchema,
   ModelConfigSchema,
   AuthConfigSchema,
   McpServerConfigSchema,
@@ -10,7 +10,7 @@ export {
 } from './schema.js';
 
 export type {
-  OpenWindConfig,
+  OpenSauriaConfig,
   ModelConfig,
   AuthConfig,
   McpServerConfig,

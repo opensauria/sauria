@@ -38,7 +38,7 @@ async function handleCommand(id: string): Promise<void> {
       const daemonStatus = isDaemonRunning() ? 'Running' : 'Stopped';
       sendCommandResult(`Daemon: ${daemonStatus}\n\nLoading details...`);
       try {
-        const { stdout } = await execFileAsync('openwind', ['status'], {
+        const { stdout } = await execFileAsync('opensauria', ['status'], {
           timeout: COMMAND_TIMEOUT,
         });
         sendCommandResult(`Daemon: ${daemonStatus}\n\n${stdout.trim()}`);
@@ -50,24 +50,24 @@ async function handleCommand(id: string): Promise<void> {
     case 'audit': {
       sendCommandResult('Loading audit log...');
       try {
-        const { stdout } = await execFileAsync('openwind', ['audit', '10'], {
+        const { stdout } = await execFileAsync('opensauria', ['audit', '10'], {
           timeout: COMMAND_TIMEOUT,
         });
         sendCommandResult(stdout.trim());
       } catch {
-        sendCommandResult('CLI not available. Is openwind installed?');
+        sendCommandResult('CLI not available. Is opensauria installed?');
       }
       break;
     }
     case 'doctor': {
       sendCommandResult('Running health check...');
       try {
-        const { stdout } = await execFileAsync('openwind', ['doctor'], {
+        const { stdout } = await execFileAsync('opensauria', ['doctor'], {
           timeout: COMMAND_TIMEOUT,
         });
         sendCommandResult(stdout.trim());
       } catch {
-        sendCommandResult('CLI not available. Is openwind installed?');
+        sendCommandResult('CLI not available. Is opensauria installed?');
       }
       break;
     }
@@ -93,7 +93,7 @@ async function handleCommand(id: string): Promise<void> {
     }
     case 'docs': {
       hidePaletteWindow();
-      shell.openExternal('https://openwind.ai/docs');
+      shell.openExternal('https://opensauria.ai/docs');
       break;
     }
     case 'quit': {

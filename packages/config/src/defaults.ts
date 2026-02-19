@@ -1,7 +1,7 @@
-import { OpenWindConfigSchema } from './schema.js';
-import type { OpenWindConfig } from './schema.js';
+import { OpenSauriaConfigSchema } from './schema.js';
+import type { OpenSauriaConfig } from './schema.js';
 
-export const DEFAULT_CONFIG: OpenWindConfig = OpenWindConfigSchema.parse({});
+export const DEFAULT_CONFIG: OpenSauriaConfig = OpenSauriaConfigSchema.parse({});
 
 /**
  * Model presets per provider — used by desktop setup wizard.

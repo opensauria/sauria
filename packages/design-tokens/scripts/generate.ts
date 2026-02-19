@@ -31,7 +31,7 @@ function generateCssProperties(
 }
 
 const lines: string[] = [
-  '/* Auto-generated from @openwind/design-tokens — do not edit manually */',
+  '/* Auto-generated from @opensauria/design-tokens — do not edit manually */',
   '',
   ':root {',
   ...generateCssProperties('', colors).map((l) =>

@@ -6,7 +6,7 @@ import { ipcMain, shell } from 'electron';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { paths, CLOUD_PRESETS, createLocalPreset } from '@openwind/config';
+import { paths, CLOUD_PRESETS, createLocalPreset } from '@opensauria/config';
 import { hidePaletteWindow, navigatePaletteBack } from '../window-palette';
 import { detectMcpClients, registerMcpInClient } from './mcp-detection';
 import { detectLocalProviders } from './local-providers';
@@ -145,10 +145,10 @@ export function registerSetupHandlers(): void {
       }
 
       try {
-        await execFileAsync('openwind', ['doctor'], { timeout: 10000 });
+        await execFileAsync('opensauria', ['doctor'], { timeout: 10000 });
         steps.push({ label: 'CLI available', status: 'done' });
       } catch {
-        steps.push({ label: 'CLI available', status: 'warning: openwind CLI not in PATH' });
+        steps.push({ label: 'CLI available', status: 'warning: opensauria CLI not in PATH' });
       }
 
       try {
@@ -196,7 +196,7 @@ export function registerSetupHandlers(): void {
       if (apiKey && !isLocal) {
         try {
           if (!existsSync(paths.vault)) mkdirSync(paths.vault, { recursive: true });
-          await execFileAsync('openwind', ['doctor'], { timeout: 10000 }).catch(() => null);
+          await execFileAsync('opensauria', ['doctor'], { timeout: 10000 }).catch(() => null);
           steps.push({ label: 'Credentials stored', status: 'done' });
         } catch {
           steps.push({ label: 'Credentials stored', status: 'warning' });

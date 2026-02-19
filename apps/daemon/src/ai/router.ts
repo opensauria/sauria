@@ -1,4 +1,4 @@
-import type { OpenWindConfig, ModelConfig } from '../config/schema.js';
+import type { OpenSauriaConfig, ModelConfig } from '../config/schema.js';
 import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
 import type { RateLimiter } from '../security/rate-limiter.js';
 import type { ChatMessage, ChatOptions, LLMProvider, StreamChunk } from './providers/base.js';
@@ -25,7 +25,7 @@ export class ModelRouter {
   private onCost: CostCallback | undefined;
 
   constructor(
-    private readonly config: OpenWindConfig,
+    private readonly config: OpenSauriaConfig,
     private readonly getApiKey: ApiKeyGetter,
   ) {
     this.extractionLimiter = createLimiter(

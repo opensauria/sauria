@@ -1,2 +1,2 @@
-// Re-export from canonical @openwind/vault package.
-export { vaultStore, vaultGet, vaultDelete } from '@openwind/vault';
+// Re-export from canonical @opensauria/vault package.
+export { vaultStore, vaultGet, vaultDelete } from '@opensauria/vault';

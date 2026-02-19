@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>OpenWind</title>
+    <title>OpenSauria</title>
     <link rel="stylesheet" href="../shared.css" />
     <style>
       html,
@@ -493,7 +493,7 @@
         gap: 3px;
       }
 
-      .footer .wind-label {
+      .footer .brand-label {
         margin-left: auto;
         font-weight: 500;
         font-size: 10px;
@@ -698,7 +698,7 @@
         <span><kbd>&uarr;</kbd><kbd>&darr;</kbd></span>
         <span><kbd>&crarr;</kbd> Run</span>
         <span><kbd>esc</kbd></span>
-        <span class="wind-label">OpenWind</span>
+        <span class="brand-label">OpenSauria</span>
         <button class="settings-btn" id="settings-btn" title="Developer settings">
           <svg viewBox="0 0 24 24" fill="none">
             <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
@@ -845,7 +845,7 @@
       function executeSelected() {
         if (filtered.length === 0) return;
         var cmd = filtered[selectedIndex];
-        window.openwind.executeCommand(cmd.id);
+        window.opensauria.executeCommand(cmd.id);
       }
 
       var tgIconSvg =
@@ -898,7 +898,7 @@
         tgForm.className = 'telegram-form visible';
         enterSubView();
 
-        var status = await window.openwind.getTelegramStatus();
+        var status = await window.opensauria.getTelegramStatus();
         var bots = status.bots || [];
         var connectedBots = bots.filter(function (b) {
           return b.connected;
@@ -916,7 +916,7 @@
               e.preventDefault();
               var nid = btn.getAttribute('data-node-id');
               if (nid) {
-                await window.openwind.disconnectChannel('telegram', nid);
+                await window.opensauria.disconnectChannel('telegram', nid);
                 showTelegramForm();
               }
             });
@@ -983,7 +983,7 @@
         tgStatus.textContent = 'Connecting...';
         tgStatus.className = 'form-status visible';
         try {
-          var result = await window.openwind.connectChannel('telegram', {
+          var result = await window.opensauria.connectChannel('telegram', {
             token: tgToken.value.trim(),
             userId: parsedId,
           });
@@ -1073,7 +1073,7 @@
             selectedIndex = 0;
             render();
           } else {
-            window.openwind.hidePalette();
+            window.opensauria.hidePalette();
           }
         }
       });
@@ -1097,17 +1097,17 @@
         }
       });
 
-      window.openwind.onCommandResult(function (result) {
+      window.opensauria.onCommandResult(function (result) {
         resultEl.className = 'result-panel visible';
         resultEl.textContent = result;
         enterSubView();
       });
 
-      window.openwind.onShowTelegramForm(function () {
+      window.opensauria.onShowTelegramForm(function () {
         showTelegramForm();
       });
 
-      window.openwind.onPaletteShow(function () {
+      window.opensauria.onPaletteShow(function () {
         refreshProviderStatus();
         if (tgForm.classList.contains('visible')) {
           var firstEmpty = !tgUserId.value.trim()
@@ -1121,7 +1121,7 @@
         }
       });
 
-      window.openwind.onPaletteReset(function () {
+      window.opensauria.onPaletteReset(function () {
         searchEl.value = '';
         selectedIndex = 0;
         devMode = false;
@@ -1137,7 +1137,7 @@
       render();
 
       function refreshProviderStatus() {
-        window.openwind.getStatus().then(function (status) {
+        window.opensauria.getStatus().then(function (status) {
           var dot = document.querySelector('#provider-status .pulse-dot');
           var label = document.getElementById('provider-label');
           if (status.connected && status.provider) {
@@ -1153,7 +1153,7 @@
 
       refreshProviderStatus();
 
-      window.openwind.getTelegramStatus().then(function (status) {
+      window.opensauria.getTelegramStatus().then(function (status) {
         var tgCmd = mainCommands.find(function (c) {
           return c.id === 'telegram';
         });

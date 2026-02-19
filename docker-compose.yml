@@ -1,10 +1,10 @@
 services:
-  openwind:
+  opensauria:
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - '${HOME}/.openwind:/home/openwind/.openwind'
+      - '${HOME}/.opensauria:/home/opensauria/.opensauria'
     environment:
       - NODE_ENV=production
     read_only: true

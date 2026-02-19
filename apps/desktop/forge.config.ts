@@ -8,9 +8,9 @@ import MakerZIP from '@electron-forge/maker-zip';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    name: 'OpenWind',
-    executableName: 'openwind-desktop',
-    appBundleId: 'ai.openwind.desktop',
+    name: 'OpenSauria',
+    executableName: 'opensauria-desktop',
+    appBundleId: 'ai.opensauria.desktop',
     icon: './assets/icon',
     asar: true,
     extraResource: ['../daemon/dist', '../daemon/package.json'],
@@ -30,15 +30,15 @@ const config: ForgeConfig = {
       icon: './assets/icon.icns',
     }),
     new MakerSquirrel({
-      name: 'OpenWind',
-      iconUrl: 'https://openwind.ai/icon.ico',
+      name: 'OpenSauria',
+      iconUrl: 'https://opensauria.ai/icon.ico',
       setupIcon: './assets/icon.ico',
     }),
     new MakerDeb({
       options: {
         icon: './assets/icon.png',
         maintainer: 'Teo Bouancheau',
-        homepage: 'https://openwind.ai',
+        homepage: 'https://opensauria.ai',
         description: 'Security-first persistent cognitive kernel',
         categories: ['Utility'],
       },
@@ -46,7 +46,7 @@ const config: ForgeConfig = {
     new MakerRPM({
       options: {
         icon: './assets/icon.png',
-        homepage: 'https://openwind.ai',
+        homepage: 'https://opensauria.ai',
         description: 'Security-first persistent cognitive kernel',
         categories: ['Utility'],
       },
