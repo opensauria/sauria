@@ -280,6 +280,104 @@ describe('LLMRoutingBrain', () => {
       expect(systemPrompt).toContain('Hiring approved for Q2');
     });
 
+    it('includes token-budget-aware conversation history in the routing prompt', async () => {
+      const agentMemory = new AgentMemory(db);
+      const conversationId = agentMemory.getOrCreateConversation('telegram', null, ['n1']);
+
+      for (let i = 0; i < 8; i++) {
+        agentMemory.recordMessage({
+          conversationId,
+          sourceNodeId: 'n1',
+          senderId: 'user1',
+          senderIsOwner: i % 2 === 0,
+          platform: 'telegram',
+          groupId: null,
+          content: `Conversation message number ${i}`,
+          contentType: 'text',
+        });
+      }
+
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({
+          content: 'What were we discussing earlier today?',
+        }),
+        conversationId,
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).toContain('Conversation message number');
+      expect(systemPrompt).toContain('Recent conversation context');
+    });
+
+    it('includes agent-level facts in the routing prompt', async () => {
+      const agentMemory = new AgentMemory(db);
+      agentMemory.storeFact(
+        'n1',
+        null,
+        'Customer prefers email communication',
+        ['preferences'],
+        'conversation',
+      );
+      agentMemory.storeFact('n1', null, 'Handles enterprise accounts', ['scope'], 'conversation');
+
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({
+          content: 'What do you know about this customer?',
+        }),
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).toContain('Agent knowledge');
+      expect(systemPrompt).toContain('Customer prefers email communication');
+      expect(systemPrompt).toContain('Handles enterprise accounts');
+    });
+
+    it('includes knowledge graph entities in the routing prompt when db has matches', async () => {
+      db.prepare(
+        `INSERT INTO entities (id, type, name, summary, importance_score) VALUES (?, ?, ?, ?, ?)`,
+      ).run('e1', 'person', 'Alice', 'Head of design team', 5);
+
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({
+          content: 'Alice design team',
+        }),
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).toContain('Known entities');
+      expect(systemPrompt).toContain('Alice');
+    });
+
     it('includes peer messages from other workspace nodes in the routing prompt', async () => {
       const agentMemory = new AgentMemory(db);
       const peerNode: AgentNode = {

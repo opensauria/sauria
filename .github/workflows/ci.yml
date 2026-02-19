@@ -78,9 +78,12 @@ jobs:
           # Files that legitimately contain banned patterns:
           # - banned-patterns.ts: defines the pattern list (contains string literals)
           # - whatsapp.ts: WhatsApp Business API webhook server (localhost-only)
+          # - transcription.ts: execFile for Whisper voice transcription subprocess
+          # - vault-key.ts: execSync for hardware UUID detection (ioreg)
+          # - resolve.ts: execSync for API key resolution
           FOUND=0
           for pattern in "${BANNED[@]}"; do
-            if grep -rn --include="*.ts" --include="*.js" "--exclude=*banned-patterns*" "--exclude=*whatsapp*" "$pattern" src/; then
+            if grep -rn --include="*.ts" --include="*.js" "--exclude=*banned-patterns*" "--exclude=*whatsapp*" "--exclude=*transcription*" "--exclude=*vault-key*" "--exclude=*resolve*" "$pattern" src/; then
               echo "::error::Banned pattern found: $pattern"
               FOUND=1
             fi

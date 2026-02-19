@@ -6,7 +6,11 @@ Synthesize information from the context. Be precise, cite specific entities and 
 If the context is insufficient, say so clearly.
 Follow the persona and response style from the INSTRUCTIONS section below.`;
 
-export function buildReasoningPrompt(context: string, query: string, instructions?: string): ChatMessage[] {
+export function buildReasoningPrompt(
+  context: string,
+  query: string,
+  instructions?: string,
+): ChatMessage[] {
   let systemContent = `${REASONING_SYSTEM_PROMPT}\n\n--- WORLD CONTEXT ---\n${context}\n--- END CONTEXT ---`;
   if (instructions) {
     systemContent += `\n\n--- INSTRUCTIONS ---\n${instructions}`;

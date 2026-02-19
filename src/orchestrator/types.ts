@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 // ─── Agent Roles & Autonomy ────────────────────────────────────────
 
 export type AgentRole = 'lead' | 'specialist' | 'observer' | 'bridge' | 'assistant';
@@ -198,6 +200,26 @@ export type OwnerCommand =
       readonly role: AgentRole;
     }
   | { readonly type: 'fire'; readonly agentId: string };
+
+export const OwnerCommandSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('instruct'), agentId: z.string(), instruction: z.string() }),
+  z.object({ type: z.literal('reassign'), agentId: z.string(), newWorkspaceId: z.string() }),
+  z.object({
+    type: z.literal('promote'),
+    agentId: z.string(),
+    newAutonomy: z.enum(['full', 'supervised', 'approval', 'manual']),
+  }),
+  z.object({ type: z.literal('pause'), workspaceId: z.string() }),
+  z.object({ type: z.literal('broadcast'), message: z.string() }),
+  z.object({ type: z.literal('review'), agentId: z.string() }),
+  z.object({
+    type: z.literal('hire'),
+    platform: z.enum(['telegram', 'slack', 'whatsapp', 'discord', 'email', 'owner']),
+    workspace: z.string(),
+    role: z.enum(['lead', 'specialist', 'observer', 'bridge', 'assistant']),
+  }),
+  z.object({ type: z.literal('fire'), agentId: z.string() }),
+]);
 
 // ─── Default Factories ─────────────────────────────────────────────
 

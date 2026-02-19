@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron';
-import { join } from 'path';
+import { loadRendererPage, SECURE_WEB_PREFERENCES } from './window-utils.js';
 
 let win: BrowserWindow | null = null;
 
@@ -23,15 +23,10 @@ export function createCanvasWindow(): void {
     vibrancy: 'sidebar',
     backgroundColor: '#0a0a0a',
     show: false,
-    webPreferences: {
-      preload: join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
+    webPreferences: SECURE_WEB_PREFERENCES,
   });
 
-  win.loadFile(join(__dirname, 'ui', 'canvas.html'));
+  loadRendererPage(win, 'canvas');
 
   win.once('ready-to-show', () => {
     win?.show();

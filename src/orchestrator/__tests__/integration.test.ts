@@ -167,7 +167,9 @@ describe('Orchestrator Integration', () => {
     });
 
     // Non-owner message should trigger approval
-    await approvalOrchestrator.handleInbound(makeMessage({ senderIsOwner: false, senderId: '999' }));
+    await approvalOrchestrator.handleInbound(
+      makeMessage({ senderIsOwner: false, senderId: '999' }),
+    );
 
     const pending = checkpointManager.getPending();
     expect(pending.length).toBeGreaterThan(0);

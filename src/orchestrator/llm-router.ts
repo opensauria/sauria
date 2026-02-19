@@ -9,7 +9,8 @@ import type {
   Workspace,
 } from './types.js';
 import { RoutingCache, buildCacheKey } from './routing-cache.js';
-import { AgentMemory } from './agent-memory.js';
+import { AgentMemory, estimateTokens } from './agent-memory.js';
+import { searchByKeyword } from '../db/search.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ export class LLMRoutingBrain {
 
   constructor(
     private readonly router: ModelRouter,
-    db: BetterSqlite3.Database,
+    private readonly db: BetterSqlite3.Database,
     cacheTtlMs?: number,
   ) {
     this.cache = new RoutingCache(cacheTtlMs);
@@ -80,13 +81,13 @@ export class LLMRoutingBrain {
       return { actions: [] };
     }
 
-    const cacheKey = buildCacheKey(message.sourceNodeId, message.content);
+    const cacheKey = buildCacheKey(message.sourceNodeId, message.content, context.conversationId);
     const cached = this.cache.get(cacheKey);
     if (cached) {
       return cached;
     }
 
-    const prompt = buildRoutingPrompt(context, this.memory);
+    const prompt = buildRoutingPrompt(context, this.memory, this.db);
     const decision = await this.callLLM(prompt, tier);
 
     this.cache.set(cacheKey, decision);
@@ -143,7 +144,11 @@ export class LLMRoutingBrain {
 
 // ─── Prompt Building ────────────────────────────────────────────────
 
-function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatMessage[] {
+function buildRoutingPrompt(
+  context: RoutingContext,
+  memory: AgentMemory,
+  db: BetterSqlite3.Database,
+): ChatMessage[] {
   const {
     message,
     sourceNode,
@@ -163,14 +168,21 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
       ? `Already-scheduled actions from rules:\n${JSON.stringify(ruleActions, null, 2)}`
       : 'No rule-based actions were triggered.';
 
+  const TOKEN_BUDGET_HISTORY = 1500;
   let conversationContext = '';
   if (conversationId) {
-    const recentMessages = memory.getConversationHistory(conversationId, 5);
+    const recentMessages = memory.getHistoryWithinBudget(conversationId, TOKEN_BUDGET_HISTORY);
     if (recentMessages.length > 0) {
       conversationContext = recentMessages
         .map((msg) => `[${msg.sourceNodeId}] ${msg.content}`)
         .join('\n');
     }
+  }
+
+  let agentFactsText = '';
+  const agentFacts = memory.getAgentFacts(sourceNode.id, 5);
+  if (agentFacts.length > 0) {
+    agentFactsText = ['Agent knowledge:', ...agentFacts.map((f) => `- ${f}`)].join('\n');
   }
 
   let workspaceFactsText = '';
@@ -197,6 +209,24 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
     }
   }
 
+  let knowledgeGraphText = '';
+  const entities = searchByKeyword(db, message.content, 5);
+  if (entities.length > 0) {
+    const entityLines: string[] = [];
+    let tokenCount = 0;
+    const TOKEN_BUDGET_KNOWLEDGE = 400;
+    for (const entity of entities) {
+      const line = `- ${entity.name} (${entity.type}): ${entity.summary ?? 'no details'}`;
+      const lineTokens = estimateTokens(line);
+      if (tokenCount + lineTokens > TOKEN_BUDGET_KNOWLEDGE) break;
+      tokenCount += lineTokens;
+      entityLines.push(line);
+    }
+    if (entityLines.length > 0) {
+      knowledgeGraphText = ['Known entities:', ...entityLines].join('\n');
+    }
+  }
+
   const systemPrompt = [
     'You are the routing brain for a team of AI agents.',
     '',
@@ -215,6 +245,8 @@ function buildRoutingPrompt(context: RoutingContext, memory: AgentMemory): ChatM
       : 'No prior conversation context.',
     '',
     ...(workspaceFactsText ? [workspaceFactsText, ''] : []),
+    ...(agentFactsText ? [agentFactsText, ''] : []),
+    ...(knowledgeGraphText ? [knowledgeGraphText, ''] : []),
     ...(peerMessagesText ? [peerMessagesText, ''] : []),
     ruleActionsText,
     '',

@@ -3,13 +3,12 @@
   "version": "1.0.0",
   "description": "OpenWind — Setup & System Tray",
   "private": true,
-  "main": "dist/main.js",
+  "main": ".vite/build/main.js",
   "scripts": {
     "icons": "node scripts/copy-icons.js",
-    "prebuild": "npm run icons",
-    "dev": "npm run icons && tsc && rm -rf dist/ui && cp -r src/ui dist/ui && electron-forge start",
-    "build": "tsc && rm -rf dist/ui && cp -r src/ui dist/ui && electron-forge make",
-    "package": "tsc && rm -rf dist/ui && cp -r src/ui dist/ui && electron-forge package"
+    "dev": "npm run icons && electron-forge start",
+    "build": "npm run icons && electron-forge make",
+    "package": "npm run icons && electron-forge package"
   },
   "dependencies": {
     "electron-squirrel-startup": "1.0.1"
@@ -21,9 +20,11 @@
     "@electron-forge/maker-rpm": "7.11.1",
     "@electron-forge/maker-squirrel": "7.11.1",
     "@electron-forge/maker-zip": "7.11.1",
+    "@electron-forge/plugin-vite": "^7.11.1",
     "electron": "40.4.1",
     "lucide-static": "0.574.0",
     "simple-icons": "16.9.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vite": "^7.3.1"
   }
 }

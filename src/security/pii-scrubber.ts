@@ -44,15 +44,3 @@ export function scrubPII(text: string): string {
   }
   return result;
 }
-
-export function hasPII(text: string): boolean {
-  for (const { regex } of PII_PATTERNS) {
-    // Reset lastIndex for global regexes
-    regex.lastIndex = 0;
-    if (regex.test(text)) {
-      regex.lastIndex = 0;
-      return true;
-    }
-  }
-  return false;
-}

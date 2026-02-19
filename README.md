@@ -52,7 +52,7 @@ npm install -g openwind && openwind onboard
 docker run -d --name openwind -v openwind-data:/data ghcr.io/openwind/openwind
 ```
 
-Requires Node.js 22+.
+Requires Node.js 24+.
 
 The installer runs the setup wizard, stores credentials in an encrypted vault, configures your AI clients as MCP consumers, and starts the background daemon.
 
@@ -118,7 +118,7 @@ All inputs validated with Zod. Rate limited. Audit logged.
 ```
 Data Sources (MCP)              Channels
   Gmail, Calendar,       ┌──── Telegram, Slack,
-  Notion, Tools          │     WhatsApp, Discord
+  Notion, Tools          │     WhatsApp, Discord, Email
          |               │            |
          v               │            v
   ┌──────────────┐       │     ┌──────────────┐
@@ -154,9 +154,10 @@ Data Sources (MCP)              Channels
 ### Design Decisions
 
 - **Any LLM.** Cheap models for extraction, balanced for reasoning, expensive for deep analysis. Swap providers without changing code. Supports Anthropic, OpenAI, Google, Ollama, and any OpenAI-compatible endpoint.
-- **Local embeddings.** Vector search runs entirely on-device via `@huggingface/transformers`. No embedding API calls.
+- **Local embeddings.** Vector search runs entirely on-device (`all-MiniLM-L6-v2`). No embedding API calls.
 - **Hybrid search.** FTS5 full-text + vector cosine similarity combined.
-- **Multi-agent.** Each agent gets its own channel instance, vault credentials, and autonomy level. Messages routed through deterministic rules or LLM intelligence.
+- **Local voice transcription.** Telegram voice messages transcribed on-device — MLX Whisper on macOS (Apple Silicon), faster-whisper on Linux/Windows. No cloud transcription API.
+- **Multi-agent collaboration.** Each agent gets its own channel instance, vault credentials, and autonomy level. Forwarded messages are enriched with source conversation context. Workspace facts are shared across agents and injected into routing prompts.
 - **Owner priority.** Messages from the owner skip the queue and get processed first.
 - **Canvas as config.** The visual canvas is the source of truth for agent topology. The daemon reads `canvas.json` and rebuilds channels on changes.
 
@@ -188,7 +189,7 @@ Security is not a feature, it's the foundation. Everything is built on top of it
 1. **Zero open ports.** All services use stdio or outbound-only HTTPS.
 2. **Zero plaintext secrets.** AES-256-GCM encrypted vault (PBKDF2, 256k iterations, SHA-512).
 3. **Zero trust on input.** Every byte from channels, MCP, AI responses is sanitized and validated.
-4. **Zero shell execution.** No `child_process`, no `exec()`, no `eval()` in `src/`.
+4. **Minimal shell execution.** Only `execFile` for voice transcription (sandboxed Python subprocess). No `exec()`, no `eval()`, no shell interpolation.
 5. **Zero auto-connect.** Outbound URLs checked against a hardcoded allowlist.
 6. **Zero data leaks.** AI calls receive extracted summaries, never raw documents.
 7. **Zero elevated privileges.** Refuses to start as root.

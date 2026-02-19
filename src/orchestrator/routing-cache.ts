@@ -8,9 +8,13 @@ interface CacheEntry {
   readonly expiresAt: number;
 }
 
-export function buildCacheKey(sourceNodeId: string, content: string): string {
+export function buildCacheKey(
+  sourceNodeId: string,
+  content: string,
+  conversationId: string | null = null,
+): string {
   const truncated = content.slice(0, 100);
-  return `${sourceNodeId}:${truncated}`;
+  return `${sourceNodeId}:${conversationId ?? ''}:${truncated}`;
 }
 
 export class RoutingCache {

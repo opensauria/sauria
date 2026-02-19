@@ -61,10 +61,10 @@ function machineId(): string {
     }
   } else if (platform() === 'win32') {
     try {
-      const raw = execSync(
-        'reg query "HKLM\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid',
-        { encoding: 'utf-8', timeout: 3000 },
-      );
+      const raw = execSync('reg query "HKLM\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid', {
+        encoding: 'utf-8',
+        timeout: 3000,
+      });
       const match = raw.match(/MachineGuid\s+REG_SZ\s+(\S+)/);
       id = match ? match[1] : userInfo().username;
     } catch {
@@ -147,9 +147,8 @@ function resolveLoginShell(): { shell: string; args: string[] } {
   if (os === 'win32') {
     return { shell: 'cmd.exe', args: ['/c'] };
   }
-  const candidates = os === 'darwin'
-    ? ['/bin/zsh', '/bin/bash']
-    : ['/bin/bash', '/bin/zsh', '/bin/sh'];
+  const candidates =
+    os === 'darwin' ? ['/bin/zsh', '/bin/bash'] : ['/bin/bash', '/bin/zsh', '/bin/sh'];
   for (const sh of candidates) {
     if (existsSync(sh)) return { shell: sh, args: ['-lc'] };
   }
@@ -164,11 +163,15 @@ function resolveNodeBin(): { nodePath: string; openwindPath: string } {
     const openwindPath = execFileSync(shell, [...args, `${whichCmd} openwind`], {
       encoding: 'utf-8',
       timeout: 5000,
-    }).trim().split('\n')[0];
+    })
+      .trim()
+      .split('\n')[0];
     const nodePath = execFileSync(shell, [...args, `${whichCmd} node`], {
       encoding: 'utf-8',
       timeout: 5000,
-    }).trim().split('\n')[0];
+    })
+      .trim()
+      .split('\n')[0];
     return { nodePath, openwindPath };
   } catch {
     // Fallback for common nvm setup (Unix only)
@@ -625,8 +628,18 @@ ipcMain.handle('detect-local-providers', async () => {
   return await detectLocalProviders();
 });
 
+const VALID_PROVIDERS = new Set(['anthropic', 'openai', 'google', 'ollama']);
+const API_KEY_PATTERN = /^[A-Za-z0-9_\-.]+$/;
+
 ipcMain.handle('validate-key', async (_event, provider: string, apiKey: string) => {
   try {
+    if (!VALID_PROVIDERS.has(provider)) {
+      return { valid: false, error: 'Unknown provider' };
+    }
+    if (!apiKey || apiKey.length > 256 || !API_KEY_PATTERN.test(apiKey)) {
+      return { valid: false, error: 'Invalid API key format' };
+    }
+
     if (provider === 'anthropic') {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -964,6 +977,7 @@ ipcMain.handle('complete-oauth', async (_event, code: string) => {
 });
 
 ipcMain.handle('open-external', (_event, url: string) => {
+  if (typeof url !== 'string' || !url.startsWith('https://')) return;
   shell.openExternal(url);
 });
 
@@ -1079,11 +1093,15 @@ function resolveOwnerPhoto(): string | null {
     const os = platform();
 
     if (os === 'darwin') {
-      const raw = execFileSync('/usr/bin/dscl', ['.', '-read', `/Users/${userInfo().username}`, 'JPEGPhoto'], {
-        encoding: 'utf-8',
-        timeout: 5000,
-        maxBuffer: 2 * 1024 * 1024,
-      });
+      const raw = execFileSync(
+        '/usr/bin/dscl',
+        ['.', '-read', `/Users/${userInfo().username}`, 'JPEGPhoto'],
+        {
+          encoding: 'utf-8',
+          timeout: 5000,
+          maxBuffer: 2 * 1024 * 1024,
+        },
+      );
       const hex = raw.split('\n').slice(1).join('').replace(/\s+/g, '');
       if (hex.length > 0) {
         return `data:image/jpeg;base64,${Buffer.from(hex, 'hex').toString('base64')}`;
@@ -1099,17 +1117,29 @@ function resolveOwnerPhoto(): string | null {
         }
       }
     } else if (os === 'win32') {
-      const picDir = join(homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'AccountPictures');
+      const picDir = join(
+        homedir(),
+        'AppData',
+        'Roaming',
+        'Microsoft',
+        'Windows',
+        'AccountPictures',
+      );
       if (existsSync(picDir)) {
-        const raw = execFileSync('powershell', [
-          '-NoProfile', '-Command',
-          `Get-ChildItem '${picDir}' -Filter *.accountpicture-ms | Sort-Object Length -Descending | Select-Object -First 1 -ExpandProperty FullName`,
-        ], { encoding: 'utf-8', timeout: 5000 }).trim();
+        const raw = execFileSync(
+          'powershell',
+          [
+            '-NoProfile',
+            '-Command',
+            `Get-ChildItem '${picDir}' -Filter *.accountpicture-ms | Sort-Object Length -Descending | Select-Object -First 1 -ExpandProperty FullName`,
+          ],
+          { encoding: 'utf-8', timeout: 5000 },
+        ).trim();
         if (raw && existsSync(raw)) {
           const buf = readFileSync(raw);
-          const jpegStart = buf.indexOf(Buffer.from([0xFF, 0xD8, 0xFF]));
+          const jpegStart = buf.indexOf(Buffer.from([0xff, 0xd8, 0xff]));
           if (jpegStart >= 0) {
-            const jpegEnd = buf.indexOf(Buffer.from([0xFF, 0xD9]), jpegStart);
+            const jpegEnd = buf.indexOf(Buffer.from([0xff, 0xd9]), jpegStart);
             if (jpegEnd >= 0) {
               const jpeg = buf.subarray(jpegStart, jpegEnd + 2);
               return `data:image/jpeg;base64,${jpeg.toString('base64')}`;

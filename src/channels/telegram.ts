@@ -19,6 +19,7 @@ import {
   getEntityTimeline,
   searchEntities,
 } from '../db/world-model.js';
+import { scrubPII } from '../security/pii-scrubber.js';
 import { formatAlert, type Channel } from './base.js';
 
 const TELEGRAM_FILE_API = 'https://api.telegram.org/file/bot';
@@ -143,6 +144,7 @@ export class TelegramChannel implements Channel {
         timestamp: new Date().toISOString(),
       };
       onInbound(inbound);
+      return;
     }
 
     await this.handleAsk(ctx, text);
@@ -166,37 +168,45 @@ export class TelegramChannel implements Channel {
 
     await ctx.reply('Transcribing...');
 
-    const file = await ctx.getFile();
-    const fileUrl = `${TELEGRAM_FILE_API}${this.deps.token}/${file.file_path}`;
-    const response = await secureFetch(fileUrl);
-    const oggBuffer = Buffer.from(await response.arrayBuffer());
+    try {
+      const file = await ctx.getFile();
+      const fileUrl = `${TELEGRAM_FILE_API}${this.deps.token}/${file.file_path}`;
+      const response = await secureFetch(fileUrl);
+      const oggBuffer = Buffer.from(await response.arrayBuffer());
 
-    const text = await transcription.transcribeVoice(oggBuffer);
-    audit.logAction('telegram:voice_transcribed', {
-      duration: voice.duration,
-      textLength: text.length,
-    });
+      const text = await transcription.transcribeVoice(oggBuffer);
+      audit.logAction('telegram:voice_transcribed', {
+        duration: voice.duration,
+        textLength: text.length,
+      });
 
-    await this.ingestText(text, 'telegram:voice');
+      await this.ingestText(text, 'telegram:voice');
 
-    const { onInbound, nodeId, ownerId } = this.deps;
-    if (onInbound && nodeId) {
-      const senderId = String(ctx.from?.id ?? 'unknown');
-      const isOwner = Boolean(ownerId && ctx.from?.id === ownerId);
-      const inbound: InboundMessage = {
-        sourceNodeId: nodeId,
-        platform: 'telegram',
-        senderId,
-        senderIsOwner: isOwner,
-        groupId: ctx.chat?.id ? String(ctx.chat.id) : null,
-        content: text,
-        contentType: 'voice',
-        timestamp: new Date().toISOString(),
-      };
-      onInbound(inbound);
+      const { onInbound, nodeId, ownerId } = this.deps;
+      if (onInbound && nodeId) {
+        const senderId = String(ctx.from?.id ?? 'unknown');
+        const isOwner = Boolean(ownerId && ctx.from?.id === ownerId);
+        const inbound: InboundMessage = {
+          sourceNodeId: nodeId,
+          platform: 'telegram',
+          senderId,
+          senderIsOwner: isOwner,
+          groupId: ctx.chat?.id ? String(ctx.chat.id) : null,
+          content: text,
+          contentType: 'voice',
+          timestamp: new Date().toISOString(),
+        };
+        onInbound(inbound);
+        return;
+      }
+
+      await this.handleAsk(ctx, text);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`[telegram:voice_error] ${errMsg}\n`);
+      audit.logAction('telegram:voice_error', { error: errMsg }, { success: false });
+      await ctx.reply('Failed to process voice message. Please try again.');
     }
-
-    await this.handleAsk(ctx, text);
   }
 
   private async ingestText(text: string, source: string): Promise<void> {
@@ -227,16 +237,23 @@ export class TelegramChannel implements Channel {
       .join('\n');
     try {
       const answer = await reasonAbout(router, context, question, this.deps.instructions);
-      audit.logAction('telegram:ask', { question, entityCount: entities.length });
+      audit.logAction('telegram:ask', {
+        question: scrubPII(question),
+        entityCount: entities.length,
+      });
       await ctx.reply(answer);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       const errStack = error instanceof Error ? error.stack : '';
       process.stderr.write(`[telegram:ask_error] ${errMsg}\n${errStack}\n`);
-      audit.logAction('telegram:ask_error', {
-        question,
-        error: errMsg,
-      }, { success: false });
+      audit.logAction(
+        'telegram:ask_error',
+        {
+          question: scrubPII(question),
+          error: errMsg,
+        },
+        { success: false },
+      );
       await ctx.reply('Sorry, I could not process that request right now.');
     }
   }
@@ -312,7 +329,7 @@ export class TelegramChannel implements Channel {
   private async handleTeach(ctx: Context, rawFact: string): Promise<void> {
     const fact = sanitizeChannelInput(rawFact);
     await this.ingestText(fact, 'telegram:teach');
-    this.deps.audit.logAction('telegram:teach', { fact });
+    this.deps.audit.logAction('telegram:teach', { fact: scrubPII(fact) });
     await ctx.reply(`Learned: "${fact}"`);
   }
 
@@ -327,7 +344,9 @@ export class TelegramChannel implements Channel {
     });
     void this.bot.start({
       onStart: () => {
-        process.stderr.write(`[telegram:polling] Bot polling started for nodeId=${this.deps.nodeId ?? 'none'}\n`);
+        process.stderr.write(
+          `[telegram:polling] Bot polling started for nodeId=${this.deps.nodeId ?? 'none'}\n`,
+        );
       },
     });
   }

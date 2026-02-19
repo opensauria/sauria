@@ -1,28 +1,11 @@
-import { pipeline } from '@huggingface/transformers';
-import type { FeatureExtractionPipeline } from '@huggingface/transformers';
+// Embeddings are currently disabled — @huggingface/transformers was removed.
+// This stub preserves the API surface for when embeddings are migrated.
 
-const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
-
-let cachedPipeline: FeatureExtractionPipeline | undefined;
-
-async function getEmbeddingPipeline(): Promise<FeatureExtractionPipeline> {
-  if (cachedPipeline) {
-    return cachedPipeline;
-  }
-
-  cachedPipeline = await pipeline('feature-extraction', MODEL_NAME);
-  return cachedPipeline;
-}
-
-export async function generateEmbedding(text: string): Promise<Float32Array> {
-  if (!text.trim()) {
-    return new Float32Array(0);
-  }
-
-  const extractor = await getEmbeddingPipeline();
-  const output = await extractor(text, { pooling: 'mean', normalize: true });
-
-  return new Float32Array(output.data as ArrayLike<number>);
+export async function generateEmbedding(_text: string): Promise<Float32Array> {
+  throw new Error(
+    'Embeddings are not available. The @huggingface/transformers dependency was removed. ' +
+      'Migrate to a local Python model or re-add the dependency.',
+  );
 }
 
 export function cosineSimilarity(a: Float32Array, b: Float32Array): number {

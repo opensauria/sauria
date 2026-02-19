@@ -1,6 +1,8 @@
 node_modules/
 dist/
 desktop/out/
+desktop/.vite/
+desktop/public/icons/
 *.tsbuildinfo
 .env
 .env.*
