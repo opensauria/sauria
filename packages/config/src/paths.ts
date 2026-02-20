@@ -1,9 +1,10 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const OPENSAURIA_HOME = process.env['OPENSAURIA_HOME']
-  ?? process.env['OPENSAURIA_HOME']
-  ?? join(homedir(), '.opensauria');
+const OPENSAURIA_HOME =
+  process.env['OPENSAURIA_HOME'] ??
+  process.env['OPENSAURIA_HOME'] ??
+  join(homedir(), '.opensauria');
 
 export const paths = {
   home: OPENSAURIA_HOME,
