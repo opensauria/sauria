@@ -1449,19 +1449,21 @@ var hoveredEdgeId: string | null = null;
 var edgeHideTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function getEdgeMidpoint(edgeId: string): { x: number; y: number } | null {
-  var edge = graph.edges.find(function (e) {
+  var matchedEdge = graph.edges.find(function (e) {
     return e.id === edgeId;
   });
-  if (!edge) return null;
+  if (!matchedEdge) return null;
+  var edgeFrom = matchedEdge.from;
+  var edgeTo = matchedEdge.to;
   var fromNode = graph.nodes.find(function (n) {
-    return n.id === edge.from;
+    return n.id === edgeFrom;
   });
   var toNode = graph.nodes.find(function (n) {
-    return n.id === edge.to;
+    return n.id === edgeTo;
   });
   if (!fromNode || !toNode) return null;
-  var fromCard = world.querySelector('[data-node-id="' + edge.from + '"]') as HTMLElement | null;
-  var toCard = world.querySelector('[data-node-id="' + edge.to + '"]') as HTMLElement | null;
+  var fromCard = world.querySelector('[data-node-id="' + edgeFrom + '"]') as HTMLElement | null;
+  var toCard = world.querySelector('[data-node-id="' + edgeTo + '"]') as HTMLElement | null;
   var fromW = fromCard ? fromCard.offsetWidth : 120;
   var fromH = fromCard ? fromCard.offsetHeight : 150;
   var toW = toCard ? toCard.offsetWidth : 120;
@@ -1628,10 +1630,11 @@ world.addEventListener('click', function (e) {
   var card = actionEl.closest('.agent-card') as HTMLElement | null;
   if (!card) return;
   var nodeId = card.dataset.nodeId!;
-  var node = graph.nodes.find(function (n) {
+  var foundNode = graph.nodes.find(function (n) {
     return n.id === nodeId;
   });
-  if (!node) return;
+  if (!foundNode) return;
+  var node = foundNode;
 
   if (action === 'cancel') {
     animateCardDelete(nodeId, function () {
@@ -2204,9 +2207,10 @@ function openWorkspaceDetail(wsId: string) {
   /* Color swatches */
   var presetColors = ['#038B9A', '#27A7E7', '#34d399', '#f59e0b', '#f87171', '#a78bfa'];
   var isPreset = presetColors.indexOf(ws.color) !== -1;
+  var wsColor = ws.color;
   document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s) {
     if (s.classList.contains('color-swatch-custom')) return;
-    s.classList.toggle('active', (s as HTMLElement).dataset.color === ws.color);
+    s.classList.toggle('active', (s as HTMLElement).dataset.color === wsColor);
   });
   /* Custom swatch state */
   var customSwatch = document.querySelector('#ws-detail-colors .color-swatch-custom') as HTMLElement | null;
@@ -2499,27 +2503,9 @@ function hexToRgba(hex: string, alpha: number): string {
   return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
 }
 
-/* -- In-Palette Mode -- */
-var isInPalette = new URLSearchParams(window.location.search).has('inPalette');
-if (isInPalette) {
-  document.documentElement.style.background = 'transparent';
-  document.body.classList.add('in-palette');
-  (document.getElementById('palette-back') as HTMLButtonElement).addEventListener('click', function () {
-    invoke('navigate_back');
-  });
-}
-
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && isInPalette) {
-    var agentPanel = document.getElementById('agent-detail-panel') as HTMLDivElement;
-    var wsPanel = document.getElementById('workspace-detail-panel') as HTMLDivElement;
-    var wsDialog = document.getElementById('ws-dialog-overlay') as HTMLDivElement;
-    if (agentPanel.classList.contains('open')) return;
-    if (wsPanel.classList.contains('open')) return;
-    if (wsDialog && wsDialog.classList.contains('open')) return;
-    e.preventDefault();
-    invoke('navigate_back');
-  }
+/* -- Back to Palette -- */
+(document.getElementById('palette-back') as HTMLButtonElement).addEventListener('click', function () {
+  invoke('close_and_show_palette', { label: 'canvas' });
 });
 
 /* Boot */

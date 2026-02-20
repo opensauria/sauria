@@ -63,6 +63,7 @@ fn main() {
             cmd_channels::disconnect_channel,
             // Commands
             cmd_commands::execute_command,
+            cmd_commands::close_and_show_palette,
             // Brain
             cmd_brain::brain_list_entities,
             cmd_brain::brain_get_entity,

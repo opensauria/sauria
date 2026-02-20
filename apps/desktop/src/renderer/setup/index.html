@@ -5,20 +5,12 @@
     <title>OpenSauria</title>
     <link rel="stylesheet" href="../shared.css" />
     <style>
-      body {
-        -webkit-app-region: drag;
-      }
-
-      body.in-palette {
-        -webkit-app-region: no-drag;
-      }
-
       .container {
-        padding: 48px 40px 40px;
+        padding: 96px 40px 40px;
         height: 100vh;
         display: flex;
         flex-direction: column;
-        -webkit-app-region: no-drag;
+        overflow-y: auto;
       }
 
       /* Steps */
@@ -294,6 +286,7 @@
     </style>
   </head>
   <body>
+    <div class="titlebar-drag" data-tauri-drag-region></div>
     <button class="palette-back" id="palette-back" title="Back">
       <img src="/icons/chevron-left.svg" alt="" />
     </button>

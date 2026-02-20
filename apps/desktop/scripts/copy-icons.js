@@ -85,6 +85,7 @@ const lucideIcons = [
   'link',
   'database',
   'share-2',
+  'sparkles',
 ];
 
 for (const name of lucideIcons) {

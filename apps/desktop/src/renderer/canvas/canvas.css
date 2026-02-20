@@ -11,7 +11,10 @@
 
 .canvas-viewport {
   position: absolute;
-  inset: 0;
+  top: 32px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: hidden;
   cursor: grab;
   background: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0);
@@ -1746,29 +1749,3 @@
   margin-bottom: 24px;
 }
 
-/* ── Titlebar drag region ────────────────────── */
-
-.titlebar-drag {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 32px;
-  -webkit-app-region: drag;
-  z-index: 500;
-  pointer-events: auto;
-}
-
-/* ── In-Palette Mode ────────────────────── */
-
-body.in-palette {
-  /* transparent background handled by shared.css for corner radius */
-}
-
-body.in-palette .titlebar-drag {
-  display: none;
-}
-
-body.in-palette .panel-header {
-  padding-top: 12px;
-}

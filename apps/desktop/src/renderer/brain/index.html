@@ -2,11 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>OpenSauria &mdash; Brain</title>
+    <title>OpenSauria &mdash; Knowledge</title>
     <link rel="stylesheet" href="../shared.css" />
     <link rel="stylesheet" href="./brain.css" />
   </head>
   <body>
+    <div class="titlebar-drag" data-tauri-drag-region></div>
     <div class="brain-layout">
       <!-- Sidebar -->
       <nav class="brain-sidebar">
@@ -15,6 +16,7 @@
         </button>
 
         <div class="brain-sidebar-section">
+          <div class="brain-sidebar-section-label">Explore</div>
           <div class="brain-nav-item" data-view="graph">
             <img class="icon-mono" src="/icons/share-2.svg" alt="" />
             Graph
@@ -81,7 +83,7 @@
           <!-- View toggle (segmented control, top center) -->
           <div class="brain-view-toggle" id="view-toggle">
             <div class="brain-view-highlight" id="view-highlight"></div>
-            <button class="brain-view-seg active" data-mode="brain">Brain</button>
+            <button class="brain-view-seg active" data-mode="brain">Graph</button>
             <button class="brain-view-seg" data-mode="library">Library</button>
           </div>
 

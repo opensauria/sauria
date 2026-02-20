@@ -734,9 +734,9 @@ const SIM = { repulsion: 800, attraction: 0.005, damping: 0.92, minAlpha: 0.001 
 async function loadGraph() {
   const graphEmpty = document.getElementById('graph-empty') as HTMLDivElement;
   try {
-    const [entityResult, relationResult]: [{ rows: Array<Record<string, unknown>>; total: number }, { rows: Array<Record<string, unknown>>; total: number }] = await Promise.all([
-      invoke('brain_list_entities', { opts: { limit: 200 } }),
-      invoke('brain_list_relations', { opts: { limit: 500 } }),
+    const [entityResult, relationResult] = await Promise.all([
+      invoke<{ rows: Array<Record<string, unknown>>; total: number }>('brain_list_entities', { opts: { limit: 200 } }),
+      invoke<{ rows: Array<Record<string, unknown>>; total: number }>('brain_list_relations', { opts: { limit: 500 } }),
     ]);
 
     const entities = entityResult.rows;
@@ -1245,25 +1245,9 @@ librarySearchInput.addEventListener('keydown', (e) => {
   }
 });
 
-/* ── In-Palette Mode ─────────────────────────────────────────────── */
-const isInPalette = new URLSearchParams(window.location.search).has('inPalette');
-
-if (isInPalette) {
-  document.documentElement.style.background = 'transparent';
-  document.body.classList.add('in-palette');
-  (document.getElementById('palette-back') as HTMLButtonElement).addEventListener('click', () => {
-    invoke('navigate_back');
-  });
-}
-
-/* ── Keyboard ── override for in-palette Escape ────────────────── */
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && isInPalette) {
-    if (deleteDialog.classList.contains('visible')) return;
-    if (detailPanel.classList.contains('open')) return;
-    e.preventDefault();
-    invoke('navigate_back');
-  }
+/* ── Back to Palette ─────────────────────────────────────────────── */
+(document.getElementById('palette-back') as HTMLButtonElement).addEventListener('click', () => {
+  invoke('close_and_show_palette', { label: 'brain' });
 });
 
 /* ── Init ────────────────────────────────────────────────────────── */

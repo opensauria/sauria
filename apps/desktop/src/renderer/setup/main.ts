@@ -354,29 +354,13 @@ async function runConfiguration(provider: string, apiKey: string, mode: string) 
   }
 }
 
-/* ── In-Palette Mode ────────────────────────── */
-const isInPalette = new URLSearchParams(window.location.search).has('inPalette');
-if (isInPalette) {
-  document.documentElement.style.background = 'transparent';
-  document.body.classList.add('in-palette');
-  document.getElementById('palette-back')!.addEventListener('click', function () {
-    invoke('navigate_back');
-  });
-}
-
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && isInPalette) {
-    e.preventDefault();
-    invoke('navigate_back');
-  }
+/* ── Back to Palette ────────────────────────── */
+document.getElementById('palette-back')!.addEventListener('click', function () {
+  invoke('close_and_show_palette', { label: 'setup' });
 });
 
 function handleDone() {
-  if (isInPalette) {
-    invoke('navigate_back');
-  } else {
-    window.close();
-  }
+  invoke('close_and_show_palette', { label: 'setup' });
 }
 
 /* Expose to inline onclick handlers in HTML */

@@ -60,13 +60,16 @@ pub async fn execute_command(
             }
         }
         "settings" | "canvas" => {
-            windows::navigate_palette_to(&app, "canvas")?;
+            windows::hide_palette(&app)?;
+            windows::show_canvas(&app)?;
         }
         "setup" => {
-            windows::navigate_palette_to(&app, "setup")?;
+            windows::hide_palette(&app)?;
+            windows::show_setup(&app)?;
         }
         "brain" => {
-            windows::navigate_palette_to(&app, "brain")?;
+            windows::hide_palette(&app)?;
+            windows::show_brain(&app)?;
         }
         "docs" => {
             windows::hide_palette(&app)?;
@@ -78,6 +81,15 @@ pub async fn execute_command(
         _ => {}
     }
 
+    Ok(())
+}
+
+#[tauri::command]
+pub fn close_and_show_palette(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(&label) {
+        win.close().map_err(|e| e.to_string())?;
+    }
+    windows::show_palette(&app)?;
     Ok(())
 }
 

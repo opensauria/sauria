@@ -302,7 +302,7 @@ pub fn show_brain(app: &AppHandle) -> Result<(), String> {
 
     let url = WebviewUrl::App("src/renderer/brain/index.html".into());
     let win = WebviewWindowBuilder::new(app, "brain", url)
-        .title("OpenSauria Brain")
+        .title("OpenSauria Knowledge")
         .inner_size(1000.0, 700.0)
         .min_inner_size(720.0, 480.0)
         .resizable(true)

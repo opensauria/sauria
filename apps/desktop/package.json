@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "icons": "node scripts/copy-icons.js",
-    "dev": "pnpm run icons && tauri dev",
-    "build": "pnpm run icons && tauri build",
+    "dev": "pnpm run icons && pnpm exec tauri dev",
+    "build": "pnpm run icons && pnpm exec tauri build",
     "dev:vite": "vite",
     "build:vite": "vite build",
     "typecheck": "tsc --noEmit"

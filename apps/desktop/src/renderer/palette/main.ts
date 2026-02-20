@@ -33,13 +33,13 @@ interface Command {
 
 const icons: Record<string, string> = {
   canvas:
-    '<svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="6" r="2.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><circle cx="19" cy="6" r="2.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><circle cx="12" cy="18" r="2.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M7.5 6h9M6.2 8.3l4.6 7.9M17.8 8.3l-4.6 7.9" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-linecap="round"/></svg>',
+    '<svg viewBox="0 0 24 24" fill="none"><rect width="8" height="8" x="3" y="3" rx="2" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect width="8" height="8" x="13" y="13" rx="2" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/></svg>',
   status:
     '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M12 7v5l3 3" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   telegram:
     '<svg viewBox="0 0 24 24"><path d="M9.04 15.6l-.39 5.36c.56 0 .8-.24 1.1-.52l2.63-2.5 5.45 3.97c1 .55 1.7.26 1.97-.92l3.57-16.67C23.71 2.7 22.85 2.14 21.9 2.5L1.4 10.17c-1.63.64-1.6 1.56-.28 1.98l5.1 1.58L19.5 5.8c.6-.38 1.15-.17.7.2L9.04 15.6z" fill="#27A7E7"/></svg>',
   setup:
-    '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13l.75 2.25L22 16l-2.25.75L19 19l-.75-2.25L16 16l2.25-.75L19 13z" stroke="rgba(255,255,255,0.35)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    '<svg viewBox="0 0 24 24" fill="none"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 2v4" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round"/><path d="M22 4h-4" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round"/><circle cx="4" cy="20" r="2" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/></svg>',
   audit:
     '<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M9 7h6M9 11h6M9 15h4" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
   doctor:
@@ -47,12 +47,12 @@ const icons: Record<string, string> = {
   docs: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   quit: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v9" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/><path d="M18.36 6.64A9 9 0 0112 21a9 9 0 01-6.36-2.36A9 9 0 015.64 6.64" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
   brain:
-    '<svg viewBox="0 0 24 24" fill="none"><path d="M12 5a3 3 0 10-5.997.125A4 4 0 003 9a4 4 0 001.4 3.04A3.5 3.5 0 005 15a3.5 3.5 0 002.84 3.44A3 3 0 0011 21h1a3 3 0 003.16-2.56A3.5 3.5 0 0019 15a3.5 3.5 0 00-.6-2.96A4 4 0 0021 9a4 4 0 00-2.99-3.87A3 3 0 0012 5z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 5v16" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-linecap="round"/><path d="M9.5 8a5.5 5.5 0 00-4.13 4M14.5 8a5.5 5.5 0 014.13 4" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-linecap="round"/></svg>',
+    '<svg viewBox="0 0 24 24" fill="none"><path d="M12 18V5" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round"/><path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/><path d="M18 18a4 4 0 0 0 2-7.464" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 18a4 4 0 0 1-2-7.464" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
 };
 
 const mainCommands: Command[] = [
   { id: 'canvas', label: 'Agent Canvas', hint: '' },
-  { id: 'brain', label: 'Brain', hint: 'knowledge graph' },
+  { id: 'brain', label: 'Knowledge', hint: 'knowledge graph' },
   { id: 'telegram', label: 'Telegram', hint: 'channel' },
   { id: 'setup', label: 'AI Provider', hint: 'config' },
   { id: 'quit', label: 'Quit', hint: '' },
@@ -433,16 +433,19 @@ listen('show-telegram-form', function () {
 
 listen('palette-show', function () {
   refreshProviderStatus();
-  if (tgForm.classList.contains('visible')) {
-    const firstEmpty = !tgUserId.value.trim()
-      ? tgUserId
-      : !tgToken.value.trim()
-        ? tgToken
-        : tgUserId;
-    firstEmpty.focus();
-  } else {
-    searchEl.focus();
-  }
+  // Delay focus to ensure window has OS focus after show+set_focus
+  setTimeout(function () {
+    if (tgForm.classList.contains('visible')) {
+      const firstEmpty = !tgUserId.value.trim()
+        ? tgUserId
+        : !tgToken.value.trim()
+          ? tgToken
+          : tgUserId;
+      firstEmpty.focus();
+    } else {
+      searchEl.focus();
+    }
+  }, 50);
 });
 
 listen('palette-reset', function () {

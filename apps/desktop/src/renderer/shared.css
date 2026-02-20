@@ -6,6 +6,40 @@
   box-sizing: border-box;
 }
 
+/* ── Window Drag Region ─────────────────────── */
+
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] input,
+[data-tauri-drag-region] select,
+[data-tauri-drag-region] textarea,
+[data-tauri-drag-region] a,
+[data-tauri-drag-region] [role="button"] {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+.titlebar-drag {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  z-index: 500;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+html {
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   background: var(--bg-solid);
@@ -125,11 +159,11 @@ body {
   flex-shrink: 0;
 }
 
-/* ── Palette Back Button (shared across all in-palette views) ─── */
+/* ── Palette Back Button (shared across all views) ─────────── */
 
 .palette-back {
   position: fixed;
-  top: 12px;
+  top: 48px;
   left: 12px;
   width: 32px;
   height: 32px;
@@ -137,13 +171,12 @@ body {
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   z-index: 600;
   padding: 0;
   transition: background 0.15s ease;
-  -webkit-app-region: no-drag;
 }
 
 .palette-back:hover {
@@ -155,17 +188,4 @@ body {
   height: 16px;
   filter: brightness(0) invert();
   opacity: 0.6;
-}
-
-body.in-palette .palette-back {
-  display: flex;
-}
-
-/* ── In-palette rounded window ─────────────────────────── */
-/* html background: transparent set via JS to prevent body bg propagation */
-
-body.in-palette {
-  border-radius: 12px;
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
-  animation: fadeIn 0.15s ease;
 }
