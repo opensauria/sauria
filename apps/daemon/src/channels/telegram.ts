@@ -1,5 +1,5 @@
-import { Bot } from 'grammy';
-import type { Context } from 'grammy';
+import { Bot } from 'grammy/web';
+import type { Context } from 'grammy/web';
 import type BetterSqlite3 from 'better-sqlite3';
 import type { ProactiveAlert } from '../engine/proactive.js';
 import type { ModelRouter } from '../ai/router.js';

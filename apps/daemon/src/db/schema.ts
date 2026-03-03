@@ -199,9 +199,7 @@ function runMigrations(db: BetterSqlite3.Database): void {
     if (!hasDeadline) {
       db.exec('ALTER TABLE agent_tasks ADD COLUMN deadline TEXT');
     }
-    db.exec(
-      'CREATE INDEX IF NOT EXISTS idx_agent_tasks_deadline ON agent_tasks(status, deadline)',
-    );
+    db.exec('CREATE INDEX IF NOT EXISTS idx_agent_tasks_deadline ON agent_tasks(status, deadline)');
   }
 }
 

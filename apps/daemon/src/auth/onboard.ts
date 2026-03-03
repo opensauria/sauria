@@ -235,7 +235,7 @@ async function runPostSetup(
   const lines = [
     `Provider:    ${provider} (${authMethod})`,
     formatPresetSummary(preset),
-    `Database:    ~/.opensauria/world.db`,
+    `Database:    ~/.opensauria/opensauria.db`,
   ];
 
   if (detected.length > 0) {

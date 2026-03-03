@@ -49,7 +49,7 @@ importers:
         version: 14.0.3
       grammy:
         specifier: 1.40.0
-        version: 1.40.0(encoding@0.1.13)
+        version: 1.40.0
       imapflow:
         specifier: 1.2.9
         version: 1.2.9
@@ -1168,9 +1168,6 @@ packages:
   encoding-japanese@2.2.0:
     resolution: {integrity: sha512-EuJWwlHPZ1LbADuKTClvHtwbaFn4rOD+dRAbWysqEOXRc2Uui0hJInNJrsdH0c+OhJA4nrCBdSkW4DD5YxAo6A==}
     engines: {node: '>=8.10.0'}
-
-  encoding@0.1.13:
-    resolution: {integrity: sha512-ETBauow1T35Y/WZMkio9jiM0Z5xjHHmJ4XmjZOq1l/dXz3lr2sRn87nJy20RupqSh1F2m3HHPSp8ShIPQJrJ3A==}
 
   end-of-stream@1.4.5:
     resolution: {integrity: sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==}
@@ -2786,11 +2783,6 @@ snapshots:
 
   encoding-japanese@2.2.0: {}
 
-  encoding@0.1.13:
-    dependencies:
-      iconv-lite: 0.6.3
-    optional: true
-
   end-of-stream@1.4.5:
     dependencies:
       once: 1.4.0
@@ -2981,12 +2973,12 @@ snapshots:
 
   gopd@1.2.0: {}
 
-  grammy@1.40.0(encoding@0.1.13):
+  grammy@1.40.0:
     dependencies:
       '@grammyjs/types': 3.24.0
       abort-controller: 3.0.0
       debug: 4.4.3
-      node-fetch: 2.7.0(encoding@0.1.13)
+      node-fetch: 2.7.0
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -3145,11 +3137,9 @@ snapshots:
     dependencies:
       semver: 7.7.4
 
-  node-fetch@2.7.0(encoding@0.1.13):
+  node-fetch@2.7.0:
     dependencies:
       whatwg-url: 5.0.0
-    optionalDependencies:
-      encoding: 0.1.13
 
   nodemailer@8.0.0: {}
 

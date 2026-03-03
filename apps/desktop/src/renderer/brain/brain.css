@@ -66,12 +66,20 @@
 .brain-nav-item .icon-mono {
   width: 16px;
   height: 16px;
-  opacity: 0.6;
-  filter: brightness(0) invert();
+  display: inline-block;
+  background-color: var(--text-secondary);
+  -webkit-mask-image: var(--icon);
+  mask-image: var(--icon);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 
 .brain-nav-item.active .icon-mono {
-  filter: brightness(0) invert() sepia(1) saturate(20) hue-rotate(160deg) brightness(0.7);
+  background-color: var(--accent);
 }
 
 .brain-nav-count {
@@ -363,10 +371,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  background: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.15s ease;
   flex-shrink: 0;
+  padding: 0;
 }
 
 .brain-detail-close:hover {
@@ -977,7 +988,7 @@ body.in-palette {
 }
 
 .in-palette .brain-sidebar {
-  padding-top: 48px;
+  padding-top: 56px;
 }
 
 /* ── Responsive ────────────────────────────────────────────────────── */

@@ -35,7 +35,7 @@
 
 .agent-card {
   position: absolute;
-  width: 120px;
+  width: 144px;
   background: rgba(30, 30, 30, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
@@ -70,8 +70,8 @@
 }
 
 .agent-avatar {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.06);
   display: flex;
@@ -89,8 +89,8 @@
 }
 
 .agent-avatar svg {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
 }
 
 .agent-status-dot {

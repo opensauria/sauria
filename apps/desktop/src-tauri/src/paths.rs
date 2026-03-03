@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+#[derive(Clone)]
 pub struct Paths {
     pub home: PathBuf,
     pub config: PathBuf,
@@ -10,7 +11,6 @@ pub struct Paths {
     pub logs: PathBuf,
     pub bot_profiles: PathBuf,
     pub owner_commands: PathBuf,
-    pub audit: PathBuf,
 }
 
 impl Paths {
@@ -32,7 +32,6 @@ impl Paths {
             logs: home.join("logs"),
             bot_profiles: home.join("bot-profiles.json"),
             owner_commands: home.join("owner-commands.jsonl"),
-            audit: home.join("audit.log"),
             home,
         }
     }
