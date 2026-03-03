@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# OpenWind — zero-friction installer
-# Usage: curl -fsSL https://openwind.ai/install.sh | bash
+# OpenSauria — zero-friction installer
+# Usage: curl -fsSL https://opensauria.ai/install.sh | bash
 #
 # What happens:
 #   1. Installs the package silently
@@ -12,7 +12,7 @@ set -euo pipefail
 #   User never touches a terminal.
 
 REQUIRED_NODE_MAJOR=22
-LABEL="ai.openwind.daemon"
+LABEL="ai.opensauria.daemon"
 
 # ─── OS Detection ────────────────────────────────────────────────────────
 OS="$(uname -s)"
@@ -97,24 +97,24 @@ open_url() {
 # ─── 1. Check Node.js ───────────────────────────────────────────────────
 
 if ! command -v node &>/dev/null; then
-  dialog_alert "OpenWind" "Node.js >= ${REQUIRED_NODE_MAJOR} is required.\n\nDownload it from nodejs.org"
+  dialog_alert "OpenSauria" "Node.js >= ${REQUIRED_NODE_MAJOR} is required.\n\nDownload it from nodejs.org"
   open_url "https://nodejs.org"
   exit 1
 fi
 
 NODE_MAJOR="$(node --version | sed 's/v//' | cut -d. -f1)"
 if [ "${NODE_MAJOR}" -lt "${REQUIRED_NODE_MAJOR}" ]; then
-  dialog_alert "OpenWind" "Node.js >= ${REQUIRED_NODE_MAJOR} required.\nFound: $(node --version)\n\nPlease upgrade."
+  dialog_alert "OpenSauria" "Node.js >= ${REQUIRED_NODE_MAJOR} required.\nFound: $(node --version)\n\nPlease upgrade."
   exit 1
 fi
 
 # ─── 2. Install package ─────────────────────────────────────────────────
 
-npm install -g openwind@latest --silent 2>/dev/null || npm install -g openwind --silent
+npm install -g opensauria@latest --silent 2>/dev/null || npm install -g opensauria --silent
 
 # ─── 3. Choose provider (native dialog) ─────────────────────────────────
 
-PROVIDER=$(dialog_list "OpenWind Setup" "Choose your AI provider:" \
+PROVIDER=$(dialog_list "OpenSauria Setup" "Choose your AI provider:" \
   "Anthropic (recommended)" \
   "OpenAI" \
   "Google" \
@@ -145,10 +145,10 @@ if [ "${PROVIDER}" != "ollama" ]; then
   # Open the API key page so user can copy their key
   open_url "${KEY_URL}"
 
-  API_KEY=$(dialog_password "OpenWind Setup" "Paste your ${PROVIDER} API key:")
+  API_KEY=$(dialog_password "OpenSauria Setup" "Paste your ${PROVIDER} API key:")
 
   if [ -z "${API_KEY}" ]; then
-    dialog_alert "OpenWind" "No API key provided. Setup cancelled."
+    dialog_alert "OpenSauria" "No API key provided. Setup cancelled."
     exit 0
   fi
 fi
@@ -158,8 +158,8 @@ fi
 SETUP_ARGS="--provider ${PROVIDER}"
 [ -n "${API_KEY}" ] && SETUP_ARGS="${SETUP_ARGS} --api-key ${API_KEY}"
 
-if ! openwind setup ${SETUP_ARGS} 2>/dev/null; then
-  dialog_alert "OpenWind" "Setup failed. Please try again or run:\nopenwind onboard"
+if ! opensauria setup ${SETUP_ARGS} 2>/dev/null; then
+  dialog_alert "OpenSauria" "Setup failed. Please try again or run:\nopensauria onboard"
   exit 1
 fi
 
@@ -172,15 +172,15 @@ if [ "${OS}" = "Darwin" ]; then
     launchctl load -w "${PLIST}" 2>/dev/null || true
   fi
 elif [ "${OS}" = "Linux" ]; then
-  UNIT="${HOME}/.config/systemd/user/openwind.service"
+  UNIT="${HOME}/.config/systemd/user/opensauria.service"
   if [ -f "${UNIT}" ]; then
     systemctl --user daemon-reload 2>/dev/null || true
-    systemctl --user enable --now openwind 2>/dev/null || true
+    systemctl --user enable --now opensauria 2>/dev/null || true
   fi
 fi
 
 # ─── 7. Done ─────────────────────────────────────────────────────────────
 
-dialog_notify "OpenWind" "Installation complete. Restart your AI client."
+dialog_notify "OpenSauria" "Installation complete. Restart your AI client."
 
-dialog_alert "OpenWind" "Setup complete!\n\nOpenWind is now connected to your AI clients.\nRestart Claude Desktop or Cursor to get started.\n\nhttps://openwind.ai"
+dialog_alert "OpenSauria" "Setup complete!\n\nOpenSauria is now connected to your AI clients.\nRestart Claude Desktop or Cursor to get started.\n\nhttps://opensauria.ai"

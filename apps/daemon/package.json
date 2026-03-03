@@ -1,10 +1,10 @@
 {
-  "name": "@openwind/daemon",
+  "name": "@opensauria/daemon",
   "version": "1.0.0",
-  "description": "OpenWind daemon — security-first persistent cognitive kernel.",
+  "description": "OpenSauria daemon — security-first persistent cognitive kernel.",
   "type": "module",
   "bin": {
-    "openwind": "./dist/index.mjs"
+    "opensauria": "./dist/index.mjs"
   },
   "engines": {
     "node": ">=24"
@@ -15,7 +15,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsdown src/cli.ts src/index.ts --format esm --dts --define.OPENWIND_VERSION=\"'$npm_package_version'\"",
+    "build": "tsdown src/cli.ts src/index.ts --format esm --dts --define.OPENSAURIA_VERSION=\"'$npm_package_version'\"",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -26,10 +26,10 @@
     "@anthropic-ai/sdk": "0.76.0",
     "@clack/prompts": "1.0.1",
     "@modelcontextprotocol/sdk": "1.26.0",
-    "@openwind/config": "workspace:*",
-    "@openwind/ipc-protocol": "workspace:*",
-    "@openwind/types": "workspace:*",
-    "@openwind/vault": "workspace:*",
+    "@opensauria/config": "workspace:*",
+    "@opensauria/ipc-protocol": "workspace:*",
+    "@opensauria/types": "workspace:*",
+    "@opensauria/vault": "workspace:*",
     "better-sqlite3": "12.6.2",
     "commander": "14.0.3",
     "grammy": "1.40.0",
@@ -44,6 +44,7 @@
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "24.10.13",
     "@types/nodemailer": "7.0.10",
+    "@vitest/coverage-v8": "^4.0.18",
     "tsdown": "0.20.3",
     "tsx": "4.21.0",
     "typescript": "5.9.3",

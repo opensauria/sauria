@@ -1,4 +1,4 @@
-// Re-export from canonical @openwind/vault package.
+// Re-export from canonical @opensauria/vault package.
 export {
   generateMasterKey,
   deriveWrappingKey,
@@ -7,4 +7,4 @@ export {
   storeSecret,
   getSecret,
   deleteSecret,
-} from '@openwind/vault';
+} from '@opensauria/vault';

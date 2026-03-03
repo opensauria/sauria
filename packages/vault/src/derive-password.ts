@@ -9,6 +9,6 @@ import { machineId } from './machine-id.js';
 
 export function deriveVaultPassword(): string {
   return createHash('sha256')
-    .update(`${machineId()}:${userInfo().username}:openwind-vault`)
+    .update(`${machineId()}:${userInfo().username}:opensauria-vault`)
     .digest('hex');
 }

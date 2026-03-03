@@ -48,7 +48,7 @@ function isFirstRun(): boolean {
 
 async function redirectToOnboard(): Promise<void> {
   w('');
-  w('Welcome to OpenWind! No configuration found.');
+  w('Welcome to OpenSauria! No configuration found.');
   w('Starting setup wizard...');
   w('');
   const { runOnboarding } = await import('./auth/onboard.js');
@@ -76,7 +76,7 @@ function withContext(fn: (ctx: AppContext) => Promise<void> | void): () => Promi
 }
 
 program
-  .name('openwind')
+  .name('opensauria')
   .description('Security-first persistent cognitive kernel')
   .version(getVersion())
   .hook('preAction', async (thisCommand) => {

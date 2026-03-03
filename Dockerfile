@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY apps/daemon/ ./apps/daemon/
 RUN pnpm turbo run build --filter='./packages/*'
-RUN pnpm --filter @openwind/daemon run build
+RUN pnpm --filter @opensauria/daemon run build
 
 # Remove devDependencies for production
 RUN pnpm prune --prod
@@ -20,22 +20,22 @@ RUN pnpm prune --prod
 # Stage 2: Production
 FROM node:24-alpine AS production
 
-RUN addgroup -g 1000 openwind && \
-    adduser -u 1000 -G openwind -s /bin/sh -D openwind
+RUN addgroup -g 1000 opensauria && \
+    adduser -u 1000 -G opensauria -s /bin/sh -D opensauria
 
 WORKDIR /app
 
-COPY --from=build --chown=openwind:openwind /app/apps/daemon/dist ./dist
-COPY --from=build --chown=openwind:openwind /app/node_modules ./node_modules
-COPY --from=build --chown=openwind:openwind /app/apps/daemon/package.json ./package.json
+COPY --from=build --chown=opensauria:opensauria /app/apps/daemon/dist ./dist
+COPY --from=build --chown=opensauria:opensauria /app/node_modules ./node_modules
+COPY --from=build --chown=opensauria:opensauria /app/apps/daemon/package.json ./package.json
 
-RUN mkdir -p /home/openwind/.openwind/logs \
-             /home/openwind/.openwind/tmp \
-             /home/openwind/.openwind/exports \
-             /home/openwind/.openwind/vault && \
-    chown -R openwind:openwind /home/openwind/.openwind
+RUN mkdir -p /home/opensauria/.opensauria/logs \
+             /home/opensauria/.opensauria/tmp \
+             /home/opensauria/.opensauria/exports \
+             /home/opensauria/.opensauria/vault && \
+    chown -R opensauria:opensauria /home/opensauria/.opensauria
 
-USER openwind
+USER opensauria
 
 ENV NODE_ENV=production
 

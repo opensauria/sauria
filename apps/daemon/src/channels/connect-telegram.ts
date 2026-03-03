@@ -132,7 +132,7 @@ export async function connectTelegram(): Promise<void> {
       `Voice transcription: ${config.channels.telegram.voice.enabled ? 'enabled' : 'disabled'}`,
       '',
       'Restart the daemon to activate:',
-      '  openwind daemon',
+      '  opensauria daemon',
     ].join('\n'),
     'Telegram connected',
   );

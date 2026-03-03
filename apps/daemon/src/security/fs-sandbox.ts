@@ -1,8 +1,8 @@
-// Re-export from canonical @openwind/vault package.
+// Re-export from canonical @opensauria/vault package.
 export {
   PathTraversalError,
   safePath,
   safeReadFile,
   safeWriteFile,
   safeMkdir,
-} from '@openwind/vault';
+} from '@opensauria/vault';

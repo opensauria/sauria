@@ -1,4 +1,4 @@
-// Re-export domain types from canonical @openwind/types package.
+// Re-export domain types from canonical @opensauria/types package.
 export type {
   EntityType,
   ObservationType,
@@ -7,7 +7,7 @@ export type {
   Event,
   Observation,
   Task,
-} from '@openwind/types';
+} from '@opensauria/types';
 
 // ─── Database Row Types (daemon-specific, SQLite column mapping) ───
 
@@ -74,7 +74,7 @@ export function isEventRow(value: unknown): value is EventRow {
 
 // ─── Row → Domain Converters ──────────────────────────────────────
 
-import type { Entity, Relation, Event, EntityType } from '@openwind/types';
+import type { Entity, Relation, Event, EntityType } from '@opensauria/types';
 
 function parseJsonField<T>(raw: string | null): T | null {
   if (raw === null) return null;

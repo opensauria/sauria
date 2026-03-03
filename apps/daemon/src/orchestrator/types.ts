@@ -8,6 +8,7 @@ export type {
   OwnerResponseBehavior,
   PeerBehavior,
   GroupBehavior,
+  AgentCapabilities,
   WorkspaceGroup,
   Checkpoint,
   WorkspaceModels,
@@ -20,14 +21,15 @@ export type {
   Edge,
   CanvasGraph,
   OwnerIdentity,
+  InternalRoute,
   InboundMessage,
   RoutingAction,
   RoutingDecision,
   KPI,
   AgentPerformance,
   OwnerCommand,
-} from '@openwind/types';
+} from '@opensauria/types';
 
-export { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '@openwind/types';
+export { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '@opensauria/types';
 
-export { OwnerCommandSchema } from '@openwind/ipc-protocol';
+export { OwnerCommandSchema } from '@opensauria/ipc-protocol';

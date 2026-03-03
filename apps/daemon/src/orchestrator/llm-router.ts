@@ -6,10 +6,11 @@ import type {
   RoutingAction,
   RoutingDecision,
   AgentNode,
+  Edge,
   Workspace,
 } from './types.js';
 import { RoutingCache, buildCacheKey } from './routing-cache.js';
-import { AgentMemory, estimateTokens } from './agent-memory.js';
+import { type AgentMemory, estimateTokens } from './agent-memory.js';
 import { searchByKeyword } from '../db/search.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -21,6 +22,7 @@ export interface RoutingContext {
   readonly sourceNode: AgentNode;
   readonly workspace: Workspace | null;
   readonly teamNodes: readonly AgentNode[];
+  readonly edges: readonly Edge[];
   readonly ruleActions: readonly RoutingAction[];
   readonly conversationId: string | null;
   readonly globalInstructions: string;
@@ -54,23 +56,26 @@ const VALID_ACTION_TYPES = new Set([
   'send_to_all',
   'learn',
   'group_message',
+  'escalate',
 ]);
 
 const VALID_PRIORITIES = new Set(['low', 'normal', 'high']);
+
+const LLM_ROUTING_TIMEOUT_MS = 30_000;
+const MAX_PROMPT_TOKENS = 4000;
 
 // ─── LLMRoutingBrain ────────────────────────────────────────────────
 
 export class LLMRoutingBrain {
   private readonly cache: RoutingCache;
-  private readonly memory: AgentMemory;
 
   constructor(
     private readonly router: ModelRouter,
+    private readonly memory: AgentMemory,
     private readonly db: BetterSqlite3.Database,
     cacheTtlMs?: number,
   ) {
     this.cache = new RoutingCache(cacheTtlMs);
-    this.memory = new AgentMemory(db);
   }
 
   async decideRouting(context: RoutingContext): Promise<RoutingDecision> {
@@ -133,11 +138,19 @@ export class LLMRoutingBrain {
     const stream =
       tier === 'deep' ? this.router.deepAnalyze(messages) : this.router.reason(messages);
 
-    let result = '';
-    for await (const chunk of stream) {
-      result += chunk.text;
-    }
+    const collect = async (): Promise<string> => {
+      let result = '';
+      for await (const chunk of stream) {
+        result += chunk.text;
+      }
+      return result;
+    };
 
+    const timeout = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('LLM routing timeout')), LLM_ROUTING_TIMEOUT_MS);
+    });
+
+    const result = await Promise.race([collect(), timeout]);
     return parseRoutingResponse(result);
   }
 }
@@ -154,13 +167,30 @@ function buildRoutingPrompt(
     sourceNode,
     workspace,
     teamNodes,
+    edges,
     ruleActions,
     conversationId,
     globalInstructions,
   } = context;
 
   const agentList = teamNodes
-    .map((node) => `- ${node.label} (${node.role}) on ${node.platform}`)
+    .map((node) => {
+      let line = `- ${node.label} (${node.role}) on ${node.platform}`;
+      if (node.capabilities) {
+        const parts: string[] = [];
+        if (node.capabilities.directories?.length) {
+          parts.push(`dirs: ${node.capabilities.directories.join(', ')}`);
+        }
+        if (node.capabilities.tools?.length) {
+          parts.push(`tools: ${node.capabilities.tools.join(', ')}`);
+        }
+        if (node.capabilities.description) {
+          parts.push(node.capabilities.description);
+        }
+        if (parts.length > 0) line += ` [${parts.join('; ')}]`;
+      }
+      return line;
+    })
     .join('\n');
 
   const ruleActionsText =
@@ -205,7 +235,7 @@ function buildRoutingPrompt(
       }
     }
     if (peerLines.length > 0) {
-      peerMessagesText = ['Recent peer activity:', ...peerLines.slice(0, 5)].join('\n');
+      peerMessagesText = ['Recent peer activity:', ...peerLines.slice(0, 3)].join('\n');
     }
   }
 
@@ -227,48 +257,99 @@ function buildRoutingPrompt(
     }
   }
 
-  const systemPrompt = [
-    'You are the routing brain for a team of AI agents.',
+  // Derive hierarchy from edges
+  const directReports = edges
+    .filter((e) => e.from === sourceNode.id)
+    .map((e) => teamNodes.find((n) => n.id === e.to))
+    .filter((n): n is AgentNode => n !== undefined);
+
+  const supervisors = edges
+    .filter((e) => e.to === sourceNode.id)
+    .map((e) => teamNodes.find((n) => n.id === e.from))
+    .filter((n): n is AgentNode => n !== undefined);
+
+  let hierarchyText = '';
+  if (directReports.length > 0 || supervisors.length > 0) {
+    const lines: string[] = ['Hierarchy:'];
+    if (supervisors.length > 0) {
+      lines.push(`You report to: ${supervisors.map((n) => n.label).join(', ')}`);
+    }
+    if (directReports.length > 0) {
+      lines.push(
+        `Your direct reports: ${directReports.map((n) => `${n.label} (${n.role})`).join(', ')}`,
+      );
+    }
+    hierarchyText = lines.join('\n');
+  }
+
+  // ─── Build prompt sections (ordered by priority for truncation) ─────
+  // Priority: action schema > agents/hierarchy > history > instructions > knowledge/peers
+
+  const characterName = sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '');
+
+  // Core sections (never truncated)
+  const coreSections = [
+    `Role: routing brain for AI agent team.`,
+    `Team: ${workspace?.name ?? 'Unknown'} | Purpose: ${workspace?.purpose ?? 'General'} | Topics: ${workspace?.topics.join(', ') ?? 'None'}`,
     '',
-    `Team: ${workspace?.name ?? 'Unknown'}`,
-    `Purpose: ${workspace?.purpose ?? 'General'}`,
-    `Topics: ${workspace?.topics.join(', ') ?? 'None'}`,
+    'Agents:',
+    agentList || '(none)',
     '',
-    'Agents in this team:',
-    agentList || '(no agents)',
-    '',
-    `Incoming message from ${sourceNode.label} (${sourceNode.role}):`,
-    `"${message.content}"`,
+    ...(hierarchyText ? [hierarchyText, ''] : []),
+    `From: ${sourceNode.label} (${sourceNode.role})`,
     '',
     conversationContext
       ? `Recent conversation context:\n${conversationContext}`
       : 'No prior conversation context.',
     '',
-    ...(workspaceFactsText ? [workspaceFactsText, ''] : []),
-    ...(agentFactsText ? [agentFactsText, ''] : []),
-    ...(knowledgeGraphText ? [knowledgeGraphText, ''] : []),
-    ...(peerMessagesText ? [peerMessagesText, ''] : []),
+    ...(message.internalRoute
+      ? [
+          `Forwarded internally from ${
+            teamNodes.find((n) => n.id === message.internalRoute!.fromNodeId)?.label ??
+            message.internalRoute.fromNodeId
+          } (hop ${String(message.internalRoute.hopCount)}). Do NOT forward back to ${message.internalRoute.fromNodeId} unless you have new info.`,
+          'When replying, briefly state who asked you and what for at the start so the recipient has context.',
+          '',
+        ]
+      : []),
     ruleActionsText,
     '',
-    `When generating reply content, respond in character as ${sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '')} (${sourceNode.role ?? 'assistant'}). Never mention being Claude, an AI model, or a language model.`,
+    `Reply in character as ${characterName} (${sourceNode.role ?? 'assistant'}). Never mention being an AI. Never use em dashes or en dashes.`,
     ...(globalInstructions || sourceNode.instructions
       ? [
-          'Response style instructions (apply to all reply content):',
+          'Style:',
           ...(globalInstructions ? [globalInstructions] : []),
           ...(sourceNode.instructions ? [sourceNode.instructions] : []),
           '',
         ]
       : []),
-    'Decide what actions to take. Return ONLY valid JSON:',
-    '{"actions": [{"type": "reply", "content": "..."}, ...]}',
-    '',
-    'Valid action types: reply, forward, assign, notify, send_to_all, learn, group_message',
-    'For forward/assign/notify: include "targetNodeId"',
-    'For assign: include "task" and "priority" (low/normal/high)',
-    'For notify: include "summary"',
-    'For send_to_all/group_message: include "workspaceId" and "content"',
-    'For learn: include "fact" and "topics" (string array)',
-  ].join('\n');
+    ...(directReports.length > 0
+      ? [
+          'DELEGATION: reply directly if you can; forward to reports for their input; compile responses before replying.',
+          `Delegates: ${directReports.map((n) => `${n.label} (${n.id})`).join(', ')}`,
+          '',
+        ]
+      : []),
+    'Output JSON only: {"actions": [{"type": "reply", "content": "..."}, ...]}',
+    'Types: reply, forward (targetNodeId+content), assign (targetNodeId+task+priority:low/normal/high), notify (targetNodeId+summary), send_to_all (workspaceId+content), learn (fact+topics[]), group_message (workspaceId+content), escalate (summary)',
+    ...(message.senderIsOwner ? ['senderIsOwner=true: do NOT escalate, reply directly.'] : []),
+  ];
+
+  // Lower-priority sections (truncated first if over budget)
+  const softSections = [
+    ...(workspaceFactsText ? [workspaceFactsText] : []),
+    ...(agentFactsText ? [agentFactsText] : []),
+    ...(knowledgeGraphText ? [knowledgeGraphText] : []),
+    ...(peerMessagesText ? [peerMessagesText] : []),
+  ];
+
+  let systemPrompt = [...coreSections, ...softSections].join('\n');
+
+  // Safety cap: truncate soft sections if over budget
+  const promptTokens = estimateTokens(systemPrompt);
+  if (promptTokens > MAX_PROMPT_TOKENS && softSections.length > 0) {
+    systemPrompt = coreSections.join('\n');
+  }
 
   return [
     { role: 'system' as const, content: systemPrompt },
@@ -351,6 +432,9 @@ function normalizeAction(raw: RawLLMAction): RoutingAction | null {
       return raw.workspaceId && raw.content
         ? { type: 'group_message', workspaceId: raw.workspaceId, content: raw.content }
         : null;
+
+    case 'escalate':
+      return raw.summary ? { type: 'escalate', summary: raw.summary } : null;
 
     default:
       return null;

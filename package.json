@@ -1,8 +1,8 @@
 {
-  "name": "openwind-monorepo",
+  "name": "opensauria-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "OpenWind monorepo — security-first personal AI operating system.",
+  "description": "OpenSauria monorepo — security-first personal AI operating system.",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
   "author": {
@@ -12,11 +12,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/teobouancheau/openwind.git"
+    "url": "https://github.com/teobouancheau/opensauria.git"
   },
-  "homepage": "https://github.com/teobouancheau/openwind",
+  "homepage": "https://github.com/teobouancheau/opensauria",
   "bugs": {
-    "url": "https://github.com/teobouancheau/openwind/issues"
+    "url": "https://github.com/teobouancheau/opensauria/issues"
   },
   "engines": {
     "node": ">=24",
@@ -24,10 +24,10 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "build:daemon": "turbo run build --filter=@openwind/daemon",
-    "build:desktop": "turbo run build --filter=openwind-desktop",
-    "dev:daemon": "pnpm --filter @openwind/daemon run dev",
-    "dev:desktop": "pnpm --filter openwind-desktop run dev",
+    "build:daemon": "turbo run build --filter=@opensauria/daemon",
+    "build:desktop": "turbo run build --filter=opensauria-desktop",
+    "dev:daemon": "pnpm --filter @opensauria/daemon run dev",
+    "dev:desktop": "pnpm --filter opensauria-desktop run dev",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",

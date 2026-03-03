@@ -11,7 +11,7 @@
  */
 
 import { z } from 'zod';
-import type { OwnerCommand } from '@openwind/types';
+import type { OwnerCommand } from '@opensauria/types';
 
 // ─── Zod Validation Schema ────────────────────────────────────────
 
@@ -74,7 +74,11 @@ export function parseOwnerCommand(input: string): ParseResult {
       ownerCommand: {
         type: 'promote',
         agentId: promoteMatch[1]!,
-        newAutonomy: promoteMatch[2]!.toLowerCase() as OwnerCommand & { type: 'promote' } extends { newAutonomy: infer T } ? T : never,
+        newAutonomy: promoteMatch[2]!.toLowerCase() as OwnerCommand & { type: 'promote' } extends {
+          newAutonomy: infer T;
+        }
+          ? T
+          : never,
       },
     };
   }
@@ -129,7 +133,13 @@ export function parseOwnerCommand(input: string): ParseResult {
       message: `${hireMatch[1] ?? ''} ${hireMatch[3] ?? ''}`,
       ownerCommand: {
         type: 'hire',
-        platform: hireMatch[1]! as 'telegram' | 'slack' | 'whatsapp' | 'discord' | 'email' | 'owner',
+        platform: hireMatch[1]! as
+          | 'telegram'
+          | 'slack'
+          | 'whatsapp'
+          | 'discord'
+          | 'email'
+          | 'owner',
         workspace: hireMatch[2]!,
         role: hireMatch[3]! as 'lead' | 'specialist' | 'observer' | 'bridge' | 'assistant',
       },

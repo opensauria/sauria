@@ -15,7 +15,8 @@ Thumbs.db
 *.log
 tmp/
 
-# Desktop (Electron)
+# Desktop (Tauri)
+apps/desktop/src-tauri/target/
 apps/desktop/out/
 apps/desktop/.vite/
 apps/desktop/public/icons/

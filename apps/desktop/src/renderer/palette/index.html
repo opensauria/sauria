@@ -2,24 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>OpenWind</title>
+    <title>OpenSauria</title>
     <link rel="stylesheet" href="../shared.css" />
     <style>
       html,
       body {
-        background: rgba(30, 30, 30, 0.75) !important;
+        background: transparent !important;
         height: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
+        overflow: hidden;
       }
 
       .palette {
         width: 100%;
         height: 100%;
-        background: rgba(30, 30, 30, 0.75);
+        background: rgba(30, 30, 30, 0.85);
+        -webkit-backdrop-filter: blur(40px);
+        backdrop-filter: blur(40px);
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        border-radius: 12px;
+        border: 0.5px solid rgba(255, 255, 255, 0.1);
       }
 
       /* ── Search ─────────────────────── */
@@ -27,8 +32,8 @@
       .search-bar {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
+        gap: 8px;
+        padding: 8px 16px;
         border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
       }
 
@@ -83,7 +88,7 @@
       .command-list {
         flex: 1;
         overflow-y: auto;
-        padding: 4px 6px;
+        padding: 4px 8px;
       }
 
       .command-list::-webkit-scrollbar {
@@ -100,12 +105,17 @@
       .command-row {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 6px 8px;
+        gap: 8px;
+        padding: 8px;
         border-radius: 8px;
         cursor: default;
         transition: background 0.08s ease;
         height: 40px;
+        width: 100%;
+        border: none;
+        background: none;
+        font-family: inherit;
+        text-align: left;
       }
 
       .command-row.selected {
@@ -146,7 +156,7 @@
       .result-panel {
         display: none;
         border-top: 0.5px solid rgba(255, 255, 255, 0.08);
-        padding: 12px 14px;
+        padding: 16px;
         max-height: 140px;
         overflow-y: auto;
         font-family: 'SF Mono', 'Fira Code', monospace;
@@ -168,7 +178,7 @@
       .telegram-form {
         display: none;
         border-top: 0.5px solid rgba(255, 255, 255, 0.08);
-        padding: 12px;
+        padding: 16px;
         background: rgba(0, 0, 0, 0.12);
         animation: fadeIn 0.15s ease;
         flex: 1;
@@ -195,8 +205,8 @@
       .bot-card {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 10px 12px;
+        gap: 16px;
+        padding: 8px 16px;
         background: rgba(255, 255, 255, 0.04);
         border: 0.5px solid rgba(255, 255, 255, 0.08);
         border-radius: 10px;
@@ -251,7 +261,7 @@
         color: rgba(255, 255, 255, 0.35);
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         margin-top: 2px;
       }
 
@@ -309,7 +319,7 @@
         align-items: center;
         justify-content: center;
         gap: 8px;
-        padding: 10px 12px;
+        padding: 8px 16px;
         background: transparent;
         border: 1.5px dashed rgba(255, 255, 255, 0.08);
         border-radius: 10px;
@@ -345,7 +355,7 @@
       }
 
       .form-field {
-        margin-bottom: 10px;
+        margin-bottom: 8px;
       }
 
       .form-field label {
@@ -357,7 +367,7 @@
 
       .form-field input {
         width: 100%;
-        padding: 8px 10px;
+        padding: 8px;
         background: rgba(255, 255, 255, 0.06);
         border: 0.5px solid rgba(255, 255, 255, 0.1);
         border-radius: 6px;
@@ -385,11 +395,11 @@
       .form-actions {
         display: flex;
         gap: 8px;
-        margin-top: 12px;
+        margin-top: 16px;
       }
 
       .form-btn {
-        padding: 6px 14px;
+        padding: 8px 16px;
         border-radius: 9999px;
         font-size: 12px;
         font-weight: 500;
@@ -444,7 +454,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 8px 12px 4px;
+        padding: 8px 8px 4px;
         font-size: 10px;
         font-weight: 600;
         text-transform: uppercase;
@@ -463,8 +473,8 @@
       .footer {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 12px 16px;
+        gap: 16px;
+        padding: 16px;
         border-top: 0.5px solid rgba(255, 255, 255, 0.06);
         font-size: 11px;
         color: rgba(255, 255, 255, 0.2);
@@ -493,7 +503,7 @@
         gap: 3px;
       }
 
-      .footer .wind-label {
+      .footer .brand-label {
         margin-left: auto;
         font-weight: 500;
         font-size: 10px;
@@ -535,7 +545,7 @@
       .provider-status {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         font-size: 11px;
         color: rgba(255, 255, 255, 0.35);
       }
@@ -577,7 +587,7 @@
   </head>
   <body>
     <div class="palette">
-      <div class="search-bar">
+      <div class="search-bar" data-tauri-drag-region>
         <svg class="wind-mascot" id="mascot" viewBox="0 0 24 24" fill="none">
           <path
             d="M12 3C8 3 5 6.5 5 11c0 3 1.5 5.5 4 7l.5 2c.2.4.6.2.7 0L12 17.5l1.8 2.5c.1.2.5.4.7 0l.5-2c2.5-1.5 4-4 4-7 0-4.5-3-8-7-8z"
@@ -690,7 +700,7 @@
         </div>
       </div>
 
-      <div class="footer">
+      <div class="footer" data-tauri-drag-region>
         <div class="provider-status" id="provider-status">
           <span class="pulse-dot offline"></span>
           <span id="provider-label">No provider</span>
@@ -698,476 +708,20 @@
         <span><kbd>&uarr;</kbd><kbd>&darr;</kbd></span>
         <span><kbd>&crarr;</kbd> Run</span>
         <span><kbd>esc</kbd></span>
-        <span class="wind-label">OpenWind</span>
+        <span class="brand-label">OpenSauria</span>
         <button class="settings-btn" id="settings-btn" title="Developer settings">
           <svg viewBox="0 0 24 24" fill="none">
-            <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-            <circle cx="12" cy="12" r="3" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+            <path
+              d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"
+              stroke="rgba(255,255,255,0.3)"
+              stroke-width="1.5"
+            />
+            <circle cx="12" cy="12" r="3" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
           </svg>
         </button>
       </div>
     </div>
 
-    <script>
-      var icons = {
-        canvas:
-          '<svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="6" r="2.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><circle cx="19" cy="6" r="2.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><circle cx="12" cy="18" r="2.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M7.5 6h9M6.2 8.3l4.6 7.9M17.8 8.3l-4.6 7.9" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-linecap="round"/></svg>',
-        status:
-          '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M12 7v5l3 3" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-        telegram:
-          '<svg viewBox="0 0 24 24"><path d="M9.04 15.6l-.39 5.36c.56 0 .8-.24 1.1-.52l2.63-2.5 5.45 3.97c1 .55 1.7.26 1.97-.92l3.57-16.67C23.71 2.7 22.85 2.14 21.9 2.5L1.4 10.17c-1.63.64-1.6 1.56-.28 1.98l5.1 1.58L19.5 5.8c.6-.38 1.15-.17.7.2L9.04 15.6z" fill="#27A7E7"/></svg>',
-        setup:
-          '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13l.75 2.25L22 16l-2.25.75L19 19l-.75-2.25L16 16l2.25-.75L19 13z" stroke="rgba(255,255,255,0.35)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-        audit:
-          '<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M9 7h6M9 11h6M9 15h4" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
-        doctor:
-          '<svg viewBox="0 0 24 24" fill="none"><path d="M12 20s-7-5.75-7-10.25A4.5 4.5 0 0112 6a4.5 4.5 0 017 3.75C19 14.25 12 20 12 20z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 10v4M10 12h4" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round"/></svg>',
-        docs: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-        quit: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v9" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/><path d="M18.36 6.64A9 9 0 0112 21a9 9 0 01-6.36-2.36A9 9 0 015.64 6.64" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
-        brain:
-          '<svg viewBox="0 0 24 24" fill="none"><path d="M12 5a3 3 0 10-5.997.125A4 4 0 003 9a4 4 0 001.4 3.04A3.5 3.5 0 005 15a3.5 3.5 0 002.84 3.44A3 3 0 0011 21h1a3 3 0 003.16-2.56A3.5 3.5 0 0019 15a3.5 3.5 0 00-.6-2.96A4 4 0 0021 9a4 4 0 00-2.99-3.87A3 3 0 0012 5z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 5v16" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-linecap="round"/><path d="M9.5 8a5.5 5.5 0 00-4.13 4M14.5 8a5.5 5.5 0 014.13 4" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-linecap="round"/></svg>',
-      };
-
-      var mainCommands = [
-        { id: 'canvas', label: 'Agent Canvas', hint: '' },
-        { id: 'brain', label: 'Brain', hint: 'knowledge graph' },
-        { id: 'telegram', label: 'Telegram', hint: 'channel' },
-        { id: 'setup', label: 'AI Provider', hint: 'config' },
-        { id: 'quit', label: 'Quit', hint: '' },
-      ];
-
-      var devCommands = [
-        { id: 'status', label: 'Daemon Status', hint: '' },
-        { id: 'doctor', label: 'Health Check', hint: '' },
-        { id: 'audit', label: 'Audit Log', hint: '' },
-        { id: 'docs', label: 'Documentation', hint: '' },
-      ];
-
-      var commands = mainCommands;
-      var devMode = false;
-      var inSubView = false;
-      var selectedIndex = 0;
-      var filtered = commands.slice();
-      var searchEl = document.getElementById('search');
-      var listEl = document.getElementById('command-list');
-      var emptyEl = document.getElementById('empty-state');
-      var resultEl = document.getElementById('result-panel');
-      var mascotEl = document.getElementById('mascot');
-      var backBtn = document.getElementById('back-btn');
-      var tgForm = document.getElementById('telegram-form');
-      var tgBotList = document.getElementById('tg-bot-list');
-      var tgAddBtn = document.getElementById('tg-add-btn');
-      var tgFormFields = document.getElementById('tg-form-fields');
-      var tgToken = document.getElementById('tg-token');
-      var tgUserId = document.getElementById('tg-userid');
-      var tgSubmit = document.getElementById('tg-submit');
-      var tgCancel = document.getElementById('tg-cancel');
-      var tgStatus = document.getElementById('tg-status');
-      var settingsBtn = document.getElementById('settings-btn');
-
-      function toggleDevMode() {
-        devMode = !devMode;
-        commands = devMode ? devCommands : mainCommands;
-        selectedIndex = 0;
-        searchEl.value = '';
-        settingsBtn.classList.toggle('active', devMode);
-        searchEl.placeholder = devMode ? 'Developer tools...' : 'Search commands...';
-        render();
-        searchEl.focus();
-      }
-
-      function render() {
-        var query = searchEl.value.toLowerCase();
-        filtered = commands.filter(function (c) {
-          return (
-            c.label.toLowerCase().includes(query) ||
-            c.hint.toLowerCase().includes(query) ||
-            c.id.includes(query)
-          );
-        });
-        if (selectedIndex >= filtered.length) selectedIndex = Math.max(0, filtered.length - 1);
-        if (filtered.length === 0) {
-          listEl.style.display = 'none';
-          emptyEl.style.display = 'block';
-          return;
-        }
-        listEl.style.display = 'block';
-        emptyEl.style.display = 'none';
-        var header = devMode
-          ? '<div class="section-header"><span>Developer</span><span class="section-line"></span></div>'
-          : '';
-        listEl.innerHTML =
-          header +
-          filtered
-            .map(function (c, i) {
-              var cls = 'command-row' + (i === selectedIndex ? ' selected' : '');
-              return (
-                '<div class="' +
-                cls +
-                '" data-index="' +
-                i +
-                '">' +
-                '<div class="icon">' +
-                icons[c.id] +
-                '</div>' +
-                '<div class="label">' +
-                c.label +
-                '</div>' +
-                (c.hint ? '<div class="hint">' + c.hint + '</div>' : '') +
-                '</div>'
-              );
-            })
-            .join('');
-      }
-
-      function enterSubView() {
-        inSubView = true;
-        mascotEl.style.display = 'none';
-        backBtn.classList.remove('hidden');
-      }
-
-      function exitSubView() {
-        inSubView = false;
-        mascotEl.style.display = '';
-        backBtn.classList.add('hidden');
-        tgForm.className = 'telegram-form';
-        resultEl.className = 'result-panel';
-        if (devMode) {
-          devMode = false;
-          commands = mainCommands;
-          settingsBtn.classList.remove('active');
-          searchEl.placeholder = 'Search commands...';
-        }
-        render();
-        searchEl.focus();
-      }
-
-      function executeSelected() {
-        if (filtered.length === 0) return;
-        var cmd = filtered[selectedIndex];
-        window.openwind.executeCommand(cmd.id);
-      }
-
-      var tgIconSvg =
-        '<svg viewBox="0 0 24 24"><path d="M9.04 15.6l-.39 5.36c.56 0 .8-.24 1.1-.52l2.63-2.5 5.45 3.97c1 .55 1.7.26 1.97-.92l3.57-16.67C23.71 2.7 22.85 2.14 21.9 2.5L1.4 10.17c-1.63.64-1.6 1.56-.28 1.98l5.1 1.58L19.5 5.8c.6-.38 1.15-.17.7.2L9.04 15.6z" fill="#27A7E7"/></svg>';
-      var trashSvg =
-        '<svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-      function renderBotCard(bot) {
-        var photo = bot.photo || (bot.profile && bot.profile.photo);
-        var photoHtml = photo ? '<img src="' + photo + '" alt="" />' : tgIconSvg;
-        var name = bot.label || (bot.profile ? '@' + bot.profile.username : 'Telegram Bot');
-        var isOnline = bot.connected;
-        var dotClass = isOnline ? 'bot-status-dot' : 'bot-status-dot offline';
-        var statusText = isOnline ? 'Online' : 'Offline';
-        var nodeId = bot.nodeId || '';
-
-        return (
-          '<div class="bot-card" data-node-id="' +
-          nodeId +
-          '">' +
-          '<div class="bot-avatar">' +
-          photoHtml +
-          '</div>' +
-          '<div class="bot-info">' +
-          '<div class="bot-name">' +
-          name +
-          '</div>' +
-          '<div class="bot-meta">' +
-          '<span class="' +
-          dotClass +
-          '"></span>' +
-          statusText +
-          '</div>' +
-          '</div>' +
-          '<div class="bot-actions">' +
-          '<button class="bot-action-btn danger tg-disconnect-btn" data-node-id="' +
-          nodeId +
-          '" title="Disconnect">' +
-          trashSvg +
-          '</button>' +
-          '</div>' +
-          '</div>'
-        );
-      }
-
-      async function showTelegramForm() {
-        listEl.style.display = 'none';
-        emptyEl.style.display = 'none';
-        resultEl.className = 'result-panel';
-        tgForm.className = 'telegram-form visible';
-        enterSubView();
-
-        var status = await window.openwind.getTelegramStatus();
-        var bots = status.bots || [];
-        var connectedBots = bots.filter(function (b) {
-          return b.connected;
-        });
-
-        if (connectedBots.length > 0) {
-          tgBotList.innerHTML = connectedBots.map(renderBotCard).join('');
-          tgFormFields.className = 'tg-connect-form';
-          tgAddBtn.style.display = '';
-
-          // Bind disconnect buttons
-          var discBtns = tgBotList.querySelectorAll('.tg-disconnect-btn');
-          discBtns.forEach(function (btn) {
-            btn.addEventListener('mousedown', async function (e) {
-              e.preventDefault();
-              var nid = btn.getAttribute('data-node-id');
-              if (nid) {
-                await window.openwind.disconnectChannel('telegram', nid);
-                showTelegramForm();
-              }
-            });
-          });
-        } else {
-          tgBotList.innerHTML = '';
-          tgAddBtn.style.display = 'none';
-          tgFormFields.className = 'tg-connect-form visible';
-          tgToken.value = '';
-          tgUserId.value = '';
-          tgStatus.className = 'form-status';
-          tgSubmit.disabled = true;
-          tgUserId.focus();
-        }
-      }
-
-      function hideTelegramForm() {
-        exitSubView();
-      }
-
-      function showConnectForm() {
-        tgFormFields.className = 'tg-connect-form visible';
-        tgAddBtn.style.display = 'none';
-        tgToken.value = '';
-        tgUserId.value = '';
-        tgStatus.className = 'form-status';
-        tgSubmit.disabled = true;
-        tgUserId.focus();
-      }
-
-      function validateTgForm() {
-        var hasToken = tgToken.value.trim().length > 0;
-        var hasId = tgUserId.value.trim().length > 0;
-        tgSubmit.disabled = !(hasToken && hasId);
-      }
-
-      tgToken.addEventListener('input', validateTgForm);
-      tgToken.addEventListener('keyup', validateTgForm);
-      tgUserId.addEventListener('input', validateTgForm);
-      tgUserId.addEventListener('keyup', validateTgForm);
-      tgAddBtn.addEventListener('mousedown', function (e) {
-        e.preventDefault();
-        showConnectForm();
-      });
-      tgCancel.addEventListener('mousedown', function (e) {
-        e.preventDefault();
-        hideTelegramForm();
-      });
-
-      tgSubmit.addEventListener('mousedown', async function (e) {
-        e.preventDefault();
-        if (tgSubmit.disabled) return;
-
-        var rawId = tgUserId.value.trim().replace(/\D/g, '');
-        var parsedId = parseInt(rawId, 10);
-        if (!rawId || isNaN(parsedId) || parsedId <= 0) {
-          tgStatus.textContent = 'User ID must be a number (get it from @userinfobot)';
-          tgStatus.className = 'form-status visible error';
-          tgUserId.focus();
-          return;
-        }
-
-        tgSubmit.disabled = true;
-        tgStatus.textContent = 'Connecting...';
-        tgStatus.className = 'form-status visible';
-        try {
-          var result = await window.openwind.connectChannel('telegram', {
-            token: tgToken.value.trim(),
-            userId: parsedId,
-          });
-          if (result.success) {
-            tgStatus.textContent = 'Connected to @' + result.botUsername;
-            tgStatus.className = 'form-status visible success';
-            setTimeout(function () {
-              showTelegramForm();
-            }, 1000);
-          } else {
-            tgStatus.textContent = result.error;
-            tgStatus.className = 'form-status visible error';
-            tgSubmit.disabled = false;
-          }
-        } catch (err) {
-          tgStatus.textContent = 'Connection failed';
-          tgStatus.className = 'form-status visible error';
-          tgSubmit.disabled = false;
-        }
-      });
-
-      /* Prevent Escape/keyboard nav inside the form from doing command stuff */
-      tgForm.addEventListener('keydown', function (e) {
-        e.stopPropagation();
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          hideTelegramForm();
-        } else if (e.key === 'Enter' && !tgSubmit.disabled) {
-          e.preventDefault();
-          tgSubmit.dispatchEvent(new MouseEvent('mousedown'));
-        }
-      });
-
-      backBtn.addEventListener('mousedown', function (e) {
-        e.preventDefault();
-        exitSubView();
-      });
-
-      settingsBtn.addEventListener('mousedown', function (e) {
-        e.preventDefault();
-        if (inSubView) exitSubView();
-        toggleDevMode();
-      });
-
-      searchEl.addEventListener('input', function () {
-        selectedIndex = 0;
-        if (inSubView) exitSubView();
-        if (devMode) {
-          devMode = false;
-          commands = mainCommands;
-          settingsBtn.classList.remove('active');
-          searchEl.placeholder = 'Search commands...';
-        }
-        render();
-      });
-
-      document.addEventListener('keydown', function (e) {
-        if (tgForm.classList.contains('visible')) return;
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          if (filtered.length > 0) {
-            selectedIndex = (selectedIndex + 1) % filtered.length;
-            render();
-          }
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          if (filtered.length > 0) {
-            selectedIndex = (selectedIndex - 1 + filtered.length) % filtered.length;
-            render();
-          }
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          executeSelected();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          if (inSubView) {
-            exitSubView();
-          } else if (devMode) {
-            devMode = false;
-            commands = mainCommands;
-            selectedIndex = 0;
-            settingsBtn.classList.remove('active');
-            searchEl.placeholder = 'Search commands...';
-            render();
-          } else if (searchEl.value !== '') {
-            searchEl.value = '';
-            selectedIndex = 0;
-            render();
-          } else {
-            window.openwind.hidePalette();
-          }
-        }
-      });
-
-      listEl.addEventListener('mousedown', function (e) {
-        var row = e.target.closest('.command-row');
-        if (!row) return;
-        e.preventDefault();
-        selectedIndex = parseInt(row.dataset.index, 10);
-        render();
-        executeSelected();
-      });
-
-      listEl.addEventListener('mousemove', function (e) {
-        var row = e.target.closest('.command-row');
-        if (!row) return;
-        var idx = parseInt(row.dataset.index, 10);
-        if (idx !== selectedIndex) {
-          selectedIndex = idx;
-          render();
-        }
-      });
-
-      window.openwind.onCommandResult(function (result) {
-        resultEl.className = 'result-panel visible';
-        resultEl.textContent = result;
-        enterSubView();
-      });
-
-      window.openwind.onShowTelegramForm(function () {
-        showTelegramForm();
-      });
-
-      window.openwind.onPaletteShow(function () {
-        refreshProviderStatus();
-        if (tgForm.classList.contains('visible')) {
-          var firstEmpty = !tgUserId.value.trim()
-            ? tgUserId
-            : !tgToken.value.trim()
-              ? tgToken
-              : tgUserId;
-          firstEmpty.focus();
-        } else {
-          searchEl.focus();
-        }
-      });
-
-      window.openwind.onPaletteReset(function () {
-        searchEl.value = '';
-        selectedIndex = 0;
-        devMode = false;
-        commands = mainCommands;
-        settingsBtn.classList.remove('active');
-        searchEl.placeholder = 'Search commands...';
-        resultEl.className = 'result-panel';
-        tgForm.className = 'telegram-form';
-        render();
-        searchEl.focus();
-      });
-
-      render();
-
-      function refreshProviderStatus() {
-        window.openwind.getStatus().then(function (status) {
-          var dot = document.querySelector('#provider-status .pulse-dot');
-          var label = document.getElementById('provider-label');
-          if (status.connected && status.provider) {
-            dot.className = 'pulse-dot';
-            var method = status.authMethod === 'oauth' ? 'subscription' : 'API key';
-            label.textContent = status.provider + ' (' + method + ')';
-          } else {
-            dot.className = 'pulse-dot offline';
-            label.textContent = 'No provider';
-          }
-        });
-      }
-
-      refreshProviderStatus();
-
-      window.openwind.getTelegramStatus().then(function (status) {
-        var tgCmd = mainCommands.find(function (c) {
-          return c.id === 'telegram';
-        });
-        if (!tgCmd) return;
-        var bots = status.bots || [];
-        var count = bots.filter(function (b) {
-          return b.connected;
-        }).length;
-        if (count > 0) {
-          tgCmd.hint = count === 1 ? 'connected' : count + ' bots';
-          if (!devMode) render();
-        }
-      });
-    </script>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

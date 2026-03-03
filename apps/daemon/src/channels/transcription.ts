@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
-const VENV_PYTHON = join(homedir(), '.openwind', 'venv', 'bin', 'python3');
+const VENV_PYTHON = join(homedir(), '.opensauria', 'venv', 'bin', 'python3');
 const AUTO_MODELS: Record<string, string> = {
   darwin: 'mlx-community/whisper-large-v3-turbo',
   linux: 'large-v3-turbo',
@@ -31,7 +31,7 @@ export class TranscriptionService {
       throw new Error(`Audio exceeds ${String(MAX_AUDIO_BYTES)} byte limit`);
     }
 
-    const tmpPath = join(tmpdir(), `openwind-${randomUUID()}.ogg`);
+    const tmpPath = join(tmpdir(), `opensauria-${randomUUID()}.ogg`);
     try {
       await writeFile(tmpPath, oggBuffer);
       return await this.runWhisper(tmpPath);

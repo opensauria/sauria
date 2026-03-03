@@ -134,7 +134,7 @@ const DEFAULT_MODELS = {
   embeddings: { provider: 'local' as const, model: 'all-MiniLM-L6-v2' },
 };
 
-export const OpenWindConfigSchema = z
+export const OpenSauriaConfigSchema = z
   .object({
     models: z
       .object({
@@ -177,7 +177,7 @@ export const OpenWindConfigSchema = z
   })
   .strict();
 
-export type OpenWindConfig = z.infer<typeof OpenWindConfigSchema>;
+export type OpenSauriaConfig = z.infer<typeof OpenSauriaConfigSchema>;
 export type ModelConfig = z.infer<typeof ModelConfigSchema>;
 export type AuthConfig = z.infer<typeof AuthConfigSchema>;
 export type McpServerConfig = z.infer<typeof McpServerConfigSchema>;

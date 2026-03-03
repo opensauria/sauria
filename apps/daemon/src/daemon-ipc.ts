@@ -36,10 +36,7 @@ export interface DaemonIpcServer {
   close(): Promise<void>;
 }
 
-type MethodHandler = (
-  db: BetterSqlite3.Database,
-  params: Record<string, unknown>,
-) => unknown;
+type MethodHandler = (db: BetterSqlite3.Database, params: Record<string, unknown>) => unknown;
 
 function buildMethodMap(): Map<string, MethodHandler> {
   const methods = new Map<string, MethodHandler>();
@@ -146,7 +143,10 @@ function handleConnection(
         });
         const response: IpcResponse = {
           id: parsed.id,
-          error: { code: 'HANDLER_ERROR', message: err instanceof Error ? err.message : 'Internal error' },
+          error: {
+            code: 'HANDLER_ERROR',
+            message: err instanceof Error ? err.message : 'Internal error',
+          },
         };
         socket.write(JSON.stringify(response) + '\n');
       }
@@ -163,10 +163,7 @@ function handleConnection(
   });
 }
 
-export function startIpcServer(
-  socketPath: string,
-  db: BetterSqlite3.Database,
-): DaemonIpcServer {
+export function startIpcServer(socketPath: string, db: BetterSqlite3.Database): DaemonIpcServer {
   const logger = getLogger();
   const methods = buildMethodMap();
 

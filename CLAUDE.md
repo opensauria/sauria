@@ -1,8 +1,8 @@
-# OpenWind — Project Rules
+# OpenSauria — Project Rules
 
-## What is OpenWind
+## What is OpenSauria
 
-OpenWind is a security-first personal AI operating system. It runs as a local daemon that ingests information from multiple sources (MCP servers, email, calendars), builds a persistent knowledge graph (entities, relations, events), and exposes it through channels (Telegram, Slack, WhatsApp, Discord, Email) and an MCP server.
+OpenSauria is a security-first personal AI operating system. It runs as a local daemon that ingests information from multiple sources (MCP servers, email, calendars), builds a persistent knowledge graph (entities, relations, events), and exposes it through channels (Telegram, Slack, WhatsApp, Discord, Email) and an MCP server.
 
 The desktop app (Electron) provides a visual canvas where users connect AI agents, draw edges between them, and orchestrate multi-agent workflows. The user is the "owner" who gives orders; agents collaborate through the orchestrator.
 
@@ -46,7 +46,7 @@ apps/
       ai/                          # Multi-provider router, extraction, reasoning
       auth/                        # OAuth PKCE, API key validation, onboarding
       channels/                    # Telegram, Slack, WhatsApp, Discord, Email, registry
-      config/                      # Zod schema, loader (re-exports @openwind/config)
+      config/                      # Zod schema, loader (re-exports @opensauria/config)
       db/                          # SQLite schema, world-model queries, search
       engine/                      # Proactive alerts, deadlines, pattern detection
       ingestion/                   # Pipeline, normalizer, dedup, MCP/email/calendar
@@ -87,21 +87,21 @@ apps/
         palette/index.html         # Command palette UI
         setup/index.html           # Setup wizard UI
         brain/index.html           # Brain knowledge graph UI
-        shared.css                 # Imports @openwind/design-tokens + shared components
+        shared.css                 # Imports @opensauria/design-tokens + shared components
     public/icons/                  # Brand + UI icons (copied by build script)
     scripts/copy-icons.js          # Icon build pipeline
     package.json  forge.config.ts  vite.*.config.ts
 
 packages/
-  types/                           # @openwind/types (zero deps)
+  types/                           # @opensauria/types (zero deps)
     src/                           # CanvasGraph, AgentNode, Edge, auth, IPC types
-  config/                          # @openwind/config (deps: zod, @openwind/types)
+  config/                          # @opensauria/config (deps: zod, @opensauria/types)
     src/                           # paths.ts, schema.ts, defaults.ts
-  vault/                           # @openwind/vault (deps: @openwind/config)
+  vault/                           # @opensauria/vault (deps: @opensauria/config)
     src/                           # machine-id, derive-password, crypto, fs-sandbox
-  ipc-protocol/                    # @openwind/ipc-protocol (deps: zod, @openwind/types)
+  ipc-protocol/                    # @opensauria/ipc-protocol (deps: zod, @opensauria/types)
     src/                           # IPC methods, owner command parsing
-  design-tokens/                   # @openwind/design-tokens (zero deps)
+  design-tokens/                   # @opensauria/design-tokens (zero deps)
     src/tokens.ts                  # Typed source of truth
     generated/tokens.css           # CSS custom properties (generated)
     generated/tokens.json          # JSON (generated)
@@ -112,12 +112,12 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 ### Dependency Graph
 
 ```
-                @openwind/types (zero deps)
+                @opensauria/types (zero deps)
                 /      |       \
                /       |        \
-@openwind/config  @openwind/ipc-protocol  @openwind/design-tokens
+@opensauria/config  @opensauria/ipc-protocol  @opensauria/design-tokens
        |
-@openwind/vault
+@opensauria/vault
        \              /
         \            /
      apps/daemon    apps/desktop
@@ -146,6 +146,7 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 ### Error Handling
 
 - Never swallow errors silently
+- Never mask, suppress, or hide warnings or deprecations (no `--no-deprecation`, no `--disable-warning`, no empty catch blocks). Fix the root cause.
 - Audit logger for all channel and security events
 - `{ success: false }` pattern in audit for failures
 - Rate limiters on all inbound channels
@@ -155,7 +156,7 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - All user input goes through `sanitizeChannelInput()` before processing
 - Vault secrets encrypted with AES-256-GCM, PBKDF2 key derivation (256k iterations, sha512)
 - Vault password derived from hardware UUID (macOS `IOPlatformUUID`), NOT hostname
-- Machine ID cached at `~/.openwind/vault/.machine-id` — never changes
+- Machine ID cached at `~/.opensauria/vault/.machine-id` — never changes
 - URL allowlist for external fetches (`secureFetch`)
 - PII scrubber before logging
 - Rate limiting on every channel (per-minute caps)
@@ -180,6 +181,7 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - Schema applied on startup via `applySchema(db)`
 - Tables: `entities`, `relations`, `events`, `observations`, `agent_messages`, `agent_conversations`, `agent_memory`, `agent_tasks`
 - FTS5 for full-text search
+- **Migrations**: `_migrations` table tracks applied migrations. `runMigrations()` runs after `applySchema()`. Indexes on new columns must be created inside the migration (after `ALTER TABLE`), not in `SCHEMA_SQL` — existing DBs would crash on `CREATE INDEX` for columns that don't exist yet.
 - **Embeddings**: `apps/daemon/src/ai/embeddings.ts` imports `@huggingface/transformers` but the package was removed from `package.json`. Semantic search is broken until embeddings are migrated (to local Python model or re-added as dependency).
 
 ### Channels
@@ -192,18 +194,27 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 ### Orchestrator
 
 - `CanvasGraph` (v2) is the source of truth: nodes, edges, workspaces
-- Graph stored at `~/.openwind/canvas.json`, read by daemon on startup
-- `MessageQueue` provides owner priority (unshift) and backpressure
+- Graph stored at `~/.opensauria/canvas.json`, read by daemon on startup
+- `MessageQueue` provides owner priority (unshift), graceful backpressure (never throws, evicts tail for owner messages), and `onError` callback
 - `evaluateEdgeRules()` for deterministic routing, `LLMRoutingBrain` for intelligent routing
 - `AutonomyEnforcer` filters actions based on agent autonomy level
 - `ChannelRegistry` maps nodeId to channel instances
+- **LLM Timeout**: `callLLM()` uses `Promise.race` with 30s timeout — prevents queue slots from being blocked forever
+- **LLM Failure Fallback**: on LLM error, sends fallback reply to sender + escalates to owner (unless sender is owner). Internal messages route fallback back through the chain.
+- **Prompt Token Cap**: `MAX_PROMPT_TOKENS = 4000`. Soft sections (workspace facts, agent facts, knowledge graph, peer messages) truncated first if over budget. Core sections (action schema, agents, hierarchy, history) never truncated.
+- **DelegationTracker**: `delegation-tracker.ts` tracks `agent_tasks` deadlines (critical=30min, high=2h, normal=8h, low=24h). `sweepOverdueDelegations()` runs every 5min, auto-escalates overdue tasks to owner.
+- **EscalationManager**: `findPendingForChannel(sourceNodeId)` matches escalations by channel, not just most-recent globally. Prevents misrouting when multiple agents escalate concurrently.
 
 ### Agent Collaboration
 
+- **Internal Reply Routing**: `reply` action on internally-forwarded messages checks `registry.get(sourceNodeId)` — if the node has a registered external channel (e.g. Telegram bot), it replies directly to the owner on that channel. If no channel, routes back through the forwarding chain. This means any agent with a channel can contact the owner directly, regardless of hierarchy position.
+- **Action Semantics**: `reply` = talk to owner (via own channel or back through chain). `forward` = talk to another agent internally. The LLM decides which action to use based on context — never inject explicit bot names or routing hints in prompts.
+- **Forwarded Reply Context**: when replying to a forwarded message, the LLM is instructed to briefly state who asked and what for at the start of the reply, so the owner has context (e.g. "Kyra asked me to check X — here's what I found").
 - **Shared Conversation Window**: forwards/notifies enriched with N most recent messages from source conversation (~150-200 tokens). `AgentMemory.getRecentMessagesForContext()` provides formatted context.
 - **Workspace Memory Pool**: `agent_memory` table has `workspace_id` column. `AgentMemory.getWorkspaceFacts()` retrieves facts scoped to a workspace. LLM routing prompt injects up to 5 workspace facts (~100 tokens).
-- **Peer Messages in Routing**: `buildRoutingPrompt()` includes recent messages from other nodes in the same workspace (~100 tokens). Total additional overhead: ~350-400 tokens per routing decision (negligible vs base ~2000-4000).
+- **Peer Messages in Routing**: `buildRoutingPrompt()` includes recent messages from other nodes in the same workspace (up to 3 peer messages, ~100 tokens). Total additional overhead: ~350-400 tokens per routing decision.
 - **Graph Persistence**: owner commands (`promote`, `reassign`, `fire`, `pause`) persist mutations to `canvas.json` via `persistGraph()`.
+- **Hop Limit**: `MAX_INTERNAL_HOPS = 5` prevents infinite loops in internal agent-to-agent routing.
 - Design doc: `docs/plans/2026-02-19-multi-agent-collaboration-design.md`
 
 ### Voice Transcription
@@ -211,18 +222,18 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - Platform-specific Whisper via Python subprocess (`execFile`, no shell)
 - macOS: `mlx-whisper` (Apple Silicon optimized, `mlx-community/whisper-large-v3-turbo`)
 - Linux/Windows: `faster-whisper` (`large-v3-turbo`)
-- Python venv at `~/.openwind/venv/` (managed separately from Node.js deps)
+- Python venv at `~/.opensauria/venv/` (managed separately from Node.js deps)
 - Config: `channels.telegram.voice.model` defaults to `'auto'` (resolves per platform)
 - `TranscriptionService` in `apps/daemon/src/channels/transcription.ts`
 - Max audio size: 20 MB, configurable timeout via `maxDurationSeconds`
 
 ## Desktop UI Design
 
-### Design Tokens (`@openwind/design-tokens`)
+### Design Tokens (`@opensauria/design-tokens`)
 
 Source of truth: `packages/design-tokens/src/tokens.ts` (typed `as const`).
 Generated outputs: `tokens.css` (CSS custom properties), `tokens.json`.
-Desktop `shared.css` imports via `@import '@openwind/design-tokens/tokens.css'`.
+Desktop `shared.css` imports via `@import '@opensauria/design-tokens/tokens.css'`.
 
 ```
 --bg: #1a1a1a          --surface: rgba(255,255,255,0.04)
@@ -305,7 +316,7 @@ Desktop `shared.css` imports via `@import '@openwind/design-tokens/tokens.css'`.
 - Dev: `cd apps/desktop && pnpm dev` (icons + electron-forge start with Vite HMR)
 - Package: `cd apps/desktop && pnpm run package`
 - Always kill all Electron processes before restart (see memory notes)
-- Daemon bundle must be rebuilt separately: `pnpm -F openwind-daemon build`
+- Daemon bundle must be rebuilt separately: `pnpm -F opensauria-daemon build`
 - Renderer files live in `apps/desktop/src/renderer/{canvas,palette,setup,brain}/`
 - Icons are static assets in `apps/desktop/public/icons/` (served at `/icons/`)
 
@@ -313,14 +324,14 @@ Desktop `shared.css` imports via `@import '@openwind/design-tokens/tokens.css'`.
 
 ```
 pnpm -r build                    # Build all packages + apps
-pnpm -F openwind-daemon build    # Rebuild daemon only
-pnpm -F openwind-desktop dev     # Start desktop in dev mode
-pnpm -F openwind-daemon test     # Run daemon tests
+pnpm -F opensauria-daemon build    # Rebuild daemon only
+pnpm -F opensauria-desktop dev     # Start desktop in dev mode
+pnpm -F opensauria-daemon test     # Run daemon tests
 pnpm -r typecheck                # Typecheck all packages
 ```
 
 When changing shared packages (`packages/*`): rebuild with `pnpm -r build` (Turbo handles deps)
-When changing daemon code (`apps/daemon/src/`): `pnpm -F openwind-daemon build`
+When changing daemon code (`apps/daemon/src/`): `pnpm -F opensauria-daemon build`
 When changing desktop main (`apps/desktop/src/main/`): Vite rebuilds automatically in dev mode
 When changing renderer files (`apps/desktop/src/renderer/`): Vite hot-reloads in dev mode
 Full restart: kill Electron + daemon, `pnpm -r build`, start desktop

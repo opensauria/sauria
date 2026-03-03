@@ -102,7 +102,11 @@ export function listEntities(
 export function getEntityDetail(
   db: BetterSqlite3.Database,
   id: string,
-): { entity: Record<string, unknown>; relations: Record<string, unknown>[]; events: Record<string, unknown>[] } | null {
+): {
+  entity: Record<string, unknown>;
+  relations: Record<string, unknown>[];
+  events: Record<string, unknown>[];
+} | null {
   const entity = db.prepare('SELECT * FROM entities WHERE id = ?').get(id) as
     | Record<string, unknown>
     | undefined;
@@ -236,9 +240,7 @@ export function listObservations(
 
   const queryParams: unknown[] = type ? [type, limit, offset] : [limit, offset];
   const rows = db
-    .prepare(
-      `SELECT * FROM observations${whereType} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-    )
+    .prepare(`SELECT * FROM observations${whereType} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
     .all(...queryParams) as Record<string, unknown>[];
 
   return { rows, total };
@@ -272,9 +274,7 @@ export function listEvents(
 
   const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
 
-  const countRow = db
-    .prepare(`SELECT COUNT(*) as total FROM events${where}`)
-    .get(...params);
+  const countRow = db.prepare(`SELECT COUNT(*) as total FROM events${where}`).get(...params);
   const total = isCountRow(countRow) ? countRow.total : 0;
 
   const queryParams = [...params, limit, offset];
@@ -402,9 +402,7 @@ export function listFacts(
   }
   const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
 
-  const countRow = db
-    .prepare(`SELECT COUNT(*) as total FROM agent_memory${where}`)
-    .get(...params);
+  const countRow = db.prepare(`SELECT COUNT(*) as total FROM agent_memory${where}`).get(...params);
   const total = isCountRow(countRow) ? countRow.total : 0;
 
   const queryParams = [...params, limit, offset];

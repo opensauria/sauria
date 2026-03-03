@@ -1,5 +1,5 @@
 import type BetterSqlite3 from 'better-sqlite3';
-import type { OpenWindConfig } from './config/schema.js';
+import type { OpenSauriaConfig } from './config/schema.js';
 import type { AuditLogger } from './security/audit.js';
 import type { ModelRouter } from './ai/router.js';
 import { sanitizeChannelInput } from './security/sanitize.js';
@@ -15,7 +15,7 @@ import {
 
 export interface AppContext {
   readonly db: BetterSqlite3.Database;
-  readonly config: OpenWindConfig;
+  readonly config: OpenSauriaConfig;
   readonly audit: AuditLogger;
   readonly router: ModelRouter;
 }
@@ -39,7 +39,7 @@ export async function askAction(ctx: AppContext, question: string): Promise<void
 
 export function statusAction(ctx: AppContext): void {
   const totalCost = ctx.audit.getTotalCost();
-  w('OpenWind Status');
+  w('OpenSauria Status');
   w('---');
   w(`Entities:     ${String(countRows(ctx.db, 'SELECT COUNT(*) AS c FROM entities'))}`);
   w(`Events:       ${String(countRows(ctx.db, 'SELECT COUNT(*) AS c FROM events'))}`);

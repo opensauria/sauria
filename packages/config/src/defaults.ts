@@ -1,7 +1,7 @@
-import { OpenWindConfigSchema } from './schema.js';
-import type { OpenWindConfig } from './schema.js';
+import { OpenSauriaConfigSchema } from './schema.js';
+import type { OpenSauriaConfig } from './schema.js';
 
-export const DEFAULT_CONFIG: OpenWindConfig = OpenWindConfigSchema.parse({});
+export const DEFAULT_CONFIG: OpenSauriaConfig = OpenSauriaConfigSchema.parse({});
 
 /**
  * Model presets per provider — used by desktop setup wizard.
@@ -46,7 +46,10 @@ export const CLOUD_PRESETS: Record<string, ModelPresetSet> = {
 /**
  * Creates a local provider preset with the given base URL.
  */
-export function createLocalPreset(engine: 'ollama' | 'lm-studio' | 'open-webui', baseUrl: string): ModelPresetSet {
+export function createLocalPreset(
+  engine: 'ollama' | 'lm-studio' | 'open-webui',
+  baseUrl: string,
+): ModelPresetSet {
   if (engine === 'ollama') {
     return {
       extraction: { provider: 'ollama', model: 'llama3.2', baseUrl },
