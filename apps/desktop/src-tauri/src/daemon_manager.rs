@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
 use tokio::process::Child;
@@ -20,14 +21,17 @@ pub struct DaemonState {
 
 impl DaemonState {
     pub fn new() -> Self {
-        let (node_path, daemon_cli_path) = resolve_paths();
         Self {
             process: None,
             starting: false,
             restarts: 0,
-            node_path,
-            daemon_cli_path,
+            node_path: resolve_node(),
+            daemon_cli_path: String::new(),
         }
+    }
+
+    pub fn set_daemon_cli_path(&mut self, path: String) {
+        self.daemon_cli_path = path;
     }
 }
 
@@ -76,12 +80,21 @@ fn shell_which(name: &str) -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
-fn resolve_daemon_cli() -> String {
+pub fn resolve_daemon_cli(resource_dir: Option<&Path>) -> String {
+    // 1. Global install
     if let Some(path) = shell_which("opensauria") {
         return path;
     }
 
-    // Fallback: resolve relative to cwd or binary location
+    // 2. Bundled Tauri resource
+    if let Some(dir) = resource_dir {
+        let bundled = dir.join("daemon/index.mjs");
+        if bundled.exists() {
+            return bundled.to_string_lossy().to_string();
+        }
+    }
+
+    // 3. Dev mode: relative to cwd or binary location
     let candidates = [
         std::env::current_dir()
             .ok()
@@ -127,10 +140,6 @@ fn resolve_node() -> String {
     }
 
     "node".to_string()
-}
-
-fn resolve_paths() -> (String, String) {
-    (resolve_node(), resolve_daemon_cli())
 }
 
 // ─── PID helpers ────────────────────────────────────────────────────────────

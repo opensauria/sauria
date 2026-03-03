@@ -17,6 +17,7 @@ use daemon_client::DaemonClient;
 use daemon_manager::DaemonState;
 use paths::Paths;
 use std::sync::Arc;
+use tauri::Manager;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 fn main() {
@@ -97,10 +98,15 @@ fn main() {
                 },
             )?;
 
+            // Resolve daemon CLI path (bundled resource → global install → dev fallback)
+            let resource_dir = app.path().resource_dir().ok();
+            let cli_path = daemon_manager::resolve_daemon_cli(resource_dir.as_deref());
+
             // Start daemon
             let ds = daemon_state.clone();
             let p = Paths::resolve();
             tauri::async_runtime::spawn(async move {
+                ds.lock().await.set_daemon_cli_path(cli_path);
                 let _ = daemon_manager::start_daemon(&ds, &p).await;
             });
 
@@ -111,6 +117,17 @@ fn main() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running OpenSauria");
+        .build(tauri::generate_context!())
+        .expect("error while building OpenSauria")
+        .run(move |app, event| {
+            if let tauri::RunEvent::Exit = event {
+                let state = app.state::<Arc<tokio::sync::Mutex<DaemonState>>>();
+                let paths = app.state::<Paths>();
+                let state = state.inner().clone();
+                let paths = paths.inner().clone();
+                tauri::async_runtime::block_on(async {
+                    daemon_manager::stop_daemon(&state, &paths).await;
+                });
+            }
+        });
 }

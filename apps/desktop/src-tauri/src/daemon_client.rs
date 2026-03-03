@@ -147,12 +147,4 @@ impl DaemonClient {
         Err("Daemon not reachable".to_string())
     }
 
-    pub async fn disconnect(&self) {
-        let mut tx_guard = self.tx.lock().await;
-        *tx_guard = None;
-        let mut pending = self.pending.lock().await;
-        for (_, sender) in pending.drain() {
-            let _ = sender.send(Err("Client disconnecting".to_string()));
-        }
-    }
 }

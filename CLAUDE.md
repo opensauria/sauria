@@ -146,6 +146,7 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 ### Error Handling
 
 - Never swallow errors silently
+- Never mask, suppress, or hide warnings or deprecations (no `--no-deprecation`, no `--disable-warning`, no empty catch blocks). Fix the root cause.
 - Audit logger for all channel and security events
 - `{ success: false }` pattern in audit for failures
 - Rate limiters on all inbound channels

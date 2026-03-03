@@ -635,11 +635,7 @@ export class AgentOrchestrator {
             );
             if (!routed) {
               const group = this.findGroupForNode(source.internalRoute.fromNodeId);
-              await this.registry.sendTo(
-                source.internalRoute.fromNodeId,
-                action.content,
-                group,
-              );
+              await this.registry.sendTo(source.internalRoute.fromNodeId, action.content, group);
             }
           }
         } else {
@@ -647,14 +643,10 @@ export class AgentOrchestrator {
         }
         if (this.agentMemory) {
           const platform = source.internalRoute ? 'internal' : source.platform;
-          const groupId = source.internalRoute
-            ? source.internalRoute.dialogueId
-            : source.groupId;
-          const conversationId = this.agentMemory.getOrCreateConversation(
-            platform,
-            groupId,
-            [source.sourceNodeId],
-          );
+          const groupId = source.internalRoute ? source.internalRoute.dialogueId : source.groupId;
+          const conversationId = this.agentMemory.getOrCreateConversation(platform, groupId, [
+            source.sourceNodeId,
+          ]);
           this.agentMemory.recordMessage({
             conversationId,
             sourceNodeId: source.sourceNodeId,
@@ -810,14 +802,6 @@ export class AgentOrchestrator {
     if (node.platform === 'slack' && this.ownerIdentity.slack) return true;
     if (node.platform === 'whatsapp' && this.ownerIdentity.whatsapp) return true;
     return false;
-  }
-
-  private hasOwnerSupervisor(nodeId: string): boolean {
-    return this.graph.edges.some(
-      (e) =>
-        e.to === nodeId &&
-        this.graph.nodes.some((n) => n.id === e.from && n.platform === 'owner'),
-    );
   }
 
   private buildForwardContext(

@@ -84,6 +84,7 @@ pub fn navigate_palette_to(app: &AppHandle, page: &str) -> Result<(), String> {
     let _ = win.set_min_size(None::<tauri::LogicalSize<f64>>);
     win.set_resizable(true).map_err(|e| e.to_string())?;
     win.set_always_on_top(false).map_err(|e| e.to_string())?;
+    win.set_decorations(true).map_err(|e| e.to_string())?;
 
     // Navigate to new page
     let query = if page != "palette" { "?inPalette=1" } else { "" };
@@ -121,6 +122,7 @@ pub fn navigate_palette_back(app: &AppHandle) -> Result<(), String> {
     let win_clone = win.clone();
     tauri::async_runtime::spawn(async move {
         animate_to_palette(&win_clone).await;
+        let _ = win_clone.set_decorations(false);
         let _ = win_clone.set_always_on_top(true);
         let _ = win_clone.set_resizable(false);
     });
@@ -244,10 +246,10 @@ fn resolve_page_url(
     page: &str,
     query: &str,
 ) -> Result<url::Url, String> {
-    let current = win.url().map_err(|e| e.to_string())?;
-    let origin = current.origin().ascii_serialization();
-    let raw = format!("{origin}/src/renderer/{page}/index.html{query}");
-    raw.parse().map_err(|e: url::ParseError| e.to_string())
+    let mut url = win.url().map_err(|e| e.to_string())?;
+    url.set_path(&format!("/src/renderer/{page}/index.html"));
+    url.set_query(query.strip_prefix('?'));
+    Ok(url)
 }
 
 fn center_palette(app: &AppHandle) -> Result<(), String> {
@@ -293,44 +295,3 @@ pub fn show_canvas(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-pub fn show_brain(app: &AppHandle) -> Result<(), String> {
-    if let Some(win) = app.get_webview_window("brain") {
-        win.show().map_err(|e| e.to_string())?;
-        win.set_focus().map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    let url = WebviewUrl::App("src/renderer/brain/index.html".into());
-    let win = WebviewWindowBuilder::new(app, "brain", url)
-        .title("OpenSauria Brain")
-        .inner_size(1000.0, 700.0)
-        .min_inner_size(720.0, 480.0)
-        .resizable(true)
-        .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    win.show().map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-pub fn show_setup(app: &AppHandle) -> Result<(), String> {
-    if let Some(win) = app.get_webview_window("setup") {
-        win.show().map_err(|e| e.to_string())?;
-        win.set_focus().map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    let url = WebviewUrl::App("src/renderer/setup/index.html".into());
-    let win = WebviewWindowBuilder::new(app, "setup", url)
-        .title("OpenSauria Setup")
-        .inner_size(520.0, 680.0)
-        .resizable(false)
-        .maximizable(false)
-        .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    win.show().map_err(|e| e.to_string())?;
-    Ok(())
-}

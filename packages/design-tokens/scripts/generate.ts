@@ -20,10 +20,7 @@ function camelToKebab(str: string): string {
   return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-function generateCssProperties(
-  prefix: string,
-  tokens: Record<string, string>,
-): string[] {
+function generateCssProperties(prefix: string, tokens: Record<string, string>): string[] {
   return Object.entries(tokens).map(([key, value]) => {
     const name = key === 'default' ? prefix : `${prefix}-${camelToKebab(key)}`;
     return `  --${name}: ${value};`;
@@ -34,9 +31,7 @@ const lines: string[] = [
   '/* Auto-generated from @opensauria/design-tokens — do not edit manually */',
   '',
   ':root {',
-  ...generateCssProperties('', colors).map((l) =>
-    l.replace('--', '--').replace('---', '--'),
-  ),
+  ...generateCssProperties('', colors).map((l) => l.replace('--', '--').replace('---', '--')),
   '',
   ...generateCssProperties('radius', radii),
   '',
