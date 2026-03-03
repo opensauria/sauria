@@ -1,10 +1,12 @@
 import type { InboundMessage } from './types.js';
+import { getLogger } from '../utils/logger.js';
 
 export type MessageHandler = (message: InboundMessage) => Promise<void>;
 
 interface QueueOptions {
   readonly maxConcurrent: number;
   readonly maxQueueSize: number;
+  readonly onError?: (message: InboundMessage, error: unknown) => void;
 }
 
 export class MessageQueue {
@@ -27,10 +29,24 @@ export class MessageQueue {
 
   enqueue(message: InboundMessage): void {
     if (this.queue.length >= this.options.maxQueueSize) {
-      throw new Error('Queue full — backpressure active');
-    }
-
-    if (message.senderIsOwner) {
+      const logger = getLogger();
+      if (message.senderIsOwner) {
+        const dropped = this.queue.pop();
+        if (dropped) {
+          logger.warn('Queue full — evicted tail message for owner priority', {
+            droppedSourceNodeId: dropped.sourceNodeId,
+            droppedPlatform: dropped.platform,
+          });
+        }
+        this.queue.unshift(message);
+      } else {
+        logger.warn('Queue full — dropping non-owner message', {
+          sourceNodeId: message.sourceNodeId,
+          platform: message.platform,
+        });
+        return;
+      }
+    } else if (message.senderIsOwner) {
       this.queue.unshift(message);
     } else {
       this.queue.push(message);
@@ -60,7 +76,15 @@ export class MessageQueue {
 
       this.processing++;
       this.handler(message)
-        .catch(() => {})
+        .catch((error: unknown) => {
+          const logger = getLogger();
+          logger.error('Message handler failed', {
+            sourceNodeId: message.sourceNodeId,
+            platform: message.platform,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          this.options.onError?.(message, error);
+        })
         .finally(() => {
           this.processing--;
           void this.drain();

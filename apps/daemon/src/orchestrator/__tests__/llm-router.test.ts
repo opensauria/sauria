@@ -59,6 +59,7 @@ function buildContext(overrides: Partial<RoutingContext> = {}): RoutingContext {
     sourceNode: baseNode,
     workspace: baseWorkspace,
     teamNodes: [baseNode],
+    edges: [],
     ruleActions: [],
     conversationId: null,
     globalInstructions: '',
@@ -232,6 +233,42 @@ describe('LLMRoutingBrain', () => {
       expect(decision1).toEqual(decision2);
       // reason should only have been called once (the router mock's generator was consumed)
       expect(router.reason).toHaveBeenCalledTimes(1);
+    });
+
+    it('times out when LLM stream never yields', async () => {
+      async function* hangingStream(): AsyncGenerator<{ text: string; done: boolean }> {
+        await new Promise(() => {});
+      }
+
+      const router = {
+        reason: vi.fn().mockReturnValue(hangingStream()),
+        deepAnalyze: vi.fn(),
+        extract: vi.fn(),
+        onCostIncurred: vi.fn(),
+        getProvider: vi.fn(),
+      } as unknown as ModelRouter;
+
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
+      const context = buildContext({
+        message: buildMessage({ content: 'What should I do about this complicated issue?' }),
+      });
+
+      await expect(brain.decideRouting(context)).rejects.toThrow('LLM routing timeout');
+    }, 35_000);
+
+    it('succeeds when response arrives before timeout', async () => {
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Fast response' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
+      const context = buildContext({
+        message: buildMessage({ content: 'What should I do about this complicated issue?' }),
+      });
+
+      const decision = await brain.decideRouting(context);
+      expect(decision.actions).toHaveLength(1);
+      expect(decision.actions[0]).toEqual({ type: 'reply', content: 'Fast response' });
     });
 
     it('handles LLM returning invalid JSON gracefully', async () => {
@@ -733,7 +770,7 @@ describe('buildRoutingPrompt — capabilities and internal routing', () => {
     expect(reasonCalls.length).toBeGreaterThan(0);
     const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
     const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
-    expect(systemPrompt).toContain('forwarded internally');
+    expect(systemPrompt).toContain('Forwarded internally');
     expect(systemPrompt).toContain('hop 1');
     expect(systemPrompt).toContain('Do NOT forward back to n2');
   });
@@ -781,6 +818,104 @@ describe('buildRoutingPrompt — capabilities and internal routing', () => {
     const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
     expect(systemPrompt).toContain('Always be professional and concise');
     expect(systemPrompt).toContain('Handle support queries');
+  });
+
+  it('includes hierarchy and delegation rules when edges exist', async () => {
+    const subordinate: AgentNode = {
+      ...baseNode,
+      id: 'n2',
+      label: '@analyst',
+      role: 'specialist',
+    };
+    const supervisor: AgentNode = {
+      ...baseNode,
+      id: 'n3',
+      label: '@director',
+      role: 'lead',
+    };
+
+    const responseJson = JSON.stringify({
+      actions: [{ type: 'reply', content: 'Ok' }],
+    });
+    const router = createMockRouter(responseJson);
+    const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
+    const context = buildContext({
+      message: buildMessage({
+        content: 'Get me a status report from your team members please?',
+      }),
+      teamNodes: [baseNode, subordinate, supervisor],
+      edges: [
+        { id: 'e1', from: 'n1', to: 'n2', edgeType: 'manual', rules: [] },
+        { id: 'e2', from: 'n3', to: 'n1', edgeType: 'manual', rules: [] },
+      ],
+    });
+
+    await brain.decideRouting(context);
+
+    const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+    expect(reasonCalls.length).toBeGreaterThan(0);
+    const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+    const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+    expect(systemPrompt).toContain('Hierarchy:');
+    expect(systemPrompt).toContain('Your direct reports: @analyst (specialist)');
+    expect(systemPrompt).toContain('You report to: @director');
+    expect(systemPrompt).toContain('DELEGATION');
+    expect(systemPrompt).toContain('forward to reports');
+  });
+
+  it('omits hierarchy section when no edges exist', async () => {
+    const responseJson = JSON.stringify({
+      actions: [{ type: 'reply', content: 'Ok' }],
+    });
+    const router = createMockRouter(responseJson);
+    const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
+    const context = buildContext({
+      message: buildMessage({
+        content: 'What is the current status of our project deadlines?',
+      }),
+      edges: [],
+    });
+
+    await brain.decideRouting(context);
+
+    const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+    expect(reasonCalls.length).toBeGreaterThan(0);
+    const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+    const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+    expect(systemPrompt).not.toContain('Hierarchy:');
+    expect(systemPrompt).not.toContain('DELEGATION');
+  });
+
+  it('action schema always preserved after truncation', async () => {
+    // Generate a large team to push token count over budget
+    const manyNodes: AgentNode[] = Array.from({ length: 25 }, (_, i) => ({
+      ...baseNode,
+      id: `n${i}`,
+      label: `@agent-${i}`,
+      role: 'specialist' as const,
+    }));
+
+    const responseJson = JSON.stringify({
+      actions: [{ type: 'reply', content: 'Ok' }],
+    });
+    const router = createMockRouter(responseJson);
+    const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
+    const context = buildContext({
+      message: buildMessage({
+        content: 'What should we do about this large team coordination issue?',
+      }),
+      teamNodes: manyNodes,
+    });
+
+    await brain.decideRouting(context);
+
+    const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+    expect(reasonCalls.length).toBeGreaterThan(0);
+    const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+    const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+    expect(systemPrompt).toContain('Output JSON only');
+    expect(systemPrompt).toContain('reply');
+    expect(systemPrompt).toContain('forward');
   });
 
   it('handles node without workspace gracefully', async () => {

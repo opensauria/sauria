@@ -30,6 +30,31 @@ describe('EscalationManager', () => {
     expect(id.length).toBeGreaterThan(0);
   });
 
+  it('findPendingForChannel returns matching escalation', () => {
+    manager.create('node1', 'conv1', 'Issue from node1');
+    manager.create('node2', 'conv2', 'Issue from node2');
+
+    const pending = manager.findPendingForChannel('node1');
+    expect(pending).not.toBeNull();
+    expect(pending!.sourceNodeId).toBe('node1');
+    expect(pending!.summary).toBe('Issue from node1');
+  });
+
+  it('findPendingForChannel returns null when no match', () => {
+    manager.create('node1', 'conv1', 'Issue from node1');
+
+    const pending = manager.findPendingForChannel('node99');
+    expect(pending).toBeNull();
+  });
+
+  it('findPendingForChannel ignores resolved escalations', () => {
+    const id = manager.create('node1', 'conv1', 'Resolved issue');
+    manager.resolve(id);
+
+    const pending = manager.findPendingForChannel('node1');
+    expect(pending).toBeNull();
+  });
+
   it('findMostRecentPending returns null when no pending escalations', () => {
     expect(manager.findMostRecentPending()).toBeNull();
   });

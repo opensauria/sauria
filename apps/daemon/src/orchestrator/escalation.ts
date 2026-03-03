@@ -34,6 +34,7 @@ const ESCALATIONS_SCHEMA = `
 
   CREATE INDEX IF NOT EXISTS idx_escalations_status ON escalations(status);
   CREATE INDEX IF NOT EXISTS idx_escalations_created ON escalations(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_escalations_source_status ON escalations(source_node_id, status);
 `;
 
 export class EscalationManager {
@@ -50,6 +51,16 @@ export class EscalationManager {
       )
       .run(id, sourceNodeId, conversationId, summary);
     return id;
+  }
+
+  findPendingForChannel(channelNodeId: string): PendingEscalation | null {
+    const row = this.db
+      .prepare(
+        `SELECT * FROM escalations WHERE status = 'pending' AND source_node_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1`,
+      )
+      .get(channelNodeId) as EscalationRow | undefined;
+
+    return row ? rowToEscalation(row) : null;
   }
 
   findMostRecentPending(): PendingEscalation | null {

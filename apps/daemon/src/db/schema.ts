@@ -123,7 +123,8 @@ const SCHEMA_SQL = `
     priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low','normal','high','critical')),
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','completed','cancelled')),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    completed_at TEXT
+    completed_at TEXT,
+    deadline TEXT
   );
 
   CREATE TABLE IF NOT EXISTS agent_memory (
@@ -179,7 +180,33 @@ const TRIGGERS_SQL = `
   END;
 `;
 
+const MIGRATIONS_SQL = `
+  -- Add deadline column to agent_tasks (idempotent for existing DBs)
+  CREATE TABLE IF NOT EXISTS _migrations (id TEXT PRIMARY KEY);
+  INSERT OR IGNORE INTO _migrations (id) VALUES ('add_agent_tasks_deadline');
+`;
+
+function runMigrations(db: BetterSqlite3.Database): void {
+  db.exec(MIGRATIONS_SQL);
+
+  const hasMigration = db
+    .prepare("SELECT id FROM _migrations WHERE id = 'add_agent_tasks_deadline'")
+    .get();
+
+  if (hasMigration) {
+    const columns = db.pragma('table_info(agent_tasks)') as Array<{ name: string }>;
+    const hasDeadline = columns.some((c) => c.name === 'deadline');
+    if (!hasDeadline) {
+      db.exec('ALTER TABLE agent_tasks ADD COLUMN deadline TEXT');
+    }
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_agent_tasks_deadline ON agent_tasks(status, deadline)',
+    );
+  }
+}
+
 export function applySchema(db: BetterSqlite3.Database): void {
   db.exec(SCHEMA_SQL);
   db.exec(TRIGGERS_SQL);
+  runMigrations(db);
 }

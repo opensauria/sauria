@@ -9,6 +9,7 @@ import { AgentMemory } from '../agent-memory.js';
 import { EscalationManager } from '../escalation.js';
 import { CheckpointManager } from '../checkpoint.js';
 import { KPITracker } from '../kpi-tracker.js';
+import { DelegationTracker } from '../delegation-tracker.js';
 import type { CanvasGraph, InboundMessage, AgentNode } from '../types.js';
 import { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '../types.js';
 import { ChannelRegistry } from '../../channels/registry.js';
@@ -807,6 +808,50 @@ describe('owner reply routes back to escalating agent', () => {
     // Should not throw — continues normal flow
     await orchestrator.handleInbound(ownerMessage);
   });
+
+  it('routes owner reply to correct agent when multiple escalations pending', async () => {
+    const escalationManager = new EscalationManager(db);
+    const graph = makeGraph([
+      makeNode({ id: 'agent1', platform: 'telegram', label: '@agent1' }),
+      makeNode({ id: 'agent2', platform: 'slack', label: '@agent2' }),
+      makeNode({ id: 'owner-ch', platform: 'telegram', label: '@owner-ch' }),
+    ]);
+
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory: new AgentMemory(db),
+      escalationManager,
+    });
+
+    // Both agents escalate
+    escalationManager.create('agent1', 'conv-a', 'Billing issue');
+    escalationManager.create('agent2', 'conv-b', 'Shipping issue');
+
+    // Owner replies on agent1's channel
+    const ownerReply: InboundMessage = {
+      sourceNodeId: 'agent1',
+      platform: 'telegram',
+      senderId: '123',
+      senderIsOwner: true,
+      groupId: null,
+      content: 'Approve refund',
+      contentType: 'text',
+      timestamp: new Date().toISOString(),
+    };
+
+    await orchestrator.handleInbound(ownerReply);
+
+    const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
+    expect(sendTo).toHaveBeenCalled();
+    const targetNodeId = sendTo.mock.calls[0]![0] as string;
+    expect(targetNodeId).toBe('agent1');
+
+    // agent2's escalation still pending
+    expect(escalationManager.getPendingCount()).toBe(1);
+    expect(escalationManager.findPendingForChannel('agent2')).not.toBeNull();
+  });
 });
 
 describe('internal conversation tracking', () => {
@@ -1562,7 +1607,7 @@ describe('handleInbound — LLM brain fallback', () => {
     expect(registry.sendTo).toHaveBeenCalledWith('n1', 'LLM response', null);
   });
 
-  it('handles LLM brain errors gracefully', async () => {
+  it('sends fallback reply on LLM failure', async () => {
     const mockBrain = {
       decideRouting: vi.fn().mockRejectedValue(new Error('LLM unavailable')),
     };
@@ -1586,10 +1631,79 @@ describe('handleInbound — LLM brain fallback', () => {
       timestamp: new Date().toISOString(),
     };
 
-    // Should not throw
     await orchestrator.handleInbound(message);
 
-    expect(registry.sendTo).not.toHaveBeenCalled();
+    const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
+    expect(sendTo).toHaveBeenCalled();
+    const sentContent = sendTo.mock.calls[0]![1] as string;
+    expect(sentContent).toContain('I encountered an issue');
+  });
+
+  it('escalates to owner on LLM failure for non-owner messages', async () => {
+    const mockBrain = {
+      decideRouting: vi.fn().mockRejectedValue(new Error('LLM unavailable')),
+    };
+    const escalationManager = new EscalationManager(db);
+
+    const graph = makeGraph([
+      makeNode({ id: 'n1', platform: 'telegram', label: '@bot' }),
+      makeNode({ id: 'owner-ch', platform: 'telegram', label: '@owner-ch' }),
+    ]);
+
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory: new AgentMemory(db),
+      escalationManager,
+      brain: mockBrain as unknown as import('../llm-router.js').LLMRoutingBrain,
+    });
+
+    const message: InboundMessage = {
+      sourceNodeId: 'n1',
+      platform: 'telegram',
+      senderId: 'user1',
+      senderIsOwner: false,
+      groupId: null,
+      content: 'Help me with billing',
+      contentType: 'text',
+      timestamp: new Date().toISOString(),
+    };
+
+    await orchestrator.handleInbound(message);
+
+    expect(escalationManager.getPendingCount()).toBe(1);
+  });
+
+  it('does not escalate when sender is owner', async () => {
+    const mockBrain = {
+      decideRouting: vi.fn().mockRejectedValue(new Error('LLM unavailable')),
+    };
+    const escalationManager = new EscalationManager(db);
+
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory: new AgentMemory(db),
+      escalationManager,
+      brain: mockBrain as unknown as import('../llm-router.js').LLMRoutingBrain,
+    });
+
+    const message: InboundMessage = {
+      sourceNodeId: 'n1',
+      platform: 'telegram',
+      senderId: '123',
+      senderIsOwner: true,
+      groupId: null,
+      content: 'Help me',
+      contentType: 'text',
+      timestamp: new Date().toISOString(),
+    };
+
+    await orchestrator.handleInbound(message);
+
+    expect(escalationManager.getPendingCount()).toBe(0);
   });
 });
 
@@ -1729,5 +1843,106 @@ describe('findGroupForNode', () => {
 
     const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
     expect(sendTo).toHaveBeenCalledWith('n2', expect.any(String), 'tg-group-123');
+  });
+});
+
+describe('sweepOverdueDelegations', () => {
+  let db: Database.Database;
+  let registry: ChannelRegistry;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    applySchema(db);
+    registry = new ChannelRegistry();
+    registry.sendTo = vi.fn().mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('escalates overdue tasks', async () => {
+    const escalationManager = new EscalationManager(db);
+    const delegationTracker = new DelegationTracker(db);
+    const agentMemory = new AgentMemory(db);
+    const graph = makeGraph([
+      makeNode({ id: 'agent1', platform: 'telegram', label: '@agent1' }),
+      makeNode({ id: 'owner-ch', platform: 'telegram', label: '@owner-ch' }),
+    ]);
+
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory,
+      escalationManager,
+      delegationTracker,
+    });
+
+    // Insert an overdue task
+    db.prepare(
+      `INSERT INTO agent_tasks (id, workspace_id, assigned_to, delegated_by, title, priority, deadline)
+       VALUES ('t1', 'ws1', 'agent1', 'owner', 'Overdue task', 'high', datetime('now', '-10 minutes'))`,
+    ).run();
+
+    await orchestrator.sweepOverdueDelegations();
+
+    expect(escalationManager.getPendingCount()).toBe(1);
+    // Task should be cancelled
+    const task = db.prepare('SELECT status FROM agent_tasks WHERE id = ?').get('t1') as {
+      status: string;
+    };
+    expect(task.status).toBe('cancelled');
+  });
+
+  it('does nothing when no tasks are overdue', async () => {
+    const escalationManager = new EscalationManager(db);
+    const delegationTracker = new DelegationTracker(db);
+    const agentMemory = new AgentMemory(db);
+
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory,
+      escalationManager,
+      delegationTracker,
+    });
+
+    await orchestrator.sweepOverdueDelegations();
+
+    expect(escalationManager.getPendingCount()).toBe(0);
+  });
+
+  it('marks overdue tasks as cancelled', async () => {
+    const escalationManager = new EscalationManager(db);
+    const delegationTracker = new DelegationTracker(db);
+    const agentMemory = new AgentMemory(db);
+
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory,
+      escalationManager,
+      delegationTracker,
+    });
+
+    db.prepare(
+      `INSERT INTO agent_tasks (id, workspace_id, assigned_to, title, priority, deadline)
+       VALUES ('t1', 'ws1', 'n1', 'Task A', 'normal', datetime('now', '-5 minutes'))`,
+    ).run();
+    db.prepare(
+      `INSERT INTO agent_tasks (id, workspace_id, assigned_to, title, priority, deadline)
+       VALUES ('t2', 'ws1', 'n1', 'Task B', 'normal', datetime('now', '-1 minutes'))`,
+    ).run();
+
+    await orchestrator.sweepOverdueDelegations();
+
+    const tasks = db.prepare('SELECT status FROM agent_tasks ORDER BY id').all() as Array<{
+      status: string;
+    }>;
+    expect(tasks.every((t) => t.status === 'cancelled')).toBe(true);
+    expect(escalationManager.getPendingCount()).toBe(2);
   });
 });
