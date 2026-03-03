@@ -93,4 +93,78 @@ describe('evaluateEdgeRules', () => {
     const actions = evaluateEdgeRules(baseNode, baseMessage, edges);
     expect(actions).toHaveLength(0);
   });
+
+  it('skips priority rules (future extension)', () => {
+    const edges: Edge[] = [
+      {
+        id: 'e1',
+        from: 'n1',
+        to: 'n2',
+        edgeType: 'manual',
+        rules: [{ type: 'priority', condition: 'high', action: 'forward' }],
+      },
+    ];
+    const actions = evaluateEdgeRules(baseNode, baseMessage, edges);
+    expect(actions).toHaveLength(0);
+  });
+
+  it('builds assign action from edge rule', () => {
+    const edges: Edge[] = [
+      {
+        id: 'e1',
+        from: 'n1',
+        to: 'n2',
+        edgeType: 'manual',
+        rules: [{ type: 'always', action: 'assign' }],
+      },
+    ];
+    const actions = evaluateEdgeRules(baseNode, baseMessage, edges);
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.type).toBe('assign');
+    expect((actions[0] as { priority: string }).priority).toBe('normal');
+  });
+
+  it('builds send_to_all action from edge rule', () => {
+    const edges: Edge[] = [
+      {
+        id: 'e1',
+        from: 'n1',
+        to: 'ws1',
+        edgeType: 'manual',
+        rules: [{ type: 'always', action: 'send_to_all' }],
+      },
+    ];
+    const actions = evaluateEdgeRules(baseNode, baseMessage, edges);
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.type).toBe('send_to_all');
+  });
+
+  it('uses forward as default for unknown action string', () => {
+    const edges: Edge[] = [
+      {
+        id: 'e1',
+        from: 'n1',
+        to: 'n2',
+        edgeType: 'manual',
+        rules: [{ type: 'always', action: 'unknown_action' as Edge['rules'][0]['action'] }],
+      },
+    ];
+    const actions = evaluateEdgeRules(baseNode, baseMessage, edges);
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.type).toBe('forward');
+  });
+
+  it('skips keyword rule when condition is missing', () => {
+    const edges: Edge[] = [
+      {
+        id: 'e1',
+        from: 'n1',
+        to: 'n2',
+        edgeType: 'manual',
+        rules: [{ type: 'keyword', action: 'forward' }],
+      },
+    ];
+    const actions = evaluateEdgeRules(baseNode, baseMessage, edges);
+    expect(actions).toHaveLength(0);
+  });
 });

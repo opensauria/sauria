@@ -39,9 +39,7 @@ function goTo(stepId: string) {
 /* ── Step 2: Connection Mode ─────────────────── */
 
 function selectMode(card: HTMLElement) {
-  document
-    .querySelectorAll('#step-mode .card')
-    .forEach((c) => c.classList.remove('selected'));
+  document.querySelectorAll('#step-mode .card').forEach((c) => c.classList.remove('selected'));
   card.classList.add('selected');
   selectedMode = card.dataset.mode!;
   (document.getElementById('btn-mode-next') as HTMLButtonElement).disabled = false;
@@ -114,9 +112,7 @@ function resetOAuth() {
 /* ── Step 3b: Provider Selection ─────────────── */
 
 function selectProvider(card: HTMLElement) {
-  document
-    .querySelectorAll('#step-provider .card')
-    .forEach((c) => c.classList.remove('selected'));
+  document.querySelectorAll('#step-provider .card').forEach((c) => c.classList.remove('selected'));
   card.classList.add('selected');
   selectedProvider = card.dataset.provider!;
   (document.getElementById('btn-provider-next') as HTMLButtonElement).disabled = false;
@@ -147,7 +143,8 @@ function goToAuth() {
     'Get your key from <a href="#" onclick="openProviderConsole()">' +
     (hints[selectedProvider!] || 'the provider console') +
     '</a>';
-  (document.getElementById('api-key') as HTMLInputElement).placeholder = placeholders[selectedProvider!] || 'sk-...';
+  (document.getElementById('api-key') as HTMLInputElement).placeholder =
+    placeholders[selectedProvider!] || 'sk-...';
   (document.getElementById('api-key') as HTMLInputElement).value = '';
   document.getElementById('auth-error')!.classList.remove('visible');
   (document.getElementById('btn-auth-next') as HTMLButtonElement).disabled = true;
@@ -330,9 +327,7 @@ async function runConfiguration(provider: string, apiKey: string, mode: string) 
         return c.detected;
       })
       .map(function (c) {
-        return (
-          '<li><span class="check">&#10003;</span> ' + c.name + ' &mdash; configured</li>'
-        );
+        return '<li><span class="check">&#10003;</span> ' + c.name + ' &mdash; configured</li>';
       })
       .join('');
 

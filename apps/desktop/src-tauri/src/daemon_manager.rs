@@ -204,7 +204,6 @@ pub async fn start_daemon(state: &Arc<Mutex<DaemonState>>, paths: &Paths) -> Res
         })?;
 
     s.process = Some(child);
-    s.restarts = 0;
 
     // Release lock, then wait for daemon to write PID file (up to 5s)
     drop(s);
@@ -230,6 +229,10 @@ pub async fn stop_daemon(state: &Arc<Mutex<DaemonState>>, paths: &Paths) {
         kill_process(pid);
     }
 
+    // Belt-and-suspenders: clean up PID + socket even if daemon's own handler didn't
+    let _ = fs::remove_file(&paths.pid_file);
+    let _ = fs::remove_file(&paths.socket);
+
     s.starting = false;
 }
 
@@ -247,16 +250,31 @@ pub fn start_health_check(
         let mut timer = interval(HEALTH_CHECK_INTERVAL);
         loop {
             timer.tick().await;
-            let should_restart = {
-                let s = state.lock().await;
-                !s.starting && is_configured(&paths) && s.restarts < MAX_RESTARTS
-            };
-            if should_restart && !is_daemon_running_by_pid(&paths) {
+
+            // Reap zombie child so kill(pid, 0) stops returning true
+            {
                 let mut s = state.lock().await;
-                s.restarts += 1;
-                drop(s);
-                let _ = start_daemon(&state, &paths).await;
+                if let Some(ref mut child) = s.process {
+                    if let Ok(Some(_)) = child.try_wait() {
+                        s.process = None;
+                    }
+                }
             }
+
+            if is_daemon_running_by_pid(&paths) {
+                let mut s = state.lock().await;
+                s.restarts = 0;
+                continue;
+            }
+
+            {
+                let mut s = state.lock().await;
+                if s.starting || !is_configured(&paths) || s.restarts >= MAX_RESTARTS {
+                    continue;
+                }
+                s.restarts += 1;
+            }
+            let _ = start_daemon(&state, &paths).await;
         }
     })
 }

@@ -96,41 +96,55 @@ impl DaemonClient {
     }
 
     pub async fn request(&self, method: &str, params: Value) -> Result<Value, String> {
-        self.ensure_connected().await?;
+        for _attempt in 0..2u8 {
+            self.ensure_connected().await?;
 
-        let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-        let payload = serde_json::json!({ "id": id, "method": method, "params": params });
-        let line = format!("{}\n", serde_json::to_string(&payload).map_err(|e| e.to_string())?);
+            let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+            let payload = serde_json::json!({ "id": id, "method": method, "params": params });
+            let line = match serde_json::to_string(&payload) {
+                Ok(s) => format!("{s}\n"),
+                Err(e) => return Err(e.to_string()),
+            };
 
-        let (resp_tx, resp_rx) = oneshot::channel();
+            let (resp_tx, resp_rx) = oneshot::channel();
 
-        {
-            let mut pending = self.pending.lock().await;
-            pending.insert(id, resp_tx);
-        }
-
-        {
-            let tx_guard = self.tx.lock().await;
-            if let Some(tx) = tx_guard.as_ref() {
-                tx.send((id, line)).await.map_err(|_| {
-                    "Failed to send to daemon".to_string()
-                })?;
-            } else {
+            {
                 let mut pending = self.pending.lock().await;
-                pending.remove(&id);
-                return Err("Not connected to daemon".to_string());
+                pending.insert(id, resp_tx);
+            }
+
+            // Send the request — if the channel is dead, reset and retry
+            {
+                let mut tx_guard = self.tx.lock().await;
+                let sent = match tx_guard.as_ref() {
+                    Some(tx) => tx.send((id, line)).await.is_ok(),
+                    None => false,
+                };
+                if !sent {
+                    self.pending.lock().await.remove(&id);
+                    *tx_guard = None;
+                    continue;
+                }
+            }
+
+            // Wait for response — timeout is a hard error, channel close triggers retry
+            match timeout(REQUEST_TIMEOUT, resp_rx).await {
+                Ok(Ok(result)) => return result,
+                Ok(Err(_)) => {
+                    // Reader died (connection closed) — reset and retry
+                    let mut tx_guard = self.tx.lock().await;
+                    *tx_guard = None;
+                    continue;
+                }
+                Err(_) => {
+                    let mut pending = self.pending.lock().await;
+                    pending.remove(&id);
+                    return Err(format!("Request timeout: {method}"));
+                }
             }
         }
 
-        match timeout(REQUEST_TIMEOUT, resp_rx).await {
-            Ok(Ok(result)) => result,
-            Ok(Err(_)) => Err("Response channel closed".to_string()),
-            Err(_) => {
-                let mut pending = self.pending.lock().await;
-                pending.remove(&id);
-                Err(format!("Request timeout: {method}"))
-            }
-        }
+        Err("Daemon not reachable".to_string())
     }
 
     pub async fn disconnect(&self) {

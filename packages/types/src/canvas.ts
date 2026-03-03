@@ -12,7 +12,14 @@ export type AgentRole = 'lead' | 'specialist' | 'observer' | 'bridge' | 'assista
 
 export type AutonomyLevel = 'full' | 'supervised' | 'approval' | 'manual';
 
-export type Platform = 'telegram' | 'slack' | 'whatsapp' | 'discord' | 'email' | 'owner';
+export type Platform =
+  | 'telegram'
+  | 'slack'
+  | 'whatsapp'
+  | 'discord'
+  | 'email'
+  | 'owner'
+  | 'internal';
 
 // ─── Group Behavior ────────────────────────────────────────────────
 
@@ -81,6 +88,14 @@ export interface Workspace {
   readonly groups: readonly WorkspaceGroup[];
 }
 
+// ─── Agent Capabilities ──────────────────────────────────────────
+
+export interface AgentCapabilities {
+  readonly directories?: readonly string[];
+  readonly tools?: readonly string[];
+  readonly description?: string;
+}
+
 // ─── Agent Node ────────────────────────────────────────────────────
 
 /**
@@ -103,6 +118,7 @@ export interface AgentNode {
   readonly autonomy: AutonomyLevel;
   readonly instructions: string;
   readonly groupBehavior?: GroupBehavior;
+  readonly capabilities?: AgentCapabilities;
 }
 
 // ─── Edge ──────────────────────────────────────────────────────────

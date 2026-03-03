@@ -27,6 +27,21 @@
       </div>
       <h2>Add your first agent</h2>
       <p>Drag a platform card from the dock below onto the canvas</p>
+      <p style="font-size: 12px; color: rgba(255, 255, 255, 0.15); margin-top: 8px">
+        <kbd
+          style="
+            display: inline-block;
+            padding: 2px 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.04);
+          "
+          >&#8984;K</kbd
+        >
+        to open command palette
+      </p>
     </div>
 
     <div class="canvas-toolbar" id="toolbar">
@@ -51,7 +66,7 @@
     <div class="agent-detail-panel" id="agent-detail-panel">
       <div class="panel-header">
         <span class="panel-title">Agent Details</span>
-        <button class="panel-close" id="agent-detail-close">
+        <button class="panel-close" id="agent-detail-close" aria-label="Close">
           <svg viewBox="0 0 24 24" fill="none">
             <path
               d="M18 6L6 18M6 6l12 12"
@@ -119,6 +134,31 @@
           </div>
         </div>
 
+        <div class="detail-section" id="capabilities-section">
+          <span class="detail-section-label">Capabilities</span>
+          <div class="capabilities-field">
+            <span class="capabilities-sublabel">Directories</span>
+            <div class="tag-input-container" id="cap-dirs-tags">
+              <input class="tag-input" id="cap-dirs-input" placeholder="Add directory path..." />
+            </div>
+          </div>
+          <div class="capabilities-field">
+            <span class="capabilities-sublabel">Tools</span>
+            <div class="tag-input-container" id="cap-tools-tags">
+              <input class="tag-input" id="cap-tools-input" placeholder="Add tool name..." />
+            </div>
+          </div>
+          <div class="capabilities-field">
+            <span class="capabilities-sublabel">Description</span>
+            <textarea
+              class="detail-textarea"
+              id="cap-description"
+              placeholder="Describe what this agent can do..."
+              rows="2"
+            ></textarea>
+          </div>
+        </div>
+
         <div class="detail-section">
           <span class="detail-section-label">KPIs</span>
           <div class="kpi-placeholder">KPI tracking coming soon</div>
@@ -130,7 +170,7 @@
     <div class="workspace-detail-panel" id="workspace-detail-panel">
       <div class="panel-header">
         <span class="panel-title">Workspace Details</span>
-        <button class="panel-close" id="workspace-detail-close">
+        <button class="panel-close" id="workspace-detail-close" aria-label="Close">
           <svg viewBox="0 0 24 24" fill="none">
             <path
               d="M18 6L6 18M6 6l12 12"
@@ -337,6 +377,38 @@
         <div class="panel-actions">
           <button class="panel-btn panel-btn-cancel" id="ws-create-cancel">Cancel</button>
           <button class="panel-btn panel-btn-primary" id="ws-create-submit">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edge Delete Confirmation Dialog -->
+    <div class="workspace-dialog-overlay" id="edge-delete-overlay">
+      <div class="workspace-dialog" role="alertdialog" aria-labelledby="edge-delete-title">
+        <h3 id="edge-delete-title">Remove Connection</h3>
+        <p
+          style="
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 16px;
+          "
+          id="edge-delete-text"
+        >
+          Are you sure you want to remove this connection?
+        </p>
+        <div class="panel-actions">
+          <button class="panel-btn panel-btn-cancel" id="edge-delete-cancel">Cancel</button>
+          <button
+            class="panel-btn"
+            id="edge-delete-confirm"
+            style="
+              background: rgba(248, 113, 113, 0.12);
+              color: var(--error);
+              border: 1px solid rgba(248, 113, 113, 0.2);
+            "
+          >
+            Remove
+          </button>
         </div>
       </div>
     </div>
