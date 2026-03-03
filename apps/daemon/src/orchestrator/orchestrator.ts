@@ -18,6 +18,7 @@ import type { AgentMemory } from './agent-memory.js';
 import type { KPITracker } from './kpi-tracker.js';
 import type { CheckpointManager } from './checkpoint.js';
 import type { EscalationManager } from './escalation.js';
+import type { DelegationTracker } from './delegation-tracker.js';
 import { AutonomyEnforcer } from './autonomy.js';
 import { evaluateEdgeRules } from './routing.js';
 import { getLogger } from '../utils/logger.js';
@@ -32,6 +33,7 @@ interface OrchestratorDeps {
   readonly kpiTracker?: KPITracker;
   readonly checkpointManager?: CheckpointManager;
   readonly escalationManager?: EscalationManager;
+  readonly delegationTracker?: DelegationTracker;
   readonly enqueueInternal?: (message: InboundMessage) => void;
   readonly canvasPath?: string;
 }
@@ -49,6 +51,7 @@ export class AgentOrchestrator {
   private readonly kpiTracker: KPITracker | null;
   private readonly checkpointManager: CheckpointManager | null;
   private readonly escalationManager: EscalationManager | null;
+  private readonly delegationTracker: DelegationTracker | null;
   private readonly enqueueInternal: ((message: InboundMessage) => void) | null;
   private readonly canvasPath: string | null;
 
@@ -62,12 +65,51 @@ export class AgentOrchestrator {
     this.kpiTracker = deps.kpiTracker ?? null;
     this.checkpointManager = deps.checkpointManager ?? null;
     this.escalationManager = deps.escalationManager ?? null;
+    this.delegationTracker = deps.delegationTracker ?? null;
     this.enqueueInternal = deps.enqueueInternal ?? null;
     this.canvasPath = deps.canvasPath ?? null;
   }
 
   updateGraph(graph: CanvasGraph): void {
     this.graph = graph;
+  }
+
+  async sweepOverdueDelegations(): Promise<void> {
+    if (!this.delegationTracker || !this.escalationManager || !this.agentMemory) return;
+
+    const logger = getLogger();
+    const overdue = this.delegationTracker.getOverdueTasks();
+
+    for (const task of overdue) {
+      const assignedNode = this.findNode(task.assignedTo);
+      const label = assignedNode?.label ?? task.assignedTo;
+      const summary = `Overdue task from ${label}: "${task.title}" (priority: ${task.priority}, deadline: ${task.deadline})`;
+
+      logger.warn('Overdue delegation detected', {
+        taskId: task.id,
+        assignedTo: task.assignedTo,
+        priority: task.priority,
+      });
+
+      const syntheticSource: InboundMessage = {
+        sourceNodeId: task.assignedTo,
+        platform: (assignedNode?.platform ?? 'internal') as Platform,
+        senderId: 'system-sweep',
+        senderIsOwner: false,
+        groupId: null,
+        content: summary,
+        contentType: 'text',
+        timestamp: new Date().toISOString(),
+      };
+
+      try {
+        await this.executeAction({ type: 'escalate', summary }, syntheticSource);
+      } catch {
+        // Best-effort escalation to owner
+      }
+
+      this.delegationTracker.markCancelled(task.id);
+    }
   }
 
   isOwnerSender(platform: Platform, senderId: string): boolean {
@@ -135,6 +177,15 @@ export class AgentOrchestrator {
     const node = this.findNode(message.sourceNodeId);
     if (!node) return;
 
+    logger.info('Inbound message received', {
+      nodeId: node.id,
+      label: node.label,
+      platform: message.internalRoute ? 'internal' : message.platform,
+      isInternal: !!message.internalRoute,
+      fromNodeId: message.internalRoute?.fromNodeId,
+      contentPreview: message.content.slice(0, 80),
+    });
+
     // Hop limit for internal routing — prevents infinite loops
     if (message.internalRoute && message.internalRoute.hopCount >= MAX_INTERNAL_HOPS) {
       logger.warn('Internal routing hop limit reached', {
@@ -147,7 +198,9 @@ export class AgentOrchestrator {
 
     // Owner reply routing: if owner replied and there's a pending escalation, route back
     if (message.senderIsOwner && this.escalationManager) {
-      const pending = this.escalationManager.findMostRecentPending();
+      const pending =
+        this.escalationManager.findPendingForChannel(message.sourceNodeId) ??
+        this.escalationManager.findMostRecentPending();
       if (pending) {
         this.escalationManager.resolve(pending.id);
         const routed = this.routeInternally(
@@ -242,6 +295,7 @@ export class AgentOrchestrator {
         sourceNode: node,
         workspace,
         teamNodes,
+        edges: [...this.graph.edges],
         ruleActions,
         conversationId,
         globalInstructions: this.graph.globalInstructions,
@@ -249,6 +303,10 @@ export class AgentOrchestrator {
 
       try {
         const decision = await this.brain.decideRouting(context);
+        logger.info('LLM routing decision', {
+          nodeId: node.id,
+          actions: decision.actions.map((a) => a.type),
+        });
         const { immediate, pendingApproval } = this.autonomy.filterActions(node, decision.actions);
         for (const action of immediate) {
           await this.executeAction(action, message);
@@ -259,6 +317,44 @@ export class AgentOrchestrator {
           nodeId: node.id,
           error: error instanceof Error ? error.message : String(error),
         });
+
+        try {
+          const fallbackContent =
+            'I encountered an issue processing your message. I have escalated this to the team lead.';
+          if (message.internalRoute) {
+            const isOrigin = message.internalRoute.originNodeId === message.sourceNodeId;
+            if (isOrigin) {
+              await this.registry.sendTo(message.sourceNodeId, fallbackContent, null);
+            } else {
+              const routed = this.routeInternally(
+                message.sourceNodeId,
+                message.internalRoute.fromNodeId,
+                fallbackContent,
+                message.internalRoute,
+              );
+              if (!routed) {
+                await this.registry.sendTo(
+                  message.internalRoute.fromNodeId,
+                  fallbackContent,
+                  this.findGroupForNode(message.internalRoute.fromNodeId),
+                );
+              }
+            }
+          } else {
+            await this.registry.sendTo(message.sourceNodeId, fallbackContent, message.groupId);
+          }
+        } catch {
+          // Best-effort fallback reply
+        }
+
+        if (!message.senderIsOwner && this.escalationManager && this.agentMemory) {
+          try {
+            const summary = `LLM routing failed for message from ${node.label}: ${message.content.slice(0, 200)}`;
+            await this.executeAction({ type: 'escalate', summary }, message);
+          } catch {
+            // Best-effort escalation
+          }
+        }
       }
     }
 
@@ -524,11 +620,39 @@ export class AgentOrchestrator {
         break;
       }
       case 'reply': {
-        await this.registry.sendTo(source.sourceNodeId, action.content, source.groupId);
+        if (source.internalRoute) {
+          const hasChannel = this.registry.get(source.sourceNodeId) !== null;
+          if (hasChannel) {
+            // Node has an external channel: reply to owner directly
+            await this.registry.sendTo(source.sourceNodeId, action.content, null);
+          } else {
+            // No external channel: route reply back through the chain
+            const routed = this.routeInternally(
+              source.sourceNodeId,
+              source.internalRoute.fromNodeId,
+              action.content,
+              source.internalRoute,
+            );
+            if (!routed) {
+              const group = this.findGroupForNode(source.internalRoute.fromNodeId);
+              await this.registry.sendTo(
+                source.internalRoute.fromNodeId,
+                action.content,
+                group,
+              );
+            }
+          }
+        } else {
+          await this.registry.sendTo(source.sourceNodeId, action.content, source.groupId);
+        }
         if (this.agentMemory) {
+          const platform = source.internalRoute ? 'internal' : source.platform;
+          const groupId = source.internalRoute
+            ? source.internalRoute.dialogueId
+            : source.groupId;
           const conversationId = this.agentMemory.getOrCreateConversation(
-            source.platform,
-            source.groupId,
+            platform,
+            groupId,
             [source.sourceNodeId],
           );
           this.agentMemory.recordMessage({
@@ -536,8 +660,8 @@ export class AgentOrchestrator {
             sourceNodeId: source.sourceNodeId,
             senderId: source.sourceNodeId,
             senderIsOwner: false,
-            platform: source.platform,
-            groupId: source.groupId,
+            platform,
+            groupId,
             content: action.content,
             contentType: 'text',
           });
@@ -549,6 +673,7 @@ export class AgentOrchestrator {
         break;
       }
       case 'assign': {
+        const taskId = nanoid();
         if (this.db) {
           this.db
             .prepare(
@@ -556,13 +681,16 @@ export class AgentOrchestrator {
                VALUES (?, ?, ?, ?, ?, ?)`,
             )
             .run(
-              nanoid(),
+              taskId,
               workspace?.id ?? '',
               action.targetNodeId,
               source.sourceNodeId,
               action.task,
               action.priority,
             );
+          if (this.delegationTracker) {
+            this.delegationTracker.setDeadline(taskId, action.priority);
+          }
         }
         const taskContent = `[Task] ${action.task}`;
         const routed = this.routeInternally(
@@ -682,6 +810,14 @@ export class AgentOrchestrator {
     if (node.platform === 'slack' && this.ownerIdentity.slack) return true;
     if (node.platform === 'whatsapp' && this.ownerIdentity.whatsapp) return true;
     return false;
+  }
+
+  private hasOwnerSupervisor(nodeId: string): boolean {
+    return this.graph.edges.some(
+      (e) =>
+        e.to === nodeId &&
+        this.graph.nodes.some((n) => n.id === e.from && n.platform === 'owner'),
+    );
   }
 
   private buildForwardContext(

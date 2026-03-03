@@ -42,6 +42,7 @@ import { AgentMemory } from './orchestrator/agent-memory.js';
 import { KPITracker } from './orchestrator/kpi-tracker.js';
 import { CheckpointManager } from './orchestrator/checkpoint.js';
 import { EscalationManager } from './orchestrator/escalation.js';
+import { DelegationTracker } from './orchestrator/delegation-tracker.js';
 import type {
   CanvasGraph,
   OwnerIdentity,
@@ -74,6 +75,7 @@ export interface DaemonContext {
   readonly ipcServer: DaemonIpcServer;
   readonly canvasWatcher: FSWatcher | null;
   readonly ownerCommandWatcher: FSWatcher | null;
+  readonly delegationSweepInterval: ReturnType<typeof setInterval> | null;
 }
 
 async function connectMcpSources(
@@ -499,6 +501,7 @@ async function setupOrchestrator(
   const agentMemory = new AgentMemory(deps.db);
   const kpiTracker = new KPITracker(deps.db);
   const escalationManager = new EscalationManager(deps.db);
+  const delegationTracker = new DelegationTracker(deps.db);
 
   const brain = new LLMRoutingBrain(
     deps.router,
@@ -524,6 +527,7 @@ async function setupOrchestrator(
     kpiTracker,
     checkpointManager,
     escalationManager,
+    delegationTracker,
     enqueueInternal,
     canvasPath: paths.canvas,
   });
@@ -667,12 +671,20 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   const orchestrator: AgentOrchestrator | null = bundle?.orchestrator ?? null;
   const queue: MessageQueue | null = bundle?.queue ?? null;
 
+  let delegationSweepInterval: ReturnType<typeof setInterval> | null = null;
   if (bundle) {
     logger.info('Orchestrator started', {
       channels: bundle.startedChannels.length,
       nodes: graph.nodes.length,
       edges: graph.edges.length,
     });
+
+    delegationSweepInterval = setInterval(
+      () => {
+        void bundle.orchestrator.sweepOverdueDelegations();
+      },
+      5 * 60 * 1000,
+    );
   }
 
   // ProactiveEngine disabled — owner drives all interaction through canvas bots
@@ -850,6 +862,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     queue,
     canvasWatcher,
     ownerCommandWatcher,
+    delegationSweepInterval,
   };
 }
 
@@ -858,6 +871,11 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
   logger.info('Daemon shutting down');
 
   clearInterval(ctx.refreshInterval);
+
+  if (ctx.delegationSweepInterval) {
+    clearInterval(ctx.delegationSweepInterval);
+    logger.info('Delegation sweep stopped');
+  }
 
   if (ctx.ownerCommandWatcher) {
     ctx.ownerCommandWatcher.close();

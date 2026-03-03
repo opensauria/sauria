@@ -180,6 +180,7 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - Schema applied on startup via `applySchema(db)`
 - Tables: `entities`, `relations`, `events`, `observations`, `agent_messages`, `agent_conversations`, `agent_memory`, `agent_tasks`
 - FTS5 for full-text search
+- **Migrations**: `_migrations` table tracks applied migrations. `runMigrations()` runs after `applySchema()`. Indexes on new columns must be created inside the migration (after `ALTER TABLE`), not in `SCHEMA_SQL` — existing DBs would crash on `CREATE INDEX` for columns that don't exist yet.
 - **Embeddings**: `apps/daemon/src/ai/embeddings.ts` imports `@huggingface/transformers` but the package was removed from `package.json`. Semantic search is broken until embeddings are migrated (to local Python model or re-added as dependency).
 
 ### Channels
@@ -193,17 +194,26 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 
 - `CanvasGraph` (v2) is the source of truth: nodes, edges, workspaces
 - Graph stored at `~/.opensauria/canvas.json`, read by daemon on startup
-- `MessageQueue` provides owner priority (unshift) and backpressure
+- `MessageQueue` provides owner priority (unshift), graceful backpressure (never throws, evicts tail for owner messages), and `onError` callback
 - `evaluateEdgeRules()` for deterministic routing, `LLMRoutingBrain` for intelligent routing
 - `AutonomyEnforcer` filters actions based on agent autonomy level
 - `ChannelRegistry` maps nodeId to channel instances
+- **LLM Timeout**: `callLLM()` uses `Promise.race` with 30s timeout — prevents queue slots from being blocked forever
+- **LLM Failure Fallback**: on LLM error, sends fallback reply to sender + escalates to owner (unless sender is owner). Internal messages route fallback back through the chain.
+- **Prompt Token Cap**: `MAX_PROMPT_TOKENS = 4000`. Soft sections (workspace facts, agent facts, knowledge graph, peer messages) truncated first if over budget. Core sections (action schema, agents, hierarchy, history) never truncated.
+- **DelegationTracker**: `delegation-tracker.ts` tracks `agent_tasks` deadlines (critical=30min, high=2h, normal=8h, low=24h). `sweepOverdueDelegations()` runs every 5min, auto-escalates overdue tasks to owner.
+- **EscalationManager**: `findPendingForChannel(sourceNodeId)` matches escalations by channel, not just most-recent globally. Prevents misrouting when multiple agents escalate concurrently.
 
 ### Agent Collaboration
 
+- **Internal Reply Routing**: `reply` action on internally-forwarded messages checks `registry.get(sourceNodeId)` — if the node has a registered external channel (e.g. Telegram bot), it replies directly to the owner on that channel. If no channel, routes back through the forwarding chain. This means any agent with a channel can contact the owner directly, regardless of hierarchy position.
+- **Action Semantics**: `reply` = talk to owner (via own channel or back through chain). `forward` = talk to another agent internally. The LLM decides which action to use based on context — never inject explicit bot names or routing hints in prompts.
+- **Forwarded Reply Context**: when replying to a forwarded message, the LLM is instructed to briefly state who asked and what for at the start of the reply, so the owner has context (e.g. "Kyra asked me to check X — here's what I found").
 - **Shared Conversation Window**: forwards/notifies enriched with N most recent messages from source conversation (~150-200 tokens). `AgentMemory.getRecentMessagesForContext()` provides formatted context.
 - **Workspace Memory Pool**: `agent_memory` table has `workspace_id` column. `AgentMemory.getWorkspaceFacts()` retrieves facts scoped to a workspace. LLM routing prompt injects up to 5 workspace facts (~100 tokens).
-- **Peer Messages in Routing**: `buildRoutingPrompt()` includes recent messages from other nodes in the same workspace (~100 tokens). Total additional overhead: ~350-400 tokens per routing decision (negligible vs base ~2000-4000).
+- **Peer Messages in Routing**: `buildRoutingPrompt()` includes recent messages from other nodes in the same workspace (up to 3 peer messages, ~100 tokens). Total additional overhead: ~350-400 tokens per routing decision.
 - **Graph Persistence**: owner commands (`promote`, `reassign`, `fire`, `pause`) persist mutations to `canvas.json` via `persistGraph()`.
+- **Hop Limit**: `MAX_INTERNAL_HOPS = 5` prevents infinite loops in internal agent-to-agent routing.
 - Design doc: `docs/plans/2026-02-19-multi-agent-collaboration-design.md`
 
 ### Voice Transcription
