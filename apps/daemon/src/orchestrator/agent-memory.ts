@@ -232,6 +232,7 @@ export class AgentMemory {
     platform: string,
     groupId: string | null,
     participantNodeIds: readonly string[],
+    workspaceId?: string | null,
   ): string {
     const existing: unknown = groupId
       ? this.db
@@ -254,10 +255,16 @@ export class AgentMemory {
     const id = nanoid();
     this.db
       .prepare(
-        `INSERT INTO agent_conversations (id, platform, group_id, participant_node_ids)
-         VALUES (?, ?, ?, ?)`,
+        `INSERT INTO agent_conversations (id, platform, group_id, participant_node_ids, workspace_id)
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(id, platform, groupId, JSON.stringify([...participantNodeIds].sort()));
+      .run(
+        id,
+        platform,
+        groupId,
+        JSON.stringify([...participantNodeIds].sort()),
+        workspaceId ?? null,
+      );
 
     return id;
   }

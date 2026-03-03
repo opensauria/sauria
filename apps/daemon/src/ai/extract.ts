@@ -59,6 +59,12 @@ export async function extractEntities(
   }
 }
 
+const WARNING_THROTTLE_MS = 300_000;
+let lastWarningTime = 0;
+
 function logWarning(message: string): void {
+  const now = Date.now();
+  if (now - lastWarningTime < WARNING_THROTTLE_MS) return;
+  lastWarningTime = now;
   process.stderr.write(`[opensauria:extract] WARNING: ${message}\n`);
 }

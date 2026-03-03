@@ -9,7 +9,7 @@ import type {
   Workspace,
 } from './types.js';
 import { RoutingCache, buildCacheKey } from './routing-cache.js';
-import { AgentMemory, estimateTokens } from './agent-memory.js';
+import { type AgentMemory, estimateTokens } from './agent-memory.js';
 import { searchByKeyword } from '../db/search.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -54,6 +54,7 @@ const VALID_ACTION_TYPES = new Set([
   'send_to_all',
   'learn',
   'group_message',
+  'escalate',
 ]);
 
 const VALID_PRIORITIES = new Set(['low', 'normal', 'high']);
@@ -62,15 +63,14 @@ const VALID_PRIORITIES = new Set(['low', 'normal', 'high']);
 
 export class LLMRoutingBrain {
   private readonly cache: RoutingCache;
-  private readonly memory: AgentMemory;
 
   constructor(
     private readonly router: ModelRouter,
+    private readonly memory: AgentMemory,
     private readonly db: BetterSqlite3.Database,
     cacheTtlMs?: number,
   ) {
     this.cache = new RoutingCache(cacheTtlMs);
-    this.memory = new AgentMemory(db);
   }
 
   async decideRouting(context: RoutingContext): Promise<RoutingDecision> {
@@ -160,7 +160,23 @@ function buildRoutingPrompt(
   } = context;
 
   const agentList = teamNodes
-    .map((node) => `- ${node.label} (${node.role}) on ${node.platform}`)
+    .map((node) => {
+      let line = `- ${node.label} (${node.role}) on ${node.platform}`;
+      if (node.capabilities) {
+        const parts: string[] = [];
+        if (node.capabilities.directories?.length) {
+          parts.push(`dirs: ${node.capabilities.directories.join(', ')}`);
+        }
+        if (node.capabilities.tools?.length) {
+          parts.push(`tools: ${node.capabilities.tools.join(', ')}`);
+        }
+        if (node.capabilities.description) {
+          parts.push(node.capabilities.description);
+        }
+        if (parts.length > 0) line += ` [${parts.join('; ')}]`;
+      }
+      return line;
+    })
     .join('\n');
 
   const ruleActionsText =
@@ -248,6 +264,17 @@ function buildRoutingPrompt(
     ...(agentFactsText ? [agentFactsText, ''] : []),
     ...(knowledgeGraphText ? [knowledgeGraphText, ''] : []),
     ...(peerMessagesText ? [peerMessagesText, ''] : []),
+    ...(message.internalRoute
+      ? [
+          `This message was forwarded internally from agent ${
+            teamNodes.find((n) => n.id === message.internalRoute!.fromNodeId)?.label ??
+            message.internalRoute.fromNodeId
+          }.`,
+          `Internal dialogue (hop ${String(message.internalRoute.hopCount)}). Reply to continue, or forward to another agent.`,
+          `Do NOT forward back to ${message.internalRoute.fromNodeId} unless you have new information.`,
+          '',
+        ]
+      : []),
     ruleActionsText,
     '',
     `When generating reply content, respond in character as ${sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '')} (${sourceNode.role ?? 'assistant'}). Never mention being Claude, an AI model, or a language model.`,
@@ -262,12 +289,17 @@ function buildRoutingPrompt(
     'Decide what actions to take. Return ONLY valid JSON:',
     '{"actions": [{"type": "reply", "content": "..."}, ...]}',
     '',
-    'Valid action types: reply, forward, assign, notify, send_to_all, learn, group_message',
+    'Valid action types: reply, forward, assign, notify, send_to_all, learn, group_message, escalate',
     'For forward/assign/notify: include "targetNodeId"',
     'For assign: include "task" and "priority" (low/normal/high)',
     'For notify: include "summary"',
     'For send_to_all/group_message: include "workspaceId" and "content"',
     'For learn: include "fact" and "topics" (string array)',
+    `For escalate: use when you cannot handle the request or need owner guidance. Include "summary".${
+      message.senderIsOwner
+        ? ' IMPORTANT: senderIsOwner=true, do NOT escalate — reply directly.'
+        : ''
+    }`,
   ].join('\n');
 
   return [
@@ -351,6 +383,9 @@ function normalizeAction(raw: RawLLMAction): RoutingAction | null {
       return raw.workspaceId && raw.content
         ? { type: 'group_message', workspaceId: raw.workspaceId, content: raw.content }
         : null;
+
+    case 'escalate':
+      return raw.summary ? { type: 'escalate', summary: raw.summary } : null;
 
     default:
       return null;

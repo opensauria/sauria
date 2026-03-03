@@ -97,7 +97,7 @@ describe('LLMRoutingBrain', () => {
   describe('selectModelTier', () => {
     it('returns local when rule actions exist', () => {
       const router = createMockRouter('{}');
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const message = buildMessage({ content: 'short' });
 
       const tier = brain.selectModelTier(message, true);
@@ -107,7 +107,7 @@ describe('LLMRoutingBrain', () => {
 
     it('returns local for simple messages under word threshold without question', () => {
       const router = createMockRouter('{}');
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const message = buildMessage({ content: 'ok thanks' });
 
       const tier = brain.selectModelTier(message, false);
@@ -117,7 +117,7 @@ describe('LLMRoutingBrain', () => {
 
     it('returns fast for messages with question marks', () => {
       const router = createMockRouter('{}');
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const message = buildMessage({ content: 'How do I fix this?' });
 
       const tier = brain.selectModelTier(message, false);
@@ -127,7 +127,7 @@ describe('LLMRoutingBrain', () => {
 
     it('returns fast for messages over word threshold', () => {
       const router = createMockRouter('{}');
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const longContent = Array.from({ length: 25 }, (_, i) => `word${i}`).join(' ');
       const message = buildMessage({ content: longContent });
 
@@ -138,7 +138,7 @@ describe('LLMRoutingBrain', () => {
 
     it('returns deep for messages with strategic keywords', () => {
       const router = createMockRouter('{}');
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const message = buildMessage({
         content: 'We need to reorganize the team structure and delegate tasks across all teams',
       });
@@ -150,7 +150,7 @@ describe('LLMRoutingBrain', () => {
 
     it('returns deep for budget-related strategic messages', () => {
       const router = createMockRouter('{}');
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const message = buildMessage({
         content:
           'Review the budget allocation and strategy for next quarter across the company-wide initiatives',
@@ -165,7 +165,7 @@ describe('LLMRoutingBrain', () => {
   describe('decideRouting', () => {
     it('skips LLM when rule actions exist and tier is local', async () => {
       const router = createMockRouter('{}');
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const context = buildContext({
         ruleActions: [{ type: 'reply', content: 'Handled by rules' }],
       });
@@ -181,7 +181,7 @@ describe('LLMRoutingBrain', () => {
         actions: [{ type: 'reply', content: 'I can help with that order' }],
       });
       const router = createMockRouter(responseJson);
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const context = buildContext({
         message: buildMessage({
           content: 'Can you help me with my order status and tracking information?',
@@ -200,7 +200,7 @@ describe('LLMRoutingBrain', () => {
         actions: [{ type: 'reply', content: 'Strategic analysis complete' }],
       });
       const router = createMockRouter(responseJson);
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const context = buildContext({
         message: buildMessage({
           content:
@@ -219,7 +219,7 @@ describe('LLMRoutingBrain', () => {
         actions: [{ type: 'reply', content: 'Cached response' }],
       });
       const router = createMockRouter(responseJson);
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const context = buildContext({
         message: buildMessage({ content: 'What is the status of my refund request?' }),
       });
@@ -236,7 +236,7 @@ describe('LLMRoutingBrain', () => {
 
     it('handles LLM returning invalid JSON gracefully', async () => {
       const router = createMockRouter('This is not valid JSON at all');
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const context = buildContext({
         message: buildMessage({ content: 'What should I do about this complicated issue?' }),
       });
@@ -261,7 +261,7 @@ describe('LLMRoutingBrain', () => {
         actions: [{ type: 'reply', content: 'Noted' }],
       });
       const router = createMockRouter(responseJson);
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const context = buildContext({
         message: buildMessage({
           content: 'What do we know about the team preferences and hiring plans?',
@@ -301,7 +301,7 @@ describe('LLMRoutingBrain', () => {
         actions: [{ type: 'reply', content: 'Noted' }],
       });
       const router = createMockRouter(responseJson);
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const context = buildContext({
         message: buildMessage({
           content: 'What were we discussing earlier today?',
@@ -334,7 +334,7 @@ describe('LLMRoutingBrain', () => {
         actions: [{ type: 'reply', content: 'Noted' }],
       });
       const router = createMockRouter(responseJson);
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const context = buildContext({
         message: buildMessage({
           content: 'What do you know about this customer?',
@@ -361,7 +361,7 @@ describe('LLMRoutingBrain', () => {
         actions: [{ type: 'reply', content: 'Noted' }],
       });
       const router = createMockRouter(responseJson);
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const context = buildContext({
         message: buildMessage({
           content: 'Alice design team',
@@ -403,7 +403,7 @@ describe('LLMRoutingBrain', () => {
         actions: [{ type: 'reply', content: 'Noted' }],
       });
       const router = createMockRouter(responseJson);
-      const brain = new LLMRoutingBrain(router, db);
+      const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
       const context = buildContext({
         message: buildMessage({
           content: 'What is the status of the design review?',
@@ -533,6 +533,24 @@ describe('parseRoutingResponse', () => {
     });
   });
 
+  it('parses escalate action', () => {
+    const raw = '{"actions": [{"type": "escalate", "summary": "Cannot handle this request"}]}';
+    const decision = parseRoutingResponse(raw);
+
+    expect(decision.actions[0]).toEqual({
+      type: 'escalate',
+      summary: 'Cannot handle this request',
+    });
+  });
+
+  it('filters out escalate action without summary', () => {
+    const raw = '{"actions": [{"type": "escalate"}, {"type": "reply", "content": "ok"}]}';
+    const decision = parseRoutingResponse(raw);
+
+    expect(decision.actions).toHaveLength(1);
+    expect(decision.actions[0]?.type).toBe('reply');
+  });
+
   it('filters out invalid action types', () => {
     const raw =
       '{"actions": [{"type": "invalid_action", "content": "bad"}, {"type": "reply", "content": "good"}]}';
@@ -588,5 +606,202 @@ describe('parseRoutingResponse', () => {
     const decision = parseRoutingResponse('');
 
     expect(decision.actions).toHaveLength(0);
+  });
+
+  it('filters out send_to_all without workspaceId', () => {
+    const raw = '{"actions": [{"type": "send_to_all", "content": "Hello"}]}';
+    const decision = parseRoutingResponse(raw);
+
+    expect(decision.actions).toHaveLength(0);
+  });
+
+  it('filters out group_message without workspaceId', () => {
+    const raw = '{"actions": [{"type": "group_message", "content": "Hello"}]}';
+    const decision = parseRoutingResponse(raw);
+
+    expect(decision.actions).toHaveLength(0);
+  });
+
+  it('filters out notify without summary', () => {
+    const raw = '{"actions": [{"type": "notify", "targetNodeId": "n2"}]}';
+    const decision = parseRoutingResponse(raw);
+
+    expect(decision.actions).toHaveLength(0);
+  });
+
+  it('filters out assign without task', () => {
+    const raw = '{"actions": [{"type": "assign", "targetNodeId": "n2"}]}';
+    const decision = parseRoutingResponse(raw);
+
+    expect(decision.actions).toHaveLength(0);
+  });
+
+  it('filters out learn without fact', () => {
+    const raw = '{"actions": [{"type": "learn", "topics": ["billing"]}]}';
+    const decision = parseRoutingResponse(raw);
+
+    expect(decision.actions).toHaveLength(0);
+  });
+
+  it('returns empty actions for non-object JSON', () => {
+    const decision = parseRoutingResponse('[1, 2, 3]');
+
+    expect(decision.actions).toHaveLength(0);
+  });
+
+  it('returns empty actions for null JSON', () => {
+    const decision = parseRoutingResponse('null');
+
+    expect(decision.actions).toHaveLength(0);
+  });
+});
+
+describe('buildRoutingPrompt — capabilities and internal routing', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    applySchema(db);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('includes agent capabilities in the routing prompt', async () => {
+    const nodeWithCaps: AgentNode = {
+      ...baseNode,
+      id: 'n2',
+      label: '@dev-bot',
+      role: 'specialist',
+      capabilities: {
+        directories: ['/projects/code', '/projects/tests'],
+        tools: ['git', 'npm'],
+        description: 'Handles code reviews',
+      },
+    };
+
+    const responseJson = JSON.stringify({
+      actions: [{ type: 'reply', content: 'Noted' }],
+    });
+    const router = createMockRouter(responseJson);
+    const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
+    const context = buildContext({
+      message: buildMessage({ content: 'Who can help with code review?' }),
+      teamNodes: [baseNode, nodeWithCaps],
+    });
+
+    await brain.decideRouting(context);
+
+    const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+    expect(reasonCalls.length).toBeGreaterThan(0);
+    const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+    const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+    expect(systemPrompt).toContain('dirs: /projects/code, /projects/tests');
+    expect(systemPrompt).toContain('tools: git, npm');
+    expect(systemPrompt).toContain('Handles code reviews');
+  });
+
+  it('includes internal routing context when message has internalRoute', async () => {
+    const peerNode: AgentNode = {
+      ...baseNode,
+      id: 'n2',
+      label: '@peer-bot',
+    };
+
+    const responseJson = JSON.stringify({
+      actions: [{ type: 'reply', content: 'Continuing dialogue' }],
+    });
+    const router = createMockRouter(responseJson);
+    const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
+    const context = buildContext({
+      message: buildMessage({
+        content: 'Can you handle this?',
+        internalRoute: {
+          originNodeId: 'n2',
+          fromNodeId: 'n2',
+          hopCount: 1,
+          dialogueId: 'dlg-1',
+        },
+      }),
+      teamNodes: [baseNode, peerNode],
+    });
+
+    await brain.decideRouting(context);
+
+    const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+    expect(reasonCalls.length).toBeGreaterThan(0);
+    const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+    const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+    expect(systemPrompt).toContain('forwarded internally');
+    expect(systemPrompt).toContain('hop 1');
+    expect(systemPrompt).toContain('Do NOT forward back to n2');
+  });
+
+  it('includes senderIsOwner guard for escalate in prompt', async () => {
+    const responseJson = JSON.stringify({
+      actions: [{ type: 'reply', content: 'Ok' }],
+    });
+    const router = createMockRouter(responseJson);
+    const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
+    const context = buildContext({
+      message: buildMessage({
+        content: 'What should we do about escalation policy?',
+        senderIsOwner: true,
+      }),
+    });
+
+    await brain.decideRouting(context);
+
+    const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+    expect(reasonCalls.length).toBeGreaterThan(0);
+    const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+    const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+    expect(systemPrompt).toContain('do NOT escalate');
+  });
+
+  it('includes globalInstructions and node instructions in prompt', async () => {
+    const responseJson = JSON.stringify({
+      actions: [{ type: 'reply', content: 'Ok' }],
+    });
+    const router = createMockRouter(responseJson);
+    const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
+    const context = buildContext({
+      message: buildMessage({
+        content: 'What is the tone we should use for customer interactions?',
+      }),
+      globalInstructions: 'Always be professional and concise',
+    });
+
+    await brain.decideRouting(context);
+
+    const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+    expect(reasonCalls.length).toBeGreaterThan(0);
+    const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+    const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+    expect(systemPrompt).toContain('Always be professional and concise');
+    expect(systemPrompt).toContain('Handle support queries');
+  });
+
+  it('handles node without workspace gracefully', async () => {
+    const responseJson = JSON.stringify({
+      actions: [{ type: 'reply', content: 'Ok' }],
+    });
+    const router = createMockRouter(responseJson);
+    const brain = new LLMRoutingBrain(router, new AgentMemory(db), db);
+    const context = buildContext({
+      message: buildMessage({
+        content: 'What should I do about this customer request for assistance?',
+      }),
+      workspace: null,
+    });
+
+    await brain.decideRouting(context);
+
+    const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+    expect(reasonCalls.length).toBeGreaterThan(0);
+    const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+    const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+    expect(systemPrompt).toContain('Unknown');
   });
 });

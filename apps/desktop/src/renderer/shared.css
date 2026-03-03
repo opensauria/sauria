@@ -35,7 +35,7 @@ body {
 .badge {
   margin-left: auto;
   font-size: 11px;
-  padding: 3px 8px;
+  padding: 4px 8px;
   border-radius: 5px;
   font-weight: 500;
   flex-shrink: 0;
@@ -168,4 +168,130 @@ body.in-palette {
   border-radius: 12px;
   border: 0.5px solid rgba(255, 255, 255, 0.1);
   animation: fadeIn 0.15s ease;
+}
+
+/* ── Button Loading State ──────────────────────── */
+
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ── Toast Notifications ───────────────────────── */
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(30, 30, 30, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-size: 13px;
+  color: var(--text);
+  pointer-events: auto;
+  animation: toastIn 0.2s ease forwards;
+  max-width: 360px;
+}
+
+.toast.toast-exit {
+  animation: toastOut 0.2s ease forwards;
+}
+
+.toast-error {
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.toast-error .toast-icon {
+  color: var(--error);
+}
+
+.toast-success {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.toast-success .toast-icon {
+  color: var(--success);
+}
+
+.toast-info .toast-icon {
+  color: var(--accent);
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.toast-message {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-retry {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toast-retry:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
 }

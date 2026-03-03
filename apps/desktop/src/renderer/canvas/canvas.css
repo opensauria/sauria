@@ -39,11 +39,11 @@
   background: rgba(30, 30, 30, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: 20px 12px 14px;
+  padding: 24px 16px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: grab;
   transition:
     border-color 0.2s ease,
@@ -568,7 +568,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   pointer-events: none;
   z-index: 1000;
   transition:
@@ -588,7 +588,7 @@
 .agent-card.connecting,
 .agent-card.error-state {
   width: 280px;
-  padding: 20px;
+  padding: 24px;
   border-radius: 16px;
   align-items: stretch;
 }
@@ -596,7 +596,7 @@
 .card-setup-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 16px;
 }
 
@@ -651,7 +651,7 @@
 }
 
 .card-setup-field {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .card-setup-field label {
@@ -664,7 +664,7 @@
 
 .card-setup-field input {
   width: 100%;
-  padding: 8px 10px;
+  padding: 8px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -760,14 +760,14 @@
 /* Connecting spinner */
 .card-spinner {
   display: inline-block;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: cardSpin 0.6s linear infinite;
   vertical-align: middle;
-  margin-right: 6px;
+  margin-right: 8px;
 }
 
 @keyframes cardSpin {
@@ -951,7 +951,7 @@
 
 .cred-field input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 16px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -980,7 +980,7 @@
 }
 
 .panel-btn {
-  padding: 10px 20px;
+  padding: 8px 24px;
   border-radius: var(--radius-pill);
   font-size: 13px;
   font-weight: 500;
@@ -1403,7 +1403,7 @@
 .detail-textarea {
   width: 100%;
   min-height: 80px;
-  padding: 12px;
+  padding: 16px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -1711,6 +1711,26 @@
 
 .tag-input::placeholder {
   color: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Capabilities Section ───────────────────── */
+
+.capabilities-field {
+  margin-top: 8px;
+}
+
+.capabilities-sublabel {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#capabilities-section .detail-textarea {
+  min-height: 48px;
+  resize: vertical;
 }
 
 /* ── Workspace Creation Dialog ───────────────── */
