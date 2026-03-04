@@ -3,13 +3,25 @@
  */
 
 export type IntegrationCategory =
-  | 'project_management'
   | 'communication'
+  | 'project_management'
   | 'development'
   | 'productivity'
-  | 'storage'
+  | 'infrastructure'
+  | 'monitoring'
+  | 'ecommerce'
+  | 'design'
+  | 'data'
   | 'crm'
-  | 'analytics';
+  | 'automation'
+  | 'content'
+  | 'storage';
+
+export interface CategoryMeta {
+  readonly id: IntegrationCategory;
+  readonly label: string;
+  readonly order: number;
+}
 
 export interface McpServerTemplate {
   readonly package: string;

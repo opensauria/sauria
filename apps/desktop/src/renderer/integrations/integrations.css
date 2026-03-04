@@ -57,6 +57,46 @@
   color: var(--text-dim);
 }
 
+/* ── Category Tabs ──────────────────────────── */
+
+.category-tabs {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: no-drag;
+}
+
+.category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.category-tab {
+  flex-shrink: 0;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-dim);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.category-tab:hover {
+  border-color: var(--border-active);
+  color: var(--text-secondary);
+}
+
+.category-tab.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
 /* ── Grid ────────────────────────────────────── */
 
 .integrations-grid {
@@ -66,7 +106,7 @@
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
   overflow-y: auto;
-  height: calc(100vh - 73px);
+  height: calc(100vh - 113px);
 }
 
 .integrations-loading {
