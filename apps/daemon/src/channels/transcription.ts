@@ -6,7 +6,9 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
-const VENV_PYTHON = join(homedir(), '.opensauria', 'venv', 'bin', 'python3');
+const VENV_PYTHON = process.platform === 'win32'
+  ? join(homedir(), '.opensauria', 'venv', 'Scripts', 'python.exe')
+  : join(homedir(), '.opensauria', 'venv', 'bin', 'python3');
 const AUTO_MODELS: Record<string, string> = {
   darwin: 'mlx-community/whisper-large-v3-turbo',
   linux: 'large-v3-turbo',

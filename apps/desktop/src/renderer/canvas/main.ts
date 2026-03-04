@@ -323,9 +323,7 @@ function renderWorkspaces() {
       '<span class="workspace-count">' +
       agentCount +
       '</span>' +
-      (ws.purpose
-        ? '<span class="workspace-purpose">' + escapeHtml(ws.purpose) + '</span>'
-        : '') +
+      (ws.purpose ? '<span class="workspace-purpose">' + escapeHtml(ws.purpose) + '</span>' : '') +
       '<button class="ws-gear" data-action="ws-gear" data-ws-id="' +
       ws.id +
       '" title="Edit workspace">' +
@@ -540,8 +538,7 @@ function renderNodes() {
           '</div>';
       }
     } else if (node.status === 'error') {
-      card.className =
-        'agent-card error-state' + (node.id === selectedNodeId ? ' selected' : '');
+      card.className = 'agent-card error-state' + (node.id === selectedNodeId ? ' selected' : '');
       var fieldsHtml = '';
       var platformFields = getFieldsForPlatform(node.platform);
       platformFields.forEach(function (f) {
@@ -618,8 +615,7 @@ function renderNodes() {
         '</div>';
     } else if (node.platform === 'owner') {
       /* Owner card */
-      card.className =
-        'agent-card owner-card' + (node.id === selectedNodeId ? ' selected' : '');
+      card.className = 'agent-card owner-card' + (node.id === selectedNodeId ? ' selected' : '');
 
       var ownerAvatarInner = node.photo
         ? '<img src="' + node.photo + '" alt="" />'
@@ -785,6 +781,7 @@ function renderEdges() {
     hoveredEdgeId = null;
   }
 
+  var defs = '';
   var paths = '';
   graph.edges.forEach(function (edge) {
     var fromNode = graph.nodes.find(function (n) {
@@ -826,11 +823,32 @@ function renderEdges() {
       ',' +
       y2;
 
-    /* Hit-area path first (wide, invisible, interactive), then visible path */
+    /* Per-edge gradient: brighter at source, dimmer at target */
+    var gid = 'eg-' + edge.id;
+    defs +=
+      '<linearGradient id="' +
+      gid +
+      '" gradientUnits="userSpaceOnUse" x1="' +
+      x1 +
+      '" y1="' +
+      y1 +
+      '" x2="' +
+      x2 +
+      '" y2="' +
+      y2 +
+      '">' +
+      '<stop offset="0%" stop-color="rgba(255,255,255,0.22)" />' +
+      '<stop offset="100%" stop-color="rgba(255,255,255,0.04)" />' +
+      '</linearGradient>';
+
+    /* Hit-area, gradient line, animated flow overlay — wrapped in a group */
+    paths += '<g class="edge-group">';
     paths += '<path class="edge-hit" data-edge-id="' + edge.id + '" d="' + d + '" />';
-    paths += '<path d="' + d + '" />';
+    paths += '<path class="edge-line" d="' + d + '" stroke="url(#' + gid + ')" />';
+    paths += '<path class="edge-flow" d="' + d + '" />';
+    paths += '</g>';
   });
-  edgeSvg.innerHTML = paths;
+  edgeSvg.innerHTML = '<defs>' + defs + '</defs>' + paths;
 }
 
 /* ═══════════════════════════════════════════════
@@ -838,7 +856,11 @@ function renderEdges() {
    ═══════════════════════════════════════════════ */
 
 viewport.addEventListener('mousedown', function (e) {
-  if (e.target !== viewport && e.target !== world && !(e.target as HTMLElement).classList.contains('edge-svg'))
+  if (
+    e.target !== viewport &&
+    e.target !== world &&
+    !(e.target as HTMLElement).classList.contains('edge-svg')
+  )
     return;
   if (e.button !== 0) return;
   /* Ignore if clicking in the dock area */
@@ -948,7 +970,9 @@ document.addEventListener('mousemove', function (e) {
         }
       });
 
-      var frame = world.querySelector('[data-workspace-id="' + wsDragId + '"]') as HTMLElement | null;
+      var frame = world.querySelector(
+        '[data-workspace-id="' + wsDragId + '"]',
+      ) as HTMLElement | null;
       if (frame) {
         frame.style.left = ws.position.x + 'px';
         frame.style.top = ws.position.y + 'px';
@@ -969,7 +993,9 @@ document.addEventListener('mousemove', function (e) {
     if (wsResizeDir === 'b' || wsResizeDir === 'br') {
       ws.size.h = Math.max(240, wsResizeStartH + dy);
     }
-    var frame = world.querySelector('[data-workspace-id="' + wsResizeId + '"]') as HTMLElement | null;
+    var frame = world.querySelector(
+      '[data-workspace-id="' + wsResizeId + '"]',
+    ) as HTMLElement | null;
     if (frame) {
       frame.style.width = ws.size.w + 'px';
       frame.style.height = ws.size.h + 'px';
@@ -1122,7 +1148,11 @@ world.addEventListener('mousedown', function (e) {
   var card = (e.target as HTMLElement).closest('.agent-card') as HTMLElement | null;
   if (card && e.button === 0) {
     /* Don't start drag if clicking inputs/buttons inside setup cards */
-    if ((e.target as HTMLElement).closest('input') || (e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('label'))
+    if (
+      (e.target as HTMLElement).closest('input') ||
+      (e.target as HTMLElement).closest('button') ||
+      (e.target as HTMLElement).closest('label')
+    )
       return;
 
     var nodeId = card.dataset.nodeId!;
@@ -1231,7 +1261,9 @@ function finishEdgeDrag(e: MouseEvent) {
   }
 
   var target = document.elementFromPoint(e.clientX, e.clientY);
-  var port = target ? (target as HTMLElement).closest('.port[data-port="input"]') as HTMLElement | null : null;
+  var port = target
+    ? ((target as HTMLElement).closest('.port[data-port="input"]') as HTMLElement | null)
+    : null;
   if (port && port.dataset.nodeId !== edgeFromId) {
     var toId = port.dataset.nodeId!;
     var exists = graph.edges.some(function (edge) {
@@ -1256,19 +1288,28 @@ function finishEdgeDrag(e: MouseEvent) {
    Zoom Buttons
    ═══════════════════════════════════════════════ */
 
-(document.getElementById('btn-zoom-in') as HTMLButtonElement).addEventListener('click', function () {
-  setZoom(Math.min(3, vpZoom + 0.25));
-});
+(document.getElementById('btn-zoom-in') as HTMLButtonElement).addEventListener(
+  'click',
+  function () {
+    setZoom(Math.min(3, vpZoom + 0.25));
+  },
+);
 
-(document.getElementById('btn-zoom-out') as HTMLButtonElement).addEventListener('click', function () {
-  setZoom(Math.max(0.25, vpZoom - 0.25));
-});
+(document.getElementById('btn-zoom-out') as HTMLButtonElement).addEventListener(
+  'click',
+  function () {
+    setZoom(Math.max(0.25, vpZoom - 0.25));
+  },
+);
 
-(document.getElementById('btn-zoom-reset') as HTMLButtonElement).addEventListener('click', function () {
-  vpX = 0;
-  vpY = 0;
-  setZoom(1);
-});
+(document.getElementById('btn-zoom-reset') as HTMLButtonElement).addEventListener(
+  'click',
+  function () {
+    vpX = 0;
+    vpY = 0;
+    setZoom(1);
+  },
+);
 
 function setZoom(z: number) {
   var cx = window.innerWidth / 2;
@@ -1453,11 +1494,13 @@ function getEdgeMidpoint(edgeId: string): { x: number; y: number } | null {
     return e.id === edgeId;
   });
   if (!edge) return null;
+  var edgeFrom = edge.from;
+  var edgeTo = edge.to;
   var fromNode = graph.nodes.find(function (n) {
-    return n.id === edge.from;
+    return n.id === edgeFrom;
   });
   var toNode = graph.nodes.find(function (n) {
-    return n.id === edge.to;
+    return n.id === edgeTo;
   });
   if (!fromNode || !toNode) return null;
   var fromCard = world.querySelector('[data-node-id="' + edge.from + '"]') as HTMLElement | null;
@@ -1660,7 +1703,7 @@ world.addEventListener('click', function (e) {
       openAgentDetail(nodeId);
     } else {
       flipCard(card, function () {
-        node._editing = true;
+        node!._editing = true;
         renderNodes();
       });
     }
@@ -1670,7 +1713,7 @@ world.addEventListener('click', function (e) {
 
   if (action === 'close-edit') {
     flipCard(card, function () {
-      node._editing = false;
+      node!._editing = false;
       renderNodes();
     });
     e.stopPropagation();
@@ -1805,7 +1848,10 @@ async function handleInlineConnect(node: AgentNode) {
       } else if (platform === 'email') {
         node.label = result.displayName || 'Email';
         node.credentials = 'email_password';
-        node.meta = { username: credentials.username as string, imapHost: credentials.imapHost as string };
+        node.meta = {
+          username: credentials.username as string,
+          imapHost: credentials.imapHost as string,
+        };
       }
 
       renderAll();
@@ -2015,9 +2061,7 @@ function openAgentDetail(nodeId: string) {
     : node.photo
       ? '<img src="' + node.photo + '" alt="" />'
       : platformIcons[node.platform] || '';
-  var displayName = isOwner
-    ? node.label
-    : node.meta.firstName || node.label.replace(/^@/, '');
+  var displayName = isOwner ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
   var platformLabel = isOwner ? 'You — Organization Owner' : capitalize(node.platform);
   var avatarClass = isOwner ? 'detail-avatar owner-avatar' : 'detail-avatar';
   identityEl.innerHTML =
@@ -2057,8 +2101,7 @@ function openAgentDetail(nodeId: string) {
       'Define how all agents should respond...\n\nExample:\n- Plain text only, no markdown\n- Concise and direct\n- No emojis';
   } else {
     instructionsLabel.textContent = 'Agent Persona';
-    instructionsTextarea.placeholder =
-      "Describe this agent's role, personality, and behavior...";
+    instructionsTextarea.placeholder = "Describe this agent's role, personality, and behavior...";
   }
   instructionsTextarea.value = node.instructions || '';
 
@@ -2076,7 +2119,10 @@ function closeAgentDetail() {
   detailNodeId = null;
 }
 
-(document.getElementById('agent-detail-close') as HTMLButtonElement).addEventListener('click', closeAgentDetail);
+(document.getElementById('agent-detail-close') as HTMLButtonElement).addEventListener(
+  'click',
+  closeAgentDetail,
+);
 
 /* Role pill clicks */
 document.querySelectorAll('#agent-role-pills .role-pill').forEach(function (pill) {
@@ -2126,33 +2172,39 @@ document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function 
 });
 
 /* Instructions textarea */
-(document.getElementById('agent-instructions') as HTMLTextAreaElement).addEventListener('input', function () {
-  if (!detailNodeId) return;
-  var node = graph.nodes.find(function (n) {
-    return n.id === detailNodeId;
-  });
-  if (!node) return;
-  node.instructions = (this as HTMLTextAreaElement).value;
-  if (node.platform === 'owner') {
-    graph.globalInstructions = (this as HTMLTextAreaElement).value;
-  }
-  saveGraph();
-});
+(document.getElementById('agent-instructions') as HTMLTextAreaElement).addEventListener(
+  'input',
+  function () {
+    if (!detailNodeId) return;
+    var node = graph.nodes.find(function (n) {
+      return n.id === detailNodeId;
+    });
+    if (!node) return;
+    node.instructions = (this as HTMLTextAreaElement).value;
+    if (node.platform === 'owner') {
+      graph.globalInstructions = (this as HTMLTextAreaElement).value;
+    }
+    saveGraph();
+  },
+);
 
 /* Template button */
-(document.getElementById('insert-template-btn') as HTMLButtonElement).addEventListener('click', function () {
-  if (!detailNodeId) return;
-  var node = graph.nodes.find(function (n) {
-    return n.id === detailNodeId;
-  });
-  if (!node) return;
-  var textarea = document.getElementById('agent-instructions') as HTMLTextAreaElement;
-  var template = node.platform === 'owner' ? CEO_TEMPLATE : BOT_TEMPLATE;
-  textarea.value = template;
-  node.instructions = template;
-  if (node.platform === 'owner') graph.globalInstructions = template;
-  saveGraph();
-});
+(document.getElementById('insert-template-btn') as HTMLButtonElement).addEventListener(
+  'click',
+  function () {
+    if (!detailNodeId) return;
+    var node = graph.nodes.find(function (n) {
+      return n.id === detailNodeId;
+    });
+    if (!node) return;
+    var textarea = document.getElementById('agent-instructions') as HTMLTextAreaElement;
+    var template = node.platform === 'owner' ? CEO_TEMPLATE : BOT_TEMPLATE;
+    textarea.value = template;
+    node.instructions = template;
+    if (node.platform === 'owner') graph.globalInstructions = template;
+    saveGraph();
+  },
+);
 
 /* Toggle switches */
 function setToggle(id: string, active: boolean) {
@@ -2203,13 +2255,16 @@ function openWorkspaceDetail(wsId: string) {
 
   /* Color swatches */
   var presetColors = ['#038B9A', '#27A7E7', '#34d399', '#f59e0b', '#f87171', '#a78bfa'];
-  var isPreset = presetColors.indexOf(ws.color) !== -1;
+  var wsColor = ws.color;
+  var isPreset = presetColors.indexOf(wsColor) !== -1;
   document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s) {
     if (s.classList.contains('color-swatch-custom')) return;
-    s.classList.toggle('active', (s as HTMLElement).dataset.color === ws.color);
+    s.classList.toggle('active', (s as HTMLElement).dataset.color === wsColor);
   });
   /* Custom swatch state */
-  var customSwatch = document.querySelector('#ws-detail-colors .color-swatch-custom') as HTMLElement | null;
+  var customSwatch = document.querySelector(
+    '#ws-detail-colors .color-swatch-custom',
+  ) as HTMLElement | null;
   if (customSwatch) {
     if (!isPreset && ws.color) {
       customSwatch.style.background = ws.color;
@@ -2234,20 +2289,25 @@ function closeWorkspaceDetail() {
   detailWorkspaceId = null;
 }
 
-(document.getElementById('workspace-detail-close') as HTMLButtonElement)
-  .addEventListener('click', closeWorkspaceDetail);
+(document.getElementById('workspace-detail-close') as HTMLButtonElement).addEventListener(
+  'click',
+  closeWorkspaceDetail,
+);
 
 /* Workspace name */
-(document.getElementById('ws-detail-name') as HTMLInputElement).addEventListener('input', function () {
-  if (!detailWorkspaceId) return;
-  var ws = graph.workspaces.find(function (w) {
-    return w.id === detailWorkspaceId;
-  });
-  if (!ws) return;
-  ws.name = (this as HTMLInputElement).value;
-  renderWorkspaces();
-  saveGraph();
-});
+(document.getElementById('ws-detail-name') as HTMLInputElement).addEventListener(
+  'input',
+  function () {
+    if (!detailWorkspaceId) return;
+    var ws = graph.workspaces.find(function (w) {
+      return w.id === detailWorkspaceId;
+    });
+    if (!ws) return;
+    ws.name = (this as HTMLInputElement).value;
+    renderWorkspaces();
+    saveGraph();
+  },
+);
 
 /* Workspace color */
 document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (swatch) {
@@ -2267,7 +2327,9 @@ document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s
       s.classList.toggle('active', (s as HTMLElement).dataset.color === ws!.color);
     });
     /* Reset custom swatch */
-    var customSwatch = document.querySelector('#ws-detail-colors .color-swatch-custom') as HTMLElement | null;
+    var customSwatch = document.querySelector(
+      '#ws-detail-colors .color-swatch-custom',
+    ) as HTMLElement | null;
     if (customSwatch) {
       customSwatch.style.background = '';
       (customSwatch.querySelector('span') as HTMLSpanElement).style.display = '';
@@ -2278,53 +2340,66 @@ document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s
   });
 });
 
-(document.getElementById('ws-detail-color-input') as HTMLInputElement).addEventListener('input', function () {
-  if (!detailWorkspaceId) return;
-  var ws = graph.workspaces.find(function (w) {
-    return w.id === detailWorkspaceId;
-  });
-  if (!ws) return;
-  ws.color = (this as HTMLInputElement).value;
-  document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s) {
-    s.classList.remove('active');
-  });
-  var customSwatch = document.querySelector('#ws-detail-colors .color-swatch-custom') as HTMLElement | null;
-  if (customSwatch) {
-    customSwatch.style.background = ws.color;
-    (customSwatch.querySelector('span') as HTMLSpanElement).style.display = 'none';
-    customSwatch.classList.add('active');
-  }
-  renderWorkspaces();
-  saveGraph();
-});
+(document.getElementById('ws-detail-color-input') as HTMLInputElement).addEventListener(
+  'input',
+  function () {
+    if (!detailWorkspaceId) return;
+    var ws = graph.workspaces.find(function (w) {
+      return w.id === detailWorkspaceId;
+    });
+    if (!ws) return;
+    ws.color = (this as HTMLInputElement).value;
+    document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s) {
+      s.classList.remove('active');
+    });
+    var customSwatch = document.querySelector(
+      '#ws-detail-colors .color-swatch-custom',
+    ) as HTMLElement | null;
+    if (customSwatch) {
+      customSwatch.style.background = ws.color;
+      (customSwatch.querySelector('span') as HTMLSpanElement).style.display = 'none';
+      customSwatch.classList.add('active');
+    }
+    renderWorkspaces();
+    saveGraph();
+  },
+);
 
 /* Workspace purpose */
-(document.getElementById('ws-detail-purpose') as HTMLTextAreaElement).addEventListener('input', function () {
-  if (!detailWorkspaceId) return;
-  var ws = graph.workspaces.find(function (w) {
-    return w.id === detailWorkspaceId;
-  });
-  if (!ws) return;
-  ws.purpose = (this as HTMLTextAreaElement).value;
-  renderWorkspaces();
-  saveGraph();
-});
+(document.getElementById('ws-detail-purpose') as HTMLTextAreaElement).addEventListener(
+  'input',
+  function () {
+    if (!detailWorkspaceId) return;
+    var ws = graph.workspaces.find(function (w) {
+      return w.id === detailWorkspaceId;
+    });
+    if (!ws) return;
+    ws.purpose = (this as HTMLTextAreaElement).value;
+    renderWorkspaces();
+    saveGraph();
+  },
+);
 
 /* Workspace budget */
-(document.getElementById('ws-detail-budget') as HTMLInputElement).addEventListener('input', function () {
-  if (!detailWorkspaceId) return;
-  var ws = graph.workspaces.find(function (w) {
-    return w.id === detailWorkspaceId;
-  });
-  if (!ws) return;
-  ws.budget = parseFloat((this as HTMLInputElement).value) || 0;
-  saveGraph();
-});
+(document.getElementById('ws-detail-budget') as HTMLInputElement).addEventListener(
+  'input',
+  function () {
+    if (!detailWorkspaceId) return;
+    var ws = graph.workspaces.find(function (w) {
+      return w.id === detailWorkspaceId;
+    });
+    if (!ws) return;
+    ws.budget = parseFloat((this as HTMLInputElement).value) || 0;
+    saveGraph();
+  },
+);
 
 /* Number stepper buttons (generic) */
 document.querySelectorAll('.stepper-btn').forEach(function (btn) {
   btn.addEventListener('click', function () {
-    var input = document.getElementById((btn as HTMLElement).dataset.target!) as HTMLInputElement | null;
+    var input = document.getElementById(
+      (btn as HTMLElement).dataset.target!,
+    ) as HTMLInputElement | null;
     if (!input) return;
     var step = parseFloat(input.step) || 1;
     var min = input.min !== '' ? parseFloat(input.min) : -Infinity;
@@ -2353,34 +2428,40 @@ function renderWsTags(topics: string[]) {
   });
 }
 
-(document.getElementById('ws-detail-tags') as HTMLDivElement).addEventListener('click', function (e) {
-  var removeBtn = (e.target as HTMLElement).closest('.tag-remove') as HTMLElement | null;
-  if (!removeBtn || !detailWorkspaceId) return;
-  var ws = graph.workspaces.find(function (w) {
-    return w.id === detailWorkspaceId;
-  });
-  if (!ws || !ws.topics) return;
-  var idx = parseInt(removeBtn.dataset.idx!, 10);
-  ws.topics.splice(idx, 1);
-  renderWsTags(ws.topics);
-  saveGraph();
-});
+(document.getElementById('ws-detail-tags') as HTMLDivElement).addEventListener(
+  'click',
+  function (e) {
+    var removeBtn = (e.target as HTMLElement).closest('.tag-remove') as HTMLElement | null;
+    if (!removeBtn || !detailWorkspaceId) return;
+    var ws = graph.workspaces.find(function (w) {
+      return w.id === detailWorkspaceId;
+    });
+    if (!ws || !ws.topics) return;
+    var idx = parseInt(removeBtn.dataset.idx!, 10);
+    ws.topics.splice(idx, 1);
+    renderWsTags(ws.topics);
+    saveGraph();
+  },
+);
 
-(document.getElementById('ws-tag-input') as HTMLInputElement).addEventListener('keydown', function (e) {
-  if (e.key !== 'Enter') return;
-  e.preventDefault();
-  var val = (this as HTMLInputElement).value.trim();
-  if (!val || !detailWorkspaceId) return;
-  var ws = graph.workspaces.find(function (w) {
-    return w.id === detailWorkspaceId;
-  });
-  if (!ws) return;
-  if (!ws.topics) ws.topics = [];
-  ws.topics.push(val);
-  (this as HTMLInputElement).value = '';
-  renderWsTags(ws.topics);
-  saveGraph();
-});
+(document.getElementById('ws-tag-input') as HTMLInputElement).addEventListener(
+  'keydown',
+  function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var val = (this as HTMLInputElement).value.trim();
+    if (!val || !detailWorkspaceId) return;
+    var ws = graph.workspaces.find(function (w) {
+      return w.id === detailWorkspaceId;
+    });
+    if (!ws) return;
+    if (!ws.topics) ws.topics = [];
+    ws.topics.push(val);
+    (this as HTMLInputElement).value = '';
+    renderWsTags(ws.topics);
+    saveGraph();
+  },
+);
 
 /* ═══════════════════════════════════════════════
    Workspace Creation Dialog
@@ -2388,29 +2469,37 @@ function renderWsTags(topics: string[]) {
 
 var wsCreateColor = '#038B9A';
 
-(document.getElementById('btn-add-workspace') as HTMLButtonElement).addEventListener('click', function () {
-  wsDialogOverlay.classList.add('open');
-  (document.getElementById('ws-create-name') as HTMLInputElement).value = '';
-  (document.getElementById('ws-create-purpose') as HTMLTextAreaElement).value = '';
-  (document.getElementById('ws-create-topics') as HTMLInputElement).value = '';
-  (document.getElementById('ws-create-budget') as HTMLInputElement).value = '';
-  wsCreateColor = '#038B9A';
-  document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s) {
-    s.classList.toggle('active', (s as HTMLElement).dataset.color === '#038B9A');
-  });
-  /* Reset custom swatch appearance */
-  var customSwatch = document.querySelector('#ws-create-colors .color-swatch-custom') as HTMLElement | null;
-  if (customSwatch) {
-    customSwatch.style.background = '';
-    (customSwatch.querySelector('span') as HTMLSpanElement).style.display = '';
-    customSwatch.classList.remove('active');
-  }
-  (document.getElementById('ws-create-name') as HTMLInputElement).focus();
-});
+(document.getElementById('btn-add-workspace') as HTMLButtonElement).addEventListener(
+  'click',
+  function () {
+    wsDialogOverlay.classList.add('open');
+    (document.getElementById('ws-create-name') as HTMLInputElement).value = '';
+    (document.getElementById('ws-create-purpose') as HTMLTextAreaElement).value = '';
+    (document.getElementById('ws-create-topics') as HTMLInputElement).value = '';
+    (document.getElementById('ws-create-budget') as HTMLInputElement).value = '';
+    wsCreateColor = '#038B9A';
+    document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s) {
+      s.classList.toggle('active', (s as HTMLElement).dataset.color === '#038B9A');
+    });
+    /* Reset custom swatch appearance */
+    var customSwatch = document.querySelector(
+      '#ws-create-colors .color-swatch-custom',
+    ) as HTMLElement | null;
+    if (customSwatch) {
+      customSwatch.style.background = '';
+      (customSwatch.querySelector('span') as HTMLSpanElement).style.display = '';
+      customSwatch.classList.remove('active');
+    }
+    (document.getElementById('ws-create-name') as HTMLInputElement).focus();
+  },
+);
 
-(document.getElementById('ws-create-cancel') as HTMLButtonElement).addEventListener('click', function () {
-  wsDialogOverlay.classList.remove('open');
-});
+(document.getElementById('ws-create-cancel') as HTMLButtonElement).addEventListener(
+  'click',
+  function () {
+    wsDialogOverlay.classList.remove('open');
+  },
+);
 
 document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (swatch) {
   swatch.addEventListener('click', function () {
@@ -2423,7 +2512,9 @@ document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s
       s.classList.toggle('active', (s as HTMLElement).dataset.color === wsCreateColor);
     });
     /* Reset custom swatch */
-    var customSwatch = document.querySelector('#ws-create-colors .color-swatch-custom') as HTMLElement | null;
+    var customSwatch = document.querySelector(
+      '#ws-create-colors .color-swatch-custom',
+    ) as HTMLElement | null;
     if (customSwatch) {
       customSwatch.style.background = '';
       (customSwatch.querySelector('span') as HTMLSpanElement).style.display = '';
@@ -2432,54 +2523,65 @@ document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s
   });
 });
 
-(document.getElementById('ws-create-color-input') as HTMLInputElement).addEventListener('input', function () {
-  wsCreateColor = (this as HTMLInputElement).value;
-  document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s) {
-    s.classList.remove('active');
-  });
-  var customSwatch = document.querySelector('#ws-create-colors .color-swatch-custom') as HTMLElement | null;
-  if (customSwatch) {
-    customSwatch.style.background = wsCreateColor;
-    (customSwatch.querySelector('span') as HTMLSpanElement).style.display = 'none';
-    customSwatch.classList.add('active');
-  }
-});
+(document.getElementById('ws-create-color-input') as HTMLInputElement).addEventListener(
+  'input',
+  function () {
+    wsCreateColor = (this as HTMLInputElement).value;
+    document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s) {
+      s.classList.remove('active');
+    });
+    var customSwatch = document.querySelector(
+      '#ws-create-colors .color-swatch-custom',
+    ) as HTMLElement | null;
+    if (customSwatch) {
+      customSwatch.style.background = wsCreateColor;
+      (customSwatch.querySelector('span') as HTMLSpanElement).style.display = 'none';
+      customSwatch.classList.add('active');
+    }
+  },
+);
 
-(document.getElementById('ws-create-submit') as HTMLButtonElement).addEventListener('click', function () {
-  var name = (document.getElementById('ws-create-name') as HTMLInputElement).value.trim();
-  if (!name) return;
-  var purpose = (document.getElementById('ws-create-purpose') as HTMLTextAreaElement).value.trim();
-  var topicsRaw = (document.getElementById('ws-create-topics') as HTMLInputElement).value.trim();
-  var topics = topicsRaw
-    ? topicsRaw
-        .split(',')
-        .map(function (t) {
-          return t.trim();
-        })
-        .filter(Boolean)
-    : [];
-  var budgetVal = parseFloat((document.getElementById('ws-create-budget') as HTMLInputElement).value) || 0;
+(document.getElementById('ws-create-submit') as HTMLButtonElement).addEventListener(
+  'click',
+  function () {
+    var name = (document.getElementById('ws-create-name') as HTMLInputElement).value.trim();
+    if (!name) return;
+    var purpose = (
+      document.getElementById('ws-create-purpose') as HTMLTextAreaElement
+    ).value.trim();
+    var topicsRaw = (document.getElementById('ws-create-topics') as HTMLInputElement).value.trim();
+    var topics = topicsRaw
+      ? topicsRaw
+          .split(',')
+          .map(function (t) {
+            return t.trim();
+          })
+          .filter(Boolean)
+      : [];
+    var budgetVal =
+      parseFloat((document.getElementById('ws-create-budget') as HTMLInputElement).value) || 0;
 
-  var cx = (window.innerWidth / 2 - vpX) / vpZoom - 200;
-  var cy = (window.innerHeight / 2 - vpY) / vpZoom - 160;
+    var cx = (window.innerWidth / 2 - vpX) / vpZoom - 200;
+    var cy = (window.innerHeight / 2 - vpY) / vpZoom - 160;
 
-  var ws: Workspace = {
-    id: generateId(),
-    name: name,
-    color: wsCreateColor,
-    purpose: purpose,
-    topics: topics,
-    budget: budgetVal,
-    position: { x: Math.round(cx), y: Math.round(cy) },
-    size: { w: 400, h: 320 },
-    checkpoints: [],
-    groups: [],
-  };
-  graph.workspaces.push(ws);
-  wsDialogOverlay.classList.remove('open');
-  renderAll();
-  saveGraph();
-});
+    var ws: Workspace = {
+      id: generateId(),
+      name: name,
+      color: wsCreateColor,
+      purpose: purpose,
+      topics: topics,
+      budget: budgetVal,
+      position: { x: Math.round(cx), y: Math.round(cy) },
+      size: { w: 400, h: 320 },
+      checkpoints: [],
+      groups: [],
+    };
+    graph.workspaces.push(ws);
+    wsDialogOverlay.classList.remove('open');
+    renderAll();
+    saveGraph();
+  },
+);
 
 /* Close dialog on overlay click */
 wsDialogOverlay.addEventListener('click', function (e) {
@@ -2504,9 +2606,12 @@ var isInPalette = new URLSearchParams(window.location.search).has('inPalette');
 if (isInPalette) {
   document.documentElement.style.background = 'transparent';
   document.body.classList.add('in-palette');
-  (document.getElementById('palette-back') as HTMLButtonElement).addEventListener('click', function () {
-    invoke('navigate_back');
-  });
+  (document.getElementById('palette-back') as HTMLButtonElement).addEventListener(
+    'click',
+    function () {
+      invoke('navigate_back');
+    },
+  );
 }
 
 document.addEventListener('keydown', function (e) {

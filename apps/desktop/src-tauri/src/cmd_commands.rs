@@ -8,8 +8,6 @@ use crate::daemon_manager::{self, DaemonState};
 use crate::paths::Paths;
 use crate::windows;
 
-const COMMAND_TIMEOUT_SECS: u64 = 10;
-
 const ALLOWED_COMMANDS: &[&str] = &[
     "status", "telegram", "settings", "setup", "audit", "doctor", "docs", "quit", "canvas", "brain",
 ];

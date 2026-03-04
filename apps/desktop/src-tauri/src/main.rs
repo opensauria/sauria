@@ -17,6 +17,8 @@ use daemon_client::DaemonClient;
 use daemon_manager::DaemonState;
 use paths::Paths;
 use std::sync::Arc;
+use tauri::Manager;
+use tauri::path::BaseDirectory;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 fn main() {
@@ -54,7 +56,6 @@ fn main() {
             // Canvas
             cmd_canvas::get_canvas_graph,
             cmd_canvas::save_canvas_graph,
-            cmd_canvas::show_canvas,
             cmd_canvas::execute_owner_command,
             cmd_canvas::get_telegram_status,
             cmd_canvas::get_owner_profile,
@@ -87,15 +88,32 @@ fn main() {
 
             // Register global shortcut
             let app_handle = app.handle().clone();
+            let shortcut = if cfg!(target_os = "macos") {
+                "Command+Shift+J"
+            } else {
+                "Ctrl+Shift+J"
+            };
 
             app.global_shortcut().on_shortcut(
-                "Command+Shift+J",
+                shortcut,
                 move |_app, _shortcut, event| {
                     if event.state == ShortcutState::Pressed {
                         let _ = windows::show_palette(&app_handle);
                     }
                 },
             )?;
+
+            // Resolve daemon CLI path and node_modules from Tauri bundled resources
+            if let Ok(resource_path) = app.path().resolve("daemon/index.mjs", BaseDirectory::Resource) {
+                if resource_path.exists() {
+                    let mut s = daemon_state.blocking_lock();
+                    s.set_daemon_cli_path(resource_path.to_string_lossy().to_string());
+                    // Set NODE_PATH so daemon can find bundled native modules (better-sqlite3)
+                    if let Ok(nm_path) = app.path().resolve("node_modules", BaseDirectory::Resource) {
+                        s.set_node_path(nm_path.to_string_lossy().to_string());
+                    }
+                }
+            }
 
             // Start daemon
             let ds = daemon_state.clone();

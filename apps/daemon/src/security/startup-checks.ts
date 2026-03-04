@@ -15,6 +15,8 @@ function isErrnoException(err: unknown): err is NodeJS.ErrnoException {
 }
 
 export async function enforceFilePermissions(filePath: string, mode: number): Promise<void> {
+  if (process.platform === 'win32') return;
+
   try {
     const info = await stat(filePath);
     const currentMode = info.mode & 0o777;
@@ -31,6 +33,8 @@ export async function enforceFilePermissions(filePath: string, mode: number): Pr
 }
 
 function checkNotRoot(): void {
+  if (process.platform === 'win32') return;
+
   const uid = process.getuid?.();
 
   if (uid === 0) {
@@ -39,6 +43,8 @@ function checkNotRoot(): void {
 }
 
 async function checkHomeOwnership(): Promise<void> {
+  if (process.platform === 'win32') return;
+
   try {
     const info = await stat(paths.home);
     const currentUid = process.getuid?.();

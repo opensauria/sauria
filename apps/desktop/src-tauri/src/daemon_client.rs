@@ -1,7 +1,6 @@
 use serde_json::Value;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::time::{timeout, Duration};
 
@@ -17,7 +16,10 @@ type PendingMap = std::collections::HashMap<u64, oneshot::Sender<Result<Value, S
 pub struct DaemonClient {
     tx: Mutex<Option<mpsc::Sender<(u64, String)>>>,
     pending: std::sync::Arc<Mutex<PendingMap>>,
+    #[cfg(unix)]
     socket_path: String,
+    #[cfg(windows)]
+    ipc_port_path: String,
 }
 
 impl DaemonClient {
@@ -25,7 +27,10 @@ impl DaemonClient {
         Self {
             tx: Mutex::new(None),
             pending: std::sync::Arc::new(Mutex::new(std::collections::HashMap::new())),
+            #[cfg(unix)]
             socket_path: paths.socket.to_string_lossy().to_string(),
+            #[cfg(windows)]
+            ipc_port_path: paths.ipc_port.to_string_lossy().to_string(),
         }
     }
 
@@ -35,12 +40,7 @@ impl DaemonClient {
             return Ok(());
         }
 
-        let stream = timeout(CONNECT_TIMEOUT, UnixStream::connect(&self.socket_path))
-            .await
-            .map_err(|_| "Daemon connect timeout".to_string())?
-            .map_err(|e| format!("Daemon connection failed: {e}"))?;
-
-        let (reader, writer) = stream.into_split();
+        let (reader, writer) = connect_ipc(self).await?;
         let (send_tx, mut send_rx) = mpsc::channel::<(u64, String)>(64);
         let pending_for_reader = self.pending.clone();
 
@@ -133,12 +133,58 @@ impl DaemonClient {
         }
     }
 
-    pub async fn disconnect(&self) {
-        let mut tx_guard = self.tx.lock().await;
-        *tx_guard = None;
-        let mut pending = self.pending.lock().await;
-        for (_, sender) in pending.drain() {
-            let _ = sender.send(Err("Client disconnecting".to_string()));
-        }
-    }
+}
+
+// ─── Platform-specific IPC connection ────────────────────────────────────────
+
+#[cfg(unix)]
+async fn connect_ipc(
+    client: &DaemonClient,
+) -> Result<
+    (
+        tokio::io::ReadHalf<tokio::net::UnixStream>,
+        tokio::io::WriteHalf<tokio::net::UnixStream>,
+    ),
+    String,
+> {
+    use tokio::io::split;
+    use tokio::net::UnixStream;
+
+    let stream = timeout(CONNECT_TIMEOUT, UnixStream::connect(&client.socket_path))
+        .await
+        .map_err(|_| "Daemon connect timeout".to_string())?
+        .map_err(|e| format!("Daemon connection failed: {e}"))?;
+
+    Ok(split(stream))
+}
+
+#[cfg(windows)]
+async fn connect_ipc(
+    client: &DaemonClient,
+) -> Result<
+    (
+        tokio::io::ReadHalf<tokio::net::TcpStream>,
+        tokio::io::WriteHalf<tokio::net::TcpStream>,
+    ),
+    String,
+> {
+    use tokio::io::split;
+    use tokio::net::TcpStream;
+
+    let port_str = std::fs::read_to_string(&client.ipc_port_path)
+        .map_err(|e| format!("Failed to read daemon port file: {e}"))?;
+    let port: u16 = port_str
+        .trim()
+        .parse()
+        .map_err(|e| format!("Invalid daemon port: {e}"))?;
+
+    let stream = timeout(
+        CONNECT_TIMEOUT,
+        TcpStream::connect(("127.0.0.1", port)),
+    )
+    .await
+    .map_err(|_| "Daemon connect timeout".to_string())?
+    .map_err(|e| format!("Daemon connection failed: {e}"))?;
+
+    Ok(split(stream))
 }

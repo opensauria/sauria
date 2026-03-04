@@ -4,7 +4,6 @@ use pbkdf2::pbkdf2_hmac;
 use rand::RngCore;
 use sha2::{Digest, Sha256, Sha512};
 use std::fs;
-use std::path::Path;
 use std::process::Command;
 
 use crate::paths::Paths;
@@ -113,16 +112,6 @@ fn encrypt_data(data: &[u8], key: &[u8; KEY_LENGTH]) -> Result<(Vec<u8>, [u8; IV
     Ok((ciphertext, iv))
 }
 
-fn decrypt_data(
-    ciphertext: &[u8],
-    key: &[u8; KEY_LENGTH],
-    iv: &[u8; IV_LENGTH],
-) -> Result<Vec<u8>, String> {
-    let cipher = Aes256Gcm::new_from_slice(key).map_err(|e| e.to_string())?;
-    let nonce = Nonce::from_slice(iv);
-    cipher.decrypt(nonce, ciphertext).map_err(|e| e.to_string())
-}
-
 fn secret_file_path(paths: &Paths, name: &str) -> std::path::PathBuf {
     paths.vault.join(format!("{name}.enc"))
 }
@@ -164,39 +153,6 @@ pub fn vault_store(paths: &Paths, name: &str, value: &str) -> Result<(), String>
     Ok(())
 }
 
-pub fn vault_get(paths: &Paths, name: &str) -> Result<Option<String>, String> {
-    let file_path = secret_file_path(paths, name);
-    if !file_path.exists() {
-        return Ok(None);
-    }
-
-    let file_data = fs::read(&file_path).map_err(|e| e.to_string())?;
-    let min_len = SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH;
-    if file_data.len() < min_len {
-        return Err("Vault file too short".to_string());
-    }
-
-    let salt = &file_data[..SALT_LENGTH];
-    let iv: [u8; IV_LENGTH] = file_data[SALT_LENGTH..SALT_LENGTH + IV_LENGTH]
-        .try_into()
-        .map_err(|_| "Invalid IV length")?;
-    let auth_tag = &file_data[SALT_LENGTH + IV_LENGTH..SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH];
-    let encrypted = &file_data[SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH..];
-
-    let password = derive_vault_password(paths);
-    let key = derive_wrapping_key(&password, salt);
-
-    // Reconstruct ciphertext with appended auth tag (what aes-gcm expects)
-    let mut ciphertext = Vec::with_capacity(encrypted.len() + AUTH_TAG_LENGTH);
-    ciphertext.extend_from_slice(encrypted);
-    ciphertext.extend_from_slice(auth_tag);
-
-    let plaintext = decrypt_data(&ciphertext, &key, &iv)?;
-    String::from_utf8(plaintext)
-        .map(Some)
-        .map_err(|e| e.to_string())
-}
-
 pub fn vault_delete(paths: &Paths, name: &str) -> Result<(), String> {
     let file_path = secret_file_path(paths, name);
     if !file_path.exists() {
@@ -216,8 +172,4 @@ pub fn vault_delete(paths: &Paths, name: &str) -> Result<(), String> {
 
 pub fn vault_exists(paths: &Paths, name: &str) -> bool {
     secret_file_path(paths, name).exists()
-}
-
-pub fn file_exists(path: &Path) -> bool {
-    path.exists()
 }

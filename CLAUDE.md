@@ -4,7 +4,7 @@
 
 OpenSauria is a security-first personal AI operating system. It runs as a local daemon that ingests information from multiple sources (MCP servers, email, calendars), builds a persistent knowledge graph (entities, relations, events), and exposes it through channels (Telegram, Slack, WhatsApp, Discord, Email) and an MCP server.
 
-The desktop app (Electron) provides a visual canvas where users connect AI agents, draw edges between them, and orchestrate multi-agent workflows. The user is the "owner" who gives orders; agents collaborate through the orchestrator.
+The desktop app (Tauri v2) provides a visual canvas where users connect AI agents, draw edges between them, and orchestrate multi-agent workflows. The user is the "owner" who gives orders; agents collaborate through the orchestrator.
 
 ## Architecture
 
@@ -19,7 +19,7 @@ CLI (commander) ──► daemon-lifecycle.ts ──► ProactiveEngine
                                          │    └── ChannelRegistry
                                          └── Channels (Telegram, Slack, WhatsApp, Discord, Email)
 
-Desktop (Electron) ──► Canvas UI (agent cards, edges, workspaces)
+Desktop (Tauri v2) ──► Canvas UI (agent cards, edges, workspaces)
                      ├── Setup Wizard (OAuth + API key + local)
                      ├── Command Palette (provider status, Telegram mgmt)
                      └── IPC ──► vault, config, daemon management
@@ -32,8 +32,8 @@ Desktop (Electron) ──► Canvas UI (agent cards, edges, workspaces)
 - **Monorepo**: pnpm workspaces + Turborepo (`pnpm-workspace.yaml`, `turbo.json`)
 - **Database**: SQLite via `better-sqlite3` (encrypted at rest)
 - **AI Providers**: Anthropic (OAuth or API key), OpenAI, Google, Ollama (local)
-- **Desktop**: Electron + Electron Forge (no framework, vanilla HTML/CSS/JS)
-- **Build**: `tsdown` for daemon CLI bundle, Vite (via `@electron-forge/plugin-vite`) for desktop
+- **Desktop**: Tauri v2 (Rust backend, vanilla HTML/CSS/JS renderer)
+- **Build**: `tsdown` for daemon CLI bundle, Vite for desktop renderer
 - **Test**: Vitest
 - **Validation**: Zod schemas
 
@@ -60,27 +60,8 @@ apps/
       daemon-lifecycle.ts          # Start/stop daemon context
     package.json  tsconfig.json  vitest.config.ts
 
-  desktop/                         # Electron app
+  desktop/                         # Tauri v2 app
     src/
-      main/                        # Main process (decomposed from monolithic main.ts)
-        app.ts                     # Lifecycle, tray, shortcuts (~145 lines)
-        daemon-manager.ts          # Spawn, kill, health check
-        ipc-setup.ts               # Setup/configure/validate handlers
-        ipc-oauth.ts               # OAuth PKCE flow (Anthropic)
-        ipc-canvas.ts              # Canvas graph handlers
-        ipc-channels.ts            # Channel connect/disconnect
-        ipc-commands.ts            # Palette command execution
-        ipc-brain.ts               # Brain query forwarding
-        channel-connectors.ts      # Platform-specific connector functions
-        daemon-client.ts           # Unix socket client
-        owner-profile.ts           # OS profile resolution
-        mcp-detection.ts           # MCP client detection
-        local-providers.ts         # Local AI provider detection
-      preload.ts                   # Context bridge
-      window-canvas.ts             # Canvas window factory
-      window-palette.ts            # Command palette window
-      window-setup.ts              # Setup wizard window
-      window-brain.ts              # Brain knowledge window
       renderer/
         canvas/index.html          # Agent canvas (inline JS, spring physics)
         canvas/canvas.css          # Canvas styles
@@ -88,9 +69,23 @@ apps/
         setup/index.html           # Setup wizard UI
         brain/index.html           # Brain knowledge graph UI
         shared.css                 # Imports @opensauria/design-tokens + shared components
+    src-tauri/src/
+      main.rs                      # Tauri app builder, shortcut, daemon launch
+      daemon_manager.rs            # Spawn, kill, health check (cross-platform)
+      daemon_client.rs             # IPC client (Unix socket / TCP)
+      windows.rs                   # Palette window, navigation, animation
+      cmd_commands.rs              # Palette command execution
+      cmd_canvas.rs                # Canvas graph handlers
+      cmd_channels.rs              # Channel connect/disconnect
+      cmd_setup.rs                 # Setup/configure/validate
+      cmd_brain.rs                 # Brain query forwarding
+      cmd_oauth.rs                 # OAuth PKCE flow
+      vault.rs                     # Vault encryption (AES-256-GCM)
+      paths.rs                     # Cross-platform path resolution
     public/icons/                  # Brand + UI icons (copied by build script)
     scripts/copy-icons.js          # Icon build pipeline
-    package.json  forge.config.ts  vite.*.config.ts
+    scripts/copy-native-deps.js    # Native Node module staging for bundling
+    package.json  vite.config.ts
 
 packages/
   types/                           # @opensauria/types (zero deps)
@@ -296,23 +291,60 @@ Desktop `shared.css` imports via `@import '@opensauria/design-tokens/tokens.css'
 - Desktop manages daemon spawn with `daemonStarting` guard and `restartDaemon()`
 - `restartDaemon()` waits for old process to exit before spawning new one
 - ProactiveEngine errors are caught (best-effort, non-fatal)
+- Daemon writes JSON status line to stdout on startup: `{"status":"ready"}` or `{"status":"error","message":"..."}`
+- `startIpcServer()` is async — awaits socket readiness before signaling "ready"
 
-## Electron Build
+## Tauri Build
 
-- Entry point: `apps/desktop/src/main/app.ts` (thin lifecycle orchestrator)
-- Vite bundles main, preload, and renderer via `@electron-forge/plugin-vite`
-- `assets/icon.icns` is missing, so `electron-forge make` (DMG) fails — use `package` instead
-- Dev: `cd apps/desktop && pnpm dev` (icons + electron-forge start with Vite HMR)
-- Package: `cd apps/desktop && pnpm run package`
-- Always kill all Electron processes before restart (see memory notes)
-- Daemon bundle must be rebuilt separately: `pnpm -F opensauria-daemon build`
+- Entry point: `apps/desktop/src-tauri/src/main.rs` → Tauri app builder
+- Vite builds renderer to `apps/desktop/dist/` (configured in `tauri.conf.json` → `build.frontendDist`)
+- `tauri.conf.json` is at `apps/desktop/src-tauri/tauri.conf.json`
+- Dev: `pnpm -F opensauria-desktop dev` (Vite HMR + Tauri dev server)
+- Build: `pnpm -r build` (builds all packages, daemon, then `tauri build` for desktop)
+- Always kill all processes before restart: `pkill -9 -f "opensauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9`
 - Renderer files live in `apps/desktop/src/renderer/{canvas,palette,setup,brain}/`
 - Icons are static assets in `apps/desktop/public/icons/` (served at `/icons/`)
+
+### Daemon Bundling (CRITICAL)
+
+- Tauri does NOT auto-include the Node.js daemon — it only bundles Rust binary + frontend assets
+- The daemon JS bundle (`apps/daemon/dist/`) MUST be declared in `tauri.conf.json` → `bundle.resources`
+- Resources land in `Contents/Resources/` on macOS
+- Use `app.path().resolve("daemon/index.mjs", BaseDirectory::Resource)` in Rust to resolve at runtime
+- `DaemonState` receives the resolved path from `AppHandle` after Tauri setup (not at construction)
+- Dev mode fallback: daemon dist is at its normal monorepo path (`../../daemon/dist/index.mjs`)
+- Error signature when broken: `daemon.err` shows `Cannot find module '/opensauria'`
+
+### tsdown Config (CRITICAL)
+
+- `tsdown.config.ts` MUST use `noExternal: [/.*/]` to inline ALL dependencies (npm + workspace)
+- `external: ['better-sqlite3']` — only native `.node` modules stay external
+- Without `noExternal: [/.*/]`, npm deps (zod, grammy, commander, etc.) remain as imports → crash in bundled `.app`
+- NEVER change to `noExternal: ['@opensauria/*']` — that only inlines workspace packages
+
+### Native Node Module Bundling
+
+- `better-sqlite3` has a native `.node` binding that cannot be inlined by tsdown
+- Runtime deps chain: `better-sqlite3` → `bindings` → `file-uri-to-path`
+- `scripts/copy-native-deps.js` stages only runtime files to `native-deps/` (~1.9MB vs 12MB+ full)
+- `tauri.conf.json` bundles `native-deps/` as `node_modules` resource
+- `beforeBuildCommand` runs `pnpm run native-deps` before Vite build
+- `daemon_manager.rs` passes `NODE_PATH` env var pointing to bundled `Contents/Resources/node_modules/`
+- Error signature when broken: `Cannot find module 'bindings'` or `Cannot find module 'better-sqlite3'`
+
+### Palette Window Architecture
+
+- Single frameless window navigates between palette/canvas/brain/setup views
+- `navigate_palette_to()` handles all view transitions with animation
+- NEVER open canvas/brain as standalone windows — breaks back navigation
+- `navigate_palette_back()` restores previous view with reverse animation
+- Drag regions: `data-tauri-drag-region` HTML attribute + CSS `-webkit-app-region: drag`
+- Interactive elements inside drag regions need `-webkit-app-region: no-drag`
 
 ## Build Checklist
 
 ```
-pnpm -r build                    # Build all packages + apps
+pnpm -r build                    # Build all packages + apps (includes tauri build)
 pnpm -F opensauria-daemon build    # Rebuild daemon only
 pnpm -F opensauria-desktop dev     # Start desktop in dev mode
 pnpm -F opensauria-daemon test     # Run daemon tests
@@ -321,6 +353,6 @@ pnpm -r typecheck                # Typecheck all packages
 
 When changing shared packages (`packages/*`): rebuild with `pnpm -r build` (Turbo handles deps)
 When changing daemon code (`apps/daemon/src/`): `pnpm -F opensauria-daemon build`
-When changing desktop main (`apps/desktop/src/main/`): Vite rebuilds automatically in dev mode
+When changing desktop main (`apps/desktop/src-tauri/src/`): Rust recompiles on `tauri dev`
 When changing renderer files (`apps/desktop/src/renderer/`): Vite hot-reloads in dev mode
-Full restart: kill Electron + daemon, `pnpm -r build`, start desktop
+Full restart: kill all processes, `pnpm -r build`, start desktop

@@ -90,7 +90,7 @@ function capitalize(str: unknown): string {
 
 const UPPER_WORDS = new Set(['id', 'url', 'api', 'uuid', 'ip', 'fts', 'ceo']);
 function toTitleCase(str: string): string {
-  return str.replace(/_/g, ' ').replace(/\b\w+/g, w => {
+  return str.replace(/_/g, ' ').replace(/\b\w+/g, (w) => {
     const lower = w.toLowerCase();
     if (UPPER_WORDS.has(lower)) return lower.toUpperCase();
     return w.charAt(0).toUpperCase() + w.slice(1);
@@ -100,7 +100,11 @@ function toTitleCase(str: string): string {
 function parseJson(raw: unknown): Record<string, unknown> | null {
   if (!raw) return null;
   if (typeof raw === 'object') return raw as Record<string, unknown>;
-  try { return JSON.parse(raw as string); } catch { return null; }
+  try {
+    return JSON.parse(raw as string);
+  } catch {
+    return null;
+  }
 }
 
 /* ── Stats ───────────────────────────────────────────────────────── */
@@ -110,13 +114,14 @@ async function loadStats() {
     renderStats();
     updateNavCounts();
   } catch {
-    statsBar.innerHTML = '<div class="brain-stat"><span style="color: var(--error)">Could not connect to OpenSauria</span></div>';
+    statsBar.innerHTML =
+      '<div class="brain-stat"><span style="color: var(--error)">Could not connect to OpenSauria</span></div>';
   }
 }
 
 function renderStats() {
   if (!stats) return;
-  statsBar.innerHTML = `
+  let html = `
     <div class="brain-stat"><span class="brain-stat-value">${stats.entities}</span> entities</div>
     <div class="brain-stat"><span class="brain-stat-value">${stats.relations}</span> relations</div>
     <div class="brain-stat"><span class="brain-stat-value">${stats.events}</span> events</div>
@@ -124,15 +129,35 @@ function renderStats() {
     <div class="brain-stat"><span class="brain-stat-value">${stats.conversations}</span> conversations</div>
     <div class="brain-stat"><span class="brain-stat-value">${stats.facts}</span> facts</div>
   `;
+
+  if (stats.entities === 0 && stats.events > 0) {
+    const hint =
+      stats.extractionFailures > 0
+        ? `Entity extraction failed ${stats.extractionFailures} time(s) — check that an AI provider is configured`
+        : 'Events recorded but no entities extracted — verify an AI provider is connected';
+    html += `<div class="brain-stat" style="color: var(--text-dim); font-size: 11px; flex-basis: 100%">${hint}</div>`;
+  }
+
+  statsBar.innerHTML = html;
 }
 
 function updateNavCounts() {
   if (!stats) return;
-  (document.getElementById('nav-count-entities') as HTMLSpanElement).textContent = String(stats.entities);
-  (document.getElementById('nav-count-relations') as HTMLSpanElement).textContent = String(stats.relations);
-  (document.getElementById('nav-count-events') as HTMLSpanElement).textContent = String(stats.events);
-  (document.getElementById('nav-count-observations') as HTMLSpanElement).textContent = String(stats.observations);
-  (document.getElementById('nav-count-conversations') as HTMLSpanElement).textContent = String(stats.conversations);
+  (document.getElementById('nav-count-entities') as HTMLSpanElement).textContent = String(
+    stats.entities,
+  );
+  (document.getElementById('nav-count-relations') as HTMLSpanElement).textContent = String(
+    stats.relations,
+  );
+  (document.getElementById('nav-count-events') as HTMLSpanElement).textContent = String(
+    stats.events,
+  );
+  (document.getElementById('nav-count-observations') as HTMLSpanElement).textContent = String(
+    stats.observations,
+  );
+  (document.getElementById('nav-count-conversations') as HTMLSpanElement).textContent = String(
+    stats.conversations,
+  );
   (document.getElementById('nav-count-facts') as HTMLSpanElement).textContent = String(stats.facts);
 }
 
@@ -143,7 +168,9 @@ interface ViewConfig {
   hasSearch: boolean;
   hasFilter: boolean;
   renderRow(r: Record<string, unknown>): string;
-  load(opts: Record<string, unknown>): Promise<{ rows: Array<Record<string, unknown>>; total: number }>;
+  load(
+    opts: Record<string, unknown>,
+  ): Promise<{ rows: Array<Record<string, unknown>>; total: number }>;
   tableName: string;
 }
 
@@ -164,7 +191,8 @@ const viewConfig: Record<string, ViewConfig> = {
     hasSearch: true,
     hasFilter: true,
     renderRow(r) {
-      const score = typeof r.importance_score === 'number' ? Math.round(r.importance_score * 100) : 0;
+      const score =
+        typeof r.importance_score === 'number' ? Math.round(r.importance_score * 100) : 0;
       return `
         <td>${escHtml(r.name)}</td>
         <td><span class="type-badge type-${escHtml(r.type)}">${escHtml(capitalize(r.type))}</span></td>
@@ -173,7 +201,9 @@ const viewConfig: Record<string, ViewConfig> = {
         <td class="ts">${formatTs(r.last_updated_at as string)}</td>
       `;
     },
-    async load(opts) { return invoke('brain_list_entities', { opts }); },
+    async load(opts) {
+      return invoke('brain_list_entities', { opts });
+    },
     tableName: 'entities',
   },
   relations: {
@@ -191,7 +221,9 @@ const viewConfig: Record<string, ViewConfig> = {
         <td class="ts">${formatTs(r.last_updated_at as string)}</td>
       `;
     },
-    async load(opts) { return invoke('brain_list_relations', { opts }); },
+    async load(opts) {
+      return invoke('brain_list_relations', { opts });
+    },
     tableName: 'relations',
   },
   events: {
@@ -209,7 +241,9 @@ const viewConfig: Record<string, ViewConfig> = {
         <td class="ts">${formatTs(r.timestamp as string)}</td>
       `;
     },
-    async load(opts) { return invoke('brain_list_events', { opts }); },
+    async load(opts) {
+      return invoke('brain_list_events', { opts });
+    },
     tableName: 'events',
   },
   observations: {
@@ -233,7 +267,9 @@ const viewConfig: Record<string, ViewConfig> = {
         <td class="ts">${formatTs(r.created_at as string)}</td>
       `;
     },
-    async load(opts) { return invoke('brain_list_observations', { opts }); },
+    async load(opts) {
+      return invoke('brain_list_observations', { opts });
+    },
     tableName: 'observations',
   },
   conversations: {
@@ -242,14 +278,18 @@ const viewConfig: Record<string, ViewConfig> = {
     hasSearch: true,
     hasFilter: false,
     renderRow(r) {
-      const plat = r.platform ? (r.platform as string).charAt(0).toUpperCase() + (r.platform as string).slice(1) : '';
+      const plat = r.platform
+        ? (r.platform as string).charAt(0).toUpperCase() + (r.platform as string).slice(1)
+        : '';
       return `
         <td>${escHtml(plat)}</td>
         <td>${(r.message_count as number) ?? 0}</td>
         <td class="ts">${formatTs(r.last_message_at as string)}</td>
       `;
     },
-    async load(opts) { return invoke('brain_list_conversations', { opts }); },
+    async load(opts) {
+      return invoke('brain_list_conversations', { opts });
+    },
     tableName: 'agent_conversations',
   },
   facts: {
@@ -265,13 +305,15 @@ const viewConfig: Record<string, ViewConfig> = {
         <td class="ts">${formatTs(r.created_at as string)}</td>
       `;
     },
-    async load(opts) { return invoke('brain_list_facts', { opts }); },
+    async load(opts) {
+      return invoke('brain_list_facts', { opts });
+    },
     tableName: 'agent_memory',
   },
 };
 
 /* ── Navigation ──────────────────────────────────────────────────── */
-navItems.forEach(item => {
+navItems.forEach((item) => {
   item.addEventListener('click', () => {
     const view = (item as HTMLElement).dataset.view;
     if (view === currentView) return;
@@ -286,12 +328,14 @@ function switchView(view: string) {
   selectedId = null;
   closeDetail();
 
-  navItems.forEach(n => n.classList.toggle('active', (n as HTMLElement).dataset.view === view));
+  navItems.forEach((n) => n.classList.toggle('active', (n as HTMLElement).dataset.view === view));
 
   const isGraph = view === 'graph';
   graphWrap.style.display = isGraph ? '' : 'none';
   (document.getElementById('table-wrap') as HTMLDivElement).style.display = isGraph ? 'none' : '';
-  (document.querySelector('.brain-toolbar') as HTMLDivElement).style.display = isGraph ? 'none' : '';
+  (document.querySelector('.brain-toolbar') as HTMLDivElement).style.display = isGraph
+    ? 'none'
+    : '';
   (document.getElementById('stats-bar') as HTMLDivElement).style.display = isGraph ? 'none' : '';
 
   if (isGraph) {
@@ -311,9 +355,9 @@ function switchView(view: string) {
 
   if (cfg.hasFilter && cfg.filterOptions.length > 0) {
     filterSelect.style.display = '';
-    filterSelect.innerHTML = cfg.filterOptions.map(o =>
-      `<option value="${escHtml(o.value)}">${escHtml(o.label)}</option>`
-    ).join('');
+    filterSelect.innerHTML = cfg.filterOptions
+      .map((o) => `<option value="${escHtml(o.value)}">${escHtml(o.label)}</option>`)
+      .join('');
   } else {
     filterSelect.style.display = 'none';
   }
@@ -324,7 +368,7 @@ function switchView(view: string) {
 
 /* ── Table Rendering ─────────────────────────────────────────────── */
 function renderTableHead(columns: string[]) {
-  tableHead.innerHTML = '<tr>' + columns.map(c => `<th>${escHtml(c)}</th>`).join('') + '</tr>';
+  tableHead.innerHTML = '<tr>' + columns.map((c) => `<th>${escHtml(c)}</th>`).join('') + '</tr>';
 }
 
 function renderTableRows(rows: Array<Record<string, unknown>>, append?: boolean) {
@@ -399,9 +443,9 @@ loadMoreBtn.addEventListener('click', () => {
 /* ── Row Click → Detail ──────────────────────────────────────────── */
 function handleRowClick(row: Record<string, unknown>) {
   selectedId = row.id as string;
-  tableBody.querySelectorAll('tr').forEach(tr =>
-    tr.classList.toggle('selected', tr.dataset.id === (row.id as string))
-  );
+  tableBody
+    .querySelectorAll('tr')
+    .forEach((tr) => tr.classList.toggle('selected', tr.dataset.id === (row.id as string)));
 
   if (currentView === 'entities') showEntityDetail(row.id as string);
   else if (currentView === 'conversations') showConversationDetail(row);
@@ -410,7 +454,11 @@ function handleRowClick(row: Record<string, unknown>) {
 
 /* ── Entity Detail ───────────────────────────────────────────────── */
 async function showEntityDetail(id: string) {
-  const data: { entity: Record<string, unknown>; relations: Array<Record<string, unknown>>; events: Array<Record<string, unknown>> } | null = await invoke('brain_get_entity', { id });
+  const data: {
+    entity: Record<string, unknown>;
+    relations: Array<Record<string, unknown>>;
+    events: Array<Record<string, unknown>>;
+  } | null = await invoke('brain_get_entity', { id });
   if (!data) return;
   const { entity: e, relations, events } = data;
 
@@ -461,10 +509,11 @@ async function showEntityDetail(id: string) {
   `;
 
   if (relations.length > 0) {
-    html += '<div class="brain-detail-section"><div class="brain-detail-section-title">Relations</div>';
+    html +=
+      '<div class="brain-detail-section"><div class="brain-detail-section-title">Relations</div>';
     for (const r of relations) {
       const isFrom = r.from_entity_id === e.id;
-      const otherName = isFrom ? (r.to_name || r.to_entity_id) : (r.from_name || r.from_entity_id);
+      const otherName = isFrom ? r.to_name || r.to_entity_id : r.from_name || r.from_entity_id;
       const otherId = isFrom ? r.to_entity_id : r.from_entity_id;
       const arrow = isFrom ? '\u2192' : '\u2190';
       html += `<div class="brain-relation-item" data-entity-id="${escHtml(otherId)}">
@@ -476,7 +525,8 @@ async function showEntityDetail(id: string) {
   }
 
   if (events.length > 0) {
-    html += '<div class="brain-detail-section"><div class="brain-detail-section-title">Recent Events</div>';
+    html +=
+      '<div class="brain-detail-section"><div class="brain-detail-section-title">Recent Events</div>';
     for (const ev of events) {
       const parsed = parseJson(ev.parsed_data);
       const text = parsed?.summary || parsed?.title || ev.event_type;
@@ -516,7 +566,7 @@ async function showEntityDetail(id: string) {
   editName.addEventListener('input', saveEntity);
   editSummary.addEventListener('input', saveEntity);
 
-  detailBody.querySelectorAll('.brain-relation-item').forEach(item => {
+  detailBody.querySelectorAll('.brain-relation-item').forEach((item) => {
     item.addEventListener('click', () => {
       const eid = (item as HTMLElement).dataset.entityId;
       if (eid) showEntityDetail(eid);
@@ -526,13 +576,18 @@ async function showEntityDetail(id: string) {
 
 /* ── Conversation Detail ─────────────────────────────────────────── */
 async function showConversationDetail(conv: Record<string, unknown>) {
-  const platName = conv.platform ? (conv.platform as string).charAt(0).toUpperCase() + (conv.platform as string).slice(1) : '';
+  const platName = conv.platform
+    ? (conv.platform as string).charAt(0).toUpperCase() + (conv.platform as string).slice(1)
+    : '';
   detailTitle.textContent = `${platName} conversation`;
   detailDelete.dataset.table = 'agent_conversations';
   detailDelete.dataset.id = conv.id as string;
   detailDelete.dataset.name = `${platName} conversation`;
 
-  const result: { rows: Array<Record<string, unknown>> } = await invoke('brain_get_conversation', { id: conv.id, opts: { offset: 0, limit: 100 } });
+  const result: { rows: Array<Record<string, unknown>> } = await invoke('brain_get_conversation', {
+    id: conv.id,
+    opts: { offset: 0, limit: 100 },
+  });
   let html = `
     <div class="brain-detail-section">
       <div class="brain-detail-field">
@@ -551,7 +606,8 @@ async function showConversationDetail(conv: Record<string, unknown>) {
   `;
 
   if (result.rows.length > 0) {
-    html += '<div class="brain-detail-section"><div class="brain-detail-section-title">Messages</div>';
+    html +=
+      '<div class="brain-detail-section"><div class="brain-detail-section-title">Messages</div>';
     for (const m of result.rows) {
       const isCeo = m.sender_is_ceo === 1;
       html += `<div class="brain-message">
@@ -615,7 +671,7 @@ function openDetail() {
 function closeDetail() {
   detailPanel.classList.remove('open');
   selectedId = null;
-  tableBody.querySelectorAll('tr.selected').forEach(tr => tr.classList.remove('selected'));
+  tableBody.querySelectorAll('tr.selected').forEach((tr) => tr.classList.remove('selected'));
 }
 
 detailClose.addEventListener('click', closeDetail);
@@ -627,11 +683,12 @@ detailDelete.addEventListener('click', () => {
   const name = detailDelete.dataset.name || id;
 
   deleteDialogText.innerHTML = `Delete <span class="brain-dialog-name">${escHtml(name)}</span>?`;
-  deleteDialogWarning.textContent = table === 'entities'
-    ? 'This will also delete all related relations and embeddings.'
-    : table === 'agent_conversations'
-      ? 'This will also delete all messages in this conversation.'
-      : '';
+  deleteDialogWarning.textContent =
+    table === 'entities'
+      ? 'This will also delete all related relations and embeddings.'
+      : table === 'agent_conversations'
+        ? 'This will also delete all messages in this conversation.'
+        : '';
 
   deleteDialog.classList.add('visible');
   deleteConfirm.dataset.table = table;
@@ -724,9 +781,14 @@ const graphState: {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  person: '#3b82f6', project: '#34d399', company: '#a78bfa',
-  event: '#f59e0b', document: '#6b7280', goal: '#038b9a',
-  place: '#eab308', concept: '#ec4899',
+  person: '#3b82f6',
+  project: '#34d399',
+  company: '#a78bfa',
+  event: '#f59e0b',
+  document: '#6b7280',
+  goal: '#038b9a',
+  place: '#eab308',
+  concept: '#ec4899',
 };
 
 const SIM = { repulsion: 800, attraction: 0.005, damping: 0.92, minAlpha: 0.001 };
@@ -734,9 +796,10 @@ const SIM = { repulsion: 800, attraction: 0.005, damping: 0.92, minAlpha: 0.001 
 async function loadGraph() {
   const graphEmpty = document.getElementById('graph-empty') as HTMLDivElement;
   try {
-    const [entityResult, relationResult]: [{ rows: Array<Record<string, unknown>>; total: number }, { rows: Array<Record<string, unknown>>; total: number }] = await Promise.all([
-      invoke('brain_list_entities', { opts: { limit: 200 } }),
-      invoke('brain_list_relations', { opts: { limit: 500 } }),
+    type ListResult = { rows: Array<Record<string, unknown>>; total: number };
+    const [entityResult, relationResult] = await Promise.all([
+      invoke('brain_list_entities', { opts: { limit: 200 } }) as Promise<ListResult>,
+      invoke('brain_list_relations', { opts: { limit: 500 } }) as Promise<ListResult>,
     ]);
 
     const entities = entityResult.rows;
@@ -752,7 +815,7 @@ async function loadGraph() {
     graphEmpty.style.display = 'none';
     graphCanvas.style.display = 'block';
 
-    await new Promise(resolve => requestAnimationFrame(resolve));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     resizeCanvas();
 
     const nodeMap = new Map<string, GraphNode>();
@@ -769,15 +832,18 @@ async function loadGraph() {
         importance: typeof e.importance_score === 'number' ? e.importance_score : 0.3,
         x: cx + Math.cos(angle) * radius,
         y: cy + Math.sin(angle) * radius,
-        vx: 0, vy: 0,
+        vx: 0,
+        vy: 0,
       };
       nodeMap.set(e.id as string, node);
       return node;
     });
 
     graphState.edges = relations
-      .filter(r => nodeMap.has(r.from_entity_id as string) && nodeMap.has(r.to_entity_id as string))
-      .map(r => ({
+      .filter(
+        (r) => nodeMap.has(r.from_entity_id as string) && nodeMap.has(r.to_entity_id as string),
+      )
+      .map((r) => ({
         from: r.from_entity_id as string,
         to: r.to_entity_id as string,
         type: r.type as string,
@@ -817,25 +883,35 @@ function simulate() {
 
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
-      const a = nodes[i], b = nodes[j];
-      const dx = b.x - a.x, dy = b.y - a.y;
+      const a = nodes[i],
+        b = nodes[j];
+      const dx = b.x - a.x,
+        dy = b.y - a.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       const force = SIM.repulsion / (dist * dist);
-      const fx = (dx / dist) * force, fy = (dy / dist) * force;
-      a.vx -= fx; a.vy -= fy;
-      b.vx += fx; b.vy += fy;
+      const fx = (dx / dist) * force,
+        fy = (dy / dist) * force;
+      a.vx -= fx;
+      a.vy -= fy;
+      b.vx += fx;
+      b.vy += fy;
     }
   }
 
   for (const e of edges) {
-    const a = nodeMap.get(e.from), b = nodeMap.get(e.to);
+    const a = nodeMap.get(e.from),
+      b = nodeMap.get(e.to);
     if (!a || !b) continue;
-    const dx = b.x - a.x, dy = b.y - a.y;
+    const dx = b.x - a.x,
+      dy = b.y - a.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
     const force = dist * SIM.attraction * (1 + e.strength);
-    const fx = (dx / dist) * force, fy = (dy / dist) * force;
-    a.vx += fx; a.vy += fy;
-    b.vx -= fx; b.vy -= fy;
+    const fx = (dx / dist) * force,
+      fy = (dy / dist) * force;
+    a.vx += fx;
+    a.vy += fy;
+    b.vx -= fx;
+    b.vy -= fy;
   }
 
   const cx = graphCanvas.width / 2 / (devicePixelRatio || 1);
@@ -867,7 +943,8 @@ function drawGraph() {
   graphCtx.translate(-w / 2, -h / 2);
 
   for (const e of edges) {
-    const a = nodeMap.get(e.from), b = nodeMap.get(e.to);
+    const a = nodeMap.get(e.from),
+      b = nodeMap.get(e.to);
     if (!a || !b) continue;
     graphCtx.beginPath();
     graphCtx.moveTo(a.x, a.y);
@@ -925,7 +1002,8 @@ function findNodeAt(gx: number, gy: number): GraphNode | null {
   for (let i = graphState.nodes.length - 1; i >= 0; i--) {
     const n = graphState.nodes[i];
     const r = 4 + n.importance * 16;
-    const dx = n.x - gx, dy = n.y - gy;
+    const dx = n.x - gx,
+      dy = n.y - gy;
     if (dx * dx + dy * dy <= (r + 4) * (r + 4)) return n;
   }
   return null;
@@ -940,7 +1018,12 @@ graphCanvas.addEventListener('mousedown', (e) => {
     graphState.drag = { node, startX: gx, startY: gy };
     graphState.settled = false;
   } else {
-    graphState.pan = { startX: e.clientX, startY: e.clientY, camX: graphState.cam.x, camY: graphState.cam.y };
+    graphState.pan = {
+      startX: e.clientX,
+      startY: e.clientY,
+      camX: graphState.cam.x,
+      camY: graphState.cam.y,
+    };
   }
 });
 
@@ -970,7 +1053,8 @@ graphCanvas.addEventListener('mouseup', (e) => {
     const node = graphState.drag.node;
     const rect = graphCanvas.getBoundingClientRect();
     const { x: gx, y: gy } = screenToGraph(e.clientX - rect.left, e.clientY - rect.top);
-    const dx = gx - graphState.drag.startX, dy = gy - graphState.drag.startY;
+    const dx = gx - graphState.drag.startX,
+      dy = gy - graphState.drag.startY;
     if (dx * dx + dy * dy < 9) {
       showEntityDetail(node.id);
     }
@@ -979,12 +1063,16 @@ graphCanvas.addEventListener('mouseup', (e) => {
   graphState.pan = null;
 });
 
-graphCanvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const factor = e.deltaY > 0 ? 0.9 : 1.1;
-  graphState.cam.zoom = Math.max(0.1, Math.min(5, graphState.cam.zoom * factor));
-  if (graphState.settled) drawGraph();
-}, { passive: false });
+graphCanvas.addEventListener(
+  'wheel',
+  (e) => {
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    graphState.cam.zoom = Math.max(0.1, Math.min(5, graphState.cam.zoom * factor));
+    if (graphState.settled) drawGraph();
+  },
+  { passive: false },
+);
 
 (document.getElementById('graph-zoom-in') as HTMLButtonElement).addEventListener('click', () => {
   graphState.cam.zoom = Math.min(5, graphState.cam.zoom * 1.3);
@@ -1009,7 +1097,7 @@ window.addEventListener('resize', () => {
 });
 
 /* ── View Toggle ─────────────────────────────────────────────────── */
-viewToggle.querySelectorAll('.brain-view-seg').forEach(btn => {
+viewToggle.querySelectorAll('.brain-view-seg').forEach((btn) => {
   btn.addEventListener('click', () => {
     const mode = (btn as HTMLButtonElement).dataset.mode;
     if (mode === graphMode) return;
@@ -1021,9 +1109,9 @@ function setGraphMode(mode: string) {
   graphMode = mode;
 
   viewToggle.dataset.active = mode;
-  viewToggle.querySelectorAll('.brain-view-seg').forEach(s =>
-    s.classList.toggle('active', (s as HTMLButtonElement).dataset.mode === mode)
-  );
+  viewToggle
+    .querySelectorAll('.brain-view-seg')
+    .forEach((s) => s.classList.toggle('active', (s as HTMLButtonElement).dataset.mode === mode));
 
   const isBrain = mode === 'brain';
   graphCanvas.style.display = isBrain ? 'block' : 'none';
@@ -1047,7 +1135,10 @@ async function loadLibrary() {
   }
 
   try {
-    const result: { rows: Array<Record<string, unknown>>; total: number } = await invoke('brain_list_entities', { opts: { limit: 200 } });
+    const result: { rows: Array<Record<string, unknown>>; total: number } = await invoke(
+      'brain_list_entities',
+      { opts: { limit: 200 } },
+    );
     libraryEntities = result.rows;
     libraryDirty = false;
     applyLibraryFilter();
@@ -1063,10 +1154,11 @@ function applyLibraryFilter() {
   if (!search) {
     libraryFiltered = libraryEntities.slice();
   } else {
-    libraryFiltered = libraryEntities.filter(e =>
-      (e.name && (e.name as string).toLowerCase().includes(search)) ||
-      (e.type && (e.type as string).toLowerCase().includes(search)) ||
-      (e.summary && (e.summary as string).toLowerCase().includes(search))
+    libraryFiltered = libraryEntities.filter(
+      (e) =>
+        (e.name && (e.name as string).toLowerCase().includes(search)) ||
+        (e.type && (e.type as string).toLowerCase().includes(search)) ||
+        (e.summary && (e.summary as string).toLowerCase().includes(search)),
     );
   }
 
@@ -1098,24 +1190,33 @@ function renderLibraryCards() {
 
     const color = TYPE_COLORS[entity.type as string] || '#666';
     const initial = ((entity.name as string) || '?').charAt(0).toUpperCase();
-    const score = typeof entity.importance_score === 'number'
-      ? Math.round(entity.importance_score * 100) + '%'
-      : '';
+    const score =
+      typeof entity.importance_score === 'number'
+        ? Math.round(entity.importance_score * 100) + '%'
+        : '';
 
     card.innerHTML =
-      '<div class="brain-library-card-dot" style="background:' + color + '22;color:' + color + '">' +
-        escHtml(initial) +
+      '<div class="brain-library-card-dot" style="background:' +
+      color +
+      '22;color:' +
+      color +
+      '">' +
+      escHtml(initial) +
       '</div>' +
-      '<div class="brain-library-card-name">' + escHtml((entity.name as string) || (entity.id as string)) + '</div>' +
-      '<span class="brain-library-card-type type-badge type-' + escHtml(entity.type) + '">' +
-        escHtml(entity.type) +
+      '<div class="brain-library-card-name">' +
+      escHtml((entity.name as string) || (entity.id as string)) +
+      '</div>' +
+      '<span class="brain-library-card-type type-badge type-' +
+      escHtml(entity.type) +
+      '">' +
+      escHtml(entity.type) +
       '</span>' +
       '<div class="brain-library-card-summary">' +
-        escHtml(truncate((entity.summary as string) || '', 120)) +
+      escHtml(truncate((entity.summary as string) || '', 120)) +
       '</div>' +
       '<div class="brain-library-card-meta">' +
-        (score ? score + ' importance' : '') +
-        (entity.last_updated_at ? ' \u00b7 ' + formatTs(entity.last_updated_at as string) : '') +
+      (score ? score + ' importance' : '') +
+      (entity.last_updated_at ? ' \u00b7 ' + formatTs(entity.last_updated_at as string) : '') +
       '</div>';
 
     libraryTrack.appendChild(card);
@@ -1140,8 +1241,15 @@ function updateLibraryTransforms() {
     const zIndex = Math.max(0, 10 - Math.round(absOffset));
 
     card.style.transform =
-      'translateX(' + translateX + 'px) translateZ(' + translateZ +
-      'px) rotateY(' + rotateY + 'deg) scale(' + scale + ')';
+      'translateX(' +
+      translateX +
+      'px) translateZ(' +
+      translateZ +
+      'px) rotateY(' +
+      rotateY +
+      'deg) scale(' +
+      scale +
+      ')';
     card.style.opacity = String(opacity);
     card.style.zIndex = String(zIndex);
     card.style.pointerEvents = absOffset > 3 ? 'none' : 'auto';
@@ -1156,8 +1264,7 @@ function libSpringTick() {
   libVelocity = (libVelocity + force) * damping;
   libCurrentIndex += libVelocity;
 
-  if (Math.abs(libCurrentIndex - libActiveIndex) < 0.002 &&
-      Math.abs(libVelocity) < 0.002) {
+  if (Math.abs(libCurrentIndex - libActiveIndex) < 0.002 && Math.abs(libVelocity) < 0.002) {
     libCurrentIndex = libActiveIndex;
     libVelocity = 0;
     libAnimating = false;
@@ -1177,23 +1284,28 @@ function startLibAnimation() {
 }
 
 /* ── Library Events ────────────────────────────────────────────── */
-libraryView.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-  libScrollAccum += delta;
+libraryView.addEventListener(
+  'wheel',
+  (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    libScrollAccum += delta;
 
-  if (libScrollTimer) clearTimeout(libScrollTimer);
-  libScrollTimer = setTimeout(() => { libScrollAccum = 0; }, 150);
+    if (libScrollTimer) clearTimeout(libScrollTimer);
+    libScrollTimer = setTimeout(() => {
+      libScrollAccum = 0;
+    }, 150);
 
-  if (Math.abs(libScrollAccum) >= LIB_SCROLL_THRESHOLD) {
-    const steps = Math.round(libScrollAccum / LIB_SCROLL_THRESHOLD);
-    libActiveIndex = Math.max(0,
-      Math.min(libraryFiltered.length - 1, libActiveIndex + steps));
-    libScrollAccum = libScrollAccum % LIB_SCROLL_THRESHOLD;
-    startLibAnimation();
-  }
-}, { passive: false });
+    if (Math.abs(libScrollAccum) >= LIB_SCROLL_THRESHOLD) {
+      const steps = Math.round(libScrollAccum / LIB_SCROLL_THRESHOLD);
+      libActiveIndex = Math.max(0, Math.min(libraryFiltered.length - 1, libActiveIndex + steps));
+      libScrollAccum = libScrollAccum % LIB_SCROLL_THRESHOLD;
+      startLibAnimation();
+    }
+  },
+  { passive: false },
+);
 
 libraryTrack.addEventListener('click', (e) => {
   const card = (e.target as HTMLElement).closest('.brain-library-card') as HTMLDivElement | null;

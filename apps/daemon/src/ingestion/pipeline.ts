@@ -5,7 +5,7 @@ import type { AuditLogger } from '../security/audit.js';
 import type { ModelRouter } from '../ai/router.js';
 import type { ExtractionResult } from '../ai/anti-injection.js';
 import { extractEntities } from '../ai/extract.js';
-import { upsertEntity, upsertRelation, recordEvent } from '../db/world-model.js';
+import { upsertEntity, upsertRelation, recordEvent, addObservation } from '../db/world-model.js';
 import { contentHash, isDuplicate } from './dedup.js';
 import { normalizeRawEvent } from './normalizer.js';
 import { resolveEntity, mergeProperties } from './resolver.js';
@@ -49,6 +49,7 @@ export class IngestPipeline {
 
     this.upsertAllEntities(extraction, entityIdMap);
     this.upsertAllRelations(extraction, entityIdMap);
+    this.createObservationsFromFacts(extraction, entityIds);
 
     const eventId = nanoid();
     recordEvent(this.db, {
@@ -106,6 +107,19 @@ export class IngestPipeline {
         type: entity.type,
         name: entity.name,
         properties: merged,
+      });
+    }
+  }
+
+  private createObservationsFromFacts(extraction: ExtractionResult, entityIds: string[]): void {
+    for (const fact of extraction.facts) {
+      if (!fact.fact.trim()) continue;
+      addObservation(this.db, {
+        id: nanoid(),
+        type: 'insight',
+        content: fact.fact,
+        confidence: fact.importance,
+        entityIds: entityIds.length > 0 ? entityIds : undefined,
       });
     }
   }

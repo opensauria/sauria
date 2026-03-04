@@ -58,7 +58,9 @@ export async function storeSecret(name: string, value: string, password: string)
   const filePath = secretFilePath(name);
 
   await safeWriteFile(filePath, fileData);
-  await chmod(filePath, 0o600);
+  if (process.platform !== 'win32') {
+    await chmod(filePath, 0o600);
+  }
 }
 
 export async function getSecret(name: string, password: string): Promise<string> {

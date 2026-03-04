@@ -15,7 +15,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsdown src/cli.ts src/index.ts --format esm --dts --define.OPENSAURIA_VERSION=\"'$npm_package_version'\"",
+    "build": "tsdown",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
