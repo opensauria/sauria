@@ -36,9 +36,13 @@ interface IpcResponse {
 export interface DaemonIpcServer {
   close(): Promise<void>;
   broadcast(event: string, data: Record<string, unknown>): void;
+  registerMethod(name: string, handler: MethodHandler): void;
 }
 
-type MethodHandler = (db: BetterSqlite3.Database, params: Record<string, unknown>) => unknown;
+type MethodHandler = (
+  db: BetterSqlite3.Database,
+  params: Record<string, unknown>,
+) => unknown | Promise<unknown>;
 
 function buildMethodMap(): Map<string, MethodHandler> {
   const methods = new Map<string, MethodHandler>();
@@ -68,9 +72,7 @@ function buildMethodMap(): Map<string, MethodHandler> {
 
   methods.set('kpi:get', (db, params) => {
     const nodeId = params['nodeId'] as string;
-    const row = db
-      .prepare(`SELECT * FROM agent_performance WHERE node_id = ?`)
-      .get(nodeId) as
+    const row = db.prepare(`SELECT * FROM agent_performance WHERE node_id = ?`).get(nodeId) as
       | {
           messages_handled: number;
           tasks_completed: number;
@@ -162,23 +164,38 @@ function handleConnection(
         continue;
       }
 
-      try {
-        const result = handler(db, parsed.params ?? {});
-        const response: IpcResponse = { id: parsed.id, result };
-        socket.write(JSON.stringify(response) + '\n');
-      } catch (err: unknown) {
+      const writeResult = (id: number, result: unknown): void => {
+        const response: IpcResponse = { id, result };
+        if (!socket.destroyed) socket.write(JSON.stringify(response) + '\n');
+      };
+
+      const writeError = (id: number, method: string, err: unknown): void => {
         logger.error('IPC handler error', {
-          method: parsed.method,
+          method,
           error: err instanceof Error ? err.message : String(err),
         });
         const response: IpcResponse = {
-          id: parsed.id,
+          id,
           error: {
             code: 'HANDLER_ERROR',
             message: err instanceof Error ? err.message : 'Internal error',
           },
         };
-        socket.write(JSON.stringify(response) + '\n');
+        if (!socket.destroyed) socket.write(JSON.stringify(response) + '\n');
+      };
+
+      try {
+        const result = handler(db, parsed.params ?? {});
+        if (result instanceof Promise) {
+          result.then(
+            (value) => writeResult(parsed.id, value),
+            (err: unknown) => writeError(parsed.id, parsed.method, err),
+          );
+        } else {
+          writeResult(parsed.id, result);
+        }
+      } catch (err: unknown) {
+        writeError(parsed.id, parsed.method, err);
       }
     }
   });
@@ -191,9 +208,15 @@ function handleConnection(
 export async function startIpcServer(
   socketPath: string,
   db: BetterSqlite3.Database,
+  startedAt?: number,
 ): Promise<DaemonIpcServer> {
   const logger = getLogger();
   const methods = buildMethodMap();
+
+  methods.set('daemon:health', () => ({
+    status: 'ok',
+    uptime: startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0,
+  }));
   const isWindows = process.platform === 'win32';
   const subscribers = new Set<Socket>();
 
@@ -263,6 +286,9 @@ export async function startIpcServer(
           socket.write(line);
         }
       }
+    },
+    registerMethod(name: string, handler: MethodHandler): void {
+      methods.set(name, handler);
     },
   };
 }

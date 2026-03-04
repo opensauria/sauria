@@ -5,6 +5,7 @@ mod cmd_brain;
 mod cmd_canvas;
 mod cmd_channels;
 mod cmd_commands;
+mod cmd_integrations;
 mod cmd_oauth;
 mod cmd_setup;
 mod daemon_client;
@@ -77,6 +78,11 @@ fn main() {
             cmd_brain::brain_delete,
             cmd_brain::brain_update_entity,
             cmd_brain::get_agent_kpis,
+            // Integrations
+            cmd_integrations::integrations_list_catalog,
+            cmd_integrations::integrations_connect,
+            cmd_integrations::integrations_disconnect,
+            cmd_integrations::integrations_list_tools,
         ])
         .setup(move |app| {
             // Hide dock icon on macOS

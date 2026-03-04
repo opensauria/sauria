@@ -2,14 +2,13 @@ use std::process::Command;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use tauri::Manager;
 
 use crate::daemon_manager::{self, DaemonState};
 use crate::paths::Paths;
 use crate::windows;
 
 const ALLOWED_COMMANDS: &[&str] = &[
-    "status", "telegram", "settings", "setup", "audit", "doctor", "docs", "quit", "canvas", "brain",
+    "status", "telegram", "settings", "setup", "audit", "doctor", "docs", "quit", "canvas", "brain", "integrations",
 ];
 
 #[tauri::command]
@@ -53,9 +52,7 @@ pub async fn execute_command(
             }
         }
         "telegram" => {
-            if let Some(win) = app.get_webview_window("palette") {
-                let _ = tauri::Emitter::emit(&win, "show-telegram-form", ());
-            }
+            windows::navigate_palette_to(&app, "integrations")?;
         }
         "settings" | "canvas" => {
             windows::navigate_palette_to(&app, "canvas")?;
@@ -65,6 +62,9 @@ pub async fn execute_command(
         }
         "brain" => {
             windows::navigate_palette_to(&app, "brain")?;
+        }
+        "integrations" => {
+            windows::navigate_palette_to(&app, "integrations")?;
         }
         "docs" => {
             windows::hide_palette(&app)?;

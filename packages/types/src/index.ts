@@ -50,3 +50,11 @@ export type {
 } from './db.js';
 
 export type { IpcRequest, IpcResponse } from './ipc.js';
+
+export type {
+  IntegrationCategory,
+  McpServerTemplate,
+  IntegrationDefinition,
+  IntegrationStatus,
+  IntegrationTool,
+} from './integrations.js';

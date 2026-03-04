@@ -10,6 +10,7 @@ import type BetterSqlite3 from 'better-sqlite3';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { openDatabase, closeDatabase } from './db/connection.js';
 import { applySchema } from './db/schema.js';
+import { runMigrations } from './db/migrations.js';
 import { loadConfig } from './config/loader.js';
 import { ensureConfigDir } from './config/loader.js';
 import type { OpenSauriaConfig } from './config/schema.js';
@@ -41,6 +42,8 @@ import { MessageQueue } from './orchestrator/message-queue.js';
 import { AgentMemory } from './orchestrator/agent-memory.js';
 import { KPITracker } from './orchestrator/kpi-tracker.js';
 import { CheckpointManager } from './orchestrator/checkpoint.js';
+import { IntegrationRegistry } from './integrations/registry.js';
+import { INTEGRATION_CATALOG } from './integrations/catalog.js';
 import type {
   CanvasGraph,
   OwnerIdentity,
@@ -71,6 +74,7 @@ export interface DaemonContext {
   readonly orchestrator: AgentOrchestrator | null;
   readonly queue: MessageQueue | null;
   readonly ipcServer: DaemonIpcServer;
+  readonly integrationRegistry: IntegrationRegistry;
   readonly canvasWatcher: FSWatcher | null;
   readonly ownerCommandWatcher: FSWatcher | null;
 }
@@ -93,6 +97,39 @@ async function connectMcpSources(
       logger.info(`MCP client connected: ${name}`);
     } catch (err: unknown) {
       logger.error(`Failed to connect MCP client: ${name}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+}
+
+async function autoConnectIntegrations(
+  registry: IntegrationRegistry,
+  config: OpenSauriaConfig,
+): Promise<void> {
+  const logger = getLogger();
+  const integrations = config.integrations ?? {};
+
+  for (const [id, settings] of Object.entries(integrations)) {
+    if (!settings?.enabled) continue;
+    try {
+      const creds: Record<string, string> = {};
+      const definition = INTEGRATION_CATALOG.find((d) => d.id === id);
+      if (!definition) continue;
+
+      for (const key of definition.credentialKeys) {
+        const value = await vaultGet(`integration_${id}_${key}`);
+        if (value) creds[key] = value;
+      }
+
+      if (Object.keys(creds).length < definition.credentialKeys.length) {
+        logger.warn(`Skipping integration ${id}: missing credentials`);
+        continue;
+      }
+
+      await registry.connect(id, creds);
+    } catch (err: unknown) {
+      logger.error(`Failed to auto-connect integration: ${id}`, {
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -481,6 +518,7 @@ async function setupOrchestrator(
   },
   checkpointManager: CheckpointManager,
   onActivity?: (event: string, data: Record<string, unknown>) => void,
+  integrationRegistry?: IntegrationRegistry,
 ): Promise<OrchestratorBundle | null> {
   const logger = getLogger();
 
@@ -501,6 +539,7 @@ async function setupOrchestrator(
     deps.router,
     deps.db,
     deps.config.orchestrator.routingCacheTtlMs,
+    integrationRegistry,
   );
 
   const ownerIdentity = buildOwnerIdentity(deps.config);
@@ -515,6 +554,7 @@ async function setupOrchestrator(
     checkpointManager,
     canvasPath: paths.canvas,
     onActivity,
+    integrationRegistry,
   });
 
   const queue = new MessageQueue((msg: InboundMessage) => orchestrator.handleInbound(msg), {
@@ -625,7 +665,8 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   await ensureConfigDir();
   const db = openDatabase();
   applySchema(db);
-  logger.info('Database opened and schema applied');
+  runMigrations(db);
+  logger.info('Database opened, schema applied, and migrations run');
 
   const config = await loadConfig();
   logger.info('Config loaded');
@@ -645,8 +686,31 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   const mcpClients = new McpClientManager(audit);
   await connectMcpSources(config, mcpClients);
 
+  // ─── Integration registry ───────────────────────────────────────────
+  const integrationRegistry = new IntegrationRegistry(mcpClients, audit, INTEGRATION_CATALOG);
+  await autoConnectIntegrations(integrationRegistry, config);
+
   // ─── IPC server (must start before orchestrator so broadcast is available) ─
-  const ipcServer = await startIpcServer(paths.socket, db);
+  const ipcServer = await startIpcServer(paths.socket, db, Date.now());
+
+  // ─── Integration IPC handlers ─────────────────────────────────────
+  ipcServer.registerMethod('integrations:list-catalog', () =>
+    integrationRegistry.getCatalogWithStatus(),
+  );
+  ipcServer.registerMethod('integrations:connect', async (_db, params) => {
+    const id = params['id'] as string;
+    const credentials = params['credentials'] as Record<string, string>;
+    return integrationRegistry.connect(id, credentials);
+  });
+  ipcServer.registerMethod('integrations:disconnect', async (_db, params) => {
+    const id = params['id'] as string;
+    await integrationRegistry.disconnect(id);
+    return { success: true };
+  });
+  ipcServer.registerMethod('integrations:list-tools', (_db, params) => {
+    const integrationId = params['integrationId'] as string | undefined;
+    return integrationRegistry.getAvailableTools(integrationId);
+  });
 
   // ─── Canvas-based orchestrator setup ────────────────────────────────
   const graph = loadCanvasGraph();
@@ -658,6 +722,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     channelDeps,
     checkpointManager,
     ipcServer.broadcast.bind(ipcServer),
+    integrationRegistry,
   );
   const registry: ChannelRegistry | null = bundle?.registry ?? null;
   const orchestrator: AgentOrchestrator | null = bundle?.orchestrator ?? null;
@@ -845,6 +910,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     mcpServer,
     refreshInterval,
     ipcServer,
+    integrationRegistry,
     registry,
     orchestrator,
     queue,
@@ -870,7 +936,7 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
   }
 
   if (ctx.queue) {
-    ctx.queue.stop();
+    await ctx.queue.gracefulStop(5000);
     logger.info('Message queue stopped');
   }
 
@@ -881,6 +947,9 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
 
   ctx.engine.stop();
   logger.info('Proactive engine stopped');
+
+  await ctx.integrationRegistry.disconnectAll();
+  logger.info('Integration registry disconnected');
 
   await ctx.mcpClients.disconnectAll();
   logger.info('MCP clients disconnected');

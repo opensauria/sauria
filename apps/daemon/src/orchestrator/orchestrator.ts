@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, renameSync } from 'node:fs';
 import type BetterSqlite3 from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 import type {
@@ -21,6 +21,7 @@ import { evaluateEdgeRules } from './routing.js';
 import { getLogger } from '../utils/logger.js';
 import { IPC_EVENTS } from '@opensauria/ipc-protocol';
 import type { ActivityMessagePayload } from '@opensauria/ipc-protocol';
+import type { IntegrationRegistry } from '../integrations/registry.js';
 
 const MAX_FORWARD_DEPTH = 3;
 
@@ -37,6 +38,7 @@ interface OrchestratorDeps {
   readonly checkpointManager?: CheckpointManager;
   readonly canvasPath?: string;
   readonly onActivity?: ActivityCallback;
+  readonly integrationRegistry?: IntegrationRegistry;
 }
 
 export class AgentOrchestrator {
@@ -51,6 +53,7 @@ export class AgentOrchestrator {
   private readonly checkpointManager: CheckpointManager | null;
   private readonly canvasPath: string | null;
   private readonly onActivity: ActivityCallback | null;
+  private readonly integrationRegistry: IntegrationRegistry | null;
 
   constructor(deps: OrchestratorDeps) {
     this.registry = deps.registry;
@@ -63,6 +66,7 @@ export class AgentOrchestrator {
     this.checkpointManager = deps.checkpointManager ?? null;
     this.canvasPath = deps.canvasPath ?? null;
     this.onActivity = deps.onActivity ?? null;
+    this.integrationRegistry = deps.integrationRegistry ?? null;
   }
 
   private contentPreview(content: string): string {
@@ -88,9 +92,7 @@ export class AgentOrchestrator {
   updateGraph(newGraph: CanvasGraph): void {
     // Detect instruction changes and clear stale conversation context
     if (this.agentMemory) {
-      const oldInstructions = new Map(
-        this.graph.nodes.map((n) => [n.id, n.instructions]),
-      );
+      const oldInstructions = new Map(this.graph.nodes.map((n) => [n.id, n.instructions]));
       for (const node of newGraph.nodes) {
         const prev = oldInstructions.get(node.id);
         if (prev !== undefined && prev !== node.instructions) {
@@ -385,7 +387,9 @@ export class AgentOrchestrator {
   private persistGraph(): void {
     if (!this.canvasPath) return;
     try {
-      writeFileSync(this.canvasPath, JSON.stringify(this.graph, null, 2), 'utf-8');
+      const tmpPath = `${this.canvasPath}.tmp`;
+      writeFileSync(tmpPath, JSON.stringify(this.graph, null, 2), 'utf-8');
+      renameSync(tmpPath, this.canvasPath);
     } catch (error) {
       const logger = getLogger();
       logger.warn('Failed to persist canvas graph', {
@@ -662,6 +666,27 @@ export class AgentOrchestrator {
             action.description,
             [...action.pendingActions],
           );
+        }
+        break;
+      }
+      case 'use_tool': {
+        if (!this.integrationRegistry) {
+          const logger = getLogger();
+          logger.warn('use_tool action received but no integration registry available');
+          break;
+        }
+        try {
+          const result = await this.integrationRegistry.callTool(action.integration, action.tool, {
+            ...action.arguments,
+          });
+          const resultSummary =
+            typeof result === 'string' ? result : JSON.stringify(result).slice(0, 500);
+          const replyContent = `${action.content}\n\nResult: ${resultSummary}`;
+          await this.executeAction({ type: 'reply', content: replyContent }, source);
+        } catch (err: unknown) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          const replyContent = `${action.content}\n\nTool error: ${errorMsg}`;
+          await this.executeAction({ type: 'reply', content: replyContent }, source);
         }
         break;
       }

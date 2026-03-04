@@ -13,7 +13,7 @@ struct PageSize {
 
 fn page_size(page: &str) -> PageSize {
     match page {
-        "brain" => PageSize { width: 1000.0, height: 700.0 },
+        "brain" | "integrations" => PageSize { width: 1000.0, height: 700.0 },
         "canvas" => PageSize { width: 1200.0, height: 800.0 },
         "setup" => PageSize { width: 520.0, height: 680.0 },
         _ => PageSize { width: PALETTE_WIDTH, height: PALETTE_HEIGHT },
@@ -57,6 +57,13 @@ pub fn show_palette(app: &AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
+    // Always reset to palette page when re-showing
+    let nav_url = resolve_page_url(&win, "palette", "")?;
+    let _ = win.navigate(nav_url);
+    let _ = win.set_decorations(false);
+    let _ = win.set_resizable(false);
+    let _ = win.set_always_on_top(true);
+
     center_palette(app)?;
     win.show().map_err(|e| e.to_string())?;
     win.set_focus().map_err(|e| e.to_string())?;
@@ -86,7 +93,7 @@ pub fn navigate_palette_to(app: &AppHandle, page: &str) -> Result<(), String> {
     win.set_always_on_top(false).map_err(|e| e.to_string())?;
 
     // Native decorations only for canvas and brain
-    let wants_decorations = page == "canvas" || page == "brain";
+    let wants_decorations = page == "canvas" || page == "brain" || page == "integrations";
     win.set_decorations(wants_decorations).map_err(|e| e.to_string())?;
 
     // Navigate to new page

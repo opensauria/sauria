@@ -45,7 +45,14 @@ export type RoutingAction =
       readonly description: string;
       readonly pendingActions: readonly RoutingAction[];
     }
-  | { readonly type: 'group_message'; readonly workspaceId: string; readonly content: string };
+  | { readonly type: 'group_message'; readonly workspaceId: string; readonly content: string }
+  | {
+      readonly type: 'use_tool';
+      readonly integration: string;
+      readonly tool: string;
+      readonly arguments: Readonly<Record<string, unknown>>;
+      readonly content: string;
+    };
 
 export interface RoutingDecision {
   readonly actions: readonly RoutingAction[];

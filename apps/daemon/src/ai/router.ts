@@ -1,4 +1,5 @@
 import type { OpenSauriaConfig, ModelConfig } from '../config/schema.js';
+import { CircuitBreaker } from '../orchestrator/circuit-breaker.js';
 import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
 import type { RateLimiter } from '../security/rate-limiter.js';
 import type { ChatMessage, ChatOptions, LLMProvider, StreamChunk } from './providers/base.js';
@@ -20,6 +21,7 @@ const PROVIDER_BASE_URLS: Readonly<Record<string, string>> = {
 
 export class ModelRouter {
   private readonly providers = new Map<string, LLMProvider>();
+  private readonly breakers = new Map<string, CircuitBreaker>();
   private readonly extractionLimiter: RateLimiter;
   private readonly deepLimiter: RateLimiter;
   private onCost: CostCallback | undefined;
@@ -50,6 +52,7 @@ export class ModelRouter {
     }
 
     const modelConfig = this.config.models.extraction;
+    const breaker = this.getBreaker(modelConfig.provider);
     const provider = await this.resolveProvider(modelConfig);
 
     const messages: ChatMessage[] = [
@@ -63,7 +66,9 @@ export class ModelRouter {
       maxTokens: SECURITY_LIMITS.ai.maxTokensPerRequest,
     };
 
-    const responseText = await collectStream(provider.chat(messages, options));
+    const responseText = await breaker.execute(() =>
+      collectStream(provider.chat(messages, options)),
+    );
     this.reportCost(modelConfig.model, responseText.length);
 
     return parseAIResponse(responseText);
@@ -71,6 +76,7 @@ export class ModelRouter {
 
   async *reason(messages: ChatMessage[]): AsyncGenerator<StreamChunk> {
     const modelConfig = this.config.models.reasoning;
+    this.checkBreaker(modelConfig.provider);
     const provider = await this.resolveProvider(modelConfig);
 
     const options: ChatOptions = {
@@ -79,7 +85,12 @@ export class ModelRouter {
       maxTokens: SECURITY_LIMITS.ai.maxTokensPerRequest,
     };
 
-    yield* provider.chat(messages, options);
+    try {
+      yield* provider.chat(messages, options);
+    } catch (err) {
+      this.recordBreakerFailure(modelConfig.provider);
+      throw err;
+    }
   }
 
   async *deepAnalyze(messages: ChatMessage[]): AsyncGenerator<StreamChunk> {
@@ -88,6 +99,7 @@ export class ModelRouter {
     }
 
     const modelConfig = this.config.models.deep;
+    this.checkBreaker(modelConfig.provider);
     const provider = await this.resolveProvider(modelConfig);
 
     const options: ChatOptions = {
@@ -96,7 +108,12 @@ export class ModelRouter {
       maxTokens: SECURITY_LIMITS.ai.maxTokensPerRequest,
     };
 
-    yield* provider.chat(messages, options);
+    try {
+      yield* provider.chat(messages, options);
+    } catch (err) {
+      this.recordBreakerFailure(modelConfig.provider);
+      throw err;
+    }
   }
 
   getProvider(providerName: string, apiKey: string, baseUrl?: string): LLMProvider {
@@ -109,6 +126,32 @@ export class ModelRouter {
     const provider = createProvider(providerName, apiKey, baseUrl);
     this.providers.set(cacheKey, provider);
     return provider;
+  }
+
+  isProviderAvailable(providerName: string): boolean {
+    const breaker = this.breakers.get(providerName);
+    return !breaker || breaker.getState() !== 'open';
+  }
+
+  private getBreaker(providerName: string): CircuitBreaker {
+    let breaker = this.breakers.get(providerName);
+    if (!breaker) {
+      breaker = new CircuitBreaker(3, 60_000);
+      this.breakers.set(providerName, breaker);
+    }
+    return breaker;
+  }
+
+  private checkBreaker(providerName: string): void {
+    const breaker = this.getBreaker(providerName);
+    if (breaker.getState() === 'open') {
+      throw new Error(`Provider ${providerName} circuit open — temporarily unavailable`);
+    }
+  }
+
+  private recordBreakerFailure(providerName: string): void {
+    const breaker = this.getBreaker(providerName);
+    breaker.execute(() => Promise.reject(new Error('provider failure'))).catch(() => {});
   }
 
   private async resolveProvider(modelConfig: ModelConfig): Promise<LLMProvider> {

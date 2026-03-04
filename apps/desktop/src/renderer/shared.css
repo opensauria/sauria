@@ -56,6 +56,11 @@ body {
   background: rgba(85, 85, 85, 0.12);
 }
 
+.badge-error {
+  color: var(--error);
+  background: rgba(248, 113, 113, 0.12);
+}
+
 .btn {
   padding: 12px 24px;
   border-radius: var(--radius-pill);
