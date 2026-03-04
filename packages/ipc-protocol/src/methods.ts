@@ -21,6 +21,35 @@ export const IPC_METHODS = {
 
 export type IpcMethodName = (typeof IPC_METHODS)[keyof typeof IPC_METHODS];
 
+export const IPC_EVENTS = {
+  ACTIVITY_EDGE: 'activity:edge',
+  ACTIVITY_NODE: 'activity:node',
+  ACTIVITY_MESSAGE: 'activity:message',
+} as const;
+
+export interface ActivityEdgePayload {
+  readonly from: string;
+  readonly to: string;
+  readonly actionType: string;
+  readonly preview: string;
+}
+
+export interface ActivityNodePayload {
+  readonly nodeId: string;
+  readonly state: 'active' | 'idle';
+}
+
+export interface ActivityMessagePayload {
+  readonly id: string;
+  readonly from: string;
+  readonly fromLabel: string;
+  readonly to: string;
+  readonly toLabel: string;
+  readonly content: string;
+  readonly actionType: string;
+  readonly timestamp: string;
+}
+
 /**
  * Parameter types for each IPC method.
  */

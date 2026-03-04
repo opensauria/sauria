@@ -1,5 +1,6 @@
 use serde_json::Value;
 use std::sync::atomic::{AtomicU64, Ordering};
+use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::time::{timeout, Duration};
@@ -16,6 +17,7 @@ type PendingMap = std::collections::HashMap<u64, oneshot::Sender<Result<Value, S
 pub struct DaemonClient {
     tx: Mutex<Option<mpsc::Sender<(u64, String)>>>,
     pending: std::sync::Arc<Mutex<PendingMap>>,
+    event_handle: Mutex<Option<AppHandle>>,
     #[cfg(unix)]
     socket_path: String,
     #[cfg(windows)]
@@ -27,11 +29,16 @@ impl DaemonClient {
         Self {
             tx: Mutex::new(None),
             pending: std::sync::Arc::new(Mutex::new(std::collections::HashMap::new())),
+            event_handle: Mutex::new(None),
             #[cfg(unix)]
             socket_path: paths.socket.to_string_lossy().to_string(),
             #[cfg(windows)]
             ipc_port_path: paths.ipc_port.to_string_lossy().to_string(),
         }
+    }
+
+    pub fn set_app_handle(&self, handle: AppHandle) {
+        *self.event_handle.blocking_lock() = Some(handle);
     }
 
     async fn ensure_connected(&self) -> Result<(), String> {
@@ -43,6 +50,7 @@ impl DaemonClient {
         let (reader, writer) = connect_ipc(self).await?;
         let (send_tx, mut send_rx) = mpsc::channel::<(u64, String)>(64);
         let pending_for_reader = self.pending.clone();
+        let event_handle = self.event_handle.lock().await.clone();
 
         // Writer task
         tokio::spawn(async move {
@@ -63,6 +71,14 @@ impl DaemonClient {
                     continue;
                 }
                 if let Ok(msg) = serde_json::from_str::<Value>(&line) {
+                    // Push events from daemon (no id, has event field)
+                    if let Some(event_name) = msg.get("event").and_then(|v| v.as_str()) {
+                        if let Some(ref handle) = event_handle {
+                            let data = msg.get("data").cloned().unwrap_or(Value::Null);
+                            let _ = handle.emit(event_name, data);
+                        }
+                        continue;
+                    }
                     if let Some(id) = msg.get("id").and_then(|v| v.as_u64()) {
                         let mut pending = pending_for_reader.lock().await;
                         if let Some(sender) = pending.remove(&id) {
@@ -93,6 +109,10 @@ impl DaemonClient {
 
         *tx_guard = Some(send_tx);
         Ok(())
+    }
+
+    pub async fn connect(&self) -> Result<(), String> {
+        self.ensure_connected().await
     }
 
     pub async fn request(&self, method: &str, params: Value) -> Result<Value, String> {

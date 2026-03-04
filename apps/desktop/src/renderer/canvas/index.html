@@ -11,11 +11,20 @@
       <img src="/icons/chevron-left.svg" alt="" />
     </button>
 
-    <div class="titlebar-drag" data-tauri-drag-region></div>
-
     <div class="canvas-viewport" id="viewport">
       <div class="canvas-world" id="world">
         <svg class="edge-svg" id="edge-svg" viewBox="-5000 -5000 10000 10000"></svg>
+        <svg class="edge-svg" id="activity-svg" viewBox="-5000 -5000 10000 10000">
+          <defs>
+            <filter id="activity-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+        </svg>
       </div>
     </div>
 
@@ -65,18 +74,18 @@
       <div class="panel-body">
         <div class="detail-identity" id="agent-detail-identity"></div>
 
-        <div class="detail-section">
+        <div class="detail-section" id="section-role">
           <span class="detail-section-label">Role</span>
           <div class="role-pills" id="agent-role-pills">
             <button class="role-pill" data-role="lead">Lead</button>
             <button class="role-pill" data-role="specialist">Specialist</button>
             <button class="role-pill" data-role="observer">Observer</button>
-            <button class="role-pill" data-role="bridge">Bridge</button>
+            <button class="role-pill" data-role="coordinator">Coordinator</button>
             <button class="role-pill" data-role="assistant">Assistant</button>
           </div>
         </div>
 
-        <div class="detail-section">
+        <div class="detail-section" id="section-autonomy">
           <span class="detail-section-label">Autonomy</span>
           <div class="autonomy-segmented" id="autonomy-segmented">
             <div class="autonomy-highlight" id="autonomy-highlight"></div>
@@ -103,7 +112,7 @@
           </button>
         </div>
 
-        <div class="detail-section">
+        <div class="detail-section" id="section-behavior">
           <span class="detail-section-label">Group Behavior</span>
           <div class="toggle-row">
             <span class="toggle-label">Proactive messages</span>
@@ -119,10 +128,16 @@
           </div>
         </div>
 
-        <div class="detail-section">
+        <div class="detail-section" id="section-kpis">
           <span class="detail-section-label">KPIs</span>
-          <div class="kpi-placeholder">KPI tracking coming soon</div>
+          <div class="kpi-grid" id="kpi-grid"></div>
         </div>
+      </div>
+      <div class="panel-footer" id="panel-footer">
+        <svg class="save-check" viewBox="0 0 24 24" fill="none">
+          <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="save-text">Saved</span>
       </div>
     </div>
 
@@ -238,6 +253,25 @@
       </div>
     </div>
 
+    <!-- Live Conversation Panel -->
+    <div class="conversation-panel" id="conversation-panel">
+      <div class="panel-header">
+        <div class="conv-participants" id="conv-participants"></div>
+        <button class="panel-close" id="conv-panel-close">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path
+              d="M18 6L6 18M6 6l12 12"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+      <div class="conv-messages" id="conv-messages"></div>
+      <div class="conv-status" id="conv-status">Waiting for activity...</div>
+    </div>
+
     <!-- Workspace Creation Dialog -->
     <div class="workspace-dialog-overlay" id="ws-dialog-overlay">
       <div class="workspace-dialog">
@@ -344,6 +378,18 @@
     <!-- Cover Flow Dock -->
     <div class="coverflow-dock" id="coverflow-dock">
       <div class="coverflow-track" id="coverflow-track"></div>
+    </div>
+
+    <!-- Activity Legend -->
+    <div class="canvas-legend" id="canvas-legend">
+      <div class="legend-item">
+        <span class="legend-dot"></span>
+        <span>Message in transit</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-ring"></span>
+        <span>Agent processing</span>
+      </div>
     </div>
 
     <!-- Dock Toggle -->

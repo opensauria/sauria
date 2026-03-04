@@ -1,15 +1,13 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const OPENSAURIA_HOME = process.env['OPENSAURIA_HOME']
-  ?? process.env['OPENSAURIA_HOME']
-  ?? join(homedir(), '.opensauria');
+const OPENSAURIA_HOME = process.env['OPENSAURIA_HOME'] ?? join(homedir(), '.opensauria');
 
 export const paths = {
   home: OPENSAURIA_HOME,
   config: join(OPENSAURIA_HOME, 'config.json5'),
-  db: join(OPENSAURIA_HOME, 'world.db'),
-  dbEncrypted: join(OPENSAURIA_HOME, 'world.db.enc'),
+  db: join(OPENSAURIA_HOME, 'opensauria.db'),
+  dbEncrypted: join(OPENSAURIA_HOME, 'opensauria.db.enc'),
   logs: join(OPENSAURIA_HOME, 'logs'),
   tmp: join(OPENSAURIA_HOME, 'tmp'),
   exports: join(OPENSAURIA_HOME, 'exports'),

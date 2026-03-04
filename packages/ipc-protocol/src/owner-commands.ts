@@ -30,7 +30,7 @@ export const OwnerCommandSchema = z.discriminatedUnion('type', [
     type: z.literal('hire'),
     platform: z.enum(['telegram', 'slack', 'whatsapp', 'discord', 'email', 'owner']),
     workspace: z.string(),
-    role: z.enum(['lead', 'specialist', 'observer', 'bridge', 'assistant']),
+    role: z.enum(['lead', 'specialist', 'observer', 'coordinator', 'assistant']),
   }),
   z.object({ type: z.literal('fire'), agentId: z.string() }),
 ]);
@@ -74,7 +74,11 @@ export function parseOwnerCommand(input: string): ParseResult {
       ownerCommand: {
         type: 'promote',
         agentId: promoteMatch[1]!,
-        newAutonomy: promoteMatch[2]!.toLowerCase() as OwnerCommand & { type: 'promote' } extends { newAutonomy: infer T } ? T : never,
+        newAutonomy: promoteMatch[2]!.toLowerCase() as OwnerCommand & { type: 'promote' } extends {
+          newAutonomy: infer T;
+        }
+          ? T
+          : never,
       },
     };
   }
@@ -129,9 +133,15 @@ export function parseOwnerCommand(input: string): ParseResult {
       message: `${hireMatch[1] ?? ''} ${hireMatch[3] ?? ''}`,
       ownerCommand: {
         type: 'hire',
-        platform: hireMatch[1]! as 'telegram' | 'slack' | 'whatsapp' | 'discord' | 'email' | 'owner',
+        platform: hireMatch[1]! as
+          | 'telegram'
+          | 'slack'
+          | 'whatsapp'
+          | 'discord'
+          | 'email'
+          | 'owner',
         workspace: hireMatch[2]!,
-        role: hireMatch[3]! as 'lead' | 'specialist' | 'observer' | 'bridge' | 'assistant',
+        role: hireMatch[3]! as 'lead' | 'specialist' | 'observer' | 'coordinator' | 'assistant',
       },
     };
   }

@@ -30,7 +30,7 @@ pub fn create_palette_window(app: &AppHandle) -> Result<(), String> {
     }
 
     let url = WebviewUrl::App("src/renderer/palette/index.html".into());
-    let _win = WebviewWindowBuilder::new(app, "palette", url)
+    let builder = WebviewWindowBuilder::new(app, "palette", url)
         .title("OpenSauria")
         .inner_size(PALETTE_WIDTH, PALETTE_HEIGHT)
         .resizable(false)
@@ -38,9 +38,9 @@ pub fn create_palette_window(app: &AppHandle) -> Result<(), String> {
         .transparent(true)
         .always_on_top(true)
         .skip_taskbar(true)
-        .visible(false)
-        .build()
-        .map_err(|e| e.to_string())?;
+        .visible(false);
+
+    builder.build().map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -85,6 +85,10 @@ pub fn navigate_palette_to(app: &AppHandle, page: &str) -> Result<(), String> {
     win.set_resizable(true).map_err(|e| e.to_string())?;
     win.set_always_on_top(false).map_err(|e| e.to_string())?;
 
+    // Native decorations only for canvas and brain
+    let wants_decorations = page == "canvas" || page == "brain";
+    win.set_decorations(wants_decorations).map_err(|e| e.to_string())?;
+
     // Navigate to new page
     let query = if page != "palette" { "?inPalette=1" } else { "" };
     let nav_url = resolve_page_url(&win, page, query)?;
@@ -112,6 +116,9 @@ pub fn navigate_palette_back(app: &AppHandle) -> Result<(), String> {
 
     // Clear constraints so animation can shrink below previous min
     let _ = win.set_min_size(None::<tauri::LogicalSize<f64>>);
+
+    // Restore frameless palette
+    let _ = win.set_decorations(false);
 
     // Navigate back to palette
     let nav_url = resolve_page_url(&win, "palette", "")?;

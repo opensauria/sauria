@@ -24,6 +24,8 @@ export interface InboundMessage {
   readonly content: string;
   readonly contentType: 'text' | 'voice' | 'image';
   readonly timestamp: string;
+  readonly forwardDepth?: number;
+  readonly replyToNodeId?: string;
 }
 
 export type RoutingAction =

@@ -20,7 +20,6 @@ import { getExtractionFailureCount } from './ai/extract.js';
 import { getLogger } from './utils/logger.js';
 
 const MAX_REQUEST_SIZE = 65_536;
-const REQUEST_TIMEOUT_MS = 5_000;
 
 interface IpcRequest {
   readonly id: number;
@@ -36,6 +35,7 @@ interface IpcResponse {
 
 export interface DaemonIpcServer {
   close(): Promise<void>;
+  broadcast(event: string, data: Record<string, unknown>): void;
 }
 
 type MethodHandler = (db: BetterSqlite3.Database, params: Record<string, unknown>) => unknown;
@@ -65,6 +65,34 @@ function buildMethodMap(): Map<string, MethodHandler> {
   methods.set('brain:update-entity', (db, params) =>
     updateEntity(db, params['id'] as string, params['fields'] as Record<string, unknown>),
   );
+
+  methods.set('kpi:get', (db, params) => {
+    const nodeId = params['nodeId'] as string;
+    const row = db
+      .prepare(`SELECT * FROM agent_performance WHERE node_id = ?`)
+      .get(nodeId) as
+      | {
+          messages_handled: number;
+          tasks_completed: number;
+          total_response_time_ms: number;
+          cost_incurred_usd: number;
+        }
+      | undefined;
+
+    if (!row) {
+      return { messagesHandled: 0, tasksCompleted: 0, avgResponseTimeMs: 0, costUsd: 0 };
+    }
+
+    return {
+      messagesHandled: row.messages_handled,
+      tasksCompleted: row.tasks_completed,
+      avgResponseTimeMs:
+        row.messages_handled > 0
+          ? Math.round(row.total_response_time_ms / row.messages_handled)
+          : 0,
+      costUsd: Math.round(row.cost_incurred_usd * 100) / 100,
+    };
+  });
 
   return methods;
 }
@@ -158,11 +186,6 @@ function handleConnection(
   socket.on('error', (err) => {
     logger.warn('IPC socket error', { error: err.message });
   });
-
-  socket.setTimeout(REQUEST_TIMEOUT_MS);
-  socket.on('timeout', () => {
-    socket.destroy();
-  });
 }
 
 export async function startIpcServer(
@@ -172,8 +195,12 @@ export async function startIpcServer(
   const logger = getLogger();
   const methods = buildMethodMap();
   const isWindows = process.platform === 'win32';
+  const subscribers = new Set<Socket>();
 
   const server: Server = createServer((socket) => {
+    subscribers.add(socket);
+    socket.on('close', () => subscribers.delete(socket));
+    socket.on('error', () => subscribers.delete(socket));
     handleConnection(socket, db, methods);
   });
 
@@ -228,6 +255,14 @@ export async function startIpcServer(
           resolve();
         });
       });
+    },
+    broadcast(event: string, data: Record<string, unknown>): void {
+      const line = JSON.stringify({ event, data }) + '\n';
+      for (const socket of subscribers) {
+        if (!socket.destroyed) {
+          socket.write(line);
+        }
+      }
     },
   };
 }

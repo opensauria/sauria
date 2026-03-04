@@ -132,9 +132,32 @@ describe('Orchestrator Integration', () => {
     });
   });
 
-  it('routes message through edge rules to target channel', async () => {
-    await orchestrator.handleInbound(makeMessage());
-    expect(ch2.sendMessage).toHaveBeenCalled();
+  it('routes forward internally without sending to external channel', async () => {
+    const onActivity = vi.fn();
+    const internalOrchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity,
+      db,
+      agentMemory,
+      kpiTracker,
+      checkpointManager,
+      onActivity,
+    });
+
+    await internalOrchestrator.handleInbound(makeMessage());
+
+    // Forward should NOT call the external channel
+    expect(ch2.sendMessage).not.toHaveBeenCalled();
+    // Activity events should still fire
+    expect(onActivity).toHaveBeenCalledWith(
+      'activity:edge',
+      expect.objectContaining({ from: 'n1', to: 'n2', actionType: 'forward' }),
+    );
+    expect(onActivity).toHaveBeenCalledWith(
+      'activity:message',
+      expect.objectContaining({ from: 'n1', to: 'n2', actionType: 'forward' }),
+    );
   });
 
   it('records messages in agent memory', async () => {
@@ -175,7 +198,7 @@ describe('Orchestrator Integration', () => {
     expect(pending.length).toBeGreaterThan(0);
   });
 
-  it('handles assign action — inserts task and forwards', async () => {
+  it('handles assign action — inserts task without sending to external channel', async () => {
     await orchestrator.executeAction(
       { type: 'assign', targetNodeId: 'n2', task: 'Review PR', priority: 'high' },
       makeMessage(),
@@ -183,7 +206,8 @@ describe('Orchestrator Integration', () => {
 
     const tasks = db.prepare('SELECT * FROM agent_tasks').all();
     expect(tasks.length).toBe(1);
-    expect(ch2.sendMessage).toHaveBeenCalledWith(expect.stringContaining('[Task] Review PR'), null);
+    /* assign no longer sends [Task] to external channels — only emits activity events */
+    expect(ch2.sendMessage).not.toHaveBeenCalled();
   });
 
   it('handles learn action — stores fact in memory', async () => {
@@ -234,15 +258,94 @@ describe('Orchestrator Integration', () => {
     expect(ch1.sendMessage).toHaveBeenCalledWith(expect.stringContaining('[Review]'), null);
   });
 
-  it('executes approved actions after approval', async () => {
+  it('executes approved actions after approval (forward routes internally)', async () => {
+    const onActivity = vi.fn();
+    const approvalOrchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity,
+      db,
+      agentMemory,
+      kpiTracker,
+      checkpointManager,
+      onActivity,
+    });
+
     const approvalId = checkpointManager.queueForApproval('n1', 'ws1', 'Test approval', [
       { type: 'forward', targetNodeId: 'n2', content: 'approved content' },
     ]);
 
     const actions = checkpointManager.approve(approvalId);
-    const executed = await orchestrator.executeApprovedActions('n1', actions);
+    const executed = await approvalOrchestrator.executeApprovedActions('n1', actions);
 
     expect(executed).toBe(1);
-    expect(ch2.sendMessage).toHaveBeenCalledWith('approved content', null);
+    // Forward routes internally, not through external channel
+    expect(ch2.sendMessage).not.toHaveBeenCalled();
+    expect(onActivity).toHaveBeenCalledWith(
+      'activity:message',
+      expect.objectContaining({ from: 'n1', to: 'n2', actionType: 'forward' }),
+    );
+  });
+
+  it('agent with channel replies directly to owner on forwarded message', async () => {
+    const onActivity = vi.fn();
+    const replyOrchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity,
+      db,
+      agentMemory,
+      kpiTracker,
+      checkpointManager,
+      onActivity,
+    });
+
+    // n2 has a registered channel (ch2) — should reply directly to owner
+    const forwardedSource: InboundMessage = {
+      sourceNodeId: 'n2',
+      platform: 'telegram',
+      senderId: 'n1',
+      senderIsOwner: false,
+      groupId: null,
+      content: 'Debate topic from owner',
+      contentType: 'text',
+      timestamp: new Date().toISOString(),
+      forwardDepth: 1,
+      replyToNodeId: 'n1',
+    };
+
+    await replyOrchestrator.executeAction(
+      { type: 'reply', content: 'Here is my direct response' },
+      forwardedSource,
+    );
+
+    // n2 has its own channel — reply goes directly to owner via n2's channel
+    expect(ch2.sendMessage).toHaveBeenCalledWith('Here is my direct response', null);
+    // Edge activity from n2 to n2 (self-reply to owner)
+    expect(onActivity).toHaveBeenCalledWith(
+      'activity:edge',
+      expect.objectContaining({ from: 'n2', to: 'n2', actionType: 'reply' }),
+    );
+  });
+
+  it('stops forwarding when forward depth limit is reached', async () => {
+    const onActivity = vi.fn();
+    const depthOrchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity,
+      db,
+      agentMemory,
+      kpiTracker,
+      checkpointManager,
+      onActivity,
+    });
+
+    // Message at max depth should be silently dropped
+    await depthOrchestrator.handleInbound(makeMessage({ forwardDepth: 3 }));
+
+    expect(onActivity).not.toHaveBeenCalled();
+    expect(ch1.sendMessage).not.toHaveBeenCalled();
+    expect(ch2.sendMessage).not.toHaveBeenCalled();
   });
 });

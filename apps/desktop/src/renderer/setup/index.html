@@ -5,20 +5,11 @@
     <title>OpenSauria</title>
     <link rel="stylesheet" href="../shared.css" />
     <style>
-      body {
-        -webkit-app-region: drag;
-      }
-
-      body.in-palette {
-        -webkit-app-region: no-drag;
-      }
-
       .container {
         padding: 48px 40px 40px;
         height: 100vh;
         display: flex;
         flex-direction: column;
-        -webkit-app-region: no-drag;
       }
 
       /* Steps */
@@ -380,8 +371,8 @@
       <div class="step" id="step-claude-desktop">
         <h1>Sign in to Anthropic</h1>
         <p class="subtitle">
-          OpenSauria will connect to your Anthropic account to use Claude as its AI engine. No API key
-          needed.
+          OpenSauria will connect to your Anthropic account to use Claude as its AI engine. No API
+          key needed.
         </p>
 
         <div id="oauth-start" style="display: block">

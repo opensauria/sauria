@@ -8,7 +8,7 @@
 
 // ─── Agent Roles & Autonomy ────────────────────────────────────────
 
-export type AgentRole = 'lead' | 'specialist' | 'observer' | 'bridge' | 'assistant';
+export type AgentRole = 'lead' | 'specialist' | 'observer' | 'coordinator' | 'assistant';
 
 export type AutonomyLevel = 'full' | 'supervised' | 'approval' | 'manual';
 
