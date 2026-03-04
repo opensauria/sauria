@@ -1,6 +1,7 @@
 import { createServer, type Server, type Socket } from 'node:net';
-import { existsSync, unlinkSync } from 'node:fs';
+import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import type BetterSqlite3 from 'better-sqlite3';
+import { paths } from './config/paths.js';
 import {
   listEntities,
   getEntityDetail,
@@ -15,6 +16,7 @@ import {
   deleteConversation,
   updateEntity,
 } from './db/brain-queries.js';
+import { getExtractionFailureCount } from './ai/extract.js';
 import { getLogger } from './utils/logger.js';
 
 const MAX_REQUEST_SIZE = 65_536;
@@ -36,10 +38,7 @@ export interface DaemonIpcServer {
   close(): Promise<void>;
 }
 
-type MethodHandler = (
-  db: BetterSqlite3.Database,
-  params: Record<string, unknown>,
-) => unknown;
+type MethodHandler = (db: BetterSqlite3.Database, params: Record<string, unknown>) => unknown;
 
 function buildMethodMap(): Map<string, MethodHandler> {
   const methods = new Map<string, MethodHandler>();
@@ -54,7 +53,7 @@ function buildMethodMap(): Map<string, MethodHandler> {
     getConversationMessages(db, params['id'] as string, params),
   );
   methods.set('brain:list-facts', (db, params) => listFacts(db, params));
-  methods.set('brain:get-stats', (db) => getStats(db));
+  methods.set('brain:get-stats', (db) => getStats(db, getExtractionFailureCount()));
   methods.set('brain:delete', (db, params) => {
     const table = params['table'] as string;
     const id = params['id'] as string;
@@ -146,7 +145,10 @@ function handleConnection(
         });
         const response: IpcResponse = {
           id: parsed.id,
-          error: { code: 'HANDLER_ERROR', message: err instanceof Error ? err.message : 'Internal error' },
+          error: {
+            code: 'HANDLER_ERROR',
+            message: err instanceof Error ? err.message : 'Internal error',
+          },
         };
         socket.write(JSON.stringify(response) + '\n');
       }
@@ -163,34 +165,59 @@ function handleConnection(
   });
 }
 
-export function startIpcServer(
+export async function startIpcServer(
   socketPath: string,
   db: BetterSqlite3.Database,
-): DaemonIpcServer {
+): Promise<DaemonIpcServer> {
   const logger = getLogger();
   const methods = buildMethodMap();
-
-  if (existsSync(socketPath)) {
-    unlinkSync(socketPath);
-  }
+  const isWindows = process.platform === 'win32';
 
   const server: Server = createServer((socket) => {
     handleConnection(socket, db, methods);
-  });
-
-  server.listen(socketPath, () => {
-    logger.info('IPC server listening', { path: socketPath });
   });
 
   server.on('error', (err) => {
     logger.error('IPC server error', { error: err.message });
   });
 
+  if (isWindows) {
+    await new Promise<void>((resolve) => {
+      server.listen(0, '127.0.0.1', () => {
+        const addr = server.address();
+        if (addr && typeof addr === 'object') {
+          writeFileSync(paths.ipcPort, String(addr.port), 'utf-8');
+          logger.info('IPC server listening', { port: addr.port });
+        }
+        resolve();
+      });
+    });
+  } else {
+    if (existsSync(socketPath)) {
+      unlinkSync(socketPath);
+    }
+
+    await new Promise<void>((resolve) => {
+      server.listen(socketPath, () => {
+        logger.info('IPC server listening', { path: socketPath });
+        resolve();
+      });
+    });
+  }
+
   return {
     close(): Promise<void> {
       return new Promise((resolve) => {
         server.close(() => {
-          if (existsSync(socketPath)) {
+          if (isWindows) {
+            if (existsSync(paths.ipcPort)) {
+              try {
+                unlinkSync(paths.ipcPort);
+              } catch {
+                // Best-effort cleanup
+              }
+            }
+          } else if (existsSync(socketPath)) {
             try {
               unlinkSync(socketPath);
             } catch {

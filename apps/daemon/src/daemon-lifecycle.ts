@@ -674,7 +674,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   });
   logger.info('MCP server started on stdio');
 
-  const ipcServer = startIpcServer(paths.socket, db);
+  const ipcServer = await startIpcServer(paths.socket, db);
 
   const refreshInterval = setInterval(() => {
     void refreshOAuthTokenIfNeeded('anthropic');

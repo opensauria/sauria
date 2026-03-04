@@ -245,9 +245,8 @@ fn resolve_page_url(
     query: &str,
 ) -> Result<url::Url, String> {
     let current = win.url().map_err(|e| e.to_string())?;
-    let origin = current.origin().ascii_serialization();
-    let raw = format!("{origin}/src/renderer/{page}/index.html{query}");
-    raw.parse().map_err(|e: url::ParseError| e.to_string())
+    let path = format!("/src/renderer/{page}/index.html{query}");
+    current.join(&path).map_err(|e| e.to_string())
 }
 
 fn center_palette(app: &AppHandle) -> Result<(), String> {
@@ -272,65 +271,3 @@ pub fn send_command_result(app: &AppHandle, text: &str) {
     }
 }
 
-pub fn show_canvas(app: &AppHandle) -> Result<(), String> {
-    if let Some(win) = app.get_webview_window("canvas") {
-        win.show().map_err(|e| e.to_string())?;
-        win.set_focus().map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    let url = WebviewUrl::App("src/renderer/canvas/index.html".into());
-    let win = WebviewWindowBuilder::new(app, "canvas", url)
-        .title("OpenSauria Canvas")
-        .inner_size(1200.0, 800.0)
-        .min_inner_size(800.0, 600.0)
-        .resizable(true)
-        .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    win.show().map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-pub fn show_brain(app: &AppHandle) -> Result<(), String> {
-    if let Some(win) = app.get_webview_window("brain") {
-        win.show().map_err(|e| e.to_string())?;
-        win.set_focus().map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    let url = WebviewUrl::App("src/renderer/brain/index.html".into());
-    let win = WebviewWindowBuilder::new(app, "brain", url)
-        .title("OpenSauria Brain")
-        .inner_size(1000.0, 700.0)
-        .min_inner_size(720.0, 480.0)
-        .resizable(true)
-        .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    win.show().map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-pub fn show_setup(app: &AppHandle) -> Result<(), String> {
-    if let Some(win) = app.get_webview_window("setup") {
-        win.show().map_err(|e| e.to_string())?;
-        win.set_focus().map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    let url = WebviewUrl::App("src/renderer/setup/index.html".into());
-    let win = WebviewWindowBuilder::new(app, "setup", url)
-        .title("OpenSauria Setup")
-        .inner_size(520.0, 680.0)
-        .resizable(false)
-        .maximizable(false)
-        .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    win.show().map_err(|e| e.to_string())?;
-    Ok(())
-}

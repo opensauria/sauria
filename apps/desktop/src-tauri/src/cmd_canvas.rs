@@ -5,7 +5,6 @@ use std::io::Write;
 
 use crate::daemon_manager;
 use crate::paths::Paths;
-use crate::windows;
 
 #[tauri::command]
 pub fn get_canvas_graph(paths: tauri::State<'_, Paths>) -> Value {
@@ -22,11 +21,6 @@ pub fn get_canvas_graph(paths: tauri::State<'_, Paths>) -> Value {
 pub fn save_canvas_graph(graph: Value, paths: tauri::State<'_, Paths>) -> Result<(), String> {
     let content = serde_json::to_string_pretty(&graph).map_err(|e| e.to_string())?;
     fs::write(&paths.canvas, content).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn show_canvas(app: tauri::AppHandle) -> Result<(), String> {
-    windows::show_canvas(&app)
 }
 
 #[derive(Serialize)]
@@ -196,35 +190,7 @@ pub fn get_owner_profile() -> OwnerProfile {
 }
 
 fn resolve_owner_name() -> String {
-    let fallback = whoami::username();
-
-    #[cfg(target_os = "macos")]
-    {
-        if let Ok(output) = std::process::Command::new("/usr/bin/id").args(["-F"]).output() {
-            let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !name.is_empty() {
-                return name;
-            }
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(output) = std::process::Command::new("/usr/bin/getent")
-            .args(["passwd", &fallback])
-            .output()
-        {
-            let gecos = String::from_utf8_lossy(&output.stdout);
-            if let Some(field) = gecos.split(':').nth(4).and_then(|f| f.split(',').next()) {
-                let name = field.trim();
-                if !name.is_empty() {
-                    return name.to_string();
-                }
-            }
-        }
-    }
-
-    fallback
+    whoami::realname()
 }
 
 fn resolve_owner_photo() -> Option<String> {

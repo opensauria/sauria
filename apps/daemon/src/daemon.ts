@@ -26,8 +26,15 @@ async function shutdown(): Promise<void> {
 }
 
 function installSignalHandlers(): void {
-  process.on('SIGINT', () => void shutdown());
-  process.on('SIGTERM', () => void shutdown());
+  if (process.platform !== 'win32') {
+    process.on('SIGINT', () => void shutdown());
+    process.on('SIGTERM', () => void shutdown());
+  }
+  // Windows: parent process (Tauri) kills the child directly.
+  // Also handle IPC 'shutdown' message when spawned as child process.
+  process.on('message', (msg) => {
+    if (msg === 'shutdown') void shutdown();
+  });
 }
 
 export async function startDaemon(): Promise<void> {
@@ -37,12 +44,11 @@ export async function startDaemon(): Promise<void> {
 
   try {
     activeContext = await startDaemonContext();
-    process.stdout.write('OpenSauria daemon running. Press Ctrl+C to stop.\n');
+    process.stdout.write(JSON.stringify({ status: 'ready' }) + '\n');
   } catch (err: unknown) {
-    logger.fatal('Daemon failed to start', {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    process.stderr.write(`Fatal: ${err instanceof Error ? err.message : String(err)}\n`);
+    const message = err instanceof Error ? err.message : String(err);
+    logger.fatal('Daemon failed to start', { error: message });
+    process.stdout.write(JSON.stringify({ status: 'error', message }) + '\n');
     process.exit(1);
   }
 }

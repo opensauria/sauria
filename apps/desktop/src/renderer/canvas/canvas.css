@@ -222,15 +222,28 @@
   overflow: visible;
 }
 
-.edge-svg path {
-  stroke: rgba(255, 255, 255, 0.1);
+.edge-svg .edge-line {
   stroke-width: 1.5;
   fill: none;
   stroke-linecap: round;
 }
 
-.edge-svg path:hover {
-  stroke: rgba(255, 255, 255, 0.25);
+.edge-svg .edge-flow {
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 2 14;
+  animation: edgeFlow 0.8s linear infinite;
+}
+
+@keyframes edgeFlow {
+  from {
+    stroke-dashoffset: 16;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .edge-svg .edge-temp {
@@ -250,8 +263,12 @@
   cursor: pointer;
 }
 
-.edge-svg .edge-hit:hover + path {
-  stroke: rgba(255, 255, 255, 0.25);
+.edge-group:hover .edge-line {
+  filter: brightness(1.6);
+}
+
+.edge-group:hover .edge-flow {
+  stroke: rgba(255, 255, 255, 0.35);
 }
 
 /* Edge delete button (positioned at bezier midpoint) */

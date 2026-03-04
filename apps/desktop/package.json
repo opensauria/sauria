@@ -8,6 +8,7 @@
     "dev": "pnpm run icons && tauri dev",
     "build": "pnpm run icons && tauri build",
     "dev:vite": "vite",
+    "native-deps": "node scripts/copy-native-deps.js",
     "build:vite": "vite build",
     "typecheck": "tsc --noEmit"
   },

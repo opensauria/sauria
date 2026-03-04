@@ -9,7 +9,7 @@
   <body>
     <div class="brain-layout">
       <!-- Sidebar -->
-      <nav class="brain-sidebar">
+      <nav class="brain-sidebar" data-tauri-drag-region>
         <button class="palette-back" id="palette-back" title="Back">
           <img src="/icons/chevron-left.svg" alt="" />
         </button>
@@ -63,7 +63,7 @@
       <!-- Content Area -->
       <main class="brain-content" id="brain-content">
         <!-- Toolbar -->
-        <div class="brain-toolbar">
+        <div class="brain-toolbar" data-tauri-drag-region>
           <div class="brain-search">
             <img src="/icons/search.svg" alt="" />
             <input type="text" id="search-input" placeholder="Search..." />
