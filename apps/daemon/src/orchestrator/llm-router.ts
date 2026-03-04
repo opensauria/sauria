@@ -11,6 +11,7 @@ import type {
 import { RoutingCache, buildCacheKey } from './routing-cache.js';
 import { AgentMemory, estimateTokens } from './agent-memory.js';
 import { searchByKeyword } from '../db/search.js';
+import type { IntegrationRegistry } from '../integrations/registry.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -40,6 +41,9 @@ interface RawLLMAction {
   readonly workspaceId?: string;
   readonly fact?: string;
   readonly topics?: readonly string[];
+  readonly integration?: string;
+  readonly tool?: string;
+  readonly arguments?: Readonly<Record<string, unknown>>;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────
@@ -54,6 +58,7 @@ const VALID_ACTION_TYPES = new Set([
   'send_to_all',
   'learn',
   'group_message',
+  'use_tool',
 ]);
 
 const VALID_PRIORITIES = new Set(['low', 'normal', 'high']);
@@ -63,14 +68,17 @@ const VALID_PRIORITIES = new Set(['low', 'normal', 'high']);
 export class LLMRoutingBrain {
   private readonly cache: RoutingCache;
   private readonly memory: AgentMemory;
+  readonly integrationRegistry: IntegrationRegistry | null;
 
   constructor(
     private readonly router: ModelRouter,
     private readonly db: BetterSqlite3.Database,
     cacheTtlMs?: number,
+    integrationRegistry?: IntegrationRegistry,
   ) {
     this.cache = new RoutingCache(cacheTtlMs);
     this.memory = new AgentMemory(db);
+    this.integrationRegistry = integrationRegistry ?? null;
   }
 
   clearCache(): void {
@@ -91,7 +99,7 @@ export class LLMRoutingBrain {
       return cached;
     }
 
-    const prompt = buildRoutingPrompt(context, this.memory, this.db);
+    const prompt = buildRoutingPrompt(context, this.memory, this.db, this.integrationRegistry);
     const decision = await this.callLLM(prompt, tier);
 
     this.cache.set(cacheKey, decision);
@@ -222,12 +230,24 @@ function extractLanguageDirective(instructions: string): string | null {
   return match ? match[1]!.charAt(0).toUpperCase() + match[1]!.slice(1).toLowerCase() : null;
 }
 
+function buildToolsSection(integrationRegistry?: IntegrationRegistry | null): string[] {
+  if (!integrationRegistry) return [];
+  const tools = integrationRegistry.getAvailableTools();
+  if (tools.length === 0) return [];
+
+  const toolLines = tools
+    .slice(0, 20)
+    .map((t) => `- ${t.integrationName}/${t.name}: ${t.description ?? 'no description'}`);
+  return ['Available tools (use "use_tool" action to invoke):', ...toolLines, ''];
+}
+
 // ─── Prompt Building ────────────────────────────────────────────────
 
 function buildRoutingPrompt(
   context: RoutingContext,
   memory: AgentMemory,
   db: BetterSqlite3.Database,
+  integrationRegistry?: IntegrationRegistry | null,
 ): ChatMessage[] {
   const {
     message,
@@ -327,6 +347,7 @@ function buildRoutingPrompt(
     ...(agentFactsText ? [agentFactsText, ''] : []),
     ...(knowledgeGraphText ? [knowledgeGraphText, ''] : []),
     ...(peerMessagesText ? [peerMessagesText, ''] : []),
+    ...buildToolsSection(integrationRegistry),
     ruleActionsText,
     '',
     `IDENTITY: Your name is ${sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '')}. You are ${sourceNode.role ?? 'assistant'}. Never use any other name. Never mention being Claude, an AI model, or a language model.`,
@@ -348,14 +369,15 @@ function buildRoutingPrompt(
     'Decide what actions to take. Return ONLY valid JSON:',
     '{"actions": [{"type": "reply", "content": "..."}, ...]}',
     '',
-    'Valid action types: reply, forward, assign, notify, send_to_all, learn, group_message',
+    'Valid action types: reply, forward, assign, notify, send_to_all, learn, group_message, use_tool',
     'For forward/assign/notify: include "targetNodeId"',
     'For assign: include "task" and "priority" (low/normal/high)',
     'For notify: include "summary"',
     'For send_to_all/group_message: include "workspaceId" and "content"',
     'For learn: include "fact" and "topics" (string array)',
+    'For use_tool: include "integration" (id), "tool" (name), "arguments" (JSON object), and "content" (explanation to owner)',
     '',
-    'DELEGATION: When the user asks you to communicate with, ask, or send something to another agent by name, you MUST use the forward action with that agent\'s targetNodeId. Never answer on behalf of another agent. Never fabricate what another agent would say.',
+    "DELEGATION: When the user asks you to communicate with, ask, or send something to another agent by name, you MUST use the forward action with that agent's targetNodeId. Never answer on behalf of another agent. Never fabricate what another agent would say.",
     'REPLY vs FORWARD: "reply" sends your response directly to the owner on YOUR channel. "forward" sends a message to another agent internally. When you receive a forwarded message, reply directly to the owner with your answer. Only use forward if you need to pass the task to yet another agent.',
     'ATTRIBUTION: When you reply to the owner after receiving a forwarded request from another agent, always mention who asked you and why. Example: "[AgentName] asked me to give my opinion on X. Here is what I think: ..." This gives the owner context about why you are reaching out.',
   ];
@@ -463,6 +485,17 @@ function normalizeAction(raw: RawLLMAction): RoutingAction | null {
     case 'group_message':
       return raw.workspaceId && raw.content
         ? { type: 'group_message', workspaceId: raw.workspaceId, content: raw.content }
+        : null;
+
+    case 'use_tool':
+      return raw.integration && raw.tool && raw.content
+        ? {
+            type: 'use_tool',
+            integration: raw.integration,
+            tool: raw.tool,
+            arguments: raw.arguments ?? {},
+            content: raw.content,
+          }
         : null;
 
     default:

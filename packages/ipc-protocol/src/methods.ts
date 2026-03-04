@@ -17,6 +17,11 @@ export const IPC_METHODS = {
   GET_STATS: 'brain:get-stats',
   DELETE: 'brain:delete',
   UPDATE_ENTITY: 'brain:update-entity',
+  HEALTH_CHECK: 'daemon:health',
+  LIST_INTEGRATION_CATALOG: 'integrations:list-catalog',
+  CONNECT_INTEGRATION: 'integrations:connect',
+  DISCONNECT_INTEGRATION: 'integrations:disconnect',
+  LIST_INTEGRATION_TOOLS: 'integrations:list-tools',
 } as const;
 
 export type IpcMethodName = (typeof IPC_METHODS)[keyof typeof IPC_METHODS];
@@ -65,4 +70,9 @@ export interface MethodParamsMap {
   [IPC_METHODS.GET_STATS]: Record<string, never>;
   [IPC_METHODS.DELETE]: { table: string; id: string };
   [IPC_METHODS.UPDATE_ENTITY]: { id: string; fields: Record<string, unknown> };
+  [IPC_METHODS.HEALTH_CHECK]: Record<string, never>;
+  [IPC_METHODS.LIST_INTEGRATION_CATALOG]: Record<string, never>;
+  [IPC_METHODS.CONNECT_INTEGRATION]: { id: string; credentials: Record<string, string> };
+  [IPC_METHODS.DISCONNECT_INTEGRATION]: { id: string };
+  [IPC_METHODS.LIST_INTEGRATION_TOOLS]: { integrationId?: string };
 }

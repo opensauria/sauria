@@ -1,4 +1,5 @@
 import type { InboundMessage } from './types.js';
+import { getLogger } from '../utils/logger.js';
 
 export type MessageHandler = (message: InboundMessage) => Promise<void>;
 
@@ -11,6 +12,7 @@ export class MessageQueue {
   private readonly queue: InboundMessage[] = [];
   private processing = 0;
   private stopped = false;
+  private failureCount = 0;
 
   constructor(
     private readonly handler: MessageHandler,
@@ -23,6 +25,10 @@ export class MessageQueue {
 
   get active(): number {
     return this.processing;
+  }
+
+  get failures(): number {
+    return this.failureCount;
   }
 
   enqueue(message: InboundMessage): void {
@@ -53,6 +59,15 @@ export class MessageQueue {
     this.queue.length = 0;
   }
 
+  async gracefulStop(timeoutMs = 5000): Promise<void> {
+    this.stopped = true;
+    const deadline = Date.now() + timeoutMs;
+    while ((this.queue.length > 0 || this.processing > 0) && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    this.queue.length = 0;
+  }
+
   private async drain(): Promise<void> {
     while (!this.stopped && this.queue.length > 0 && this.processing < this.options.maxConcurrent) {
       const message = this.queue.shift();
@@ -60,7 +75,14 @@ export class MessageQueue {
 
       this.processing++;
       this.handler(message)
-        .catch(() => {})
+        .catch((err: unknown) => {
+          this.failureCount++;
+          const logger = getLogger();
+          logger.error('Message handler failed', {
+            sourceNodeId: message.sourceNodeId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        })
         .finally(() => {
           this.processing--;
           void this.drain();

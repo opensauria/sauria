@@ -48,12 +48,14 @@ const icons: Record<string, string> = {
   quit: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v9" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/><path d="M18.36 6.64A9 9 0 0112 21a9 9 0 01-6.36-2.36A9 9 0 015.64 6.64" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/></svg>',
   brain:
     '<svg viewBox="0 0 24 24" fill="none"><path d="M12 5a3 3 0 10-5.997.125A4 4 0 003 9a4 4 0 001.4 3.04A3.5 3.5 0 005 15a3.5 3.5 0 002.84 3.44A3 3 0 0011 21h1a3 3 0 003.16-2.56A3.5 3.5 0 0019 15a3.5 3.5 0 00-.6-2.96A4 4 0 0021 9a4 4 0 00-2.99-3.87A3 3 0 0012 5z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 5v16" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-linecap="round"/><path d="M9.5 8a5.5 5.5 0 00-4.13 4M14.5 8a5.5 5.5 0 014.13 4" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-linecap="round"/></svg>',
+  integrations:
+    '<svg viewBox="0 0 24 24" fill="none"><path d="M12 22c5.523 0 10-4.477 10-10h-4a6 6 0 01-6 6v4z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2C6.477 2 2 6.477 2 12h4a6 6 0 016-6V2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="7" r="2" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/><circle cx="7" cy="17" r="2" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/></svg>',
 };
 
 const mainCommands: Command[] = [
   { id: 'canvas', label: 'Agent Canvas', hint: '' },
   { id: 'brain', label: 'Brain', hint: 'knowledge graph' },
-  { id: 'telegram', label: 'Telegram', hint: 'channel' },
+  { id: 'integrations', label: 'Integrations', hint: 'tools & channels' },
   { id: 'setup', label: 'AI Provider', hint: 'config' },
   { id: 'quit', label: 'Quit', hint: '' },
 ];

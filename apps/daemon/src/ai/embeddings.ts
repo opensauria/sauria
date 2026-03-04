@@ -1,11 +1,8 @@
 // Embeddings are currently disabled — @huggingface/transformers was removed.
 // This stub preserves the API surface for when embeddings are migrated.
 
-export async function generateEmbedding(_text: string): Promise<Float32Array> {
-  throw new Error(
-    'Embeddings are not available. The @huggingface/transformers dependency was removed. ' +
-      'Migrate to a local Python model or re-add the dependency.',
-  );
+export async function generateEmbedding(_text: string): Promise<Float32Array | null> {
+  return null;
 }
 
 export function cosineSimilarity(a: Float32Array, b: Float32Array): number {
