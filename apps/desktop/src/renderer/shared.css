@@ -143,7 +143,6 @@ body {
   z-index: 600;
   padding: 0;
   transition: background 0.15s ease;
-  -webkit-app-region: no-drag;
 }
 
 .palette-back:hover {

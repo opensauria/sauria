@@ -73,6 +73,10 @@ export class LLMRoutingBrain {
     this.memory = new AgentMemory(db);
   }
 
+  clearCache(): void {
+    this.cache.clear();
+  }
+
   async decideRouting(context: RoutingContext): Promise<RoutingDecision> {
     const { message, ruleActions } = context;
 
@@ -142,6 +146,82 @@ export class LLMRoutingBrain {
   }
 }
 
+// ─── Forward Content Parser ──────────────────────────────────────────
+
+interface ParsedForward {
+  readonly senderLabel: string;
+  readonly context: readonly string[];
+  readonly actualMessage: string;
+}
+
+function parseForwardedContent(content: string): ParsedForward | null {
+  const senderMatch = content.match(/^\[Forwarded from ([^\]]+)\]\s*/);
+  if (!senderMatch) return null;
+
+  const messageMarker = content.indexOf('\n[Message]:\n');
+  if (messageMarker === -1) {
+    return { senderLabel: senderMatch[1]!, context: [], actualMessage: content };
+  }
+
+  const contextBlock = content.slice(senderMatch[0].length, messageMarker);
+  const contextLines = contextBlock
+    .split('\n')
+    .filter((l) => l.startsWith('- '))
+    .map((l) => l.slice(2));
+
+  const actualMessage = content.slice(messageMarker + '\n[Message]:\n'.length).trim();
+
+  return { senderLabel: senderMatch[1]!, context: contextLines, actualMessage };
+}
+
+function buildMessageSection(message: InboundMessage, sourceNode: AgentNode): string[] {
+  const isForwarded = (message.forwardDepth ?? 0) > 0;
+
+  if (!isForwarded) {
+    return [
+      `Incoming message from ${sourceNode.label} (${sourceNode.role}):`,
+      `"${message.content}"`,
+    ];
+  }
+
+  const parsed = parseForwardedContent(message.content);
+  if (!parsed) {
+    return [
+      `${sourceNode.label} (${sourceNode.role}) received a forwarded message:`,
+      `"${message.content}"`,
+    ];
+  }
+
+  const lines: string[] = [
+    `${sourceNode.label} (${sourceNode.role}) received a message forwarded by ${parsed.senderLabel}.`,
+  ];
+
+  if (parsed.context.length > 0) {
+    lines.push('Conversation context leading to this forward:');
+    for (const ctx of parsed.context) {
+      lines.push(`  ${ctx}`);
+    }
+  }
+
+  lines.push('', `The actual request/message:`, `"${parsed.actualMessage}"`);
+  lines.push(
+    '',
+    `CRITICAL: Reply naturally to the actual request above. Do NOT echo or repeat the forwarding metadata. Respond as if ${parsed.senderLabel} asked you directly.`,
+  );
+
+  return lines;
+}
+
+// ─── Language Extraction ─────────────────────────────────────────────
+
+const LANGUAGE_DIRECTIVE_PATTERN =
+  /(?:always\s+(?:reply|respond|answer|write|speak)|(?:reply|respond|answer|write|speak)\s+(?:only\s+)?in)\s+(english|french|spanish|german|italian|portuguese|arabic|chinese|japanese|korean|russian|dutch|swedish|norwegian|danish|finnish|polish|czech|hungarian|romanian|turkish|hindi|thai|vietnamese|indonesian|malay|filipino|hebrew|greek|ukrainian|bulgarian|croatian|serbian|slovak|slovenian|latvian|lithuanian|estonian)/i;
+
+function extractLanguageDirective(instructions: string): string | null {
+  const match = instructions.match(LANGUAGE_DIRECTIVE_PATTERN);
+  return match ? match[1]!.charAt(0).toUpperCase() + match[1]!.slice(1).toLowerCase() : null;
+}
+
 // ─── Prompt Building ────────────────────────────────────────────────
 
 function buildRoutingPrompt(
@@ -160,7 +240,7 @@ function buildRoutingPrompt(
   } = context;
 
   const agentList = teamNodes
-    .map((node) => `- ${node.label} (${node.role}) on ${node.platform}`)
+    .map((node) => `- ${node.label} (${node.role}) [nodeId: "${node.id}"] on ${node.platform}`)
     .join('\n');
 
   const ruleActionsText =
@@ -227,7 +307,7 @@ function buildRoutingPrompt(
     }
   }
 
-  const systemPrompt = [
+  const promptParts = [
     'You are the routing brain for a team of AI agents.',
     '',
     `Team: ${workspace?.name ?? 'Unknown'}`,
@@ -237,8 +317,7 @@ function buildRoutingPrompt(
     'Agents in this team:',
     agentList || '(no agents)',
     '',
-    `Incoming message from ${sourceNode.label} (${sourceNode.role}):`,
-    `"${message.content}"`,
+    ...buildMessageSection(message, sourceNode),
     '',
     conversationContext
       ? `Recent conversation context:\n${conversationContext}`
@@ -250,12 +329,19 @@ function buildRoutingPrompt(
     ...(peerMessagesText ? [peerMessagesText, ''] : []),
     ruleActionsText,
     '',
-    `When generating reply content, respond in character as ${sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '')} (${sourceNode.role ?? 'assistant'}). Never mention being Claude, an AI model, or a language model.`,
-    ...(globalInstructions || sourceNode.instructions
+    `IDENTITY: Your name is ${sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '')}. You are ${sourceNode.role ?? 'assistant'}. Never use any other name. Never mention being Claude, an AI model, or a language model.`,
+    ...(sourceNode.instructions
       ? [
-          'Response style instructions (apply to all reply content):',
-          ...(globalInstructions ? [globalInstructions] : []),
-          ...(sourceNode.instructions ? [sourceNode.instructions] : []),
+          `AGENT PERSONA (this defines WHO you are — embody this fully in every response):`,
+          sourceNode.instructions,
+          '',
+        ]
+      : []),
+    'FORMATTING: Write plain text only. Never use asterisks, markdown, bold, italic, bullet points, headers, or any special formatting characters. Keep messages short and natural like a human chat message.',
+    ...(globalInstructions
+      ? [
+          'Communication style (applies to tone and language of all responses):',
+          globalInstructions,
           '',
         ]
       : []),
@@ -268,11 +354,38 @@ function buildRoutingPrompt(
     'For notify: include "summary"',
     'For send_to_all/group_message: include "workspaceId" and "content"',
     'For learn: include "fact" and "topics" (string array)',
-  ].join('\n');
+    '',
+    'DELEGATION: When the user asks you to communicate with, ask, or send something to another agent by name, you MUST use the forward action with that agent\'s targetNodeId. Never answer on behalf of another agent. Never fabricate what another agent would say.',
+    'REPLY vs FORWARD: "reply" sends your response directly to the owner on YOUR channel. "forward" sends a message to another agent internally. When you receive a forwarded message, reply directly to the owner with your answer. Only use forward if you need to pass the task to yet another agent.',
+    'ATTRIBUTION: When you reply to the owner after receiving a forwarded request from another agent, always mention who asked you and why. Example: "[AgentName] asked me to give my opinion on X. Here is what I think: ..." This gives the owner context about why you are reaching out.',
+  ];
+
+  // Extract explicit language directive from instructions and inject at the very end
+  // for maximum LLM attention (recency bias)
+  const allInstructions = [globalInstructions, sourceNode.instructions].filter(Boolean).join('\n');
+  const detectedLanguage = extractLanguageDirective(allInstructions);
+
+  if (detectedLanguage) {
+    promptParts.push(
+      '',
+      `MANDATORY LANGUAGE: You MUST write ALL content (replies, forwards, summaries, agent-to-agent messages) in ${detectedLanguage}. This overrides everything else. Even if the user writes in another language, you MUST respond in ${detectedLanguage}.`,
+    );
+  } else {
+    promptParts.push(
+      '',
+      'LANGUAGE: Match the language of the incoming message. If the user writes in French, respond in French. If in English, respond in English.',
+    );
+  }
+
+  const systemPrompt = promptParts.join('\n');
+
+  const isForwarded = (message.forwardDepth ?? 0) > 0;
+  const parsed = isForwarded ? parseForwardedContent(message.content) : null;
+  const userContent = parsed?.actualMessage ?? message.content;
 
   return [
     { role: 'system' as const, content: systemPrompt },
-    { role: 'user' as const, content: message.content },
+    { role: 'user' as const, content: userContent },
   ];
 }
 

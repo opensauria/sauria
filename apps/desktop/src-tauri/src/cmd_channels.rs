@@ -101,6 +101,29 @@ async fn connect_telegram(
     let first_name = result.get("first_name").and_then(|v| v.as_str()).unwrap_or("");
     let bot_username = if username.is_empty() { first_name } else { username };
 
+    // Best-effort: fetch bot profile photo
+    let photo_url: Option<String> = async {
+        let photos_res: Value = client
+            .get(format!("{tg_api}/getUserProfilePhotos"))
+            .query(&[("user_id", bot_id.to_string()), ("limit", "1".to_string())])
+            .send().await.ok()?
+            .json().await.ok()?;
+
+        let file_id = photos_res.get("result")?
+            .get("photos")?.as_array()?.first()?
+            .as_array()?.last()?
+            .get("file_id")?.as_str()?;
+
+        let file_res: Value = client
+            .get(format!("{tg_api}/getFile"))
+            .query(&[("file_id", file_id)])
+            .send().await.ok()?
+            .json().await.ok()?;
+
+        let file_path = file_res.get("result")?.get("file_path")?.as_str()?;
+        Some(format!("https://api.telegram.org/file/bot{token}/{file_path}"))
+    }.await;
+
     // Generate nodeId
     let node_id = creds
         .get("nodeId")
@@ -130,6 +153,7 @@ async fn connect_telegram(
                 "username": bot_username,
                 "firstName": first_name,
                 "userId": user_id,
+                "photo": photo_url,
                 "connectedAt": chrono_now_iso(),
             }),
         );
@@ -159,6 +183,7 @@ async fn connect_telegram(
         "firstName": first_name,
         "botId": bot_id,
         "nodeId": node_id,
+        "photo": photo_url,
     }))
 }
 

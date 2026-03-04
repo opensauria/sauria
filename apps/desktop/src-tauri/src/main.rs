@@ -76,6 +76,7 @@ fn main() {
             cmd_brain::brain_get_stats,
             cmd_brain::brain_delete,
             cmd_brain::brain_update_entity,
+            cmd_brain::get_agent_kpis,
         ])
         .setup(move |app| {
             // Hide dock icon on macOS
@@ -85,6 +86,10 @@ fn main() {
             // Create palette window
             windows::create_palette_window(app.handle())
                 .expect("Failed to create palette window");
+
+            // Set app handle on daemon client for push event forwarding
+            let client = app.state::<Arc<DaemonClient>>();
+            client.set_app_handle(app.handle().clone());
 
             // Register global shortcut
             let app_handle = app.handle().clone();
@@ -120,6 +125,18 @@ fn main() {
             let p = Paths::resolve();
             tauri::async_runtime::spawn(async move {
                 let _ = daemon_manager::start_daemon(&ds, &p).await;
+            });
+
+            // Eager IPC connect: open socket to daemon so activity broadcasts reach us
+            let eager_client = app.state::<Arc<DaemonClient>>().inner().clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                for _ in 0..10 {
+                    if eager_client.connect().await.is_ok() {
+                        break;
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                }
             });
 
             // Start health check (must run inside async runtime)

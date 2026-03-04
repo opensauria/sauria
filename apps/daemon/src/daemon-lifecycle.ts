@@ -156,7 +156,7 @@ interface RawGraph {
 }
 
 const VALID_AUTONOMY_LEVELS = new Set<string>(['full', 'supervised', 'approval', 'manual']);
-const VALID_ROLES = new Set<string>(['lead', 'specialist', 'observer', 'bridge', 'assistant']);
+const VALID_ROLES = new Set<string>(['lead', 'specialist', 'observer', 'coordinator', 'assistant']);
 const VALID_STATUSES = new Set<string>(['connected', 'disconnected', 'error']);
 
 function normalizeNode(raw: RawNode): AgentNode {
@@ -480,6 +480,7 @@ async function setupOrchestrator(
     config: OpenSauriaConfig;
   },
   checkpointManager: CheckpointManager,
+  onActivity?: (event: string, data: Record<string, unknown>) => void,
 ): Promise<OrchestratorBundle | null> {
   const logger = getLogger();
 
@@ -513,6 +514,7 @@ async function setupOrchestrator(
     kpiTracker,
     checkpointManager,
     canvasPath: paths.canvas,
+    onActivity,
   });
 
   const queue = new MessageQueue((msg: InboundMessage) => orchestrator.handleInbound(msg), {
@@ -643,12 +645,20 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   const mcpClients = new McpClientManager(audit);
   await connectMcpSources(config, mcpClients);
 
+  // ─── IPC server (must start before orchestrator so broadcast is available) ─
+  const ipcServer = await startIpcServer(paths.socket, db);
+
   // ─── Canvas-based orchestrator setup ────────────────────────────────
   const graph = loadCanvasGraph();
   const checkpointManager = new CheckpointManager(db);
   const channelDeps = { db, router, audit, config, globalInstructions: graph.globalInstructions };
 
-  const bundle = await setupOrchestrator(graph, channelDeps, checkpointManager);
+  const bundle = await setupOrchestrator(
+    graph,
+    channelDeps,
+    checkpointManager,
+    ipcServer.broadcast.bind(ipcServer),
+  );
   const registry: ChannelRegistry | null = bundle?.registry ?? null;
   const orchestrator: AgentOrchestrator | null = bundle?.orchestrator ?? null;
   const queue: MessageQueue | null = bundle?.queue ?? null;
@@ -674,84 +684,92 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   });
   logger.info('MCP server started on stdio');
 
-  const ipcServer = await startIpcServer(paths.socket, db);
-
   const refreshInterval = setInterval(() => {
     void refreshOAuthTokenIfNeeded('anthropic');
   }, 1_800_000);
 
   // ─── Canvas file watcher with channel lifecycle ────────────────────
   let canvasWatcher: FSWatcher | null = null;
+  let canvasDebounce: ReturnType<typeof setTimeout> | null = null;
   try {
     canvasWatcher = watch(paths.canvas, { persistent: false }, () => {
-      const newGraph = loadCanvasGraph();
-
-      if (orchestrator && registry) {
-        const currentNodeIds = new Set(registry.getAll().map((c) => c.nodeId));
-        const newConnectedNodes = newGraph.nodes.filter(
-          (n) => n.status === 'connected' && n.platform !== 'owner',
-        );
-        const newNodeIds = new Set(newConnectedNodes.map((n) => n.id));
-
-        // Stop + unregister removed nodes
-        for (const existingId of currentNodeIds) {
-          if (!newNodeIds.has(existingId)) {
-            void (async () => {
-              try {
-                await registry.stop(existingId);
-                registry.unregister(existingId);
-                logger.info('Channel removed on canvas change', { nodeId: existingId });
-              } catch (error) {
-                logger.warn('Error removing channel', {
-                  nodeId: existingId,
-                  error: error instanceof Error ? error.message : String(error),
-                });
-              }
-            })();
-          }
-        }
-
-        // Create + register + start new nodes
-        const onInbound = (msg: InboundMessage): void => {
-          if (queue) queue.enqueue(msg);
-        };
-        for (const node of newConnectedNodes) {
-          if (!currentNodeIds.has(node.id)) {
-            void (async () => {
-              try {
-                const channel = await createChannelForNode(node, {
-                  ...channelDeps,
-                  onInbound,
-                  globalInstructions: newGraph.globalInstructions,
-                });
-                if (channel) {
-                  registry.register(node.id, channel);
-                  await channel.start();
-                  logger.info('Channel added on canvas change', {
-                    nodeId: node.id,
-                    platform: node.platform,
-                  });
-                }
-              } catch (error) {
-                logger.warn('Error adding channel', {
-                  nodeId: node.id,
-                  error: error instanceof Error ? error.message : String(error),
-                });
-              }
-            })();
-          }
-        }
-
-        orchestrator.updateGraph(newGraph);
-        logger.info('Canvas graph reloaded', { nodes: newGraph.nodes.length });
-      } else if (orchestrator) {
-        orchestrator.updateGraph(newGraph);
-        logger.info('Canvas graph reloaded (no registry)', { nodes: newGraph.nodes.length });
-      }
+      // Debounce: macOS kqueue can fire multiple times per write
+      if (canvasDebounce) clearTimeout(canvasDebounce);
+      canvasDebounce = setTimeout(() => {
+        canvasDebounce = null;
+        reloadCanvas();
+      }, 100);
     });
   } catch {
     // File may not exist yet, watcher will fail gracefully
     logger.info('Canvas watcher not started (file may not exist yet)');
+  }
+
+  function reloadCanvas(): void {
+    const newGraph = loadCanvasGraph();
+
+    if (orchestrator && registry) {
+      const currentNodeIds = new Set(registry.getAll().map((c) => c.nodeId));
+      const newConnectedNodes = newGraph.nodes.filter(
+        (n) => n.status === 'connected' && n.platform !== 'owner',
+      );
+      const newNodeIds = new Set(newConnectedNodes.map((n) => n.id));
+
+      // Stop + unregister removed nodes
+      for (const existingId of currentNodeIds) {
+        if (!newNodeIds.has(existingId)) {
+          void (async () => {
+            try {
+              await registry.stop(existingId);
+              registry.unregister(existingId);
+              logger.info('Channel removed on canvas change', { nodeId: existingId });
+            } catch (error) {
+              logger.warn('Error removing channel', {
+                nodeId: existingId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          })();
+        }
+      }
+
+      // Create + register + start new nodes
+      const onInbound = (msg: InboundMessage): void => {
+        if (queue) queue.enqueue(msg);
+      };
+      for (const node of newConnectedNodes) {
+        if (!currentNodeIds.has(node.id)) {
+          void (async () => {
+            try {
+              const channel = await createChannelForNode(node, {
+                ...channelDeps,
+                onInbound,
+                globalInstructions: newGraph.globalInstructions,
+              });
+              if (channel) {
+                registry.register(node.id, channel);
+                await channel.start();
+                logger.info('Channel added on canvas change', {
+                  nodeId: node.id,
+                  platform: node.platform,
+                });
+              }
+            } catch (error) {
+              logger.warn('Error adding channel', {
+                nodeId: node.id,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          })();
+        }
+      }
+
+      orchestrator.updateGraph(newGraph);
+      logger.info('Canvas graph reloaded', { nodes: newGraph.nodes.length });
+    } else if (orchestrator) {
+      orchestrator.updateGraph(newGraph);
+      logger.info('Canvas graph reloaded (no registry)', { nodes: newGraph.nodes.length });
+    }
   }
 
   // ─── Owner command file watcher ────────────────────────────────

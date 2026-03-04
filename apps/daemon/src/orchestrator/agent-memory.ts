@@ -261,4 +261,18 @@ export class AgentMemory {
 
     return id;
   }
+
+  clearAgentConversations(nodeId: string): void {
+    const rows = this.db
+      .prepare(
+        `SELECT id FROM agent_conversations
+         WHERE participant_node_ids LIKE ?`,
+      )
+      .all(`%${nodeId}%`) as readonly { readonly id: string }[];
+
+    for (const row of rows) {
+      this.db.prepare(`DELETE FROM agent_messages WHERE conversation_id = ?`).run(row.id);
+      this.db.prepare(`DELETE FROM agent_conversations WHERE id = ?`).run(row.id);
+    }
+  }
 }

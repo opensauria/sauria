@@ -91,7 +91,6 @@ describe('AgentOrchestrator', () => {
 describe('executeAction forward enrichment', () => {
   let db: Database.Database;
   let registry: ChannelRegistry;
-  let orchestrator: AgentOrchestrator;
 
   const graph = makeGraph([
     makeNode(),
@@ -103,13 +102,6 @@ describe('executeAction forward enrichment', () => {
     applySchema(db);
     registry = new ChannelRegistry();
     registry.sendTo = vi.fn().mockResolvedValue(undefined);
-
-    orchestrator = new AgentOrchestrator({
-      registry,
-      graph,
-      ownerIdentity: { telegram: { userId: 123 } },
-      agentMemory: new AgentMemory(db),
-    });
   });
 
   afterEach(() => {
@@ -118,6 +110,16 @@ describe('executeAction forward enrichment', () => {
 
   it('enriches forward content with recent conversation context', async () => {
     const agentMemory = new AgentMemory(db);
+    const onActivity = vi.fn();
+
+    const enrichOrchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory,
+      onActivity,
+    });
+
     const conversationId = agentMemory.getOrCreateConversation('telegram', null, ['n1']);
     agentMemory.recordMessage({
       conversationId,
@@ -151,18 +153,27 @@ describe('executeAction forward enrichment', () => {
       timestamp: new Date().toISOString(),
     };
 
-    await orchestrator.executeAction(
+    await enrichOrchestrator.executeAction(
       { type: 'forward', targetNodeId: 'n2', content: 'Please handle design meeting' },
       source,
     );
 
+    // Forward now routes internally — sendTo should NOT be called
     const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
-    expect(sendTo).toHaveBeenCalledOnce();
-    const sentContent = sendTo.mock.calls[0]![1] as string;
+    expect(sendTo).not.toHaveBeenCalled();
 
-    expect(sentContent).toContain('[Forwarded from @support_bot]');
-    expect(sentContent).toContain('Schedule a meeting with design');
-    expect(sentContent).toContain('Please handle design meeting');
+    // Verify activity events were emitted (edge + message for forward, node for target processing)
+    const edgeCall = onActivity.mock.calls.find((c: unknown[]) => c[0] === 'activity:edge');
+    expect(edgeCall).toBeDefined();
+    expect((edgeCall![1] as Record<string, string>).from).toBe('n1');
+    expect((edgeCall![1] as Record<string, string>).to).toBe('n2');
+
+    // Target node should have been activated via handleInbound
+    const nodeCall = onActivity.mock.calls.find(
+      (c: unknown[]) =>
+        c[0] === 'activity:node' && (c[1] as Record<string, unknown>).nodeId === 'n2',
+    );
+    expect(nodeCall).toBeDefined();
   });
 });
 
@@ -212,6 +223,130 @@ describe('executeAction reply recording', () => {
     expect(history).toHaveLength(1);
     expect(history[0]?.content).toBe('Hello human');
     expect(history[0]?.senderIsOwner).toBe(false);
+  });
+});
+
+describe('executeAction reply internal routing', () => {
+  let db: Database.Database;
+  let registry: ChannelRegistry;
+
+  const graph = makeGraph([
+    makeNode({ id: 'n1', platform: 'telegram', label: '@kyra_bot' }),
+    makeNode({ id: 'n2', platform: 'telegram', label: '@karl_bot', role: 'specialist' }),
+  ]);
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    applySchema(db);
+    registry = new ChannelRegistry();
+    registry.sendTo = vi.fn().mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('agent with own channel replies directly to owner on forwarded message', async () => {
+    // Register a channel for n2 so registry.get('n2') returns truthy
+    const mockChannel = {
+      name: 'telegram',
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn().mockResolvedValue(undefined),
+      sendAlert: vi.fn().mockResolvedValue(undefined),
+      sendMessage: vi.fn().mockResolvedValue(undefined),
+      sendToGroup: vi.fn().mockResolvedValue(undefined),
+    };
+    registry.register('n2', mockChannel);
+
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory: new AgentMemory(db),
+    });
+
+    // Karl (n2) replies to a forwarded message from Kyra (n1)
+    const source: InboundMessage = {
+      sourceNodeId: 'n2',
+      platform: 'telegram',
+      senderId: 'n1',
+      senderIsOwner: false,
+      groupId: null,
+      content: 'Forwarded topic',
+      contentType: 'text',
+      timestamp: new Date().toISOString(),
+      forwardDepth: 1,
+      replyToNodeId: 'n1',
+    };
+
+    await orchestrator.executeAction({ type: 'reply', content: 'My direct response' }, source);
+
+    // Should reply via n2's own channel (sendTo called with n2, not n1)
+    const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
+    expect(sendTo).toHaveBeenCalledWith('n2', 'My direct response', null);
+  });
+
+  it('agent without own channel routes reply internally to forwarding agent', async () => {
+    const onActivity = vi.fn();
+    // n2 has NO registered channel
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory: new AgentMemory(db),
+      onActivity,
+    });
+
+    const source: InboundMessage = {
+      sourceNodeId: 'n2',
+      platform: 'telegram',
+      senderId: 'n1',
+      senderIsOwner: false,
+      groupId: null,
+      content: 'Forwarded topic',
+      contentType: 'text',
+      timestamp: new Date().toISOString(),
+      forwardDepth: 1,
+      replyToNodeId: 'n1',
+    };
+
+    await orchestrator.executeAction({ type: 'reply', content: 'Routed back' }, source);
+
+    // Should NOT call external channel
+    const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
+    expect(sendTo).not.toHaveBeenCalled();
+
+    // Should route internally — n1 activated via handleInbound
+    const nodeCall = onActivity.mock.calls.find(
+      (c: unknown[]) =>
+        c[0] === 'activity:node' && (c[1] as Record<string, unknown>).nodeId === 'n1',
+    );
+    expect(nodeCall).toBeDefined();
+  });
+
+  it('routes reply externally when forwardDepth is 0', async () => {
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory: new AgentMemory(db),
+    });
+
+    const source: InboundMessage = {
+      sourceNodeId: 'n1',
+      platform: 'telegram',
+      senderId: 'user123',
+      senderIsOwner: true,
+      groupId: null,
+      content: 'Hello',
+      contentType: 'text',
+      timestamp: new Date().toISOString(),
+    };
+
+    await orchestrator.executeAction({ type: 'reply', content: 'Hello back' }, source);
+
+    const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
+    expect(sendTo).toHaveBeenCalledWith('n1', 'Hello back', null);
   });
 });
 

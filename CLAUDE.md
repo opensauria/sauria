@@ -199,7 +199,56 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - **Workspace Memory Pool**: `agent_memory` table has `workspace_id` column. `AgentMemory.getWorkspaceFacts()` retrieves facts scoped to a workspace. LLM routing prompt injects up to 5 workspace facts (~100 tokens).
 - **Peer Messages in Routing**: `buildRoutingPrompt()` includes recent messages from other nodes in the same workspace (~100 tokens). Total additional overhead: ~350-400 tokens per routing decision (negligible vs base ~2000-4000).
 - **Graph Persistence**: owner commands (`promote`, `reassign`, `fire`, `pause`) persist mutations to `canvas.json` via `persistGraph()`.
+- **Inter-agent isolation**: `forward`, `notify`, `send_to_all`, `group_message` route via `handleInbound()` (internal). Only owner-agent communication uses `registry.sendTo()` (external channels).
 - Design doc: `docs/plans/2026-02-19-multi-agent-collaboration-design.md`
+
+### Routing Logic (CRITICAL — read before touching orchestrator or llm-router)
+
+#### LLM Prompt: Agent List MUST Include Node IDs
+
+`buildRoutingPrompt()` in `llm-router.ts` lists team agents with their `nodeId`:
+```
+- @karl_bot (specialist) [nodeId: "abc123"] on telegram
+```
+Without node IDs, the LLM cannot construct valid `forward` actions (requires `targetNodeId`), and all forwards get filtered out → agents fall back to `reply` and fabricate responses instead of delegating. **NEVER remove node IDs from the agent list.**
+
+#### LLM Prompt: Delegation and Reply Semantics
+
+Two critical prompt instructions in `llm-router.ts`:
+- **DELEGATION**: When the owner mentions another agent by name, the current agent MUST `forward` to that agent. Never fabricate what another agent would say.
+- **REPLY vs FORWARD**: `reply` sends directly to the owner on the agent's own channel. `forward` sends internally to another agent. These are NOT interchangeable.
+
+#### Reply Routing: Channel-Based Autonomy
+
+`executeAction('reply', ...)` in `orchestrator.ts` follows this logic:
+
+```
+Agent receives forwarded message (forwardDepth > 0, replyToNodeId ≠ sourceNodeId)?
+  ├── Agent HAS own channel (registry.get(sourceNodeId)) → reply directly to owner via own channel
+  └── Agent has NO channel → route internally back to forwarding agent via handleInbound()
+Agent received direct message (forwardDepth = 0) → reply via own channel (normal path)
+```
+
+**Key invariant**: agents with their own external channel (Telegram bot, etc.) are autonomous — they reply directly to the owner. Only channel-less compute nodes route back through the forwarding chain.
+
+#### Forward Action: Always Internal
+
+`forward`, `notify`, `send_to_all`, `group_message` always create a synthetic `InboundMessage` and call `handleInbound()` (internal routing). They NEVER call `registry.sendTo()` (external channel). This keeps inter-agent communication inside the orchestrator.
+
+#### Forward Depth Protection
+
+- `forwardDepth` increments on each `forward` action
+- `MAX_FORWARD_DEPTH = 3` — `handleInbound()` drops messages at this depth
+- Forwarded replies preserve depth (don't increment) — only new forwards increment
+- This gives ~3 rounds of agent-to-agent debate before the chain stops
+
+#### Edge Animation: Bidirectional Matching
+
+`animateEdgeTravel()` in `canvas/main.ts` matches edges in BOTH directions:
+```ts
+graph.edges.find(e => (e.from === fromId && e.to === toId) || (e.from === toId && e.to === fromId))
+```
+For reverse messages (reply B→A on edge A→B), the dot travels `totalLength→0` along the edge's canonical curve. Edge glow activates for both directions.
 
 ### Voice Transcription
 
@@ -300,8 +349,10 @@ Desktop `shared.css` imports via `@import '@opensauria/design-tokens/tokens.css'
 - Vite builds renderer to `apps/desktop/dist/` (configured in `tauri.conf.json` → `build.frontendDist`)
 - `tauri.conf.json` is at `apps/desktop/src-tauri/tauri.conf.json`
 - Dev: `pnpm -F opensauria-desktop dev` (Vite HMR + Tauri dev server)
-- Build: `pnpm -r build` (builds all packages, daemon, then `tauri build` for desktop)
-- Always kill all processes before restart: `pkill -9 -f "opensauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9`
+- Build: `pnpm -r build` only builds packages/daemon (Turborepo may cache desktop). For a **full production build** always run explicitly: `cd apps/desktop && pnpm run build` — this runs Vite + Rust compilation + `.app` bundling
+- **NEVER manually patch files inside `/Applications/OpenSauria.app/`** — always do a full `tauri build` and replace the entire `.app`. Manual patching leads to frontend/daemon version mismatch.
+- After build, install: `rm -rf /Applications/OpenSauria.app && cp -R apps/desktop/src-tauri/target/release/bundle/macos/OpenSauria.app /Applications/OpenSauria.app`
+- Always kill all processes before restart: `pkill -9 -f "opensauria"; pkill -9 -f "OpenSauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9`
 - Renderer files live in `apps/desktop/src/renderer/{canvas,palette,setup,brain}/`
 - Icons are static assets in `apps/desktop/public/icons/` (served at `/icons/`)
 
@@ -344,15 +395,38 @@ Desktop `shared.css` imports via `@import '@opensauria/design-tokens/tokens.css'
 ## Build Checklist
 
 ```
-pnpm -r build                    # Build all packages + apps (includes tauri build)
-pnpm -F opensauria-daemon build    # Rebuild daemon only
-pnpm -F opensauria-desktop dev     # Start desktop in dev mode
-pnpm -F opensauria-daemon test     # Run daemon tests
-pnpm -r typecheck                # Typecheck all packages
+pnpm -r build                              # Build shared packages + daemon (Turborepo, may cache desktop)
+pnpm -F @opensauria/daemon build           # Rebuild daemon only
+cd apps/desktop && pnpm run build          # Full production build (Vite + Rust + .app bundle) — ALWAYS use this for production
+pnpm -F opensauria-desktop dev             # Start desktop in dev mode (Vite HMR)
+pnpm -F @opensauria/daemon test            # Run daemon tests
+pnpm -r typecheck                          # Typecheck all packages
 ```
 
+### Production Deploy (CRITICAL)
+
+Always follow this exact sequence — no shortcuts:
+```bash
+# 1. Kill everything
+pkill -9 -f "opensauria"; pkill -9 -f "OpenSauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9
+
+# 2. Full production build
+pnpm -r build                              # packages + daemon
+cd apps/desktop && pnpm run build          # Vite + Rust + .app bundle
+
+# 3. Install
+rm -rf /Applications/OpenSauria.app
+cp -R apps/desktop/src-tauri/target/release/bundle/macos/OpenSauria.app /Applications/OpenSauria.app
+
+# 4. Launch
+open /Applications/OpenSauria.app
+```
+
+**NEVER manually copy files into `/Applications/OpenSauria.app/Contents/Resources/`** — always rebuild the full `.app`.
+
+### Dev Workflow
+
 When changing shared packages (`packages/*`): rebuild with `pnpm -r build` (Turbo handles deps)
-When changing daemon code (`apps/daemon/src/`): `pnpm -F opensauria-daemon build`
+When changing daemon code (`apps/daemon/src/`): `pnpm -F @opensauria/daemon build`
 When changing desktop main (`apps/desktop/src-tauri/src/`): Rust recompiles on `tauri dev`
 When changing renderer files (`apps/desktop/src/renderer/`): Vite hot-reloads in dev mode
-Full restart: kill all processes, `pnpm -r build`, start desktop
