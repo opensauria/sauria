@@ -53,6 +53,7 @@ export type { IpcRequest, IpcResponse } from './ipc.js';
 
 export type {
   IntegrationCategory,
+  CategoryMeta,
   McpServerTemplate,
   IntegrationDefinition,
   IntegrationStatus,

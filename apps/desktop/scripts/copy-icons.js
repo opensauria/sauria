@@ -101,21 +101,53 @@ const INTEGRATIONS_OUT = path.join(OUT, 'integrations');
 fs.mkdirSync(INTEGRATIONS_OUT, { recursive: true });
 
 const integrationBrands = {
-  notion: { file: 'notion.svg', color: '#FFFFFF' },
-  github: { file: 'github.svg', color: '#FFFFFF' },
+  // Communication
+  slack: null,
+  // Project Management
   linear: { file: 'linear.svg', color: '#5E6AD2' },
-  slack: null, // reuse existing slack icon (multi-color)
-  googledrive: null, // multi-color, custom SVG below
   jira: { file: 'jira.svg', color: '#2684FF' },
   trello: { file: 'trello.svg', color: '#0079BF' },
   asana: { file: 'asana.svg', color: '#F06A6A' },
+  clickup: { file: 'clickup.svg', color: '#7B68EE' },
+  // Development
+  github: { file: 'github.svg', color: '#FFFFFF' },
+  gitlab: { file: 'gitlab.svg', color: '#FC6D26' },
+  circleci: { file: 'circleci.svg', color: '#343434' },
+  vercel: { file: 'vercel.svg', color: '#FFFFFF' },
+  netlify: { file: 'netlify.svg', color: '#00C7B7' },
+  // Productivity
+  notion: { file: 'notion.svg', color: '#FFFFFF' },
   confluence: { file: 'confluence.svg', color: '#2684FF' },
+  googlecalendar: null,
+  obsidian: { file: 'obsidian.svg', color: '#7C3AED' },
+  airtable: { file: 'airtable.svg', color: '#18BFFF' },
+  // Infrastructure
+  azure: null,
+  cloudflare: { file: 'cloudflare.svg', color: '#F38020' },
+  kubernetes: { file: 'kubernetes.svg', color: '#326CE5' },
+  // Monitoring
   sentry: { file: 'sentry.svg', color: '#FB4226' },
-  postgresql: { file: 'postgresql.svg', color: '#4169E1' },
-  googlecalendar: null, // multi-color, custom SVG below
-  figma: null, // multi-color, custom SVG below
-  hubspot: { file: 'hubspot.svg', color: '#FF7A59' },
+  datadog: { file: 'datadog.svg', color: '#632CA6' },
+  // E-commerce
   stripe: { file: 'stripe.svg', color: '#635BFF' },
+  paypal: { file: 'paypal.svg', color: '#003087' },
+  // Design
+  figma: null,
+  // Data
+  postgresql: { file: 'postgresql.svg', color: '#4169E1' },
+  mongodb: { file: 'mongodb.svg', color: '#47A248' },
+  mysql: { file: 'mysql.svg', color: '#4479A1' },
+  // CRM
+  hubspot: { file: 'hubspot.svg', color: '#FF7A59' },
+  pipedrive: null,
+  // Automation
+  zapier: { file: 'zapier.svg', color: '#FF4A00' },
+  // Content
+  contentful: { file: 'contentful.svg', color: '#2478CC' },
+  sanity: { file: 'sanity.svg', color: '#F03E2F' },
+  // Storage
+  googledrive: null,
+  // Channel (always present)
   telegram: { file: 'telegram.svg', color: '#26A5E4' },
 };
 
@@ -177,6 +209,20 @@ const googleCalendarSvg = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2
 </g>
 </svg>`;
 fs.writeFileSync(path.join(INTEGRATIONS_OUT, 'googlecalendar.svg'), googleCalendarSvg);
+integrationCount++;
+
+/* ── Custom SVGs for brands not in simple-icons ── */
+
+const azureSvg = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M9.462 3.034L2.01 18.882l5.075.012 1.49-3.242h7.58l-.506 3.225 5.343.007L14.544 3.034H9.462zm1.758 4.87l3.69 7.593h-5.17l1.48-7.593z" fill="#0078D4"/>
+</svg>`;
+fs.writeFileSync(path.join(INTEGRATIONS_OUT, 'azure.svg'), azureSvg);
+integrationCount++;
+
+const pipedriveSvg = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm1.8 5.2c1.546 0 2.8 1.433 2.8 3.2 0 1.767-1.254 3.2-2.8 3.2-.586 0-1.13-.207-1.574-.559l-.026.159V16.8h-1.6V8.4c0-.44.358-.8.8-.8.394 0 .72.285.783.66A2.637 2.637 0 0 1 13.8 7.2zm0 1.6c-.663 0-1.2.716-1.2 1.6s.537 1.6 1.2 1.6c.663 0 1.2-.716 1.2-1.6s-.537-1.6-1.2-1.6z" fill="#017737"/>
+</svg>`;
+fs.writeFileSync(path.join(INTEGRATIONS_OUT, 'pipedrive.svg'), pipedriveSvg);
 integrationCount++;
 
 /* Also add the plug icon for palette command */

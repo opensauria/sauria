@@ -43,11 +43,31 @@ interface ConnectResult {
   readonly error?: string;
 }
 
+// ── Category Config ──────────────────────────
+
+const CATEGORY_ORDER: readonly { readonly id: string; readonly label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'communication', label: 'Communication' },
+  { id: 'project_management', label: 'Project Mgmt' },
+  { id: 'development', label: 'Development' },
+  { id: 'productivity', label: 'Productivity' },
+  { id: 'infrastructure', label: 'Infrastructure' },
+  { id: 'monitoring', label: 'Monitoring' },
+  { id: 'ecommerce', label: 'E-commerce' },
+  { id: 'design', label: 'Design' },
+  { id: 'data', label: 'Data' },
+  { id: 'crm', label: 'CRM' },
+  { id: 'automation', label: 'Automation' },
+  { id: 'content', label: 'Content' },
+  { id: 'storage', label: 'Storage' },
+];
+
 // ── State ─────────────────────────────────────
 
 let catalog: IntegrationStatus[] = [];
 let telegramBots: readonly TelegramBot[] = [];
 let searchQuery = '';
+let activeCategory = 'all';
 
 // ── DOM refs ──────────────────────────────────
 
@@ -57,6 +77,7 @@ const configPanel = document.getElementById('config-panel') as HTMLElement;
 const configTitle = document.getElementById('config-title') as HTMLElement;
 const configBody = document.getElementById('config-body') as HTMLElement;
 const configClose = document.getElementById('config-close') as HTMLButtonElement;
+const categoryTabs = document.getElementById('category-tabs') as HTMLElement;
 
 // ── Telegram card (frontend-only, not an MCP integration) ─────
 
@@ -77,6 +98,33 @@ function telegramBotCount(): number {
 }
 
 // ── Render ────────────────────────────────────
+
+function renderTabs(): void {
+  const presentCategories = new Set<string>();
+  presentCategories.add(TELEGRAM_CARD.category);
+  for (const item of catalog) {
+    presentCategories.add(item.definition.category);
+  }
+
+  const tabs = CATEGORY_ORDER.filter(
+    (cat) => cat.id === 'all' || presentCategories.has(cat.id),
+  );
+
+  categoryTabs.innerHTML = tabs
+    .map(
+      (cat) =>
+        `<button class="category-tab ${cat.id === activeCategory ? 'active' : ''}" data-category="${cat.id}">${cat.label}</button>`,
+    )
+    .join('');
+
+  categoryTabs.querySelectorAll('.category-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activeCategory = (btn as HTMLElement).dataset['category'] ?? 'all';
+      renderTabs();
+      renderGrid();
+    });
+  });
+}
 
 function renderCard(
   id: string,
@@ -112,15 +160,19 @@ function renderCard(
 }
 
 function renderGrid(): void {
-  const matchesSearch = (name: string, category: string): boolean =>
-    !searchQuery ||
-    name.toLowerCase().includes(searchQuery) ||
-    category.toLowerCase().includes(searchQuery);
+  const matchesFilter = (name: string, category: string): boolean => {
+    const matchesCategory = activeCategory === 'all' || category === activeCategory;
+    const matchesSearch_ =
+      !searchQuery ||
+      name.toLowerCase().includes(searchQuery) ||
+      category.toLowerCase().includes(searchQuery);
+    return matchesCategory && matchesSearch_;
+  };
 
   const cards: string[] = [];
 
   // Telegram card
-  if (matchesSearch(TELEGRAM_CARD.name, TELEGRAM_CARD.category)) {
+  if (matchesFilter(TELEGRAM_CARD.name, TELEGRAM_CARD.category)) {
     cards.push(
       renderCard(
         TELEGRAM_CARD.id,
@@ -136,7 +188,7 @@ function renderGrid(): void {
 
   // MCP integration cards
   for (const item of catalog) {
-    if (!matchesSearch(item.definition.name, item.definition.category)) continue;
+    if (!matchesFilter(item.definition.name, item.definition.category)) continue;
     cards.push(
       renderCard(
         item.id,
@@ -484,5 +536,6 @@ Promise.all([
 ]).then(([mcpCatalog, tgStatus]) => {
   catalog = mcpCatalog;
   telegramBots = tgStatus.bots ?? [];
+  renderTabs();
   renderGrid();
 });
