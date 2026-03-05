@@ -163,7 +163,7 @@ interface ParsedForward {
 }
 
 function parseForwardedContent(content: string): ParsedForward | null {
-  const senderMatch = content.match(/^\[Forwarded from ([^\]]+)\]\s*/);
+  const senderMatch = content.match(/^\[(?:Forwarded|Reply) from ([^\]]+)\]\s*/);
   if (!senderMatch) return null;
 
   const messageMarker = content.indexOf('\n[Message]:\n');
@@ -193,15 +193,19 @@ function buildMessageSection(message: InboundMessage, sourceNode: AgentNode): st
   }
 
   const parsed = parseForwardedContent(message.content);
+  const isReply = message.content.startsWith('[Reply from ');
+
   if (!parsed) {
+    const verb = isReply ? 'a reply' : 'a forwarded message';
     return [
-      `${sourceNode.label} (${sourceNode.role}) received a forwarded message:`,
+      `${sourceNode.label} (${sourceNode.role}) received ${verb}:`,
       `"${message.content}"`,
     ];
   }
 
+  const verb = isReply ? 'a reply from' : 'a message forwarded by';
   const lines: string[] = [
-    `${sourceNode.label} (${sourceNode.role}) received a message forwarded by ${parsed.senderLabel}.`,
+    `${sourceNode.label} (${sourceNode.role}) received ${verb} ${parsed.senderLabel}.`,
   ];
 
   if (parsed.context.length > 0) {
@@ -377,8 +381,9 @@ function buildRoutingPrompt(
     'For learn: include "fact" and "topics" (string array)',
     'For use_tool: include "integration" (id), "tool" (name), "arguments" (JSON object), and "content" (explanation to owner)',
     '',
+    'COLLABORATION: When you receive a forwarded message from another agent, ALWAYS reply to confirm understanding and provide your response. Your reply is automatically routed back to the sender AND to the owner if you have your own channel. Like real teamwork — always confirm, never leave colleagues in the dark.',
     "DELEGATION: When the user asks you to communicate with, ask, or send something to another agent by name, you MUST use the forward action with that agent's targetNodeId. Never answer on behalf of another agent. Never fabricate what another agent would say.",
-    'REPLY vs FORWARD: "reply" sends your response directly to the owner on YOUR channel. "forward" sends a message to another agent internally. When you receive a forwarded message, reply directly to the owner with your answer. Only use forward if you need to pass the task to yet another agent.',
+    'REPLY vs FORWARD: "reply" sends your response (to owner for direct messages, to sender agent for forwarded messages). "forward" sends to a DIFFERENT agent. Use reply to continue a discussion, forward to involve someone new.',
     'ATTRIBUTION: When you reply to the owner after receiving a forwarded request from another agent, always mention who asked you and why. Example: "[AgentName] asked me to give my opinion on X. Here is what I think: ..." This gives the owner context about why you are reaching out.',
   ];
 

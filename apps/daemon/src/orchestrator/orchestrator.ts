@@ -69,6 +69,25 @@ export class AgentOrchestrator {
     this.integrationRegistry = deps.integrationRegistry ?? null;
   }
 
+  private recordReplyInMemory(source: InboundMessage, content: string): void {
+    if (!this.agentMemory) return;
+    const conversationId = this.agentMemory.getOrCreateConversation(
+      source.platform,
+      source.groupId,
+      [source.sourceNodeId],
+    );
+    this.agentMemory.recordMessage({
+      conversationId,
+      sourceNodeId: source.sourceNodeId,
+      senderId: source.sourceNodeId,
+      senderIsOwner: false,
+      platform: source.platform,
+      groupId: source.groupId,
+      content,
+      contentType: 'text',
+    });
+  }
+
   private contentPreview(content: string): string {
     return content.length > 60 ? content.slice(0, 57) + '...' : content;
   }
@@ -519,20 +538,25 @@ export class AgentOrchestrator {
         const replyTargetId = source.replyToNodeId ?? source.sourceNodeId;
         const isForwardedReply =
           (source.forwardDepth ?? 0) > 0 && replyTargetId !== source.sourceNodeId;
-        const ownChannel = this.registry.get(source.sourceNodeId);
 
-        if (isForwardedReply && !ownChannel) {
-          // Agent has no external channel — route internally back to forwarding agent
+        this.recordReplyInMemory(source, action.content);
+
+        if (isForwardedReply) {
+          // 1. Always route internally back to sender with attribution
+          const sourceLabel =
+            this.findNode(source.sourceNodeId)?.label ?? source.sourceNodeId;
+          const enrichedContent = `[Reply from ${sourceLabel}]\n${action.content}`;
           const syntheticReply: InboundMessage = {
             sourceNodeId: replyTargetId,
             platform: source.platform,
             senderId: source.sourceNodeId,
             senderIsOwner: false,
             groupId: source.groupId,
-            content: action.content,
+            content: enrichedContent,
             contentType: 'text',
             timestamp: new Date().toISOString(),
             forwardDepth: source.forwardDepth ?? 0,
+            replyToNodeId: source.replyToNodeId,
           };
           this.onActivity?.(IPC_EVENTS.ACTIVITY_EDGE, {
             from: source.sourceNodeId,
@@ -541,52 +565,17 @@ export class AgentOrchestrator {
             preview: this.contentPreview(action.content),
           });
           this.emitMessage(source.sourceNodeId, replyTargetId, action.content, 'reply');
-          if (this.agentMemory) {
-            const conversationId = this.agentMemory.getOrCreateConversation(
-              source.platform,
-              source.groupId,
-              [source.sourceNodeId],
-            );
-            this.agentMemory.recordMessage({
-              conversationId,
-              sourceNodeId: source.sourceNodeId,
-              senderId: source.sourceNodeId,
-              senderIsOwner: false,
-              platform: source.platform,
-              groupId: source.groupId,
-              content: action.content,
-              contentType: 'text',
-            });
-          }
           await this.handleInbound(syntheticReply);
         } else {
-          // Agent has its own channel (or direct message) — reply directly to owner
-          const sendToId = source.sourceNodeId;
-          await this.registry.sendTo(sendToId, action.content, source.groupId);
+          // Direct message — reply to owner via channel
+          await this.registry.sendTo(source.sourceNodeId, action.content, source.groupId);
           this.onActivity?.(IPC_EVENTS.ACTIVITY_EDGE, {
             from: source.sourceNodeId,
-            to: sendToId,
+            to: source.sourceNodeId,
             actionType: 'reply',
             preview: this.contentPreview(action.content),
           });
-          this.emitMessage(source.sourceNodeId, sendToId, action.content, 'reply');
-          if (this.agentMemory) {
-            const conversationId = this.agentMemory.getOrCreateConversation(
-              source.platform,
-              source.groupId,
-              [source.sourceNodeId],
-            );
-            this.agentMemory.recordMessage({
-              conversationId,
-              sourceNodeId: source.sourceNodeId,
-              senderId: source.sourceNodeId,
-              senderIsOwner: false,
-              platform: source.platform,
-              groupId: source.groupId,
-              content: action.content,
-              contentType: 'text',
-            });
-          }
+          this.emitMessage(source.sourceNodeId, source.sourceNodeId, action.content, 'reply');
         }
         break;
       }
