@@ -214,22 +214,23 @@ Without node IDs, the LLM cannot construct valid `forward` actions (requires `ta
 
 #### LLM Prompt: Delegation and Reply Semantics
 
-Two critical prompt instructions in `llm-router.ts`:
+Critical prompt instructions in `llm-router.ts`:
 - **DELEGATION**: When the owner mentions another agent by name, the current agent MUST `forward` to that agent. Never fabricate what another agent would say.
-- **REPLY vs FORWARD**: `reply` sends directly to the owner on the agent's own channel. `forward` sends internally to another agent. These are NOT interchangeable.
+- **REPLY vs FORWARD**: `reply` sends response back (to owner for direct messages, to sender agent for forwarded messages). `forward` sends to a DIFFERENT agent. These are NOT interchangeable.
+- **INTERNAL DEBATE**: Forwarded replies go back internally to the sender agent. The owner never sees intermediate debate. Only the agent who received the owner's original message sends the final answer.
+- **BEHAVIOR TOGGLES**: `behavior.ownerResponse`, `behavior.proactive`, `behavior.peer` from agent settings are injected into the routing prompt.
 
-#### Reply Routing: Channel-Based Autonomy
+#### Reply Routing: Internal-First
 
 `executeAction('reply', ...)` in `orchestrator.ts` follows this logic:
 
 ```
 Agent receives forwarded message (forwardDepth > 0, replyToNodeId ≠ sourceNodeId)?
-  ├── Agent HAS own channel (registry.get(sourceNodeId)) → reply directly to owner via own channel
-  └── Agent has NO channel → route internally back to forwarding agent via handleInbound()
+  └── ALWAYS route internally back to forwarding agent via handleInbound()
 Agent received direct message (forwardDepth = 0) → reply via own channel (normal path)
 ```
 
-**Key invariant**: agents with their own external channel (Telegram bot, etc.) are autonomous — they reply directly to the owner. Only channel-less compute nodes route back through the forwarding chain.
+**Key invariant**: forwarded replies ALWAYS go back internally to the originating agent. The owner only sees the final answer from the agent they originally talked to. This prevents internal debate from leaking to the owner.
 
 #### Forward Action: Always Internal
 

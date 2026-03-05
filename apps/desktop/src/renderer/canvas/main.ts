@@ -34,6 +34,7 @@ interface AgentNode {
   _statusType?: string;
   _animateIn?: boolean;
   _editing?: boolean;
+  integrations?: string[];
 }
 
 interface Edge {
@@ -52,15 +53,30 @@ interface Workspace {
   topics?: string[];
   budget?: number;
   position: { x: number; y: number };
-  size: { w: number; h: number };
+  size: { width: number; height: number };
   checkpoints: unknown[];
   groups: unknown[];
+  locked?: boolean;
+}
+
+interface IntegrationInstance {
+  id: string;
+  integrationId: string;
+  label: string;
+  connectedAt: string;
+}
+
+interface IntegrationDef {
+  id: string;
+  name: string;
+  icon: string;
 }
 
 interface CanvasGraph {
   nodes: AgentNode[];
   edges: Edge[];
   workspaces: Workspace[];
+  instances?: IntegrationInstance[];
   globalInstructions: string;
   viewport: Viewport;
 }
@@ -151,6 +167,8 @@ var wsDragStartX = 0,
   wsDragStartWsY = 0;
 var wsDragNodeStarts: Array<{ id: string; startX: number; startY: number }> = [];
 
+/* workspace lock state — persisted in graph via ws.locked */
+
 /* DOM refs */
 var viewport = document.getElementById('viewport') as HTMLDivElement;
 var world = document.getElementById('world') as HTMLDivElement;
@@ -168,6 +186,11 @@ var activeNodeIds = new Set<string>();
 var edgeAnimCounts = new Map<string, number>();
 var edgeActiveCounts = new Map<string, number>();
 var legendTimer: ReturnType<typeof setTimeout> | null = null;
+
+/* Integration catalog cache */
+var catalogMap = new Map<string, IntegrationDef>();
+var hoveredNodeId: string | null = null;
+var hoverLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
 /* Conversation panel state */
 var convPanel = document.getElementById('conversation-panel') as HTMLDivElement;
@@ -318,17 +341,18 @@ async function init() {
   vpY = graph.viewport.y;
   vpZoom = graph.viewport.zoom;
 
-  /* Auto-create owner node if not present */
-  var hasOwner = graph.nodes.some(function (n) {
+  /* Auto-create or refresh owner node */
+  var ownerProfile: OwnerProfile = { fullName: 'You', photo: null, customInstructions: '' };
+  try {
+    ownerProfile = await invoke<OwnerProfile>('get_owner_profile');
+  } catch {
+    /* fallback */
+  }
+
+  var existingOwner = graph.nodes.find(function (n) {
     return n.platform === 'owner';
   });
-  if (!hasOwner) {
-    var ownerProfile: OwnerProfile = { fullName: 'You', photo: null, customInstructions: '' };
-    try {
-      ownerProfile = await invoke<OwnerProfile>('get_owner_profile');
-    } catch {
-      /* fallback */
-    }
+  if (!existingOwner) {
     var cx = (window.innerWidth / 2 - vpX) / vpZoom - 60;
     graph.nodes.unshift({
       id: 'owner-' + generateId(),
@@ -344,6 +368,18 @@ async function init() {
       autonomy: 3,
     });
     saveGraph();
+  } else {
+    /* Refresh photo and name from OS profile */
+    var changed = false;
+    if (ownerProfile.photo && existingOwner.photo !== ownerProfile.photo) {
+      existingOwner.photo = ownerProfile.photo;
+      changed = true;
+    }
+    if (ownerProfile.fullName && existingOwner.label !== ownerProfile.fullName) {
+      existingOwner.label = ownerProfile.fullName;
+      changed = true;
+    }
+    if (changed) saveGraph();
   }
 
   /* Migrate: if globalInstructions exists but owner node has no instructions, copy over */
@@ -358,6 +394,17 @@ async function init() {
   renderAll();
   cfCurrentIndex = cfActiveIndex;
   renderCoverflow();
+
+  /* Preload integration catalog for orbital bubbles */
+  invoke<Array<{ id: string; definition: IntegrationDef }>>('integrations_list_catalog')
+    .then(function (catalog) {
+      for (var item of catalog) {
+        catalogMap.set(item.id ?? item.definition.id, item.definition);
+      }
+    })
+    .catch(function () {
+      /* daemon may not be ready yet */
+    });
 }
 
 /* ═══════════════════════════════════════════════
@@ -397,12 +444,16 @@ function renderWorkspaces() {
 
   graph.workspaces.forEach(function (ws) {
     var frame = document.createElement('div');
-    frame.className = 'workspace-frame' + (ws.id === selectedWorkspaceId ? ' selected' : '');
+    var isLocked = ws.locked === true;
+    frame.className =
+      'workspace-frame' +
+      (ws.id === selectedWorkspaceId ? ' selected' : '') +
+      (isLocked ? ' locked' : '');
     frame.dataset.workspaceId = ws.id;
     frame.style.left = ws.position.x + 'px';
     frame.style.top = ws.position.y + 'px';
-    frame.style.width = ws.size.w + 'px';
-    frame.style.height = ws.size.h + 'px';
+    frame.style.width = ws.size.width + 'px';
+    frame.style.height = ws.size.height + 'px';
     frame.style.borderColor = ws.color;
     frame.style.background = hexToRgba(ws.color, 0.04);
 
@@ -421,6 +472,15 @@ function renderWorkspaces() {
       agentCount +
       '</span>' +
       (ws.purpose ? '<span class="workspace-purpose">' + escapeHtml(ws.purpose) + '</span>' : '') +
+      '<button class="ws-lock' +
+      (isLocked ? ' locked' : '') +
+      '" data-action="ws-lock" data-ws-id="' +
+      ws.id +
+      '" title="' +
+      (isLocked ? 'Unlock' : 'Lock') +
+      ' workspace">' +
+      (isLocked ? LOCK_SVG : UNLOCK_SVG) +
+      '</button>' +
       '<button class="ws-gear" data-action="ws-gear" data-ws-id="' +
       ws.id +
       '" title="Edit workspace">' +
@@ -538,8 +598,15 @@ function getFieldsForPlatform(platform: string): PlatformField[] {
 }
 
 var GEAR_SVG = '<img src="/icons/settings.svg" alt="Settings" />';
+var LOCK_SVG =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+var UNLOCK_SVG =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
 
 function renderNodes() {
+  /* Reset hover state — DOM is about to be rebuilt */
+  removeOrbitalBubbles();
+
   world.querySelectorAll('.agent-card').forEach(function (el) {
     el.remove();
   });
@@ -770,6 +837,21 @@ function renderNodes() {
 
     world.appendChild(card);
 
+    /* Orbital hover bubbles */
+    card.addEventListener('mouseenter', function () {
+      if (isDragging) return;
+      var nid = card.dataset.nodeId!;
+      if (nid === hoveredNodeId) return;
+      if (hoverLeaveTimer) {
+        clearTimeout(hoverLeaveTimer);
+        hoverLeaveTimer = null;
+      }
+      showOrbitalBubbles(nid);
+    });
+    card.addEventListener('mouseleave', function () {
+      if (hoveredNodeId) scheduleOrbitalHide();
+    });
+
     /* Restore active state from in-memory set */
     if (activeNodeIds.has(node.id)) {
       card.classList.add('node-active');
@@ -889,11 +971,10 @@ function renderEdges() {
     var geo = computeEdgeGeometry(edge.from, edge.to);
     if (!geo) return;
 
-    /* Per-edge gradient: brighter at source, dimmer at target */
+    /* Per-edge gradients: static line + animated flow both fade at ends */
     var gid = 'eg-' + edge.id;
-    defs +=
-      '<linearGradient id="' +
-      gid +
+    var fid = 'ef-' + edge.id;
+    var gradientAttrs =
       '" gradientUnits="userSpaceOnUse" x1="' +
       geo.x1 +
       '" y1="' +
@@ -902,16 +983,32 @@ function renderEdges() {
       geo.x2 +
       '" y2="' +
       geo.y2 +
-      '">' +
-      '<stop offset="0%" stop-color="rgba(255,255,255,0.16)" />' +
-      '<stop offset="100%" stop-color="rgba(255,255,255,0.04)" />' +
+      '">';
+    defs +=
+      '<linearGradient id="' +
+      gid +
+      gradientAttrs +
+      '<stop offset="0%" stop-color="rgba(255,255,255,0)" />' +
+      '<stop offset="20%" stop-color="rgba(255,255,255,0.14)" />' +
+      '<stop offset="50%" stop-color="rgba(255,255,255,0.18)" />' +
+      '<stop offset="80%" stop-color="rgba(255,255,255,0.14)" />' +
+      '<stop offset="100%" stop-color="rgba(255,255,255,0)" />' +
+      '</linearGradient>';
+    defs +=
+      '<linearGradient id="' +
+      fid +
+      gradientAttrs +
+      '<stop offset="0%" stop-color="rgba(255,255,255,0)" />' +
+      '<stop offset="15%" stop-color="rgba(255,255,255,0.35)" />' +
+      '<stop offset="85%" stop-color="rgba(255,255,255,0.35)" />' +
+      '<stop offset="100%" stop-color="rgba(255,255,255,0)" />' +
       '</linearGradient>';
 
     /* Hit-area, gradient line, animated flow overlay — wrapped in a group */
     paths += '<g class="edge-group" data-edge-id="' + edge.id + '">';
     paths += '<path class="edge-hit" data-edge-id="' + edge.id + '" d="' + geo.d + '" />';
     paths += '<path class="edge-line" d="' + geo.d + '" stroke="url(#' + gid + ')" />';
-    paths += '<path class="edge-flow" d="' + geo.d + '" />';
+    paths += '<path class="edge-flow" d="' + geo.d + '" stroke="url(#' + fid + ')" />';
     paths += '</g>';
   });
   edgeSvg.innerHTML = '<defs>' + defs + '</defs>' + paths;
@@ -1003,7 +1100,9 @@ function animateEdgeTravel(fromId: string, toId: string, preview: string): void 
     var t = Math.min(elapsed / ANIM_DURATION_MS, 1);
     /* Ease-out cubic */
     var eased = 1 - Math.pow(1 - t, 3);
-    var point = tempPath.getPointAtLength(isReverse ? (1 - eased) * totalLength : eased * totalLength);
+    var point = tempPath.getPointAtLength(
+      isReverse ? (1 - eased) * totalLength : eased * totalLength,
+    );
     circle.setAttribute('cx', String(point.x));
     circle.setAttribute('cy', String(point.y));
 
@@ -1323,8 +1422,11 @@ viewport.addEventListener('mousedown', function (e) {
   panStartVpX = vpX;
   panStartVpY = vpY;
   viewport.classList.add('grabbing');
-  selectedNodeId = null;
-  renderNodes();
+  if (selectedNodeId) {
+    var prevCard = world.querySelector('[data-node-id="' + selectedNodeId + '"]');
+    if (prevCard) prevCard.classList.remove('selected');
+    selectedNodeId = null;
+  }
   e.preventDefault();
 });
 
@@ -1333,7 +1435,6 @@ document.addEventListener('mousemove', function (e) {
     vpX = panStartVpX + (e.clientX - panStartX);
     vpY = panStartVpY + (e.clientY - panStartY);
     applyTransform();
-    renderEdges();
   }
   if (isDragging && dragNodeId) {
     var node = graph.nodes.find(function (n) {
@@ -1358,9 +1459,9 @@ document.addEventListener('mousemove', function (e) {
       if (!ws) return;
       var isInside =
         cardCx >= ws.position.x &&
-        cardCx <= ws.position.x + ws.size.w &&
+        cardCx <= ws.position.x + ws.size.width &&
         cardCy >= ws.position.y &&
-        cardCy <= ws.position.y + ws.size.h;
+        cardCy <= ws.position.y + ws.size.height;
       if (isInside) {
         frame.classList.add('drop-target');
       } else {
@@ -1436,17 +1537,17 @@ document.addEventListener('mousemove', function (e) {
     var dx = (e.clientX - wsResizeStartX) / vpZoom;
     var dy = (e.clientY - wsResizeStartY) / vpZoom;
     if (wsResizeDir === 'r' || wsResizeDir === 'br') {
-      ws.size.w = Math.max(320, wsResizeStartW + dx);
+      ws.size.width = Math.max(320, wsResizeStartW + dx);
     }
     if (wsResizeDir === 'b' || wsResizeDir === 'br') {
-      ws.size.h = Math.max(240, wsResizeStartH + dy);
+      ws.size.height = Math.max(240, wsResizeStartH + dy);
     }
     var frame = world.querySelector(
       '[data-workspace-id="' + wsResizeId + '"]',
     ) as HTMLElement | null;
     if (frame) {
-      frame.style.width = ws.size.w + 'px';
-      frame.style.height = ws.size.h + 'px';
+      frame.style.width = ws.size.width + 'px';
+      frame.style.height = ws.size.height + 'px';
     }
   }
 });
@@ -1472,9 +1573,9 @@ document.addEventListener('mouseup', function (e) {
       graph.workspaces.forEach(function (ws) {
         if (
           cardCx >= ws.position.x &&
-          cardCx <= ws.position.x + ws.size.w &&
+          cardCx <= ws.position.x + ws.size.width &&
           cardCy >= ws.position.y &&
-          cardCy <= ws.position.y + ws.size.h
+          cardCy <= ws.position.y + ws.size.height
         ) {
           node!.workspaceId = ws.id;
           snapped = true;
@@ -1559,7 +1660,6 @@ viewport.addEventListener(
     }
 
     applyTransform();
-    renderEdges();
     updateZoomDisplay();
     saveViewport();
   },
@@ -1577,6 +1677,23 @@ world.addEventListener('mousedown', function (e) {
     return;
   }
 
+  /* Workspace lock button */
+  var wsLock = (e.target as HTMLElement).closest('.ws-lock') as HTMLElement | null;
+  if (wsLock) {
+    var lockWsId = wsLock.dataset.wsId!;
+    var lockWs = graph.workspaces.find(function (w) {
+      return w.id === lockWsId;
+    });
+    if (lockWs) {
+      (lockWs as { locked?: boolean }).locked = !lockWs.locked;
+      saveGraph();
+    }
+    renderWorkspaces();
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+
   /* Workspace gear button */
   var wsGear = (e.target as HTMLElement).closest('.ws-gear') as HTMLElement | null;
   if (wsGear) {
@@ -1589,8 +1706,17 @@ world.addEventListener('mousedown', function (e) {
   /* Workspace resize handles */
   var resizeHandle = (e.target as HTMLElement).closest('.workspace-resize') as HTMLElement | null;
   if (resizeHandle && e.button === 0) {
+    var resizeWsId = resizeHandle.dataset.wsId!;
+    var resizeWs = graph.workspaces.find(function (w) {
+      return w.id === resizeWsId;
+    });
+    if (resizeWs?.locked) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     isWsResizing = true;
-    wsResizeId = resizeHandle.dataset.wsId!;
+    wsResizeId = resizeWsId;
     wsResizeDir = resizeHandle.dataset.dir!;
     wsResizeStartX = e.clientX;
     wsResizeStartY = e.clientY;
@@ -1598,8 +1724,8 @@ world.addEventListener('mousedown', function (e) {
       return w.id === wsResizeId;
     });
     if (ws) {
-      wsResizeStartW = ws.size.w;
-      wsResizeStartH = ws.size.h;
+      wsResizeStartW = ws.size.width;
+      wsResizeStartH = ws.size.height;
     }
     e.preventDefault();
     e.stopPropagation();
@@ -1648,6 +1774,14 @@ world.addEventListener('mousedown', function (e) {
     renderNodes();
     renderWorkspaces();
 
+    var dragWs = graph.workspaces.find(function (w) {
+      return w.id === wsId;
+    });
+    if (dragWs?.locked) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     isWsDragging = true;
     wsDragId = wsId;
     wsDragStartX = e.clientX;
@@ -1779,7 +1913,6 @@ function setZoom(z: number) {
   vpY = cy - (cy - vpY) * (z / vpZoom);
   vpZoom = z;
   applyTransform();
-  renderEdges();
   updateZoomDisplay();
   saveViewport();
 }
@@ -2449,10 +2582,13 @@ function saveGraph() {
   graph.viewport = { x: vpX, y: vpY, zoom: vpZoom };
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(function () {
-    invoke('save_canvas_graph', { graph }).then(function () {
-      if (detailNodeId) showSavedIndicator();
-    });
+    invoke('save_canvas_graph', { graph });
   }, 300);
+}
+
+function saveGraphFromPanel() {
+  saveGraph();
+  showSavedIndicator();
 }
 
 function saveViewport() {
@@ -2609,6 +2745,9 @@ function openAgentDetail(nodeId: string) {
     loadAgentKpis(nodeId, kpiGrid);
   }
 
+  /* Integrations — hide for owner */
+  populateIntegrationSection(nodeId);
+
   agentDetailPanel.classList.add('open');
 }
 
@@ -2625,7 +2764,8 @@ function loadAgentKpis(nodeId: string, container: HTMLDivElement) {
         { value: String(kpis.messagesHandled), label: 'Messages' },
         { value: String(kpis.tasksCompleted), label: 'Tasks' },
         {
-          value: kpis.avgResponseTimeMs > 0 ? (kpis.avgResponseTimeMs / 1000).toFixed(1) + 's' : '--',
+          value:
+            kpis.avgResponseTimeMs > 0 ? (kpis.avgResponseTimeMs / 1000).toFixed(1) + 's' : '--',
           label: 'Avg Response',
         },
         { value: kpis.costUsd > 0 ? '$' + kpis.costUsd.toFixed(2) : '--', label: 'Cost' },
@@ -2634,8 +2774,12 @@ function loadAgentKpis(nodeId: string, container: HTMLDivElement) {
         .map(function (item) {
           return (
             '<div class="kpi-item">' +
-            '<span class="kpi-value">' + item.value + '</span>' +
-            '<span class="kpi-label">' + item.label + '</span>' +
+            '<span class="kpi-value">' +
+            item.value +
+            '</span>' +
+            '<span class="kpi-label">' +
+            item.label +
+            '</span>' +
             '</div>'
           );
         })
@@ -2672,7 +2816,7 @@ document.querySelectorAll('#agent-role-pills .role-pill').forEach(function (pill
     document.querySelectorAll('#agent-role-pills .role-pill').forEach(function (p) {
       p.classList.toggle('active', (p as HTMLElement).dataset.role === node!.role);
     });
-    saveGraph();
+    saveGraphFromPanel();
   });
 });
 
@@ -2703,7 +2847,7 @@ document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function 
       s.classList.toggle('active', parseInt((s as HTMLElement).dataset.level!, 10) === val);
     });
     moveAutonomyHighlight(val, true);
-    saveGraph();
+    saveGraphFromPanel();
   });
 });
 
@@ -2720,7 +2864,7 @@ document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function 
     if (node.platform === 'owner') {
       graph.globalInstructions = (this as HTMLTextAreaElement).value;
     }
-    saveGraph();
+    saveGraphFromPanel();
   },
 );
 
@@ -2738,7 +2882,7 @@ document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function 
     textarea.value = template;
     node.instructions = template;
     if (node.platform === 'owner') graph.globalInstructions = template;
-    saveGraph();
+    saveGraphFromPanel();
   },
 );
 
@@ -2763,7 +2907,7 @@ function bindToggle(id: string, key: string) {
     var isActive = this.classList.contains('active');
     (node.behavior as Record<string, boolean>)[key] = !isActive;
     this.classList.toggle('active');
-    saveGraph();
+    saveGraphFromPanel();
   });
 }
 
@@ -2841,7 +2985,7 @@ function closeWorkspaceDetail() {
     if (!ws) return;
     ws.name = (this as HTMLInputElement).value;
     renderWorkspaces();
-    saveGraph();
+    saveGraphFromPanel();
   },
 );
 
@@ -2872,7 +3016,7 @@ document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s
       customSwatch.classList.remove('active');
     }
     renderWorkspaces();
-    saveGraph();
+    saveGraphFromPanel();
   });
 });
 
@@ -2897,7 +3041,7 @@ document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s
       customSwatch.classList.add('active');
     }
     renderWorkspaces();
-    saveGraph();
+    saveGraphFromPanel();
   },
 );
 
@@ -2912,7 +3056,7 @@ document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s
     if (!ws) return;
     ws.purpose = (this as HTMLTextAreaElement).value;
     renderWorkspaces();
-    saveGraph();
+    saveGraphFromPanel();
   },
 );
 
@@ -2926,7 +3070,7 @@ document.querySelectorAll('#ws-detail-colors .color-swatch').forEach(function (s
     });
     if (!ws) return;
     ws.budget = parseFloat((this as HTMLInputElement).value) || 0;
-    saveGraph();
+    saveGraphFromPanel();
   },
 );
 
@@ -2976,7 +3120,7 @@ function renderWsTags(topics: string[]) {
     var idx = parseInt(removeBtn.dataset.idx!, 10);
     ws.topics.splice(idx, 1);
     renderWsTags(ws.topics);
-    saveGraph();
+    saveGraphFromPanel();
   },
 );
 
@@ -2995,7 +3139,7 @@ function renderWsTags(topics: string[]) {
     ws.topics.push(val);
     (this as HTMLInputElement).value = '';
     renderWsTags(ws.topics);
-    saveGraph();
+    saveGraphFromPanel();
   },
 );
 
@@ -3108,7 +3252,7 @@ document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s
       topics: topics,
       budget: budgetVal,
       position: { x: Math.round(cx), y: Math.round(cy) },
-      size: { w: 400, h: 320 },
+      size: { width: 400, height: 320 },
       checkpoints: [],
       groups: [],
     };
@@ -3169,6 +3313,273 @@ document.addEventListener('keydown', function (e) {
     }
   }
 });
+
+/* ═══════════════════════════════════════════════
+   Orbital Hover Bubbles
+   ═══════════════════════════════════════════════ */
+
+function showOrbitalBubbles(nodeId: string) {
+  removeOrbitalBubbles();
+  hoveredNodeId = nodeId;
+
+  var node = graph.nodes.find(function (n) {
+    return n.id === nodeId;
+  });
+  if (!node || !node.integrations || node.integrations.length === 0) return;
+
+  var instances = graph.instances ?? [];
+  var cardEl = world.querySelector('[data-node-id="' + nodeId + '"]') as HTMLElement | null;
+  if (!cardEl) return;
+
+  var cardRect = {
+    x: node.position.x,
+    y: node.position.y,
+    w: cardEl.offsetWidth || 120,
+    h: cardEl.offsetHeight || 160,
+  };
+
+  var bubbleData: Array<{ instanceId: string; integrationId: string; label: string }> = [];
+  for (var iid of node.integrations) {
+    var inst = instances.find(function (i) {
+      return i.id === iid;
+    });
+    if (inst) {
+      bubbleData.push({ instanceId: iid, integrationId: inst.integrationId, label: inst.label });
+    }
+  }
+
+  if (bubbleData.length === 0) return;
+
+  var gap = 32;
+  var offsetX = 16;
+
+  for (var i = 0; i < bubbleData.length; i++) {
+    var b = bubbleData[i];
+    var def = catalogMap.get(b.integrationId);
+    var iconName = def ? def.icon : '';
+
+    var rightSide = bubbleData.length <= 4 || i < Math.ceil(bubbleData.length / 2);
+    var sideIndex = rightSide ? i : i - Math.ceil(bubbleData.length / 2);
+    var totalOnSide = rightSide
+      ? bubbleData.length <= 4
+        ? bubbleData.length
+        : Math.ceil(bubbleData.length / 2)
+      : bubbleData.length - Math.ceil(bubbleData.length / 2);
+
+    var startY = cardRect.y + (cardRect.h - totalOnSide * gap) / 2 + 12;
+    var bx: number;
+    var by = startY + sideIndex * gap;
+
+    if (rightSide) {
+      bx = cardRect.x + cardRect.w + offsetX;
+    } else {
+      bx = cardRect.x - offsetX - 24;
+    }
+
+    var bubble = document.createElement('div');
+    bubble.className = 'orbital-bubble';
+    bubble.dataset.orbitalNode = nodeId;
+    bubble.style.left = bx + 'px';
+    bubble.style.top = by + 'px';
+    bubble.style.animationDelay = i * 50 + 'ms';
+
+    if (iconName) {
+      bubble.innerHTML =
+        '<img src="/icons/integrations/' +
+        escapeHtml(iconName) +
+        '.svg" alt="" onerror="this.style.display=\'none\'" />';
+    }
+
+    var tooltip = document.createElement('div');
+    tooltip.className = 'orbital-tooltip';
+    tooltip.textContent = b.label;
+    bubble.appendChild(tooltip);
+
+    world.appendChild(bubble);
+  }
+}
+
+function removeOrbitalBubbles() {
+  var existing = world.querySelectorAll('.orbital-bubble');
+  for (var i = 0; i < existing.length; i++) {
+    existing[i].remove();
+  }
+  hoveredNodeId = null;
+}
+
+function scheduleOrbitalHide() {
+  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer);
+  hoverLeaveTimer = setTimeout(function () {
+    hoverLeaveTimer = null;
+    removeOrbitalBubbles();
+  }, 150);
+}
+
+/* Bubble hover — cancel hide when entering a bubble */
+world.addEventListener(
+  'mouseenter',
+  function (e) {
+    if ((e.target as HTMLElement).closest('.orbital-bubble')) {
+      if (hoverLeaveTimer) {
+        clearTimeout(hoverLeaveTimer);
+        hoverLeaveTimer = null;
+      }
+    }
+  },
+  true,
+);
+world.addEventListener(
+  'mouseleave',
+  function (e) {
+    if ((e.target as HTMLElement).closest('.orbital-bubble')) {
+      scheduleOrbitalHide();
+    }
+  },
+  true,
+);
+
+/* ═══════════════════════════════════════════════
+   Integration Assignment UI (Detail Panel)
+   ═══════════════════════════════════════════════ */
+
+function populateIntegrationSection(nodeId: string) {
+  var sectionEl = document.getElementById('section-integrations') as HTMLDivElement;
+  var chipsEl = document.getElementById('agent-integration-chips') as HTMLDivElement;
+  var addBtn = document.getElementById('add-integration-btn') as HTMLButtonElement;
+
+  var node = graph.nodes.find(function (n) {
+    return n.id === nodeId;
+  });
+  if (!node || node.platform === 'owner') {
+    sectionEl.style.display = 'none';
+    return;
+  }
+  sectionEl.style.display = '';
+
+  var instances = graph.instances ?? [];
+  var assigned = node.integrations ?? [];
+
+  /* Render chips */
+  chipsEl.innerHTML = '';
+  for (var aid of assigned) {
+    var inst = instances.find(function (i) {
+      return i.id === aid;
+    });
+    if (!inst) continue;
+    var def = catalogMap.get(inst.integrationId);
+    var iconHtml =
+      def && def.icon
+        ? '<img src="/icons/integrations/' +
+          escapeHtml(def.icon) +
+          '.svg" alt="" onerror="this.style.display=\'none\'" />'
+        : '';
+
+    var chip = document.createElement('div');
+    chip.className = 'integration-chip';
+    chip.innerHTML =
+      iconHtml +
+      '<span>' +
+      escapeHtml(inst.label) +
+      '</span>' +
+      '<button class="integration-chip-remove" data-instance-id="' +
+      escapeHtml(inst.id) +
+      '">&times;</button>';
+    chipsEl.appendChild(chip);
+  }
+
+  /* Remove button clicks */
+  chipsEl.querySelectorAll('.integration-chip-remove').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var iid = (btn as HTMLElement).dataset.instanceId!;
+      invoke('integrations_unassign_instance', { nodeId: nodeId, instanceId: iid }).then(
+        function () {
+          /* Update local graph */
+          var n = graph.nodes.find(function (nd) {
+            return nd.id === nodeId;
+          });
+          if (n && n.integrations) {
+            n.integrations = n.integrations.filter(function (id) {
+              return id !== iid;
+            });
+          }
+          populateIntegrationSection(nodeId);
+          showSavedIndicator();
+        },
+      );
+    });
+  });
+
+  /* Add button — toggle dropdown */
+  var existingDrop = addBtn.parentElement!.querySelector('.integration-dropdown');
+  if (existingDrop) existingDrop.remove();
+
+  addBtn.onclick = function () {
+    var existing = addBtn.parentElement!.querySelector('.integration-dropdown');
+    if (existing) {
+      existing.remove();
+      return;
+    }
+
+    var drop = document.createElement('div');
+    drop.className = 'integration-dropdown';
+
+    var unassigned = instances.filter(function (inst) {
+      return !assigned.includes(inst.id);
+    });
+
+    if (unassigned.length === 0) {
+      drop.innerHTML = '<div class="integration-dropdown-empty">No available instances</div>';
+    } else {
+      for (var ui of unassigned) {
+        var udef = catalogMap.get(ui.integrationId);
+        var uicon =
+          udef && udef.icon
+            ? '<img src="/icons/integrations/' +
+              escapeHtml(udef.icon) +
+              '.svg" alt="" onerror="this.style.display=\'none\'" />'
+            : '';
+        var item = document.createElement('div');
+        item.className = 'integration-dropdown-item';
+        item.dataset.instanceId = ui.id;
+        item.innerHTML = uicon + '<span>' + escapeHtml(ui.label) + '</span>';
+        drop.appendChild(item);
+      }
+    }
+
+    addBtn.parentElement!.appendChild(drop);
+
+    drop.addEventListener('click', function (ev) {
+      var target = (ev.target as HTMLElement).closest(
+        '.integration-dropdown-item',
+      ) as HTMLElement | null;
+      if (!target) return;
+      var iid = target.dataset.instanceId!;
+
+      invoke('integrations_assign_instance', { nodeId: nodeId, instanceId: iid }).then(function () {
+        var n = graph.nodes.find(function (nd) {
+          return nd.id === nodeId;
+        });
+        if (n) {
+          if (!n.integrations) n.integrations = [];
+          n.integrations.push(iid);
+        }
+        drop.remove();
+        populateIntegrationSection(nodeId);
+        showSavedIndicator();
+      });
+    });
+
+    /* Close dropdown on outside click */
+    setTimeout(function () {
+      document.addEventListener('click', function closeDropdown(ev) {
+        if (!drop.contains(ev.target as Node) && ev.target !== addBtn) {
+          drop.remove();
+          document.removeEventListener('click', closeDropdown);
+        }
+      });
+    }, 0);
+  };
+}
 
 /* Boot */
 init();

@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AutonomyEnforcer } from '../autonomy.js';
 import type { AgentNode, RoutingAction, Workspace } from '../types.js';
-import { DEFAULT_GROUP_BEHAVIOR } from '../types.js';
-
 function createAgent(autonomy: AgentNode['autonomy']): AgentNode {
   return {
     id: 'a1',
@@ -17,7 +15,6 @@ function createAgent(autonomy: AgentNode['autonomy']): AgentNode {
     role: 'specialist',
     autonomy,
     instructions: '',
-    groupBehavior: DEFAULT_GROUP_BEHAVIOR,
   };
 }
 

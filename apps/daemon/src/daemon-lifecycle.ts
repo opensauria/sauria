@@ -11,7 +11,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { openDatabase, closeDatabase } from './db/connection.js';
 import { applySchema } from './db/schema.js';
 import { runMigrations } from './db/migrations.js';
-import { loadConfig } from './config/loader.js';
+import { loadConfig, saveConfig } from './config/loader.js';
 import { ensureConfigDir } from './config/loader.js';
 import type { OpenSauriaConfig } from './config/schema.js';
 import { AuditLogger } from './security/audit.js';
@@ -29,7 +29,7 @@ import { EmailChannel } from './channels/email.js';
 import { TranscriptionService } from './channels/transcription.js';
 import { IngestPipeline } from './ingestion/pipeline.js';
 import { createLimiter, SECURITY_LIMITS } from './security/rate-limiter.js';
-import { vaultGet } from './security/vault-key.js';
+import { vaultGet, vaultStore, vaultDelete } from './security/vault-key.js';
 import { startMcpServer } from './mcp/server.js';
 import { getLogger } from './utils/logger.js';
 import { recordSpend, isOverBudget } from './utils/budget.js';
@@ -42,6 +42,7 @@ import { MessageQueue } from './orchestrator/message-queue.js';
 import { AgentMemory } from './orchestrator/agent-memory.js';
 import { KPITracker } from './orchestrator/kpi-tracker.js';
 import { CheckpointManager } from './orchestrator/checkpoint.js';
+import type { IntegrationInstance } from '@opensauria/types';
 import { IntegrationRegistry } from './integrations/registry.js';
 import { INTEGRATION_CATALOG } from './integrations/catalog.js';
 import type {
@@ -55,11 +56,7 @@ import type {
   AutonomyLevel,
   AgentRole,
 } from './orchestrator/types.js';
-import {
-  createEmptyGraph,
-  DEFAULT_GROUP_BEHAVIOR,
-  OwnerCommandSchema,
-} from './orchestrator/types.js';
+import { createEmptyGraph, OwnerCommandSchema } from './orchestrator/types.js';
 
 export interface DaemonContext {
   readonly db: BetterSqlite3.Database;
@@ -152,7 +149,8 @@ interface RawNode {
   readonly role?: string;
   readonly autonomy?: string | number;
   readonly instructions?: string;
-  readonly groupBehavior?: AgentNode['groupBehavior'];
+  readonly behavior?: AgentNode['behavior'];
+  readonly integrations?: readonly string[];
 }
 
 interface RawEdge {
@@ -189,6 +187,7 @@ interface RawGraph {
   readonly nodes?: readonly RawNode[];
   readonly edges?: readonly RawEdge[];
   readonly workspaces?: readonly RawWorkspace[];
+  readonly instances?: readonly IntegrationInstance[];
   readonly viewport?: { readonly x: number; readonly y: number; readonly zoom: number };
 }
 
@@ -224,7 +223,8 @@ function normalizeNode(raw: RawNode): AgentNode {
     role,
     autonomy,
     instructions: raw.instructions ?? '',
-    groupBehavior: raw.groupBehavior ?? DEFAULT_GROUP_BEHAVIOR,
+    behavior: raw.behavior,
+    integrations: raw.integrations,
   };
 }
 
@@ -275,6 +275,7 @@ function loadCanvasGraph(): CanvasGraph {
       nodes: (parsed.nodes ?? []).map(normalizeNode),
       edges: (parsed.edges ?? []).map(normalizeEdge),
       workspaces: (parsed.workspaces ?? []).map(normalizeWorkspace),
+      instances: parsed.instances ?? [],
       viewport: parsed.viewport ?? { x: 0, y: 0, zoom: 1 },
     };
   } catch {
@@ -700,16 +701,136 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   ipcServer.registerMethod('integrations:connect', async (_db, params) => {
     const id = params['id'] as string;
     const credentials = params['credentials'] as Record<string, string>;
-    return integrationRegistry.connect(id, credentials);
+    const def = INTEGRATION_CATALOG.find((d) => d.id === id);
+    if (!def) throw new Error(`Unknown integration: ${id}`);
+
+    const result = await integrationRegistry.connect(id, credentials);
+
+    // Persist credentials in vault
+    for (const key of def.credentialKeys) {
+      const value = credentials[key];
+      if (value) await vaultStore(`integration_${id}_${key}`, value);
+    }
+
+    // Mark enabled in config
+    const currentConfig = await loadConfig();
+    const updatedConfig = {
+      ...currentConfig,
+      integrations: { ...currentConfig.integrations, [id]: { enabled: true } },
+    };
+    await saveConfig(updatedConfig);
+
+    // Persist instance in canvas graph
+    const currentGraph = loadCanvasGraph();
+    const instanceId = `${id}:default`;
+    const alreadyExists = (currentGraph.instances ?? []).some((i) => i.id === instanceId);
+    if (!alreadyExists) {
+      const instance: IntegrationInstance = {
+        id: instanceId,
+        integrationId: id,
+        label: def.name,
+        connectedAt: new Date().toISOString(),
+      };
+      const updatedGraph = {
+        ...currentGraph,
+        instances: [...(currentGraph.instances ?? []), instance],
+      };
+      writeFileSync(paths.canvas, JSON.stringify(updatedGraph, null, 2), 'utf-8');
+      if (orchestrator) orchestrator.updateGraph(updatedGraph);
+    }
+
+    return result;
   });
   ipcServer.registerMethod('integrations:disconnect', async (_db, params) => {
     const id = params['id'] as string;
     await integrationRegistry.disconnect(id);
+
+    // Remove credentials from vault
+    const def = INTEGRATION_CATALOG.find((d) => d.id === id);
+    if (def) {
+      for (const key of def.credentialKeys) {
+        await vaultDelete(`integration_${id}_${key}`);
+      }
+    }
+
+    // Mark disabled in config
+    const currentConfig = await loadConfig();
+    const updatedConfig = {
+      ...currentConfig,
+      integrations: { ...currentConfig.integrations, [id]: { enabled: false } },
+    };
+    await saveConfig(updatedConfig);
+
+    // Remove instance from canvas graph
+    const instanceId = `${id}:default`;
+    const currentGraph = loadCanvasGraph();
+    const updatedInstances = (currentGraph.instances ?? []).filter((i) => i.id !== instanceId);
+    const updatedNodes = currentGraph.nodes.map((n) => {
+      if (!n.integrations) return n;
+      const filtered = n.integrations.filter((iid) => iid !== instanceId);
+      return filtered.length === n.integrations.length ? n : { ...n, integrations: filtered };
+    });
+    const updatedGraph = { ...currentGraph, instances: updatedInstances, nodes: updatedNodes };
+    writeFileSync(paths.canvas, JSON.stringify(updatedGraph, null, 2), 'utf-8');
+    if (orchestrator) orchestrator.updateGraph(updatedGraph);
+
     return { success: true };
   });
   ipcServer.registerMethod('integrations:list-tools', (_db, params) => {
     const integrationId = params['integrationId'] as string | undefined;
     return integrationRegistry.getAvailableTools(integrationId);
+  });
+
+  ipcServer.registerMethod('integrations:assign-instance', (_db, params) => {
+    const nodeId = params['nodeId'] as string;
+    const instanceId = params['instanceId'] as string;
+    const currentGraph = loadCanvasGraph();
+    const node = currentGraph.nodes.find((n) => n.id === nodeId);
+    if (!node) throw new Error(`Node not found: ${nodeId}`);
+
+    const existing = node.integrations ?? [];
+    if (existing.includes(instanceId)) return { success: true };
+
+    const updatedNodes = currentGraph.nodes.map((n) =>
+      n.id === nodeId ? { ...n, integrations: [...existing, instanceId] } : n,
+    );
+    const updatedGraph = { ...currentGraph, nodes: updatedNodes };
+    writeFileSync(paths.canvas, JSON.stringify(updatedGraph, null, 2), 'utf-8');
+
+    if (orchestrator) orchestrator.updateGraph(updatedGraph);
+    return { success: true };
+  });
+
+  ipcServer.registerMethod('integrations:unassign-instance', (_db, params) => {
+    const nodeId = params['nodeId'] as string;
+    const instanceId = params['instanceId'] as string;
+    const currentGraph = loadCanvasGraph();
+    const node = currentGraph.nodes.find((n) => n.id === nodeId);
+    if (!node) throw new Error(`Node not found: ${nodeId}`);
+
+    const existing = node.integrations ?? [];
+    const updatedNodes = currentGraph.nodes.map((n) =>
+      n.id === nodeId ? { ...n, integrations: existing.filter((id) => id !== instanceId) } : n,
+    );
+    const updatedGraph = { ...currentGraph, nodes: updatedNodes };
+    writeFileSync(paths.canvas, JSON.stringify(updatedGraph, null, 2), 'utf-8');
+
+    if (orchestrator) orchestrator.updateGraph(updatedGraph);
+    return { success: true };
+  });
+
+  ipcServer.registerMethod('integrations:connect-instance', async (_db, params) => {
+    const instanceId = params['instanceId'] as string;
+    const integrationId = params['integrationId'] as string;
+    const label = params['label'] as string;
+    const credentials = params['credentials'] as Record<string, string>;
+    return integrationRegistry.connectInstance(instanceId, integrationId, label, credentials);
+  });
+
+  ipcServer.registerMethod('integrations:disconnect-instance', async (_db, params) => {
+    const instanceId = params['instanceId'] as string;
+    await integrationRegistry.disconnectInstance(instanceId);
+    return { success: true };
   });
 
   // ─── Canvas-based orchestrator setup ────────────────────────────────

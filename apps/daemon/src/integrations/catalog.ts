@@ -166,6 +166,9 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     mcpServer: {
       package: '@notionhq/notion-mcp-server',
       envMapping: { apiKey: 'OPENAPI_MCP_HEADERS' },
+      envValueTemplate: {
+        apiKey: '{"Authorization":"Bearer {value}","Notion-Version":"2022-06-28"}',
+      },
     },
   },
   {

@@ -22,6 +22,10 @@ export const IPC_METHODS = {
   CONNECT_INTEGRATION: 'integrations:connect',
   DISCONNECT_INTEGRATION: 'integrations:disconnect',
   LIST_INTEGRATION_TOOLS: 'integrations:list-tools',
+  CONNECT_INSTANCE: 'integrations:connect-instance',
+  DISCONNECT_INSTANCE: 'integrations:disconnect-instance',
+  ASSIGN_INSTANCE: 'integrations:assign-instance',
+  UNASSIGN_INSTANCE: 'integrations:unassign-instance',
 } as const;
 
 export type IpcMethodName = (typeof IPC_METHODS)[keyof typeof IPC_METHODS];
@@ -75,4 +79,13 @@ export interface MethodParamsMap {
   [IPC_METHODS.CONNECT_INTEGRATION]: { id: string; credentials: Record<string, string> };
   [IPC_METHODS.DISCONNECT_INTEGRATION]: { id: string };
   [IPC_METHODS.LIST_INTEGRATION_TOOLS]: { integrationId?: string };
+  [IPC_METHODS.CONNECT_INSTANCE]: {
+    instanceId: string;
+    integrationId: string;
+    label: string;
+    credentials: Record<string, string>;
+  };
+  [IPC_METHODS.DISCONNECT_INSTANCE]: { instanceId: string };
+  [IPC_METHODS.ASSIGN_INSTANCE]: { nodeId: string; instanceId: string };
+  [IPC_METHODS.UNASSIGN_INSTANCE]: { nodeId: string; instanceId: string };
 }

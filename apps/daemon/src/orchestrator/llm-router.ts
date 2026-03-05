@@ -22,6 +22,8 @@ export interface RoutingContext {
   readonly sourceNode: AgentNode;
   readonly workspace: Workspace | null;
   readonly teamNodes: readonly AgentNode[];
+  readonly allNodes?: readonly AgentNode[];
+  readonly allWorkspaces?: readonly Workspace[];
   readonly ruleActions: readonly RoutingAction[];
   readonly conversationId: string | null;
   readonly globalInstructions: string;
@@ -141,6 +143,32 @@ export class LLMRoutingBrain {
     return 'fast';
   }
 
+  async summarizeToolResult(
+    agentName: string,
+    originalMessage: string,
+    toolName: string,
+    rawResult: string,
+  ): Promise<string> {
+    const messages: ChatMessage[] = [
+      {
+        role: 'system',
+        content: [
+          `You are ${agentName}. Summarize the "${toolName}" result for the user. Extract key info from JSON. Say clearly if empty. Match user language. Plain text only, no markdown/emojis/formatting.`,
+        ].join('\n'),
+      },
+      {
+        role: 'user',
+        content: `User asked: "${originalMessage}"\n\nRaw tool result:\n${rawResult}`,
+      },
+    ];
+
+    let result = '';
+    for await (const chunk of this.router.reason(messages)) {
+      result += chunk.text;
+    }
+    return result.trim();
+  }
+
   private async callLLM(messages: ChatMessage[], tier: ModelTier): Promise<RoutingDecision> {
     const stream =
       tier === 'deep' ? this.router.deepAnalyze(messages) : this.router.reason(messages);
@@ -197,10 +225,7 @@ function buildMessageSection(message: InboundMessage, sourceNode: AgentNode): st
 
   if (!parsed) {
     const verb = isReply ? 'a reply' : 'a forwarded message';
-    return [
-      `${sourceNode.label} (${sourceNode.role}) received ${verb}:`,
-      `"${message.content}"`,
-    ];
+    return [`${sourceNode.label} (${sourceNode.role}) received ${verb}:`, `"${message.content}"`];
   }
 
   const verb = isReply ? 'a reply from' : 'a message forwarded by';
@@ -234,14 +259,23 @@ function extractLanguageDirective(instructions: string): string | null {
   return match ? match[1]!.charAt(0).toUpperCase() + match[1]!.slice(1).toLowerCase() : null;
 }
 
-function buildToolsSection(integrationRegistry?: IntegrationRegistry | null): string[] {
+function buildToolsSection(
+  integrationRegistry?: IntegrationRegistry | null,
+  agentInstanceIds?: readonly string[],
+): string[] {
   if (!integrationRegistry) return [];
-  const tools = integrationRegistry.getAvailableTools();
+
+  const tools =
+    agentInstanceIds && agentInstanceIds.length > 0
+      ? integrationRegistry.getToolsForInstances(agentInstanceIds)
+      : integrationRegistry.getAvailableTools();
+
   if (tools.length === 0) return [];
 
-  const toolLines = tools
-    .slice(0, 20)
-    .map((t) => `- ${t.integrationName}/${t.name}: ${t.description ?? 'no description'}`);
+  const toolLines = tools.slice(0, 20).map((t) => {
+    const desc = t.description ? t.description.slice(0, 80) : 'no description';
+    return `- integration="${t.instanceId}" tool="${t.name}": ${desc}`;
+  });
   return ['Available tools (use "use_tool" action to invoke):', ...toolLines, ''];
 }
 
@@ -258,6 +292,7 @@ function buildRoutingPrompt(
     sourceNode,
     workspace,
     teamNodes,
+    allNodes,
     ruleActions,
     conversationId,
     globalInstructions,
@@ -265,6 +300,17 @@ function buildRoutingPrompt(
 
   const agentList = teamNodes
     .map((node) => `- ${node.label} (${node.role}) [nodeId: "${node.id}"] on ${node.platform}`)
+    .join('\n');
+
+  const otherWorkspaceNodes = allNodes
+    ? allNodes.filter((n) => n.workspaceId !== sourceNode.workspaceId && n.platform !== 'owner')
+    : [];
+  const allWorkspaces = context.allWorkspaces ?? [];
+  const otherAgentsList = otherWorkspaceNodes
+    .map((n) => {
+      const ws = allWorkspaces.find((w) => w.id === n.workspaceId);
+      return `- ${n.label} (${n.role}) [nodeId: "${n.id}"] in workspace "${ws?.name ?? 'unknown'}" on ${n.platform}`;
+    })
     .join('\n');
 
   const ruleActionsText =
@@ -341,6 +387,13 @@ function buildRoutingPrompt(
     'Agents in this team:',
     agentList || '(no agents)',
     '',
+    ...(otherAgentsList
+      ? [
+          'Agents in other workspaces (you can forward to them for cross-team collaboration):',
+          otherAgentsList,
+          '',
+        ]
+      : []),
     ...buildMessageSection(message, sourceNode),
     '',
     conversationContext
@@ -351,7 +404,7 @@ function buildRoutingPrompt(
     ...(agentFactsText ? [agentFactsText, ''] : []),
     ...(knowledgeGraphText ? [knowledgeGraphText, ''] : []),
     ...(peerMessagesText ? [peerMessagesText, ''] : []),
-    ...buildToolsSection(integrationRegistry),
+    ...buildToolsSection(integrationRegistry, sourceNode.integrations),
     ruleActionsText,
     '',
     `IDENTITY: Your name is ${sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '')}. You are ${sourceNode.role ?? 'assistant'}. Never use any other name. Never mention being Claude, an AI model, or a language model.`,
@@ -362,7 +415,7 @@ function buildRoutingPrompt(
           '',
         ]
       : []),
-    'FORMATTING: Write plain text only. Never use asterisks, markdown, bold, italic, bullet points, headers, or any special formatting characters. Keep messages short and natural like a human chat message.',
+    'FORMATTING (critical): Plain text only. No markdown, no asterisks, no hashes, no backticks, no bullets, no emojis. Write like a natural human text message.',
     ...(globalInstructions
       ? [
           'Communication style (applies to tone and language of all responses):',
@@ -379,13 +432,32 @@ function buildRoutingPrompt(
     'For notify: include "summary"',
     'For send_to_all/group_message: include "workspaceId" and "content"',
     'For learn: include "fact" and "topics" (string array)',
-    'For use_tool: include "integration" (id), "tool" (name), "arguments" (JSON object), and "content" (explanation to owner)',
+    'For use_tool: include "integration" (exact instance ID from the tool list, e.g. "notion:default"), "tool" (exact tool name, e.g. "API-post-search"), "arguments" (JSON object), and "content" (explanation to owner). Use the EXACT values from the tool list — do not combine or modify them.',
     '',
-    'COLLABORATION: When you receive a forwarded message from another agent, ALWAYS reply to confirm understanding and provide your response. Your reply is automatically routed back to the sender AND to the owner if you have your own channel. Like real teamwork — always confirm, never leave colleagues in the dark.',
+    'COLLABORATION: When you receive a forwarded message from another agent, ALWAYS reply to confirm understanding and provide your response. Your reply is automatically routed back to the sender internally. Like real teamwork — always confirm, never leave colleagues in the dark.',
+    "INTERNAL DEBATE: When you receive a forwarded message from another agent, your reply goes back to that agent internally. The owner does NOT see intermediate debate. Only the agent who received the owner's original message sends the final answer to the owner.",
     "DELEGATION: When the user asks you to communicate with, ask, or send something to another agent by name, you MUST use the forward action with that agent's targetNodeId. Never answer on behalf of another agent. Never fabricate what another agent would say.",
     'REPLY vs FORWARD: "reply" sends your response (to owner for direct messages, to sender agent for forwarded messages). "forward" sends to a DIFFERENT agent. Use reply to continue a discussion, forward to involve someone new.',
     'ATTRIBUTION: When you reply to the owner after receiving a forwarded request from another agent, always mention who asked you and why. Example: "[AgentName] asked me to give my opinion on X. Here is what I think: ..." This gives the owner context about why you are reaching out.',
   ];
+
+  // Behavior toggles from agent settings
+  const behavior = sourceNode.behavior;
+  if (behavior?.ownerResponse === false) {
+    promptParts.push(
+      'RESPONSE MODE: Silent mode. Do NOT reply to the owner unless directly asked. Focus on internal tasks, forwarding, and collaboration.',
+    );
+  }
+  if (behavior?.proactive === true) {
+    promptParts.push(
+      'PROACTIVE MODE: Proactively share relevant information and suggest actions without waiting to be asked.',
+    );
+  }
+  if (behavior?.peer === false) {
+    promptParts.push(
+      'PEER ISOLATION: Do NOT collaborate with other agents. Work independently. Ignore forwarded requests from peers and do not forward to others.',
+    );
+  }
 
   // Extract explicit language directive from instructions and inject at the very end
   // for maximum LLM attention (recency bias)

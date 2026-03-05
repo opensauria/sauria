@@ -54,9 +54,9 @@ const icons: Record<string, string> = {
 
 const mainCommands: Command[] = [
   { id: 'canvas', label: 'Agent Canvas', hint: '' },
-  { id: 'brain', label: 'Brain', hint: 'knowledge graph' },
-  { id: 'integrations', label: 'Integrations', hint: 'tools & channels' },
-  { id: 'setup', label: 'AI Provider', hint: 'config' },
+  { id: 'brain', label: 'Brain', hint: '' },
+  { id: 'integrations', label: 'Integrations', hint: '' },
+  { id: 'setup', label: 'AI Provider', hint: '' },
   { id: 'quit', label: 'Quit', hint: '' },
 ];
 

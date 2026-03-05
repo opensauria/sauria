@@ -212,6 +212,8 @@ export class AgentOrchestrator {
         sourceNode: node,
         workspace,
         teamNodes,
+        allNodes: this.graph.nodes,
+        allWorkspaces: this.graph.workspaces,
         ruleActions,
         conversationId,
         globalInstructions: this.graph.globalInstructions,
@@ -219,6 +221,10 @@ export class AgentOrchestrator {
 
       try {
         const decision = await this.brain.decideRouting(context);
+        logger.info('LLM routing decision', {
+          nodeId: node.id,
+          actions: decision.actions.map((a) => a.type),
+        });
         const { immediate, pendingApproval } = this.autonomy.filterActions(node, decision.actions);
         for (const action of immediate) {
           await this.executeAction(action, message);
@@ -542,9 +548,9 @@ export class AgentOrchestrator {
         this.recordReplyInMemory(source, action.content);
 
         if (isForwardedReply) {
-          // 1. Always route internally back to sender with attribution
-          const sourceLabel =
-            this.findNode(source.sourceNodeId)?.label ?? source.sourceNodeId;
+          // ALWAYS route forwarded replies back internally — never to owner.
+          // The originating agent will handle final owner communication.
+          const sourceLabel = this.findNode(source.sourceNodeId)?.label ?? source.sourceNodeId;
           const enrichedContent = `[Reply from ${sourceLabel}]\n${action.content}`;
           const syntheticReply: InboundMessage = {
             sourceNodeId: replyTargetId,
@@ -664,16 +670,64 @@ export class AgentOrchestrator {
           logger.warn('use_tool action received but no integration registry available');
           break;
         }
+
+        // Validate and resolve instance ID
+        const sourceNode = this.findNode(source.sourceNodeId);
+        let resolvedIntegration = action.integration;
+        if (sourceNode?.integrations && sourceNode.integrations.length > 0) {
+          const matched = this.resolveInstanceId(resolvedIntegration, sourceNode.integrations);
+          if (!matched) {
+            const logger = getLogger();
+            logger.warn('use_tool blocked: instance not assigned to agent', {
+              nodeId: source.sourceNodeId,
+              integration: resolvedIntegration,
+              assignedInstances: [...sourceNode.integrations],
+            });
+            break;
+          }
+          resolvedIntegration = matched;
+        }
+
         try {
-          const result = await this.integrationRegistry.callTool(action.integration, action.tool, {
+          const logger = getLogger();
+          logger.info('use_tool: calling', {
+            integration: resolvedIntegration,
+            tool: action.tool,
+            args: Object.keys(action.arguments),
+          });
+          const result = await this.integrationRegistry.callTool(resolvedIntegration, action.tool, {
             ...action.arguments,
           });
-          const resultSummary =
-            typeof result === 'string' ? result : JSON.stringify(result).slice(0, 500);
-          const replyContent = `${action.content}\n\nResult: ${resultSummary}`;
+          const rawResult = typeof result === 'string' ? result : JSON.stringify(result);
+          logger.info('use_tool: result received', {
+            integration: resolvedIntegration,
+            tool: action.tool,
+            resultLength: rawResult.length,
+          });
+
+          // Summarize through LLM for human-readable output
+          const sourceNode = this.findNode(source.sourceNodeId);
+          let replyContent: string;
+          if (this.brain) {
+            const summary = await this.brain.summarizeToolResult(
+              sourceNode?.label ?? 'Agent',
+              source.content,
+              action.tool,
+              rawResult.slice(0, 4000),
+            );
+            replyContent = summary;
+          } else {
+            replyContent = `${action.content}\n\n${rawResult.slice(0, 500)}`;
+          }
           await this.executeAction({ type: 'reply', content: replyContent }, source);
         } catch (err: unknown) {
+          const logger = getLogger();
           const errorMsg = err instanceof Error ? err.message : String(err);
+          logger.error('use_tool: failed', {
+            integration: resolvedIntegration,
+            tool: action.tool,
+            error: errorMsg,
+          });
           const replyContent = `${action.content}\n\nTool error: ${errorMsg}`;
           await this.executeAction({ type: 'reply', content: replyContent }, source);
         }
@@ -767,6 +821,18 @@ export class AgentOrchestrator {
       '',
       '[Message]:',
     ].join('\n');
+  }
+
+  private resolveInstanceId(ref: string, assignedIds: readonly string[]): string | null {
+    for (const iid of assignedIds) {
+      if (iid === ref) return iid;
+      if (iid.startsWith(ref + ':')) return iid;
+      const inst = (this.graph.instances ?? []).find((i) => i.id === iid);
+      if (!inst) continue;
+      if (inst.integrationId === ref) return iid;
+      if (inst.label.toLowerCase() === ref.toLowerCase()) return iid;
+    }
+    return null;
   }
 
   private findGroupForNode(nodeId: string): string | null {

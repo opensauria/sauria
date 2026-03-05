@@ -31,7 +31,7 @@ pub fn create_palette_window(app: &AppHandle) -> Result<(), String> {
 
     let url = WebviewUrl::App("src/renderer/palette/index.html".into());
     let builder = WebviewWindowBuilder::new(app, "palette", url)
-        .title("OpenSauria")
+        .title("Sauria")
         .inner_size(PALETTE_WIDTH, PALETTE_HEIGHT)
         .resizable(false)
         .decorations(false)
@@ -92,8 +92,8 @@ pub fn navigate_palette_to(app: &AppHandle, page: &str) -> Result<(), String> {
     win.set_resizable(true).map_err(|e| e.to_string())?;
     win.set_always_on_top(false).map_err(|e| e.to_string())?;
 
-    // Native decorations only for canvas and brain
-    let wants_decorations = page == "canvas" || page == "brain" || page == "integrations";
+    // Native decorations for expanded views (not palette)
+    let wants_decorations = page != "palette";
     win.set_decorations(wants_decorations).map_err(|e| e.to_string())?;
 
     // Navigate to new page
