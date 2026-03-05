@@ -246,7 +246,8 @@ describe('executeAction reply internal routing', () => {
     db.close();
   });
 
-  it('agent with own channel replies directly to owner on forwarded message', async () => {
+  it('agent with own channel still routes internally on forwarded reply, no sendTo', async () => {
+    const onActivity = vi.fn();
     // Register a channel for n2 so registry.get('n2') returns truthy
     const mockChannel = {
       name: 'telegram',
@@ -263,6 +264,7 @@ describe('executeAction reply internal routing', () => {
       graph,
       ownerIdentity: { telegram: { userId: 123 } },
       agentMemory: new AgentMemory(db),
+      onActivity,
     });
 
     // Karl (n2) replies to a forwarded message from Kyra (n1)
@@ -281,12 +283,19 @@ describe('executeAction reply internal routing', () => {
 
     await orchestrator.executeAction({ type: 'reply', content: 'My direct response' }, source);
 
-    // Should reply via n2's own channel (sendTo called with n2, not n1)
+    // Should route internally back to n1 (forwarding agent)
+    const nodeCall = onActivity.mock.calls.find(
+      (c: unknown[]) =>
+        c[0] === 'activity:node' && (c[1] as Record<string, unknown>).nodeId === 'n1',
+    );
+    expect(nodeCall).toBeDefined();
+
+    // Should NOT send to owner — forwarded replies stay internal
     const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
-    expect(sendTo).toHaveBeenCalledWith('n2', 'My direct response', null);
+    expect(sendTo).not.toHaveBeenCalled();
   });
 
-  it('agent without own channel routes reply internally to forwarding agent', async () => {
+  it('agent without own channel routes reply internally with attribution, no sendTo', async () => {
     const onActivity = vi.fn();
     // n2 has NO registered channel
     const orchestrator = new AgentOrchestrator({
@@ -322,6 +331,16 @@ describe('executeAction reply internal routing', () => {
         c[0] === 'activity:node' && (c[1] as Record<string, unknown>).nodeId === 'n1',
     );
     expect(nodeCall).toBeDefined();
+
+    // Internal reply should have [Reply from] attribution prefix
+    const edgeCall = onActivity.mock.calls.find(
+      (c: unknown[]) =>
+        c[0] === 'activity:edge' &&
+        (c[1] as Record<string, unknown>).from === 'n2' &&
+        (c[1] as Record<string, unknown>).to === 'n1' &&
+        (c[1] as Record<string, unknown>).actionType === 'reply',
+    );
+    expect(edgeCall).toBeDefined();
   });
 
   it('routes reply externally when forwardDepth is 0', async () => {
