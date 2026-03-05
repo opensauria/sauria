@@ -27,3 +27,6 @@ packages/design-tokens/generated/
 
 # Turbo
 .turbo/
+
+# Worktrees
+.worktrees/
