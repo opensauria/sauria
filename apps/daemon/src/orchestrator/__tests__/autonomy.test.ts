@@ -59,10 +59,6 @@ const sendToAllAction: RoutingAction = {
   workspaceId: 'ws1',
   content: 'broadcast',
 };
-const escalateAction: RoutingAction = {
-  type: 'escalate',
-  summary: 'need help',
-};
 
 const allActions: RoutingAction[] = [
   replyAction,
@@ -70,7 +66,6 @@ const allActions: RoutingAction[] = [
   assignAction,
   notifyAction,
   sendToAllAction,
-  escalateAction,
 ];
 
 describe('AutonomyEnforcer', () => {
@@ -80,24 +75,22 @@ describe('AutonomyEnforcer', () => {
     it('full autonomy: all actions are immediate', () => {
       const agent = createAgent('full');
       const { immediate, pendingApproval } = enforcer.filterActions(agent, allActions);
-      expect(immediate).toHaveLength(6);
+      expect(immediate).toHaveLength(5);
       expect(pendingApproval).toHaveLength(0);
     });
 
     it('supervised autonomy: all actions are immediate', () => {
       const agent = createAgent('supervised');
       const { immediate, pendingApproval } = enforcer.filterActions(agent, allActions);
-      expect(immediate).toHaveLength(6);
+      expect(immediate).toHaveLength(5);
       expect(pendingApproval).toHaveLength(0);
     });
 
-    it('approval autonomy: reply and escalate are immediate, others pending', () => {
+    it('approval autonomy: reply is immediate, others pending', () => {
       const agent = createAgent('approval');
       const { immediate, pendingApproval } = enforcer.filterActions(agent, allActions);
-      expect(immediate).toHaveLength(2);
-      const immediateTypes = immediate.map((a) => a.type);
-      expect(immediateTypes).toContain('reply');
-      expect(immediateTypes).toContain('escalate');
+      expect(immediate).toHaveLength(1);
+      expect(immediate[0]?.type).toBe('reply');
       expect(pendingApproval).toHaveLength(4);
     });
 
@@ -105,7 +98,7 @@ describe('AutonomyEnforcer', () => {
       const agent = createAgent('manual');
       const { immediate, pendingApproval } = enforcer.filterActions(agent, allActions);
       expect(immediate).toHaveLength(0);
-      expect(pendingApproval).toHaveLength(6);
+      expect(pendingApproval).toHaveLength(5);
     });
 
     it('handles empty action list', () => {

@@ -1,7 +1,7 @@
 use serde_json::Value;
 use std::sync::atomic::{AtomicU64, Ordering};
+use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::time::{timeout, Duration};
 
@@ -17,7 +17,11 @@ type PendingMap = std::collections::HashMap<u64, oneshot::Sender<Result<Value, S
 pub struct DaemonClient {
     tx: Mutex<Option<mpsc::Sender<(u64, String)>>>,
     pending: std::sync::Arc<Mutex<PendingMap>>,
+    event_handle: Mutex<Option<AppHandle>>,
+    #[cfg(unix)]
     socket_path: String,
+    #[cfg(windows)]
+    ipc_port_path: String,
 }
 
 impl DaemonClient {
@@ -25,8 +29,16 @@ impl DaemonClient {
         Self {
             tx: Mutex::new(None),
             pending: std::sync::Arc::new(Mutex::new(std::collections::HashMap::new())),
+            event_handle: Mutex::new(None),
+            #[cfg(unix)]
             socket_path: paths.socket.to_string_lossy().to_string(),
+            #[cfg(windows)]
+            ipc_port_path: paths.ipc_port.to_string_lossy().to_string(),
         }
+    }
+
+    pub fn set_app_handle(&self, handle: AppHandle) {
+        *self.event_handle.blocking_lock() = Some(handle);
     }
 
     async fn ensure_connected(&self) -> Result<(), String> {
@@ -35,14 +47,10 @@ impl DaemonClient {
             return Ok(());
         }
 
-        let stream = timeout(CONNECT_TIMEOUT, UnixStream::connect(&self.socket_path))
-            .await
-            .map_err(|_| "Daemon connect timeout".to_string())?
-            .map_err(|e| format!("Daemon connection failed: {e}"))?;
-
-        let (reader, writer) = stream.into_split();
+        let (reader, writer) = connect_ipc(self).await?;
         let (send_tx, mut send_rx) = mpsc::channel::<(u64, String)>(64);
         let pending_for_reader = self.pending.clone();
+        let event_handle = self.event_handle.lock().await.clone();
 
         // Writer task
         tokio::spawn(async move {
@@ -63,6 +71,14 @@ impl DaemonClient {
                     continue;
                 }
                 if let Ok(msg) = serde_json::from_str::<Value>(&line) {
+                    // Push events from daemon (no id, has event field)
+                    if let Some(event_name) = msg.get("event").and_then(|v| v.as_str()) {
+                        if let Some(ref handle) = event_handle {
+                            let data = msg.get("data").cloned().unwrap_or(Value::Null);
+                            let _ = handle.emit(event_name, data);
+                        }
+                        continue;
+                    }
                     if let Some(id) = msg.get("id").and_then(|v| v.as_u64()) {
                         let mut pending = pending_for_reader.lock().await;
                         if let Some(sender) = pending.remove(&id) {
@@ -95,56 +111,100 @@ impl DaemonClient {
         Ok(())
     }
 
+    pub async fn connect(&self) -> Result<(), String> {
+        self.ensure_connected().await
+    }
+
     pub async fn request(&self, method: &str, params: Value) -> Result<Value, String> {
-        for _attempt in 0..2u8 {
-            self.ensure_connected().await?;
+        self.ensure_connected().await?;
 
-            let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-            let payload = serde_json::json!({ "id": id, "method": method, "params": params });
-            let line = match serde_json::to_string(&payload) {
-                Ok(s) => format!("{s}\n"),
-                Err(e) => return Err(e.to_string()),
-            };
+        let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+        let payload = serde_json::json!({ "id": id, "method": method, "params": params });
+        let line = format!("{}\n", serde_json::to_string(&payload).map_err(|e| e.to_string())?);
 
-            let (resp_tx, resp_rx) = oneshot::channel();
+        let (resp_tx, resp_rx) = oneshot::channel();
 
-            {
+        {
+            let mut pending = self.pending.lock().await;
+            pending.insert(id, resp_tx);
+        }
+
+        {
+            let tx_guard = self.tx.lock().await;
+            if let Some(tx) = tx_guard.as_ref() {
+                tx.send((id, line)).await.map_err(|_| {
+                    "Failed to send to daemon".to_string()
+                })?;
+            } else {
                 let mut pending = self.pending.lock().await;
-                pending.insert(id, resp_tx);
-            }
-
-            // Send the request — if the channel is dead, reset and retry
-            {
-                let mut tx_guard = self.tx.lock().await;
-                let sent = match tx_guard.as_ref() {
-                    Some(tx) => tx.send((id, line)).await.is_ok(),
-                    None => false,
-                };
-                if !sent {
-                    self.pending.lock().await.remove(&id);
-                    *tx_guard = None;
-                    continue;
-                }
-            }
-
-            // Wait for response — timeout is a hard error, channel close triggers retry
-            match timeout(REQUEST_TIMEOUT, resp_rx).await {
-                Ok(Ok(result)) => return result,
-                Ok(Err(_)) => {
-                    // Reader died (connection closed) — reset and retry
-                    let mut tx_guard = self.tx.lock().await;
-                    *tx_guard = None;
-                    continue;
-                }
-                Err(_) => {
-                    let mut pending = self.pending.lock().await;
-                    pending.remove(&id);
-                    return Err(format!("Request timeout: {method}"));
-                }
+                pending.remove(&id);
+                return Err("Not connected to daemon".to_string());
             }
         }
 
-        Err("Daemon not reachable".to_string())
+        match timeout(REQUEST_TIMEOUT, resp_rx).await {
+            Ok(Ok(result)) => result,
+            Ok(Err(_)) => Err("Response channel closed".to_string()),
+            Err(_) => {
+                let mut pending = self.pending.lock().await;
+                pending.remove(&id);
+                Err(format!("Request timeout: {method}"))
+            }
+        }
     }
 
+}
+
+// ─── Platform-specific IPC connection ────────────────────────────────────────
+
+#[cfg(unix)]
+async fn connect_ipc(
+    client: &DaemonClient,
+) -> Result<
+    (
+        tokio::io::ReadHalf<tokio::net::UnixStream>,
+        tokio::io::WriteHalf<tokio::net::UnixStream>,
+    ),
+    String,
+> {
+    use tokio::io::split;
+    use tokio::net::UnixStream;
+
+    let stream = timeout(CONNECT_TIMEOUT, UnixStream::connect(&client.socket_path))
+        .await
+        .map_err(|_| "Daemon connect timeout".to_string())?
+        .map_err(|e| format!("Daemon connection failed: {e}"))?;
+
+    Ok(split(stream))
+}
+
+#[cfg(windows)]
+async fn connect_ipc(
+    client: &DaemonClient,
+) -> Result<
+    (
+        tokio::io::ReadHalf<tokio::net::TcpStream>,
+        tokio::io::WriteHalf<tokio::net::TcpStream>,
+    ),
+    String,
+> {
+    use tokio::io::split;
+    use tokio::net::TcpStream;
+
+    let port_str = std::fs::read_to_string(&client.ipc_port_path)
+        .map_err(|e| format!("Failed to read daemon port file: {e}"))?;
+    let port: u16 = port_str
+        .trim()
+        .parse()
+        .map_err(|e| format!("Invalid daemon port: {e}"))?;
+
+    let stream = timeout(
+        CONNECT_TIMEOUT,
+        TcpStream::connect(("127.0.0.1", port)),
+    )
+    .await
+    .map_err(|_| "Daemon connect timeout".to_string())?
+    .map_err(|e| format!("Daemon connection failed: {e}"))?;
+
+    Ok(split(stream))
 }

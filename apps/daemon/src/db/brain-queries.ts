@@ -423,9 +423,10 @@ export interface BrainStats {
   readonly conversations: number;
   readonly messages: number;
   readonly facts: number;
+  readonly extractionFailures: number;
 }
 
-export function getStats(db: BetterSqlite3.Database): BrainStats {
+export function getStats(db: BetterSqlite3.Database, extractionFailures = 0): BrainStats {
   const count = (table: string): number => {
     const row = db.prepare(`SELECT COUNT(*) as total FROM ${table}`).get();
     return isCountRow(row) ? row.total : 0;
@@ -439,6 +440,7 @@ export function getStats(db: BetterSqlite3.Database): BrainStats {
     conversations: count('agent_conversations'),
     messages: count('agent_messages'),
     facts: count('agent_memory'),
+    extractionFailures,
   };
 }
 

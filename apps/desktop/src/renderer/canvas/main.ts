@@ -34,11 +34,6 @@ interface AgentNode {
   _statusType?: string;
   _animateIn?: boolean;
   _editing?: boolean;
-  capabilities?: {
-    directories?: string[];
-    tools?: string[];
-    description?: string;
-  };
 }
 
 interface Edge {
@@ -165,6 +160,103 @@ var zoomDisplay = document.getElementById('zoom-display') as HTMLSpanElement;
 var agentDetailPanel = document.getElementById('agent-detail-panel') as HTMLDivElement;
 var workspaceDetailPanel = document.getElementById('workspace-detail-panel') as HTMLDivElement;
 var wsDialogOverlay = document.getElementById('ws-dialog-overlay') as HTMLDivElement;
+var activitySvg = document.getElementById('activity-svg') as unknown as SVGSVGElement;
+var canvasLegend = document.getElementById('canvas-legend') as HTMLDivElement;
+
+/* Activity state */
+var activeNodeIds = new Set<string>();
+var edgeAnimCounts = new Map<string, number>();
+var edgeActiveCounts = new Map<string, number>();
+var legendTimer: ReturnType<typeof setTimeout> | null = null;
+
+/* Conversation panel state */
+var convPanel = document.getElementById('conversation-panel') as HTMLDivElement;
+var convMessages = document.getElementById('conv-messages') as HTMLDivElement;
+var convParticipants = document.getElementById('conv-participants') as HTMLDivElement;
+var convStatus = document.getElementById('conv-status') as HTMLDivElement;
+
+interface ConvMessage {
+  readonly id: string;
+  readonly from: string;
+  readonly fromLabel: string;
+  readonly to: string;
+  readonly toLabel: string;
+  readonly content: string;
+  readonly actionType: string;
+  readonly timestamp: string;
+}
+
+var conversationBuffer = new Map<string, ConvMessage[]>();
+var activeConvKey: string | null = null;
+var CONV_MAX_AGE_MS = 5 * 60 * 1000;
+
+/* ── Shared Edge Geometry ───────────────────── */
+var CARD_FALLBACK_W = 120;
+var CARD_FALLBACK_H = 150;
+
+interface EdgeGeometry {
+  readonly x1: number;
+  readonly y1: number;
+  readonly x2: number;
+  readonly y2: number;
+  readonly d: string;
+  readonly midX: number;
+  readonly midY: number;
+}
+
+/**
+ * Compute a Bezier curve between two nodes (bottom-center of source to top-center of target).
+ * Used by renderEdges, activity animations, and edge midpoint calculations.
+ */
+function computeEdgeGeometry(fromId: string, toId: string): EdgeGeometry | null {
+  var fromNode = graph.nodes.find(function (n) {
+    return n.id === fromId;
+  });
+  var toNode = graph.nodes.find(function (n) {
+    return n.id === toId;
+  });
+  if (!fromNode || !toNode) return null;
+
+  var fromCard = world.querySelector('[data-node-id="' + fromId + '"]') as HTMLElement | null;
+  var toCard = world.querySelector('[data-node-id="' + toId + '"]') as HTMLElement | null;
+  var fromW = fromCard ? fromCard.offsetWidth : CARD_FALLBACK_W;
+  var fromH = fromCard ? fromCard.offsetHeight : CARD_FALLBACK_H;
+  var toW = toCard ? toCard.offsetWidth : CARD_FALLBACK_W;
+
+  var x1 = fromNode.position.x + fromW / 2;
+  var y1 = fromNode.position.y + fromH;
+  var x2 = toNode.position.x + toW / 2;
+  var y2 = toNode.position.y;
+  var dy = Math.abs(y2 - y1) * 0.4;
+
+  var d =
+    'M' +
+    x1 +
+    ',' +
+    y1 +
+    ' C' +
+    x1 +
+    ',' +
+    (y1 + dy) +
+    ' ' +
+    x2 +
+    ',' +
+    (y2 - dy) +
+    ' ' +
+    x2 +
+    ',' +
+    y2;
+
+  return {
+    x1: x1,
+    y1: y1,
+    x2: x2,
+    y2: y2,
+    d: d,
+    midX: (x1 + x2) / 2,
+    midY: (y1 + y2) / 2,
+  };
+}
 
 /* Platform icons — loaded from /icons/ directory (simple-icons + lucide-static) */
 var platformIcons: Record<string, string> = {
@@ -639,7 +731,7 @@ function renderNodes() {
         '<span class="platform-badge owner">YOU</span>' +
         '<div class="port port-output" data-node-id="' +
         node.id +
-        '" data-port="output" role="button" aria-label="Connect output"></div>';
+        '" data-port="output"></div>';
     } else {
       /* Connected portrait card */
       card.className = 'agent-card' + (node.id === selectedNodeId ? ' selected' : '');
@@ -670,13 +762,18 @@ function renderNodes() {
         '</span>' +
         '<div class="port port-input" data-node-id="' +
         node.id +
-        '" data-port="input" role="button" aria-label="Connect input"></div>' +
+        '" data-port="input"></div>' +
         '<div class="port port-output" data-node-id="' +
         node.id +
-        '" data-port="output" role="button" aria-label="Connect output"></div>';
+        '" data-port="output"></div>';
     }
 
     world.appendChild(card);
+
+    /* Restore active state from in-memory set */
+    if (activeNodeIds.has(node.id)) {
+      card.classList.add('node-active');
+    }
 
     /* Drop-in animation */
     if (node._animateIn) {
@@ -786,53 +883,421 @@ function renderEdges() {
     hoveredEdgeId = null;
   }
 
+  var defs = '';
   var paths = '';
   graph.edges.forEach(function (edge) {
-    var fromNode = graph.nodes.find(function (n) {
-      return n.id === edge.from;
-    });
-    var toNode = graph.nodes.find(function (n) {
-      return n.id === edge.to;
-    });
-    if (!fromNode || !toNode) return;
+    var geo = computeEdgeGeometry(edge.from, edge.to);
+    if (!geo) return;
 
-    /* Org chart: bottom-center of parent -> top-center of child */
-    var fromCard = world.querySelector('[data-node-id="' + edge.from + '"]') as HTMLElement | null;
-    var toCard = world.querySelector('[data-node-id="' + edge.to + '"]') as HTMLElement | null;
-    var fromW = fromCard ? fromCard.offsetWidth : 120;
-    var fromH = fromCard ? fromCard.offsetHeight : 150;
-    var toW = toCard ? toCard.offsetWidth : 120;
+    /* Per-edge gradient: brighter at source, dimmer at target */
+    var gid = 'eg-' + edge.id;
+    defs +=
+      '<linearGradient id="' +
+      gid +
+      '" gradientUnits="userSpaceOnUse" x1="' +
+      geo.x1 +
+      '" y1="' +
+      geo.y1 +
+      '" x2="' +
+      geo.x2 +
+      '" y2="' +
+      geo.y2 +
+      '">' +
+      '<stop offset="0%" stop-color="rgba(255,255,255,0.16)" />' +
+      '<stop offset="100%" stop-color="rgba(255,255,255,0.04)" />' +
+      '</linearGradient>';
 
-    var x1 = fromNode.position.x + fromW / 2;
-    var y1 = fromNode.position.y + fromH;
-    var x2 = toNode.position.x + toW / 2;
-    var y2 = toNode.position.y;
-
-    var dy = Math.abs(y2 - y1) * 0.4;
-    var d =
-      'M' +
-      x1 +
-      ',' +
-      y1 +
-      ' C' +
-      x1 +
-      ',' +
-      (y1 + dy) +
-      ' ' +
-      x2 +
-      ',' +
-      (y2 - dy) +
-      ' ' +
-      x2 +
-      ',' +
-      y2;
-
-    /* Hit-area path first (wide, invisible, interactive), then visible path */
-    paths += '<path class="edge-hit" data-edge-id="' + edge.id + '" d="' + d + '" />';
-    paths += '<path d="' + d + '" />';
+    /* Hit-area, gradient line, animated flow overlay — wrapped in a group */
+    paths += '<g class="edge-group" data-edge-id="' + edge.id + '">';
+    paths += '<path class="edge-hit" data-edge-id="' + edge.id + '" d="' + geo.d + '" />';
+    paths += '<path class="edge-line" d="' + geo.d + '" stroke="url(#' + gid + ')" />';
+    paths += '<path class="edge-flow" d="' + geo.d + '" />';
+    paths += '</g>';
   });
-  edgeSvg.innerHTML = paths;
+  edgeSvg.innerHTML = '<defs>' + defs + '</defs>' + paths;
 }
+
+/* ═══════════════════════════════════════════════
+   Activity Animations
+   ═══════════════════════════════════════════════ */
+
+var MAX_EDGE_ANIMS = 3;
+var ANIM_DURATION_MS = 800;
+var BUBBLE_LINGER_MS = 2500;
+var NODE_IDLE_TIMEOUT_MS = 30_000;
+var LEGEND_FADE_MS = 10_000;
+
+function animateEdgeTravel(fromId: string, toId: string, preview: string): void {
+  if (!activitySvg) return;
+
+  /* Self-loop (reply): just pulse the node, no dot animation */
+  if (fromId === toId) return;
+
+  var edgeKey = fromId + '->' + toId;
+  var currentCount = edgeAnimCounts.get(edgeKey) || 0;
+  if (currentCount >= MAX_EDGE_ANIMS) return;
+  edgeAnimCounts.set(edgeKey, currentCount + 1);
+
+  /* Find matching edge in both directions and activate its SVG group */
+  var matchedEdge = graph.edges.find(function (e) {
+    return (e.from === fromId && e.to === toId) || (e.from === toId && e.to === fromId);
+  });
+  var isReverse = matchedEdge ? matchedEdge.from !== fromId : false;
+  var edgeGroupEl: Element | null = null;
+  if (matchedEdge) {
+    edgeGroupEl = edgeSvg.querySelector('[data-edge-id="' + matchedEdge.id + '"].edge-group');
+    if (edgeGroupEl) {
+      edgeGroupEl.classList.add('edge-active');
+      var activeCount = (edgeActiveCounts.get(matchedEdge.id) || 0) + 1;
+      edgeActiveCounts.set(matchedEdge.id, activeCount);
+    }
+  }
+
+  /* Compute geometry using edge's canonical direction so dot follows the curve */
+  var geoFrom = isReverse ? toId : fromId;
+  var geoTo = isReverse ? fromId : toId;
+  var geo = computeEdgeGeometry(geoFrom, geoTo);
+  if (!geo) {
+    edgeAnimCounts.set(edgeKey, (edgeAnimCounts.get(edgeKey) || 1) - 1);
+    if (matchedEdge && edgeGroupEl) {
+      var cnt = (edgeActiveCounts.get(matchedEdge.id) || 1) - 1;
+      edgeActiveCounts.set(matchedEdge.id, cnt);
+      if (cnt <= 0) edgeGroupEl.classList.remove('edge-active');
+    }
+    return;
+  }
+
+  /* Create temp path for getPointAtLength */
+  var ns = 'http://www.w3.org/2000/svg';
+  var tempPath = document.createElementNS(ns, 'path') as SVGPathElement;
+  tempPath.setAttribute('d', geo.d);
+  tempPath.setAttribute('fill', 'none');
+  tempPath.setAttribute('stroke', 'none');
+  activitySvg.appendChild(tempPath);
+  var totalLength = tempPath.getTotalLength();
+
+  /* Traveling dot — color set via CSS class, not hardcoded */
+  var circle = document.createElementNS(ns, 'circle');
+  circle.setAttribute('r', '4');
+  circle.classList.add('activity-dot');
+  circle.setAttribute('filter', 'url(#activity-glow)');
+  activitySvg.appendChild(circle);
+
+  /* Floating bubble */
+  var bubble = document.createElement('div');
+  bubble.className = 'activity-bubble';
+  bubble.textContent = preview;
+  bubble.style.left = geo.midX + 'px';
+  bubble.style.top = geo.midY + 'px';
+  bubble.addEventListener('click', function () {
+    openConversationPanel(fromId, toId);
+  });
+  world.appendChild(bubble);
+
+  var startTime = performance.now();
+  var bubbleShown = false;
+  var bubbleHidden = false;
+
+  function step(now: number): void {
+    var elapsed = now - startTime;
+    var t = Math.min(elapsed / ANIM_DURATION_MS, 1);
+    /* Ease-out cubic */
+    var eased = 1 - Math.pow(1 - t, 3);
+    var point = tempPath.getPointAtLength(isReverse ? (1 - eased) * totalLength : eased * totalLength);
+    circle.setAttribute('cx', String(point.x));
+    circle.setAttribute('cy', String(point.y));
+
+    /* Show bubble at ~30% travel */
+    if (!bubbleShown && t >= 0.3) {
+      bubble.classList.add('visible');
+      bubbleShown = true;
+    }
+
+    if (t < 1) {
+      requestAnimationFrame(step);
+    } else {
+      cleanup();
+    }
+  }
+
+  function cleanup(): void {
+    circle.remove();
+    tempPath.remove();
+    edgeAnimCounts.set(edgeKey, (edgeAnimCounts.get(edgeKey) || 1) - 1);
+
+    /* Deactivate edge glow when last animation finishes */
+    if (matchedEdge && edgeGroupEl) {
+      var remaining = (edgeActiveCounts.get(matchedEdge.id) || 1) - 1;
+      edgeActiveCounts.set(matchedEdge.id, remaining);
+      if (remaining <= 0) edgeGroupEl.classList.remove('edge-active');
+    }
+
+    /* Fade bubble after linger */
+    if (!bubbleHidden) {
+      bubbleHidden = true;
+      setTimeout(function () {
+        bubble.classList.remove('visible');
+        setTimeout(function () {
+          bubble.remove();
+        }, 300);
+      }, BUBBLE_LINGER_MS);
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
+var nodeIdleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function setNodeActivityState(nodeId: string, state: string): void {
+  /* Clear existing auto-idle timer */
+  var existing = nodeIdleTimers.get(nodeId);
+  if (existing) clearTimeout(existing);
+
+  if (state === 'active') {
+    activeNodeIds.add(nodeId);
+    /* Safety: auto-idle after timeout */
+    nodeIdleTimers.set(
+      nodeId,
+      setTimeout(function () {
+        activeNodeIds.delete(nodeId);
+        applyNodeActiveClass(nodeId, false);
+        nodeIdleTimers.delete(nodeId);
+      }, NODE_IDLE_TIMEOUT_MS),
+    );
+  } else {
+    activeNodeIds.delete(nodeId);
+    nodeIdleTimers.delete(nodeId);
+  }
+
+  applyNodeActiveClass(nodeId, state === 'active');
+}
+
+function applyNodeActiveClass(nodeId: string, active: boolean): void {
+  var card = world.querySelector('[data-node-id="' + nodeId + '"]') as HTMLElement | null;
+  if (!card) return;
+  if (active) {
+    card.classList.add('node-active');
+    if (!card.querySelector('.glow-ring')) {
+      var ring = document.createElement('div');
+      ring.className = 'glow-ring';
+      var mask = document.createElement('div');
+      mask.className = 'glow-ring-mask';
+      ring.appendChild(mask);
+      card.prepend(ring);
+    }
+  } else {
+    card.classList.remove('node-active');
+    var existingRing = card.querySelector('.glow-ring');
+    if (existingRing) existingRing.remove();
+  }
+}
+
+function showLegend(): void {
+  if (!canvasLegend) return;
+  canvasLegend.classList.add('visible');
+
+  if (legendTimer) clearTimeout(legendTimer);
+  legendTimer = setTimeout(function () {
+    canvasLegend.classList.remove('visible');
+    legendTimer = null;
+  }, LEGEND_FADE_MS);
+}
+
+/* Activity event listeners */
+listen<{ from: string; to: string; actionType: string; preview: string }>(
+  'activity:edge',
+  function (e) {
+    animateEdgeTravel(e.payload.from, e.payload.to, e.payload.preview);
+    showLegend();
+  },
+);
+
+listen<{ nodeId: string; state: string }>('activity:node', function (e) {
+  setNodeActivityState(e.payload.nodeId, e.payload.state);
+  showLegend();
+
+  /* Update conversation panel status when nodes go idle */
+  if (activeConvKey && e.payload.state === 'idle') {
+    var parts = activeConvKey.split('|');
+    var fromActive = activeNodeIds.has(parts[0]);
+    var toActive = activeNodeIds.has(parts[1]);
+    if (!fromActive && !toActive) {
+      convStatus.textContent = 'Processing complete';
+      convStatus.classList.add('idle');
+    }
+  }
+});
+
+/* Activity message listener — conversation panel */
+listen<ConvMessage>('activity:message', function (e) {
+  var msg = e.payload;
+  var key = convKey(msg.from, msg.to);
+
+  if (!conversationBuffer.has(key)) {
+    conversationBuffer.set(key, []);
+  }
+  conversationBuffer.get(key)!.push(msg);
+
+  /* If this conversation is open, append live */
+  if (activeConvKey === key) {
+    appendConversationMessage(msg);
+  }
+
+  purgeOldConversations();
+});
+
+/* ── Conversation Panel Functions ──────────── */
+
+function convKey(a: string, b: string): string {
+  return a < b ? a + '|' + b : b + '|' + a;
+}
+
+function buildParticipant(node: AgentNode | undefined): string {
+  if (!node) return '<span class="conv-participant-name">Unknown</span>';
+  var photoHtml = node.photo
+    ? '<div class="conv-participant-avatar"><img src="' + node.photo + '" alt="" /></div>'
+    : '<div class="conv-participant-avatar">' + (platformIcons[node.platform] || '') + '</div>';
+  return (
+    '<div class="conv-participant">' +
+    photoHtml +
+    '<span class="conv-participant-name">' +
+    escapeHtml(node.label) +
+    '</span></div>'
+  );
+}
+
+function openConversationPanel(fromId: string, toId: string): void {
+  var key = convKey(fromId, toId);
+  activeConvKey = key;
+
+  closeAgentDetail();
+  closeWorkspaceDetail();
+
+  var fromNode = graph.nodes.find(function (n) {
+    return n.id === fromId;
+  });
+  var toNode = graph.nodes.find(function (n) {
+    return n.id === toId;
+  });
+  convParticipants.innerHTML =
+    buildParticipant(fromNode) +
+    '<span class="conv-separator">&middot;</span>' +
+    buildParticipant(toNode);
+
+  renderConversationMessages(key);
+
+  var fromActive = activeNodeIds.has(fromId);
+  var toActive = activeNodeIds.has(toId);
+  if (fromActive || toActive) {
+    convStatus.textContent = 'Processing...';
+    convStatus.classList.remove('idle');
+  } else {
+    convStatus.textContent = 'Processing complete';
+    convStatus.classList.add('idle');
+  }
+
+  convPanel.classList.add('open');
+}
+
+function closeConversationPanel(): void {
+  convPanel.classList.remove('open');
+  activeConvKey = null;
+}
+
+function buildMsgBubbleHtml(msg: ConvMessage, side: string): string {
+  var node = graph.nodes.find(function (n) {
+    return n.id === msg.from;
+  });
+  var avatarHtml = '';
+  if (node?.photo) {
+    avatarHtml =
+      '<div class="conv-msg-avatar"><img src="' + escapeHtml(node.photo) + '" alt="" /></div>';
+  } else {
+    var icon = node ? platformIcons[node.platform] || '' : '';
+    avatarHtml =
+      '<div class="conv-msg-avatar"><div class="conv-msg-avatar-icon">' + icon + '</div></div>';
+  }
+
+  return (
+    '<div class="conv-msg-row ' +
+    side +
+    '">' +
+    avatarHtml +
+    '<div class="conv-msg-bubble">' +
+    '<div class="conv-msg-sender">' +
+    escapeHtml(msg.fromLabel) +
+    '</div>' +
+    '<div class="conv-msg-content">' +
+    escapeHtml(msg.content) +
+    '</div>' +
+    '<div class="conv-msg-footer">' +
+    '<span class="conv-msg-type-badge">' +
+    escapeHtml(msg.actionType) +
+    '</span>' +
+    '<span class="conv-msg-time">' +
+    formatTime(msg.timestamp) +
+    '</span>' +
+    '</div>' +
+    '</div>' +
+    '</div>'
+  );
+}
+
+function renderConversationMessages(key: string): void {
+  var messages = conversationBuffer.get(key) || [];
+  if (messages.length === 0) {
+    convMessages.innerHTML =
+      '<div class="conv-empty">Messages will appear here when agents communicate on this edge.</div>';
+    return;
+  }
+  var firstNodeId = key.split('|')[0];
+  convMessages.innerHTML = messages
+    .map(function (msg) {
+      var side = msg.from === firstNodeId ? 'from' : 'to';
+      return buildMsgBubbleHtml(msg, side);
+    })
+    .join('');
+  convMessages.scrollTop = convMessages.scrollHeight;
+}
+
+function appendConversationMessage(msg: ConvMessage): void {
+  var key = activeConvKey!;
+  var firstNodeId = key.split('|')[0];
+  var side = msg.from === firstNodeId ? 'from' : 'to';
+
+  var emptyMsg = convMessages.querySelector('.conv-empty');
+  if (emptyMsg) emptyMsg.remove();
+
+  var wrapper = document.createElement('div');
+  wrapper.innerHTML = buildMsgBubbleHtml(msg, side);
+  var row = wrapper.firstElementChild;
+  if (row) convMessages.appendChild(row);
+  convMessages.scrollTop = convMessages.scrollHeight;
+
+  convStatus.textContent = 'Processing...';
+  convStatus.classList.remove('idle');
+}
+
+function purgeOldConversations(): void {
+  var now = Date.now();
+  for (var [key, msgs] of conversationBuffer) {
+    var last = msgs[msgs.length - 1];
+    if (last && now - new Date(last.timestamp).getTime() > CONV_MAX_AGE_MS) {
+      conversationBuffer.delete(key);
+    }
+  }
+}
+
+function formatTime(iso: string): string {
+  var d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+(document.getElementById('conv-panel-close') as HTMLButtonElement).addEventListener(
+  'click',
+  closeConversationPanel,
+);
 
 /* ═══════════════════════════════════════════════
    Pan & Zoom
@@ -1030,9 +1495,22 @@ document.addEventListener('mouseup', function (e) {
     renderWorkspaces();
     saveGraph();
 
-    /* Click (not drag): open agent detail panel */
+    /* Click (not drag): open conversation panel if node active, else agent detail */
     if (dragDist < 5 && clickedNodeId) {
-      openAgentDetail(clickedNodeId);
+      if (activeNodeIds.has(clickedNodeId)) {
+        var foundConv = false;
+        for (var [ck] of conversationBuffer) {
+          if (ck.includes(clickedNodeId) && conversationBuffer.get(ck)!.length > 0) {
+            var ckParts = ck.split('|');
+            openConversationPanel(ckParts[0], ckParts[1]);
+            foundConv = true;
+            break;
+          }
+        }
+        if (!foundConv) openAgentDetail(clickedNodeId);
+      } else {
+        openAgentDetail(clickedNodeId);
+      }
     }
   }
   if (isEdgeDragging) {
@@ -1212,8 +1690,8 @@ function startEdgeDrag(port: HTMLElement, e: MouseEvent) {
   if (!fromNode) return;
 
   var fromCard = world.querySelector('[data-node-id="' + edgeFromId + '"]') as HTMLElement | null;
-  var fromW = fromCard ? fromCard.offsetWidth : 120;
-  var fromH = fromCard ? fromCard.offsetHeight : 150;
+  var fromW = fromCard ? fromCard.offsetWidth : CARD_FALLBACK_W;
+  var fromH = fromCard ? fromCard.offsetHeight : CARD_FALLBACK_H;
   edgeDragOrigin.x = fromNode.position.x + fromW / 2;
   edgeDragOrigin.y = fromNode.position.y + fromH;
 
@@ -1451,7 +1929,10 @@ cfTrack.addEventListener('click', function (e) {
 /* Dock collapse/expand toggle */
 var dockToggle = document.getElementById('dock-toggle') as HTMLButtonElement;
 var canvasToolbar = document.getElementById('toolbar') as HTMLDivElement;
-var isDockCollapsed = false;
+var isDockCollapsed = true;
+cfDock.classList.add('collapsed');
+dockToggle.classList.add('collapsed');
+canvasToolbar.classList.add('dock-hidden');
 function toggleDock() {
   isDockCollapsed = !isDockCollapsed;
   cfDock.classList.toggle('collapsed', isDockCollapsed);
@@ -1477,25 +1958,9 @@ function getEdgeMidpoint(edgeId: string): { x: number; y: number } | null {
     return e.id === edgeId;
   });
   if (!edge) return null;
-  var edgeFrom = edge.from;
-  var edgeTo = edge.to;
-  var fromNode = graph.nodes.find(function (n) {
-    return n.id === edgeFrom;
-  });
-  var toNode = graph.nodes.find(function (n) {
-    return n.id === edgeTo;
-  });
-  if (!fromNode || !toNode) return null;
-  var fromCard = world.querySelector('[data-node-id="' + edge.from + '"]') as HTMLElement | null;
-  var toCard = world.querySelector('[data-node-id="' + edge.to + '"]') as HTMLElement | null;
-  var fromW = fromCard ? fromCard.offsetWidth : 120;
-  var fromH = fromCard ? fromCard.offsetHeight : 150;
-  var toW = toCard ? toCard.offsetWidth : 120;
-  var x1 = fromNode.position.x + fromW / 2;
-  var y1 = fromNode.position.y + fromH;
-  var x2 = toNode.position.x + toW / 2;
-  var y2 = toNode.position.y;
-  return { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
+  var geo = computeEdgeGeometry(edge.from, edge.to);
+  if (!geo) return null;
+  return { x: geo.midX, y: geo.midY };
 }
 
 edgeSvg.addEventListener('mouseover', function (e) {
@@ -1521,6 +1986,18 @@ edgeSvg.addEventListener('mouseout', function (e) {
   }, 300);
 });
 
+edgeSvg.addEventListener('click', function (e) {
+  var hit = (e.target as HTMLElement).closest('.edge-hit') as HTMLElement | null;
+  if (!hit) return;
+  var edgeId = hit.dataset.edgeId;
+  if (!edgeId) return;
+  var edge = graph.edges.find(function (ed) {
+    return ed.id === edgeId;
+  });
+  if (!edge) return;
+  openConversationPanel(edge.from, edge.to);
+});
+
 edgeDeleteBtn.addEventListener('mouseenter', function () {
   if (edgeHideTimeout) clearTimeout(edgeHideTimeout);
 });
@@ -1532,63 +2009,18 @@ edgeDeleteBtn.addEventListener('mouseleave', function () {
   }, 200);
 });
 
-/* ── Edge Delete Confirmation ──────────────── */
-var edgeDeleteOverlay = document.getElementById('edge-delete-overlay')!;
-var edgeDeleteCancelBtn = document.getElementById('edge-delete-cancel')!;
-var edgeDeleteConfirmBtn = document.getElementById('edge-delete-confirm')!;
-var edgeDeleteText = document.getElementById('edge-delete-text')!;
-var pendingDeleteEdgeId: string | null = null;
-
-function showEdgeDeleteDialog(edgeId: string): void {
-  var edge = graph.edges.find(function (e) {
-    return e.id === edgeId;
-  });
-  if (!edge) return;
-  var fromNode = graph.nodes.find(function (n) {
-    return n.id === edge!.from;
-  });
-  var toNode = graph.nodes.find(function (n) {
-    return n.id === edge!.to;
-  });
-  var fromName = fromNode ? fromNode.label || fromNode.platform : 'Unknown';
-  var toName = toNode ? toNode.label || toNode.platform : 'Unknown';
-  edgeDeleteText.textContent = 'Remove the connection between ' + fromName + ' and ' + toName + '?';
-  pendingDeleteEdgeId = edgeId;
-  edgeDeleteOverlay.classList.add('open');
-  edgeDeleteConfirmBtn.focus();
-}
-
-function hideEdgeDeleteDialog(): void {
-  edgeDeleteOverlay.classList.remove('open');
-  pendingDeleteEdgeId = null;
-}
-
-edgeDeleteCancelBtn.addEventListener('click', hideEdgeDeleteDialog);
-
-edgeDeleteConfirmBtn.addEventListener('click', function () {
-  if (!pendingDeleteEdgeId) return;
-  graph.edges = graph.edges.filter(function (edge) {
-    return edge.id !== pendingDeleteEdgeId;
-  });
-  hideEdgeDeleteDialog();
-  edgeDeleteBtn.classList.remove('visible');
-  hoveredEdgeId = null;
-  renderEdges();
-  saveGraph();
-});
-
-edgeDeleteOverlay.addEventListener('click', function (e) {
-  if (e.target === edgeDeleteOverlay) hideEdgeDeleteDialog();
-});
-
 edgeDeleteBtn.addEventListener('click', function (e) {
   e.stopPropagation();
   e.preventDefault();
   var edgeId = edgeDeleteBtn.dataset.edgeId;
   if (!edgeId) return;
+  graph.edges = graph.edges.filter(function (edge) {
+    return edge.id !== edgeId;
+  });
   edgeDeleteBtn.classList.remove('visible');
   hoveredEdgeId = null;
-  showEdgeDeleteDialog(edgeId);
+  renderEdges();
+  saveGraph();
 });
 
 /* ═══════════════════════════════════════════════
@@ -1730,9 +2162,8 @@ world.addEventListener('click', function (e) {
     if (node.platform === 'owner') {
       openAgentDetail(nodeId);
     } else {
-      var gearNode = node;
       flipCard(card, function () {
-        gearNode._editing = true;
+        node!._editing = true;
         renderNodes();
       });
     }
@@ -1741,9 +2172,8 @@ world.addEventListener('click', function (e) {
   }
 
   if (action === 'close-edit') {
-    var editNode = node;
     flipCard(card, function () {
-      editNode._editing = false;
+      node!._editing = false;
       renderNodes();
     });
     e.stopPropagation();
@@ -1908,9 +2338,7 @@ document.addEventListener('keydown', function (e) {
   var isMod = e.metaKey || e.ctrlKey;
 
   if (e.key === 'Escape') {
-    if (edgeDeleteOverlay.classList.contains('open')) {
-      hideEdgeDeleteDialog();
-    } else if (wsDialogOverlay.classList.contains('open')) {
+    if (wsDialogOverlay.classList.contains('open')) {
       wsDialogOverlay.classList.remove('open');
     } else if (agentDetailPanel.classList.contains('open')) {
       closeAgentDetail();
@@ -2004,11 +2432,26 @@ function removeNode(nodeId: string) {
    ═══════════════════════════════════════════════ */
 
 var saveTimeout: ReturnType<typeof setTimeout> | null = null;
+var savedHideTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function showSavedIndicator() {
+  var footer = document.getElementById('panel-footer');
+  if (!footer) return;
+  var el = footer;
+  el.classList.add('visible');
+  if (savedHideTimeout) clearTimeout(savedHideTimeout);
+  savedHideTimeout = setTimeout(function () {
+    el.classList.remove('visible');
+  }, 2000);
+}
+
 function saveGraph() {
   graph.viewport = { x: vpX, y: vpY, zoom: vpZoom };
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(function () {
-    invoke('save_canvas_graph', { graph });
+    invoke('save_canvas_graph', { graph }).then(function () {
+      if (detailNodeId) showSavedIndicator();
+    });
   }, 300);
 }
 
@@ -2084,6 +2527,10 @@ function openAgentDetail(nodeId: string) {
   /* Populate identity */
   var identityEl = document.getElementById('agent-detail-identity') as HTMLDivElement;
   var isOwner = node.platform === 'owner';
+
+  /* Panel title */
+  var panelTitle = agentDetailPanel.querySelector('.panel-title') as HTMLSpanElement;
+  panelTitle.textContent = isOwner ? 'Owner Settings' : 'Agent Details';
   var photoHtml = isOwner
     ? node.photo
       ? '<img src="' + node.photo + '" alt="" />'
@@ -2111,6 +2558,14 @@ function openAgentDetail(nodeId: string) {
     '</div>' +
     '</div>';
 
+  /* Hide agent-only sections for owner */
+  var sectionRole = document.getElementById('section-role') as HTMLDivElement;
+  var sectionAutonomy = document.getElementById('section-autonomy') as HTMLDivElement;
+  var sectionBehavior = document.getElementById('section-behavior') as HTMLDivElement;
+  sectionRole.style.display = isOwner ? 'none' : '';
+  sectionAutonomy.style.display = isOwner ? 'none' : '';
+  sectionBehavior.style.display = isOwner ? 'none' : '';
+
   /* Role pills */
   var role = node.role || 'assistant';
   document.querySelectorAll('#agent-role-pills .role-pill').forEach(function (pill) {
@@ -2131,9 +2586,11 @@ function openAgentDetail(nodeId: string) {
     instructionsLabel.textContent = 'Communication Style (all agents)';
     instructionsTextarea.placeholder =
       'Define how all agents should respond...\n\nExample:\n- Plain text only, no markdown\n- Concise and direct\n- No emojis';
+    instructionsTextarea.classList.add('owner-instructions');
   } else {
     instructionsLabel.textContent = 'Agent Persona';
     instructionsTextarea.placeholder = "Describe this agent's role, personality, and behavior...";
+    instructionsTextarea.classList.remove('owner-instructions');
   }
   instructionsTextarea.value = node.instructions || '';
 
@@ -2143,122 +2600,59 @@ function openAgentDetail(nodeId: string) {
   setToggle('toggle-owner-response', behavior.ownerResponse !== false);
   setToggle('toggle-peer', behavior.peer === true);
 
-  /* Capabilities — hide for owner */
-  var capSection = document.getElementById('capabilities-section') as HTMLDivElement;
-  if (isOwner) {
-    capSection.style.display = 'none';
-  } else {
-    capSection.style.display = '';
-    var caps = node.capabilities || {};
-    renderCapabilityTags('cap-dirs-tags', 'cap-dirs-input', caps.directories || [], 'directories');
-    renderCapabilityTags('cap-tools-tags', 'cap-tools-input', caps.tools || [], 'tools');
-    (document.getElementById('cap-description') as HTMLTextAreaElement).value =
-      caps.description || '';
+  /* KPIs — hide for owner, fetch for agents */
+  var sectionKpis = document.getElementById('section-kpis') as HTMLDivElement;
+  var kpiGrid = document.getElementById('kpi-grid') as HTMLDivElement;
+  sectionKpis.style.display = isOwner ? 'none' : '';
+  kpiGrid.innerHTML = '';
+  if (!isOwner) {
+    loadAgentKpis(nodeId, kpiGrid);
   }
 
   agentDetailPanel.classList.add('open');
 }
 
-function renderCapabilityTags(
-  containerId: string,
-  inputId: string,
-  tags: string[],
-  field: 'directories' | 'tools',
-) {
-  var container = document.getElementById(containerId) as HTMLDivElement;
-  var input = document.getElementById(inputId) as HTMLInputElement;
-  container.querySelectorAll('.tag-item').forEach(function (t) {
-    t.remove();
-  });
-  tags.forEach(function (tag, idx) {
-    var el = document.createElement('span');
-    el.className = 'tag-item';
-    el.innerHTML =
-      escapeHtml(tag) +
-      '<button class="tag-remove" data-idx="' +
-      idx +
-      '" data-field="' +
-      field +
-      '">x</button>';
-    container.insertBefore(el, input);
-  });
-}
-
-function addCapabilityTag(inputId: string, containerId: string, field: 'directories' | 'tools') {
-  var input = document.getElementById(inputId) as HTMLInputElement;
-  var val = input.value.trim();
-  if (!val || !detailNodeId) return;
-  var node = graph.nodes.find(function (n) {
-    return n.id === detailNodeId;
-  });
-  if (!node) return;
-  if (!node.capabilities) node.capabilities = {};
-  if (!node.capabilities[field]) node.capabilities[field] = [];
-  node.capabilities[field]!.push(val);
-  input.value = '';
-  renderCapabilityTags(containerId, inputId, node.capabilities[field]!, field);
-  saveGraph();
-}
-
-/* Capability tag Enter key handlers */
-(document.getElementById('cap-dirs-input') as HTMLInputElement).addEventListener(
-  'keydown',
-  function (e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addCapabilityTag('cap-dirs-input', 'cap-dirs-tags', 'directories');
-    }
-  },
-);
-
-(document.getElementById('cap-tools-input') as HTMLInputElement).addEventListener(
-  'keydown',
-  function (e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addCapabilityTag('cap-tools-input', 'cap-tools-tags', 'tools');
-    }
-  },
-);
-
-/* Capability tag remove click delegation */
-['cap-dirs-tags', 'cap-tools-tags'].forEach(function (containerId) {
-  (document.getElementById(containerId) as HTMLDivElement).addEventListener('click', function (e) {
-    var removeBtn = (e.target as HTMLElement).closest('.tag-remove') as HTMLElement | null;
-    if (!removeBtn || !detailNodeId) return;
-    var node = graph.nodes.find(function (n) {
-      return n.id === detailNodeId;
+function loadAgentKpis(nodeId: string, container: HTMLDivElement) {
+  invoke('get_agent_kpis', { nodeId: nodeId })
+    .then(function (result: unknown) {
+      var kpis = result as {
+        messagesHandled: number;
+        tasksCompleted: number;
+        avgResponseTimeMs: number;
+        costUsd: number;
+      };
+      var items = [
+        { value: String(kpis.messagesHandled), label: 'Messages' },
+        { value: String(kpis.tasksCompleted), label: 'Tasks' },
+        {
+          value: kpis.avgResponseTimeMs > 0 ? (kpis.avgResponseTimeMs / 1000).toFixed(1) + 's' : '--',
+          label: 'Avg Response',
+        },
+        { value: kpis.costUsd > 0 ? '$' + kpis.costUsd.toFixed(2) : '--', label: 'Cost' },
+      ];
+      container.innerHTML = items
+        .map(function (item) {
+          return (
+            '<div class="kpi-item">' +
+            '<span class="kpi-value">' + item.value + '</span>' +
+            '<span class="kpi-label">' + item.label + '</span>' +
+            '</div>'
+          );
+        })
+        .join('');
+    })
+    .catch(function () {
+      container.innerHTML =
+        '<div class="kpi-item" style="grid-column: span 2; text-align: center">' +
+        '<span class="kpi-label">No data yet</span></div>';
     });
-    if (!node || !node.capabilities) return;
-    var field = removeBtn.dataset.field as 'directories' | 'tools';
-    var idx = parseInt(removeBtn.dataset.idx!, 10);
-    var arr = node.capabilities[field];
-    if (!arr) return;
-    arr.splice(idx, 1);
-    var inputId = containerId === 'cap-dirs-tags' ? 'cap-dirs-input' : 'cap-tools-input';
-    renderCapabilityTags(containerId, inputId, arr, field);
-    saveGraph();
-  });
-});
-
-/* Capability description textarea */
-(document.getElementById('cap-description') as HTMLTextAreaElement).addEventListener(
-  'input',
-  function () {
-    if (!detailNodeId) return;
-    var node = graph.nodes.find(function (n) {
-      return n.id === detailNodeId;
-    });
-    if (!node) return;
-    if (!node.capabilities) node.capabilities = {};
-    node.capabilities.description = (this as HTMLTextAreaElement).value;
-    saveGraph();
-  },
-);
+}
 
 function closeAgentDetail() {
   agentDetailPanel.classList.remove('open');
   detailNodeId = null;
+  var footer = document.getElementById('panel-footer');
+  if (footer) footer.classList.remove('visible');
 }
 
 (document.getElementById('agent-detail-close') as HTMLButtonElement).addEventListener(
@@ -2757,15 +3151,22 @@ if (isInPalette) {
 }
 
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && isInPalette) {
-    var agentPanel = document.getElementById('agent-detail-panel') as HTMLDivElement;
-    var wsPanel = document.getElementById('workspace-detail-panel') as HTMLDivElement;
-    var wsDialog = document.getElementById('ws-dialog-overlay') as HTMLDivElement;
-    if (agentPanel.classList.contains('open')) return;
-    if (wsPanel.classList.contains('open')) return;
-    if (wsDialog && wsDialog.classList.contains('open')) return;
-    e.preventDefault();
-    invoke('navigate_back');
+  if (e.key === 'Escape') {
+    /* Close conversation panel first if open */
+    if (convPanel.classList.contains('open')) {
+      closeConversationPanel();
+      return;
+    }
+    if (isInPalette) {
+      var agentPanel = document.getElementById('agent-detail-panel') as HTMLDivElement;
+      var wsPanel = document.getElementById('workspace-detail-panel') as HTMLDivElement;
+      var wsDialog = document.getElementById('ws-dialog-overlay') as HTMLDivElement;
+      if (agentPanel.classList.contains('open')) return;
+      if (wsPanel.classList.contains('open')) return;
+      if (wsDialog && wsDialog.classList.contains('open')) return;
+      e.preventDefault();
+      invoke('navigate_back');
+    }
   }
 });
 

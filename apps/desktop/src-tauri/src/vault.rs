@@ -173,4 +173,3 @@ pub fn vault_delete(paths: &Paths, name: &str) -> Result<(), String> {
 pub fn vault_exists(paths: &Paths, name: &str) -> bool {
     secret_file_path(paths, name).exists()
 }
-

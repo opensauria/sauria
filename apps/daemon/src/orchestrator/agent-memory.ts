@@ -232,7 +232,6 @@ export class AgentMemory {
     platform: string,
     groupId: string | null,
     participantNodeIds: readonly string[],
-    workspaceId?: string | null,
   ): string {
     const existing: unknown = groupId
       ? this.db
@@ -255,17 +254,25 @@ export class AgentMemory {
     const id = nanoid();
     this.db
       .prepare(
-        `INSERT INTO agent_conversations (id, platform, group_id, participant_node_ids, workspace_id)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO agent_conversations (id, platform, group_id, participant_node_ids)
+         VALUES (?, ?, ?, ?)`,
       )
-      .run(
-        id,
-        platform,
-        groupId,
-        JSON.stringify([...participantNodeIds].sort()),
-        workspaceId ?? null,
-      );
+      .run(id, platform, groupId, JSON.stringify([...participantNodeIds].sort()));
 
     return id;
+  }
+
+  clearAgentConversations(nodeId: string): void {
+    const rows = this.db
+      .prepare(
+        `SELECT id FROM agent_conversations
+         WHERE participant_node_ids LIKE ?`,
+      )
+      .all(`%${nodeId}%`) as readonly { readonly id: string }[];
+
+    for (const row of rows) {
+      this.db.prepare(`DELETE FROM agent_messages WHERE conversation_id = ?`).run(row.id);
+      this.db.prepare(`DELETE FROM agent_conversations WHERE id = ?`).run(row.id);
+    }
   }
 }

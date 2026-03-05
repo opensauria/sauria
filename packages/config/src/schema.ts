@@ -174,6 +174,14 @@ export const OpenSauriaConfigSchema = z
     }),
     owner: OwnerIdentitySchema,
     orchestrator: OrchestratorConfigSchema,
+    integrations: z
+      .record(
+        z.string(),
+        z.object({
+          enabled: z.boolean().default(false),
+        }),
+      )
+      .default({}),
   })
   .strict();
 

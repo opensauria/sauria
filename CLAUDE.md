@@ -4,7 +4,7 @@
 
 OpenSauria is a security-first personal AI operating system. It runs as a local daemon that ingests information from multiple sources (MCP servers, email, calendars), builds a persistent knowledge graph (entities, relations, events), and exposes it through channels (Telegram, Slack, WhatsApp, Discord, Email) and an MCP server.
 
-The desktop app (Electron) provides a visual canvas where users connect AI agents, draw edges between them, and orchestrate multi-agent workflows. The user is the "owner" who gives orders; agents collaborate through the orchestrator.
+The desktop app (Tauri v2) provides a visual canvas where users connect AI agents, draw edges between them, and orchestrate multi-agent workflows. The user is the "owner" who gives orders; agents collaborate through the orchestrator.
 
 ## Architecture
 
@@ -19,7 +19,7 @@ CLI (commander) ──► daemon-lifecycle.ts ──► ProactiveEngine
                                          │    └── ChannelRegistry
                                          └── Channels (Telegram, Slack, WhatsApp, Discord, Email)
 
-Desktop (Electron) ──► Canvas UI (agent cards, edges, workspaces)
+Desktop (Tauri v2) ──► Canvas UI (agent cards, edges, workspaces)
                      ├── Setup Wizard (OAuth + API key + local)
                      ├── Command Palette (provider status, Telegram mgmt)
                      └── IPC ──► vault, config, daemon management
@@ -32,8 +32,8 @@ Desktop (Electron) ──► Canvas UI (agent cards, edges, workspaces)
 - **Monorepo**: pnpm workspaces + Turborepo (`pnpm-workspace.yaml`, `turbo.json`)
 - **Database**: SQLite via `better-sqlite3` (encrypted at rest)
 - **AI Providers**: Anthropic (OAuth or API key), OpenAI, Google, Ollama (local)
-- **Desktop**: Electron + Electron Forge (no framework, vanilla HTML/CSS/JS)
-- **Build**: `tsdown` for daemon CLI bundle, Vite (via `@electron-forge/plugin-vite`) for desktop
+- **Desktop**: Tauri v2 (Rust backend, vanilla HTML/CSS/JS renderer)
+- **Build**: `tsdown` for daemon CLI bundle, Vite for desktop renderer
 - **Test**: Vitest
 - **Validation**: Zod schemas
 
@@ -60,27 +60,8 @@ apps/
       daemon-lifecycle.ts          # Start/stop daemon context
     package.json  tsconfig.json  vitest.config.ts
 
-  desktop/                         # Electron app
+  desktop/                         # Tauri v2 app
     src/
-      main/                        # Main process (decomposed from monolithic main.ts)
-        app.ts                     # Lifecycle, tray, shortcuts (~145 lines)
-        daemon-manager.ts          # Spawn, kill, health check
-        ipc-setup.ts               # Setup/configure/validate handlers
-        ipc-oauth.ts               # OAuth PKCE flow (Anthropic)
-        ipc-canvas.ts              # Canvas graph handlers
-        ipc-channels.ts            # Channel connect/disconnect
-        ipc-commands.ts            # Palette command execution
-        ipc-brain.ts               # Brain query forwarding
-        channel-connectors.ts      # Platform-specific connector functions
-        daemon-client.ts           # Unix socket client
-        owner-profile.ts           # OS profile resolution
-        mcp-detection.ts           # MCP client detection
-        local-providers.ts         # Local AI provider detection
-      preload.ts                   # Context bridge
-      window-canvas.ts             # Canvas window factory
-      window-palette.ts            # Command palette window
-      window-setup.ts              # Setup wizard window
-      window-brain.ts              # Brain knowledge window
       renderer/
         canvas/index.html          # Agent canvas (inline JS, spring physics)
         canvas/canvas.css          # Canvas styles
@@ -88,9 +69,23 @@ apps/
         setup/index.html           # Setup wizard UI
         brain/index.html           # Brain knowledge graph UI
         shared.css                 # Imports @opensauria/design-tokens + shared components
+    src-tauri/src/
+      main.rs                      # Tauri app builder, shortcut, daemon launch
+      daemon_manager.rs            # Spawn, kill, health check (cross-platform)
+      daemon_client.rs             # IPC client (Unix socket / TCP)
+      windows.rs                   # Palette window, navigation, animation
+      cmd_commands.rs              # Palette command execution
+      cmd_canvas.rs                # Canvas graph handlers
+      cmd_channels.rs              # Channel connect/disconnect
+      cmd_setup.rs                 # Setup/configure/validate
+      cmd_brain.rs                 # Brain query forwarding
+      cmd_oauth.rs                 # OAuth PKCE flow
+      vault.rs                     # Vault encryption (AES-256-GCM)
+      paths.rs                     # Cross-platform path resolution
     public/icons/                  # Brand + UI icons (copied by build script)
     scripts/copy-icons.js          # Icon build pipeline
-    package.json  forge.config.ts  vite.*.config.ts
+    scripts/copy-native-deps.js    # Native Node module staging for bundling
+    package.json  vite.config.ts
 
 packages/
   types/                           # @opensauria/types (zero deps)
@@ -146,7 +141,6 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 ### Error Handling
 
 - Never swallow errors silently
-- Never mask, suppress, or hide warnings or deprecations (no `--no-deprecation`, no `--disable-warning`, no empty catch blocks). Fix the root cause.
 - Audit logger for all channel and security events
 - `{ success: false }` pattern in audit for failures
 - Rate limiters on all inbound channels
@@ -181,7 +175,6 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - Schema applied on startup via `applySchema(db)`
 - Tables: `entities`, `relations`, `events`, `observations`, `agent_messages`, `agent_conversations`, `agent_memory`, `agent_tasks`
 - FTS5 for full-text search
-- **Migrations**: `_migrations` table tracks applied migrations. `runMigrations()` runs after `applySchema()`. Indexes on new columns must be created inside the migration (after `ALTER TABLE`), not in `SCHEMA_SQL` — existing DBs would crash on `CREATE INDEX` for columns that don't exist yet.
 - **Embeddings**: `apps/daemon/src/ai/embeddings.ts` imports `@huggingface/transformers` but the package was removed from `package.json`. Semantic search is broken until embeddings are migrated (to local Python model or re-added as dependency).
 
 ### Channels
@@ -195,27 +188,67 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 
 - `CanvasGraph` (v2) is the source of truth: nodes, edges, workspaces
 - Graph stored at `~/.opensauria/canvas.json`, read by daemon on startup
-- `MessageQueue` provides owner priority (unshift), graceful backpressure (never throws, evicts tail for owner messages), and `onError` callback
+- `MessageQueue` provides owner priority (unshift) and backpressure
 - `evaluateEdgeRules()` for deterministic routing, `LLMRoutingBrain` for intelligent routing
 - `AutonomyEnforcer` filters actions based on agent autonomy level
 - `ChannelRegistry` maps nodeId to channel instances
-- **LLM Timeout**: `callLLM()` uses `Promise.race` with 30s timeout — prevents queue slots from being blocked forever
-- **LLM Failure Fallback**: on LLM error, sends fallback reply to sender + escalates to owner (unless sender is owner). Internal messages route fallback back through the chain.
-- **Prompt Token Cap**: `MAX_PROMPT_TOKENS = 4000`. Soft sections (workspace facts, agent facts, knowledge graph, peer messages) truncated first if over budget. Core sections (action schema, agents, hierarchy, history) never truncated.
-- **DelegationTracker**: `delegation-tracker.ts` tracks `agent_tasks` deadlines (critical=30min, high=2h, normal=8h, low=24h). `sweepOverdueDelegations()` runs every 5min, auto-escalates overdue tasks to owner.
-- **EscalationManager**: `findPendingForChannel(sourceNodeId)` matches escalations by channel, not just most-recent globally. Prevents misrouting when multiple agents escalate concurrently.
 
 ### Agent Collaboration
 
-- **Internal Reply Routing**: `reply` action on internally-forwarded messages checks `registry.get(sourceNodeId)` — if the node has a registered external channel (e.g. Telegram bot), it replies directly to the owner on that channel. If no channel, routes back through the forwarding chain. This means any agent with a channel can contact the owner directly, regardless of hierarchy position.
-- **Action Semantics**: `reply` = talk to owner (via own channel or back through chain). `forward` = talk to another agent internally. The LLM decides which action to use based on context — never inject explicit bot names or routing hints in prompts.
-- **Forwarded Reply Context**: when replying to a forwarded message, the LLM is instructed to briefly state who asked and what for at the start of the reply, so the owner has context (e.g. "Kyra asked me to check X — here's what I found").
 - **Shared Conversation Window**: forwards/notifies enriched with N most recent messages from source conversation (~150-200 tokens). `AgentMemory.getRecentMessagesForContext()` provides formatted context.
 - **Workspace Memory Pool**: `agent_memory` table has `workspace_id` column. `AgentMemory.getWorkspaceFacts()` retrieves facts scoped to a workspace. LLM routing prompt injects up to 5 workspace facts (~100 tokens).
-- **Peer Messages in Routing**: `buildRoutingPrompt()` includes recent messages from other nodes in the same workspace (up to 3 peer messages, ~100 tokens). Total additional overhead: ~350-400 tokens per routing decision.
+- **Peer Messages in Routing**: `buildRoutingPrompt()` includes recent messages from other nodes in the same workspace (~100 tokens). Total additional overhead: ~350-400 tokens per routing decision (negligible vs base ~2000-4000).
 - **Graph Persistence**: owner commands (`promote`, `reassign`, `fire`, `pause`) persist mutations to `canvas.json` via `persistGraph()`.
-- **Hop Limit**: `MAX_INTERNAL_HOPS = 5` prevents infinite loops in internal agent-to-agent routing.
+- **Inter-agent isolation**: `forward`, `notify`, `send_to_all`, `group_message` route via `handleInbound()` (internal). Only owner-agent communication uses `registry.sendTo()` (external channels).
 - Design doc: `docs/plans/2026-02-19-multi-agent-collaboration-design.md`
+
+### Routing Logic (CRITICAL — read before touching orchestrator or llm-router)
+
+#### LLM Prompt: Agent List MUST Include Node IDs
+
+`buildRoutingPrompt()` in `llm-router.ts` lists team agents with their `nodeId`:
+```
+- @karl_bot (specialist) [nodeId: "abc123"] on telegram
+```
+Without node IDs, the LLM cannot construct valid `forward` actions (requires `targetNodeId`), and all forwards get filtered out → agents fall back to `reply` and fabricate responses instead of delegating. **NEVER remove node IDs from the agent list.**
+
+#### LLM Prompt: Delegation and Reply Semantics
+
+Two critical prompt instructions in `llm-router.ts`:
+- **DELEGATION**: When the owner mentions another agent by name, the current agent MUST `forward` to that agent. Never fabricate what another agent would say.
+- **REPLY vs FORWARD**: `reply` sends directly to the owner on the agent's own channel. `forward` sends internally to another agent. These are NOT interchangeable.
+
+#### Reply Routing: Channel-Based Autonomy
+
+`executeAction('reply', ...)` in `orchestrator.ts` follows this logic:
+
+```
+Agent receives forwarded message (forwardDepth > 0, replyToNodeId ≠ sourceNodeId)?
+  ├── Agent HAS own channel (registry.get(sourceNodeId)) → reply directly to owner via own channel
+  └── Agent has NO channel → route internally back to forwarding agent via handleInbound()
+Agent received direct message (forwardDepth = 0) → reply via own channel (normal path)
+```
+
+**Key invariant**: agents with their own external channel (Telegram bot, etc.) are autonomous — they reply directly to the owner. Only channel-less compute nodes route back through the forwarding chain.
+
+#### Forward Action: Always Internal
+
+`forward`, `notify`, `send_to_all`, `group_message` always create a synthetic `InboundMessage` and call `handleInbound()` (internal routing). They NEVER call `registry.sendTo()` (external channel). This keeps inter-agent communication inside the orchestrator.
+
+#### Forward Depth Protection
+
+- `forwardDepth` increments on each `forward` action
+- `MAX_FORWARD_DEPTH = 3` — `handleInbound()` drops messages at this depth
+- Forwarded replies preserve depth (don't increment) — only new forwards increment
+- This gives ~3 rounds of agent-to-agent debate before the chain stops
+
+#### Edge Animation: Bidirectional Matching
+
+`animateEdgeTravel()` in `canvas/main.ts` matches edges in BOTH directions:
+```ts
+graph.edges.find(e => (e.from === fromId && e.to === toId) || (e.from === toId && e.to === fromId))
+```
+For reverse messages (reply B→A on edge A→B), the dot travels `totalLength→0` along the edge's canonical curve. Edge glow activates for both directions.
 
 ### Voice Transcription
 
@@ -307,31 +340,93 @@ Desktop `shared.css` imports via `@import '@opensauria/design-tokens/tokens.css'
 - Desktop manages daemon spawn with `daemonStarting` guard and `restartDaemon()`
 - `restartDaemon()` waits for old process to exit before spawning new one
 - ProactiveEngine errors are caught (best-effort, non-fatal)
+- Daemon writes JSON status line to stdout on startup: `{"status":"ready"}` or `{"status":"error","message":"..."}`
+- `startIpcServer()` is async — awaits socket readiness before signaling "ready"
 
-## Electron Build
+## Tauri Build
 
-- Entry point: `apps/desktop/src/main/app.ts` (thin lifecycle orchestrator)
-- Vite bundles main, preload, and renderer via `@electron-forge/plugin-vite`
-- `assets/icon.icns` is missing, so `electron-forge make` (DMG) fails — use `package` instead
-- Dev: `cd apps/desktop && pnpm dev` (icons + electron-forge start with Vite HMR)
-- Package: `cd apps/desktop && pnpm run package`
-- Always kill all Electron processes before restart (see memory notes)
-- Daemon bundle must be rebuilt separately: `pnpm -F opensauria-daemon build`
+- Entry point: `apps/desktop/src-tauri/src/main.rs` → Tauri app builder
+- Vite builds renderer to `apps/desktop/dist/` (configured in `tauri.conf.json` → `build.frontendDist`)
+- `tauri.conf.json` is at `apps/desktop/src-tauri/tauri.conf.json`
+- Dev: `pnpm -F opensauria-desktop dev` (Vite HMR + Tauri dev server)
+- Build: `pnpm -r build` only builds packages/daemon (Turborepo may cache desktop). For a **full production build** always run explicitly: `cd apps/desktop && pnpm run build` — this runs Vite + Rust compilation + `.app` bundling
+- **NEVER manually patch files inside `/Applications/OpenSauria.app/`** — always do a full `tauri build` and replace the entire `.app`. Manual patching leads to frontend/daemon version mismatch.
+- After build, install: `rm -rf /Applications/OpenSauria.app && cp -R apps/desktop/src-tauri/target/release/bundle/macos/OpenSauria.app /Applications/OpenSauria.app`
+- Always kill all processes before restart: `pkill -9 -f "opensauria"; pkill -9 -f "OpenSauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9`
 - Renderer files live in `apps/desktop/src/renderer/{canvas,palette,setup,brain}/`
 - Icons are static assets in `apps/desktop/public/icons/` (served at `/icons/`)
+
+### Daemon Bundling (CRITICAL)
+
+- Tauri does NOT auto-include the Node.js daemon — it only bundles Rust binary + frontend assets
+- The daemon JS bundle (`apps/daemon/dist/`) MUST be declared in `tauri.conf.json` → `bundle.resources`
+- Resources land in `Contents/Resources/` on macOS
+- Use `app.path().resolve("daemon/index.mjs", BaseDirectory::Resource)` in Rust to resolve at runtime
+- `DaemonState` receives the resolved path from `AppHandle` after Tauri setup (not at construction)
+- Dev mode fallback: daemon dist is at its normal monorepo path (`../../daemon/dist/index.mjs`)
+- Error signature when broken: `daemon.err` shows `Cannot find module '/opensauria'`
+
+### tsdown Config (CRITICAL)
+
+- `tsdown.config.ts` MUST use `noExternal: [/.*/]` to inline ALL dependencies (npm + workspace)
+- `external: ['better-sqlite3']` — only native `.node` modules stay external
+- Without `noExternal: [/.*/]`, npm deps (zod, grammy, commander, etc.) remain as imports → crash in bundled `.app`
+- NEVER change to `noExternal: ['@opensauria/*']` — that only inlines workspace packages
+
+### Native Node Module Bundling
+
+- `better-sqlite3` has a native `.node` binding that cannot be inlined by tsdown
+- Runtime deps chain: `better-sqlite3` → `bindings` → `file-uri-to-path`
+- `scripts/copy-native-deps.js` stages only runtime files to `native-deps/` (~1.9MB vs 12MB+ full)
+- `tauri.conf.json` bundles `native-deps/` as `node_modules` resource
+- `beforeBuildCommand` runs `pnpm run native-deps` before Vite build
+- `daemon_manager.rs` passes `NODE_PATH` env var pointing to bundled `Contents/Resources/node_modules/`
+- Error signature when broken: `Cannot find module 'bindings'` or `Cannot find module 'better-sqlite3'`
+
+### Palette Window Architecture
+
+- Single frameless window navigates between palette/canvas/brain/setup views
+- `navigate_palette_to()` handles all view transitions with animation
+- NEVER open canvas/brain as standalone windows — breaks back navigation
+- `navigate_palette_back()` restores previous view with reverse animation
+- Drag regions: `data-tauri-drag-region` HTML attribute + CSS `-webkit-app-region: drag`
+- Interactive elements inside drag regions need `-webkit-app-region: no-drag`
 
 ## Build Checklist
 
 ```
-pnpm -r build                    # Build all packages + apps
-pnpm -F opensauria-daemon build    # Rebuild daemon only
-pnpm -F opensauria-desktop dev     # Start desktop in dev mode
-pnpm -F opensauria-daemon test     # Run daemon tests
-pnpm -r typecheck                # Typecheck all packages
+pnpm -r build                              # Build shared packages + daemon (Turborepo, may cache desktop)
+pnpm -F @opensauria/daemon build           # Rebuild daemon only
+cd apps/desktop && pnpm run build          # Full production build (Vite + Rust + .app bundle) — ALWAYS use this for production
+pnpm -F opensauria-desktop dev             # Start desktop in dev mode (Vite HMR)
+pnpm -F @opensauria/daemon test            # Run daemon tests
+pnpm -r typecheck                          # Typecheck all packages
 ```
 
+### Production Deploy (CRITICAL)
+
+Always follow this exact sequence — no shortcuts:
+```bash
+# 1. Kill everything
+pkill -9 -f "opensauria"; pkill -9 -f "OpenSauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9
+
+# 2. Full production build
+pnpm -r build                              # packages + daemon
+cd apps/desktop && pnpm run build          # Vite + Rust + .app bundle
+
+# 3. Install
+rm -rf /Applications/OpenSauria.app
+cp -R apps/desktop/src-tauri/target/release/bundle/macos/OpenSauria.app /Applications/OpenSauria.app
+
+# 4. Launch
+open /Applications/OpenSauria.app
+```
+
+**NEVER manually copy files into `/Applications/OpenSauria.app/Contents/Resources/`** — always rebuild the full `.app`.
+
+### Dev Workflow
+
 When changing shared packages (`packages/*`): rebuild with `pnpm -r build` (Turbo handles deps)
-When changing daemon code (`apps/daemon/src/`): `pnpm -F opensauria-daemon build`
-When changing desktop main (`apps/desktop/src/main/`): Vite rebuilds automatically in dev mode
+When changing daemon code (`apps/daemon/src/`): `pnpm -F @opensauria/daemon build`
+When changing desktop main (`apps/desktop/src-tauri/src/`): Rust recompiles on `tauri dev`
 When changing renderer files (`apps/desktop/src/renderer/`): Vite hot-reloads in dev mode
-Full restart: kill Electron + daemon, `pnpm -r build`, start desktop

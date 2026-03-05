@@ -20,9 +20,13 @@ apps/desktop/src-tauri/target/
 apps/desktop/out/
 apps/desktop/.vite/
 apps/desktop/public/icons/
+apps/desktop/native-deps/
 
 # Generated build outputs
 packages/design-tokens/generated/
 
 # Turbo
 .turbo/
+
+# Worktrees
+.worktrees/

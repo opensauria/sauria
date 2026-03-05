@@ -14,4 +14,15 @@ services:
       - ALL
     tmpfs:
       - /tmp:noexec,nosuid,size=64m
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('net').connect('/home/opensauria/.opensauria/daemon.sock').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     restart: unless-stopped

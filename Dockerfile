@@ -40,3 +40,6 @@ USER opensauria
 ENV NODE_ENV=production
 
 ENTRYPOINT ["node", "dist/cli.js"]
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD node -e "require('net').connect('/home/opensauria/.opensauria/daemon.sock').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"

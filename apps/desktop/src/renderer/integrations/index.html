@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>OpenSauria &mdash; Integrations</title>
+    <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="./integrations.css" />
+  </head>
+  <body>
+    <header class="integrations-header" data-tauri-drag-region>
+      <button class="palette-back" id="palette-back" title="Back">
+        <img src="/icons/chevron-left.svg" alt="" />
+      </button>
+      <h1 class="integrations-title">Integrations</h1>
+      <div class="integrations-search">
+        <img src="/icons/search.svg" alt="" />
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search integrations..."
+          autocomplete="off"
+        />
+      </div>
+    </header>
+
+    <nav class="category-tabs" id="category-tabs"></nav>
+
+    <main class="integrations-grid" id="integrations-grid">
+      <div class="integrations-loading">
+        <div class="spinner"></div>
+      </div>
+    </main>
+
+    <aside class="config-panel" id="config-panel">
+      <div class="config-panel-header">
+        <h2 class="config-panel-title" id="config-title">Configure</h2>
+        <button class="config-panel-close" id="config-close" title="Close">
+          <img src="/icons/x.svg" alt="" />
+        </button>
+      </div>
+      <div class="config-panel-body" id="config-body"></div>
+    </aside>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

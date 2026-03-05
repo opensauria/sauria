@@ -15,48 +15,48 @@
         </button>
 
         <div class="brain-sidebar-section">
-          <button class="brain-nav-item" data-view="graph">
-            <span class="icon-mono" style="--icon: url(/icons/share-2.svg)"></span>
+          <div class="brain-nav-item" data-view="graph">
+            <img class="icon-mono" src="/icons/share-2.svg" alt="" />
             Graph
-          </button>
+          </div>
         </div>
 
         <div class="brain-sidebar-section">
           <div class="brain-sidebar-section-label">Knowledge</div>
-          <button class="brain-nav-item active" data-view="entities">
-            <span class="icon-mono" style="--icon: url(/icons/user.svg)"></span>
+          <div class="brain-nav-item active" data-view="entities">
+            <img class="icon-mono" src="/icons/user.svg" alt="" />
             Entities
             <span class="brain-nav-count" id="nav-count-entities">0</span>
-          </button>
-          <button class="brain-nav-item" data-view="relations">
-            <span class="icon-mono" style="--icon: url(/icons/link.svg)"></span>
+          </div>
+          <div class="brain-nav-item" data-view="relations">
+            <img class="icon-mono" src="/icons/link.svg" alt="" />
             Relations
             <span class="brain-nav-count" id="nav-count-relations">0</span>
-          </button>
-          <button class="brain-nav-item" data-view="events">
-            <span class="icon-mono" style="--icon: url(/icons/calendar.svg)"></span>
+          </div>
+          <div class="brain-nav-item" data-view="events">
+            <img class="icon-mono" src="/icons/calendar.svg" alt="" />
             Events
             <span class="brain-nav-count" id="nav-count-events">0</span>
-          </button>
-          <button class="brain-nav-item" data-view="observations">
-            <span class="icon-mono" style="--icon: url(/icons/lightbulb.svg)"></span>
+          </div>
+          <div class="brain-nav-item" data-view="observations">
+            <img class="icon-mono" src="/icons/lightbulb.svg" alt="" />
             Observations
             <span class="brain-nav-count" id="nav-count-observations">0</span>
-          </button>
+          </div>
         </div>
 
         <div class="brain-sidebar-section">
           <div class="brain-sidebar-section-label">Activity</div>
-          <button class="brain-nav-item" data-view="conversations">
-            <span class="icon-mono" style="--icon: url(/icons/message-square.svg)"></span>
+          <div class="brain-nav-item" data-view="conversations">
+            <img class="icon-mono" src="/icons/message-square.svg" alt="" />
             Conversations
             <span class="brain-nav-count" id="nav-count-conversations">0</span>
-          </button>
-          <button class="brain-nav-item" data-view="facts">
-            <span class="icon-mono" style="--icon: url(/icons/brain.svg)"></span>
+          </div>
+          <div class="brain-nav-item" data-view="facts">
+            <img class="icon-mono" src="/icons/brain.svg" alt="" />
             Agent Memory
             <span class="brain-nav-count" id="nav-count-facts">0</span>
-          </button>
+          </div>
         </div>
       </nav>
 
@@ -85,15 +85,13 @@
             <button class="brain-view-seg" data-mode="library">Library</button>
           </div>
 
-          <!-- 3D Brain view -->
-          <div id="brain-3d-container"></div>
-          <div id="brain-3d-tooltip"></div>
-
+          <!-- Brain view (existing canvas) -->
+          <canvas id="graph-canvas"></canvas>
           <div class="brain-graph-empty" id="graph-empty" style="display: none">
             <img class="icon-mono" src="/icons/share-2.svg" alt="" />
             <div>No entities yet</div>
             <div style="font-size: 12px">
-              Connect an agent and start a conversation to see your knowledge graph
+              Entities will appear here as OpenSauria learns from your conversations
             </div>
           </div>
 
@@ -113,6 +111,12 @@
             </div>
           </div>
 
+          <!-- Graph controls -->
+          <div class="brain-graph-controls" id="graph-controls">
+            <button class="brain-graph-btn" id="graph-zoom-out" title="Zoom out">&minus;</button>
+            <button class="brain-graph-btn" id="graph-zoom-in" title="Zoom in">+</button>
+            <button class="brain-graph-btn" id="graph-zoom-reset" title="Reset">&#8634;</button>
+          </div>
           <div class="brain-graph-stats" id="graph-stats"></div>
         </div>
 
@@ -139,9 +143,9 @@
       <aside class="brain-detail" id="detail-panel">
         <div class="brain-detail-header">
           <span class="brain-detail-title" id="detail-title"></span>
-          <button class="brain-detail-close" id="detail-close" aria-label="Close">
+          <div class="brain-detail-close" id="detail-close">
             <img src="/icons/x.svg" alt="Close" />
-          </button>
+          </div>
         </div>
         <div class="brain-detail-body" id="detail-body"></div>
         <div class="brain-detail-actions" id="detail-actions">

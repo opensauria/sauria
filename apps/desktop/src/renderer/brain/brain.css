@@ -18,13 +18,11 @@
   flex-direction: column;
   padding-top: var(--titlebar-h);
   background: rgba(255, 255, 255, 0.02);
-  -webkit-app-region: drag;
 }
 
 .brain-sidebar-section {
   padding: 0 8px;
   margin-bottom: 8px;
-  -webkit-app-region: no-drag;
 }
 
 .brain-sidebar-section-label {
@@ -46,11 +44,6 @@
   font-size: 13px;
   color: var(--text-secondary);
   transition: all 0.15s ease;
-  width: 100%;
-  border: none;
-  background: none;
-  font-family: inherit;
-  text-align: left;
 }
 
 .brain-nav-item:hover {
@@ -66,20 +59,12 @@
 .brain-nav-item .icon-mono {
   width: 16px;
   height: 16px;
-  display: inline-block;
-  background-color: var(--text-secondary);
-  -webkit-mask-image: var(--icon);
-  mask-image: var(--icon);
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
+  opacity: 0.6;
+  filter: brightness(0) invert();
 }
 
 .brain-nav-item.active .icon-mono {
-  background-color: var(--accent);
+  filter: brightness(0) invert() sepia(1) saturate(20) hue-rotate(160deg) brightness(0.7);
 }
 
 .brain-nav-count {
@@ -107,7 +92,6 @@
   padding-top: calc(var(--titlebar-h) + 8px);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  -webkit-app-region: drag;
 }
 
 .brain-search {
@@ -119,7 +103,6 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
-  -webkit-app-region: no-drag;
 }
 
 .brain-search img {
@@ -152,7 +135,6 @@
   font-size: 13px;
   cursor: pointer;
   appearance: none;
-  -webkit-app-region: no-drag;
   font-family: inherit;
 }
 
@@ -218,7 +200,7 @@
 }
 
 .brain-table td {
-  padding: 8px 16px;
+  padding: 10px 16px;
   font-size: 13px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
@@ -371,13 +353,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  background: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.15s ease;
   flex-shrink: 0;
-  padding: 0;
 }
 
 .brain-detail-close:hover {
@@ -411,7 +390,7 @@
 }
 
 .brain-detail-field {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .brain-detail-label {
@@ -691,6 +670,44 @@ textarea.brain-detail-value.editable {
   overflow: hidden;
 }
 
+.brain-graph-wrap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.brain-graph-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  gap: 4px;
+}
+
+.brain-graph-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-solid);
+  color: var(--text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  line-height: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.brain-graph-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
 .brain-graph-stats {
   position: absolute;
   bottom: 16px;
@@ -717,39 +734,6 @@ textarea.brain-detail-value.editable {
   height: 48px;
   opacity: 0.2;
   filter: brightness(0) invert();
-}
-
-/* ── 3D Brain Container ──────────────────────────────────────────────── */
-
-#brain-3d-container {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-
-#brain-3d-container canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-#brain-3d-tooltip {
-  display: none;
-  position: absolute;
-  z-index: 10;
-  padding: 8px 16px;
-  background: rgba(30, 30, 30, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-sm);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  font-size: 12px;
-  color: var(--text);
-  pointer-events: none;
-  white-space: nowrap;
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ── View Toggle (segmented control) ─────────────────────────────────── */
@@ -785,7 +769,7 @@ textarea.brain-detail-value.editable {
 }
 
 .brain-view-seg {
-  padding: 8px 24px;
+  padding: 6px 24px;
   font-size: 12px;
   font-weight: 500;
   border: none;
@@ -988,7 +972,7 @@ body.in-palette {
 }
 
 .in-palette .brain-sidebar {
-  padding-top: 56px;
+  padding-top: 48px;
 }
 
 /* ── Responsive ────────────────────────────────────────────────────── */

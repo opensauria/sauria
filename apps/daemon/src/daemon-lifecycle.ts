@@ -10,6 +10,7 @@ import type BetterSqlite3 from 'better-sqlite3';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { openDatabase, closeDatabase } from './db/connection.js';
 import { applySchema } from './db/schema.js';
+import { runMigrations } from './db/migrations.js';
 import { loadConfig } from './config/loader.js';
 import { ensureConfigDir } from './config/loader.js';
 import type { OpenSauriaConfig } from './config/schema.js';
@@ -41,8 +42,8 @@ import { MessageQueue } from './orchestrator/message-queue.js';
 import { AgentMemory } from './orchestrator/agent-memory.js';
 import { KPITracker } from './orchestrator/kpi-tracker.js';
 import { CheckpointManager } from './orchestrator/checkpoint.js';
-import { EscalationManager } from './orchestrator/escalation.js';
-import { DelegationTracker } from './orchestrator/delegation-tracker.js';
+import { IntegrationRegistry } from './integrations/registry.js';
+import { INTEGRATION_CATALOG } from './integrations/catalog.js';
 import type {
   CanvasGraph,
   OwnerIdentity,
@@ -73,9 +74,9 @@ export interface DaemonContext {
   readonly orchestrator: AgentOrchestrator | null;
   readonly queue: MessageQueue | null;
   readonly ipcServer: DaemonIpcServer;
+  readonly integrationRegistry: IntegrationRegistry;
   readonly canvasWatcher: FSWatcher | null;
   readonly ownerCommandWatcher: FSWatcher | null;
-  readonly delegationSweepInterval: ReturnType<typeof setInterval> | null;
 }
 
 async function connectMcpSources(
@@ -102,6 +103,39 @@ async function connectMcpSources(
   }
 }
 
+async function autoConnectIntegrations(
+  registry: IntegrationRegistry,
+  config: OpenSauriaConfig,
+): Promise<void> {
+  const logger = getLogger();
+  const integrations = config.integrations ?? {};
+
+  for (const [id, settings] of Object.entries(integrations)) {
+    if (!settings?.enabled) continue;
+    try {
+      const creds: Record<string, string> = {};
+      const definition = INTEGRATION_CATALOG.find((d) => d.id === id);
+      if (!definition) continue;
+
+      for (const key of definition.credentialKeys) {
+        const value = await vaultGet(`integration_${id}_${key}`);
+        if (value) creds[key] = value;
+      }
+
+      if (Object.keys(creds).length < definition.credentialKeys.length) {
+        logger.warn(`Skipping integration ${id}: missing credentials`);
+        continue;
+      }
+
+      await registry.connect(id, creds);
+    } catch (err: unknown) {
+      logger.error(`Failed to auto-connect integration: ${id}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+}
+
 // ─── Canvas Graph Loading ─────────────────────────────────────────────
 
 // ─── Raw types from desktop canvas (simplified schema) ───────────────
@@ -119,7 +153,6 @@ interface RawNode {
   readonly autonomy?: string | number;
   readonly instructions?: string;
   readonly groupBehavior?: AgentNode['groupBehavior'];
-  readonly capabilities?: AgentNode['capabilities'];
 }
 
 interface RawEdge {
@@ -160,7 +193,7 @@ interface RawGraph {
 }
 
 const VALID_AUTONOMY_LEVELS = new Set<string>(['full', 'supervised', 'approval', 'manual']);
-const VALID_ROLES = new Set<string>(['lead', 'specialist', 'observer', 'bridge', 'assistant']);
+const VALID_ROLES = new Set<string>(['lead', 'specialist', 'observer', 'coordinator', 'assistant']);
 const VALID_STATUSES = new Set<string>(['connected', 'disconnected', 'error']);
 
 function normalizeNode(raw: RawNode): AgentNode {
@@ -192,7 +225,6 @@ function normalizeNode(raw: RawNode): AgentNode {
     autonomy,
     instructions: raw.instructions ?? '',
     groupBehavior: raw.groupBehavior ?? DEFAULT_GROUP_BEHAVIOR,
-    capabilities: raw.capabilities,
   };
 }
 
@@ -485,6 +517,8 @@ async function setupOrchestrator(
     config: OpenSauriaConfig;
   },
   checkpointManager: CheckpointManager,
+  onActivity?: (event: string, data: Record<string, unknown>) => void,
+  integrationRegistry?: IntegrationRegistry,
 ): Promise<OrchestratorBundle | null> {
   const logger = getLogger();
 
@@ -496,25 +530,17 @@ async function setupOrchestrator(
     return null;
   }
 
-  // 1. Create modules and orchestrator
+  // 1. Create modules and orchestrator (no chicken-and-egg)
   const registry = new ChannelRegistry();
   const agentMemory = new AgentMemory(deps.db);
   const kpiTracker = new KPITracker(deps.db);
-  const escalationManager = new EscalationManager(deps.db);
-  const delegationTracker = new DelegationTracker(deps.db);
 
   const brain = new LLMRoutingBrain(
     deps.router,
-    agentMemory,
     deps.db,
     deps.config.orchestrator.routingCacheTtlMs,
+    integrationRegistry,
   );
-
-  // Deferred queue reference — resolves circular dep between orchestrator and queue
-  let queueRef: MessageQueue | null = null;
-  const enqueueInternal = (msg: InboundMessage): void => {
-    if (queueRef) queueRef.enqueue(msg);
-  };
 
   const ownerIdentity = buildOwnerIdentity(deps.config);
   const orchestrator = new AgentOrchestrator({
@@ -526,17 +552,15 @@ async function setupOrchestrator(
     agentMemory,
     kpiTracker,
     checkpointManager,
-    escalationManager,
-    delegationTracker,
-    enqueueInternal,
     canvasPath: paths.canvas,
+    onActivity,
+    integrationRegistry,
   });
 
   const queue = new MessageQueue((msg: InboundMessage) => orchestrator.handleInbound(msg), {
     maxConcurrent: deps.config.orchestrator.maxMessagesPerSecond,
     maxQueueSize: 1000,
   });
-  queueRef = queue;
 
   // 2. Create channels with onInbound wired to the queue
   const onInbound = (msg: InboundMessage): void => {
@@ -641,7 +665,8 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   await ensureConfigDir();
   const db = openDatabase();
   applySchema(db);
-  logger.info('Database opened and schema applied');
+  runMigrations(db);
+  logger.info('Database opened, schema applied, and migrations run');
 
   const config = await loadConfig();
   logger.info('Config loaded');
@@ -661,30 +686,54 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   const mcpClients = new McpClientManager(audit);
   await connectMcpSources(config, mcpClients);
 
+  // ─── Integration registry ───────────────────────────────────────────
+  const integrationRegistry = new IntegrationRegistry(mcpClients, audit, INTEGRATION_CATALOG);
+  await autoConnectIntegrations(integrationRegistry, config);
+
+  // ─── IPC server (must start before orchestrator so broadcast is available) ─
+  const ipcServer = await startIpcServer(paths.socket, db, Date.now());
+
+  // ─── Integration IPC handlers ─────────────────────────────────────
+  ipcServer.registerMethod('integrations:list-catalog', () =>
+    integrationRegistry.getCatalogWithStatus(),
+  );
+  ipcServer.registerMethod('integrations:connect', async (_db, params) => {
+    const id = params['id'] as string;
+    const credentials = params['credentials'] as Record<string, string>;
+    return integrationRegistry.connect(id, credentials);
+  });
+  ipcServer.registerMethod('integrations:disconnect', async (_db, params) => {
+    const id = params['id'] as string;
+    await integrationRegistry.disconnect(id);
+    return { success: true };
+  });
+  ipcServer.registerMethod('integrations:list-tools', (_db, params) => {
+    const integrationId = params['integrationId'] as string | undefined;
+    return integrationRegistry.getAvailableTools(integrationId);
+  });
+
   // ─── Canvas-based orchestrator setup ────────────────────────────────
   const graph = loadCanvasGraph();
   const checkpointManager = new CheckpointManager(db);
   const channelDeps = { db, router, audit, config, globalInstructions: graph.globalInstructions };
 
-  const bundle = await setupOrchestrator(graph, channelDeps, checkpointManager);
+  const bundle = await setupOrchestrator(
+    graph,
+    channelDeps,
+    checkpointManager,
+    ipcServer.broadcast.bind(ipcServer),
+    integrationRegistry,
+  );
   const registry: ChannelRegistry | null = bundle?.registry ?? null;
   const orchestrator: AgentOrchestrator | null = bundle?.orchestrator ?? null;
   const queue: MessageQueue | null = bundle?.queue ?? null;
 
-  let delegationSweepInterval: ReturnType<typeof setInterval> | null = null;
   if (bundle) {
     logger.info('Orchestrator started', {
       channels: bundle.startedChannels.length,
       nodes: graph.nodes.length,
       edges: graph.edges.length,
     });
-
-    delegationSweepInterval = setInterval(
-      () => {
-        void bundle.orchestrator.sweepOverdueDelegations();
-      },
-      5 * 60 * 1000,
-    );
   }
 
   // ProactiveEngine disabled — owner drives all interaction through canvas bots
@@ -700,8 +749,6 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   });
   logger.info('MCP server started on stdio');
 
-  const ipcServer = startIpcServer(paths.socket, db);
-
   const refreshInterval = setInterval(() => {
     void refreshOAuthTokenIfNeeded('anthropic');
   }, 1_800_000);
@@ -711,77 +758,83 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   let canvasDebounce: ReturnType<typeof setTimeout> | null = null;
   try {
     canvasWatcher = watch(paths.canvas, { persistent: false }, () => {
+      // Debounce: macOS kqueue can fire multiple times per write
       if (canvasDebounce) clearTimeout(canvasDebounce);
       canvasDebounce = setTimeout(() => {
-        const newGraph = loadCanvasGraph();
-
-        if (orchestrator && registry) {
-          const currentNodeIds = new Set(registry.getAll().map((c) => c.nodeId));
-          const newConnectedNodes = newGraph.nodes.filter(
-            (n) => n.status === 'connected' && n.platform !== 'owner',
-          );
-          const newNodeIds = new Set(newConnectedNodes.map((n) => n.id));
-
-          // Stop + unregister removed nodes
-          for (const existingId of currentNodeIds) {
-            if (!newNodeIds.has(existingId)) {
-              void (async () => {
-                try {
-                  await registry.stop(existingId);
-                  registry.unregister(existingId);
-                  logger.info('Channel removed on canvas change', { nodeId: existingId });
-                } catch (error) {
-                  logger.warn('Error removing channel', {
-                    nodeId: existingId,
-                    error: error instanceof Error ? error.message : String(error),
-                  });
-                }
-              })();
-            }
-          }
-
-          // Create + register + start new nodes
-          const onInbound = (msg: InboundMessage): void => {
-            if (queue) queue.enqueue(msg);
-          };
-          for (const node of newConnectedNodes) {
-            if (!currentNodeIds.has(node.id)) {
-              void (async () => {
-                try {
-                  const channel = await createChannelForNode(node, {
-                    ...channelDeps,
-                    onInbound,
-                    globalInstructions: newGraph.globalInstructions,
-                  });
-                  if (channel) {
-                    registry.register(node.id, channel);
-                    await channel.start();
-                    logger.info('Channel added on canvas change', {
-                      nodeId: node.id,
-                      platform: node.platform,
-                    });
-                  }
-                } catch (error) {
-                  logger.warn('Error adding channel', {
-                    nodeId: node.id,
-                    error: error instanceof Error ? error.message : String(error),
-                  });
-                }
-              })();
-            }
-          }
-
-          orchestrator.updateGraph(newGraph);
-          logger.info('Canvas graph reloaded', { nodes: newGraph.nodes.length });
-        } else if (orchestrator) {
-          orchestrator.updateGraph(newGraph);
-          logger.info('Canvas graph reloaded (no registry)', { nodes: newGraph.nodes.length });
-        }
-      }, 500);
+        canvasDebounce = null;
+        reloadCanvas();
+      }, 100);
     });
   } catch {
     // File may not exist yet, watcher will fail gracefully
     logger.info('Canvas watcher not started (file may not exist yet)');
+  }
+
+  function reloadCanvas(): void {
+    const newGraph = loadCanvasGraph();
+
+    if (orchestrator && registry) {
+      const currentNodeIds = new Set(registry.getAll().map((c) => c.nodeId));
+      const newConnectedNodes = newGraph.nodes.filter(
+        (n) => n.status === 'connected' && n.platform !== 'owner',
+      );
+      const newNodeIds = new Set(newConnectedNodes.map((n) => n.id));
+
+      // Stop + unregister removed nodes
+      for (const existingId of currentNodeIds) {
+        if (!newNodeIds.has(existingId)) {
+          void (async () => {
+            try {
+              await registry.stop(existingId);
+              registry.unregister(existingId);
+              logger.info('Channel removed on canvas change', { nodeId: existingId });
+            } catch (error) {
+              logger.warn('Error removing channel', {
+                nodeId: existingId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          })();
+        }
+      }
+
+      // Create + register + start new nodes
+      const onInbound = (msg: InboundMessage): void => {
+        if (queue) queue.enqueue(msg);
+      };
+      for (const node of newConnectedNodes) {
+        if (!currentNodeIds.has(node.id)) {
+          void (async () => {
+            try {
+              const channel = await createChannelForNode(node, {
+                ...channelDeps,
+                onInbound,
+                globalInstructions: newGraph.globalInstructions,
+              });
+              if (channel) {
+                registry.register(node.id, channel);
+                await channel.start();
+                logger.info('Channel added on canvas change', {
+                  nodeId: node.id,
+                  platform: node.platform,
+                });
+              }
+            } catch (error) {
+              logger.warn('Error adding channel', {
+                nodeId: node.id,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          })();
+        }
+      }
+
+      orchestrator.updateGraph(newGraph);
+      logger.info('Canvas graph reloaded', { nodes: newGraph.nodes.length });
+    } else if (orchestrator) {
+      orchestrator.updateGraph(newGraph);
+      logger.info('Canvas graph reloaded (no registry)', { nodes: newGraph.nodes.length });
+    }
   }
 
   // ─── Owner command file watcher ────────────────────────────────
@@ -857,12 +910,12 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     mcpServer,
     refreshInterval,
     ipcServer,
+    integrationRegistry,
     registry,
     orchestrator,
     queue,
     canvasWatcher,
     ownerCommandWatcher,
-    delegationSweepInterval,
   };
 }
 
@@ -871,11 +924,6 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
   logger.info('Daemon shutting down');
 
   clearInterval(ctx.refreshInterval);
-
-  if (ctx.delegationSweepInterval) {
-    clearInterval(ctx.delegationSweepInterval);
-    logger.info('Delegation sweep stopped');
-  }
 
   if (ctx.ownerCommandWatcher) {
     ctx.ownerCommandWatcher.close();
@@ -888,7 +936,7 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
   }
 
   if (ctx.queue) {
-    ctx.queue.stop();
+    await ctx.queue.gracefulStop(5000);
     logger.info('Message queue stopped');
   }
 
@@ -899,6 +947,9 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
 
   ctx.engine.stop();
   logger.info('Proactive engine stopped');
+
+  await ctx.integrationRegistry.disconnectAll();
+  logger.info('Integration registry disconnected');
 
   await ctx.mcpClients.disconnectAll();
   logger.info('MCP clients disconnected');

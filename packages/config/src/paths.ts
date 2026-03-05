@@ -1,10 +1,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const OPENSAURIA_HOME =
-  process.env['OPENSAURIA_HOME'] ??
-  process.env['OPENSAURIA_HOME'] ??
-  join(homedir(), '.opensauria');
+const OPENSAURIA_HOME = process.env['OPENSAURIA_HOME'] ?? join(homedir(), '.opensauria');
 
 export const paths = {
   home: OPENSAURIA_HOME,
@@ -20,6 +17,7 @@ export const paths = {
   ownerCommands: join(OPENSAURIA_HOME, 'owner-commands.jsonl'),
   pidFile: join(OPENSAURIA_HOME, 'daemon.pid'),
   socket: join(OPENSAURIA_HOME, 'daemon.sock'),
+  ipcPort: join(OPENSAURIA_HOME, 'daemon.port'),
   botProfiles: join(OPENSAURIA_HOME, 'bot-profiles.json'),
 } as const;
 

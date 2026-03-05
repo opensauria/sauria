@@ -75,8 +75,8 @@ opensauria insights           # AI-generated observations
 opensauria doctor             # Health checks
 ```
 
-| Command                       | Description                       |
-| ----------------------------- | --------------------------------- |
+| Command                     | Description                       |
+| --------------------------- | --------------------------------- |
 | `opensauria onboard`          | Interactive setup wizard          |
 | `opensauria daemon`           | Start background daemon           |
 | `opensauria ask <question>`   | Natural language query            |
@@ -99,8 +99,8 @@ opensauria doctor             # Health checks
 
 When running as an MCP server, OpenSauria exposes 7 tools to connected agents:
 
-| Tool                         | Description                                             |
-| ---------------------------- | ------------------------------------------------------- |
+| Tool                       | Description                                             |
+| -------------------------- | ------------------------------------------------------- |
 | `opensauria_query`           | Natural language question answered from knowledge graph |
 | `opensauria_get_entity`      | Entity details + relations + timeline                   |
 | `opensauria_search`          | Hybrid semantic + keyword search                        |

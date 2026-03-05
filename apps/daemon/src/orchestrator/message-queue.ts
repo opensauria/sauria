@@ -6,13 +6,13 @@ export type MessageHandler = (message: InboundMessage) => Promise<void>;
 interface QueueOptions {
   readonly maxConcurrent: number;
   readonly maxQueueSize: number;
-  readonly onError?: (message: InboundMessage, error: unknown) => void;
 }
 
 export class MessageQueue {
   private readonly queue: InboundMessage[] = [];
   private processing = 0;
   private stopped = false;
+  private failureCount = 0;
 
   constructor(
     private readonly handler: MessageHandler,
@@ -27,26 +27,16 @@ export class MessageQueue {
     return this.processing;
   }
 
+  get failures(): number {
+    return this.failureCount;
+  }
+
   enqueue(message: InboundMessage): void {
     if (this.queue.length >= this.options.maxQueueSize) {
-      const logger = getLogger();
-      if (message.senderIsOwner) {
-        const dropped = this.queue.pop();
-        if (dropped) {
-          logger.warn('Queue full — evicted tail message for owner priority', {
-            droppedSourceNodeId: dropped.sourceNodeId,
-            droppedPlatform: dropped.platform,
-          });
-        }
-        this.queue.unshift(message);
-      } else {
-        logger.warn('Queue full — dropping non-owner message', {
-          sourceNodeId: message.sourceNodeId,
-          platform: message.platform,
-        });
-        return;
-      }
-    } else if (message.senderIsOwner) {
+      throw new Error('Queue full — backpressure active');
+    }
+
+    if (message.senderIsOwner) {
       this.queue.unshift(message);
     } else {
       this.queue.push(message);
@@ -69,6 +59,15 @@ export class MessageQueue {
     this.queue.length = 0;
   }
 
+  async gracefulStop(timeoutMs = 5000): Promise<void> {
+    this.stopped = true;
+    const deadline = Date.now() + timeoutMs;
+    while ((this.queue.length > 0 || this.processing > 0) && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    this.queue.length = 0;
+  }
+
   private async drain(): Promise<void> {
     while (!this.stopped && this.queue.length > 0 && this.processing < this.options.maxConcurrent) {
       const message = this.queue.shift();
@@ -76,14 +75,13 @@ export class MessageQueue {
 
       this.processing++;
       this.handler(message)
-        .catch((error: unknown) => {
+        .catch((err: unknown) => {
+          this.failureCount++;
           const logger = getLogger();
           logger.error('Message handler failed', {
             sourceNodeId: message.sourceNodeId,
-            platform: message.platform,
-            error: error instanceof Error ? error.message : String(error),
+            error: err instanceof Error ? err.message : String(err),
           });
-          this.options.onError?.(message, error);
         })
         .finally(() => {
           this.processing--;

@@ -5,6 +5,7 @@ mod cmd_brain;
 mod cmd_canvas;
 mod cmd_channels;
 mod cmd_commands;
+mod cmd_integrations;
 mod cmd_oauth;
 mod cmd_setup;
 mod daemon_client;
@@ -18,6 +19,7 @@ use daemon_manager::DaemonState;
 use paths::Paths;
 use std::sync::Arc;
 use tauri::Manager;
+use tauri::path::BaseDirectory;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 fn main() {
@@ -55,7 +57,6 @@ fn main() {
             // Canvas
             cmd_canvas::get_canvas_graph,
             cmd_canvas::save_canvas_graph,
-            cmd_canvas::show_canvas,
             cmd_canvas::execute_owner_command,
             cmd_canvas::get_telegram_status,
             cmd_canvas::get_owner_profile,
@@ -76,6 +77,12 @@ fn main() {
             cmd_brain::brain_get_stats,
             cmd_brain::brain_delete,
             cmd_brain::brain_update_entity,
+            cmd_brain::get_agent_kpis,
+            // Integrations
+            cmd_integrations::integrations_list_catalog,
+            cmd_integrations::integrations_connect,
+            cmd_integrations::integrations_disconnect,
+            cmd_integrations::integrations_list_tools,
         ])
         .setup(move |app| {
             // Hide dock icon on macOS
@@ -86,11 +93,20 @@ fn main() {
             windows::create_palette_window(app.handle())
                 .expect("Failed to create palette window");
 
+            // Set app handle on daemon client for push event forwarding
+            let client = app.state::<Arc<DaemonClient>>();
+            client.set_app_handle(app.handle().clone());
+
             // Register global shortcut
             let app_handle = app.handle().clone();
+            let shortcut = if cfg!(target_os = "macos") {
+                "Command+Shift+J"
+            } else {
+                "Ctrl+Shift+J"
+            };
 
             app.global_shortcut().on_shortcut(
-                "Command+Shift+J",
+                shortcut,
                 move |_app, _shortcut, event| {
                     if event.state == ShortcutState::Pressed {
                         let _ = windows::show_palette(&app_handle);
@@ -98,16 +114,35 @@ fn main() {
                 },
             )?;
 
-            // Resolve daemon CLI path (bundled resource → global install → dev fallback)
-            let resource_dir = app.path().resource_dir().ok();
-            let cli_path = daemon_manager::resolve_daemon_cli(resource_dir.as_deref());
+            // Resolve daemon CLI path and node_modules from Tauri bundled resources
+            if let Ok(resource_path) = app.path().resolve("daemon/index.mjs", BaseDirectory::Resource) {
+                if resource_path.exists() {
+                    let mut s = daemon_state.blocking_lock();
+                    s.set_daemon_cli_path(resource_path.to_string_lossy().to_string());
+                    // Set NODE_PATH so daemon can find bundled native modules (better-sqlite3)
+                    if let Ok(nm_path) = app.path().resolve("node_modules", BaseDirectory::Resource) {
+                        s.set_node_path(nm_path.to_string_lossy().to_string());
+                    }
+                }
+            }
 
             // Start daemon
             let ds = daemon_state.clone();
             let p = Paths::resolve();
             tauri::async_runtime::spawn(async move {
-                ds.lock().await.set_daemon_cli_path(cli_path);
                 let _ = daemon_manager::start_daemon(&ds, &p).await;
+            });
+
+            // Eager IPC connect: open socket to daemon so activity broadcasts reach us
+            let eager_client = app.state::<Arc<DaemonClient>>().inner().clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                for _ in 0..10 {
+                    if eager_client.connect().await.is_ok() {
+                        break;
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                }
             });
 
             // Start health check (must run inside async runtime)
@@ -117,17 +152,6 @@ fn main() {
 
             Ok(())
         })
-        .build(tauri::generate_context!())
-        .expect("error while building OpenSauria")
-        .run(move |app, event| {
-            if let tauri::RunEvent::Exit = event {
-                let state = app.state::<Arc<tokio::sync::Mutex<DaemonState>>>();
-                let paths = app.state::<Paths>();
-                let state = state.inner().clone();
-                let paths = paths.inner().clone();
-                tauri::async_runtime::block_on(async {
-                    daemon_manager::stop_daemon(&state, &paths).await;
-                });
-            }
-        });
+        .run(tauri::generate_context!())
+        .expect("error while running OpenSauria");
 }

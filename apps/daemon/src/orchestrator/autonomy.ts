@@ -22,7 +22,7 @@ export class AutonomyEnforcer {
     const pendingApproval: RoutingAction[] = [];
 
     for (const action of actions) {
-      if (action.type === 'reply' || action.type === 'escalate') {
+      if (action.type === 'reply') {
         immediate.push(action);
       } else {
         pendingApproval.push(action);

@@ -30,7 +30,7 @@ export const OwnerCommandSchema = z.discriminatedUnion('type', [
     type: z.literal('hire'),
     platform: z.enum(['telegram', 'slack', 'whatsapp', 'discord', 'email', 'owner']),
     workspace: z.string(),
-    role: z.enum(['lead', 'specialist', 'observer', 'bridge', 'assistant']),
+    role: z.enum(['lead', 'specialist', 'observer', 'coordinator', 'assistant']),
   }),
   z.object({ type: z.literal('fire'), agentId: z.string() }),
 ]);
@@ -141,7 +141,7 @@ export function parseOwnerCommand(input: string): ParseResult {
           | 'email'
           | 'owner',
         workspace: hireMatch[2]!,
-        role: hireMatch[3]! as 'lead' | 'specialist' | 'observer' | 'bridge' | 'assistant',
+        role: hireMatch[3]! as 'lead' | 'specialist' | 'observer' | 'coordinator' | 'assistant',
       },
     };
   }

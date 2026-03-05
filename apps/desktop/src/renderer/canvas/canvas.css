@@ -35,15 +35,15 @@
 
 .agent-card {
   position: absolute;
-  width: 144px;
+  width: 120px;
   background: rgba(30, 30, 30, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: 24px 16px 16px;
+  padding: 20px 12px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: grab;
   transition:
     border-color 0.2s ease,
@@ -60,7 +60,7 @@
 
 .agent-card.selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(3, 139, 154, 0.24);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .agent-card.dragging {
@@ -70,8 +70,8 @@
 }
 
 .agent-avatar {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.06);
   display: flex;
@@ -89,8 +89,8 @@
 }
 
 .agent-avatar svg {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
 }
 
 .agent-status-dot {
@@ -194,7 +194,7 @@
   background: var(--accent);
   border-color: var(--accent);
   transform: scale(1.4);
-  box-shadow: 0 0 8px rgba(3, 139, 154, 0.4);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .port-output {
@@ -218,19 +218,33 @@
   width: 10000px;
   height: 10000px;
   pointer-events: none;
-  z-index: 0;
+  z-index: 1;
   overflow: visible;
 }
 
-.edge-svg path {
-  stroke: rgba(255, 255, 255, 0.1);
+.edge-svg .edge-line {
   stroke-width: 1.5;
   fill: none;
   stroke-linecap: round;
 }
 
-.edge-svg path:hover {
-  stroke: rgba(255, 255, 255, 0.25);
+.edge-svg .edge-flow {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 40 200;
+  animation: edgeFlow 2.5s linear infinite;
+  filter: blur(1px);
+}
+
+@keyframes edgeFlow {
+  from {
+    stroke-dashoffset: 240;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .edge-svg .edge-temp {
@@ -250,8 +264,41 @@
   cursor: pointer;
 }
 
-.edge-svg .edge-hit:hover + path {
-  stroke: rgba(255, 255, 255, 0.25);
+.edge-group:hover .edge-line {
+  filter: brightness(1.6);
+}
+
+.edge-group:hover .edge-flow {
+  stroke: rgba(255, 255, 255, 0.5);
+  filter: blur(1.5px);
+}
+
+/* n8n-style active edge glow */
+.edge-group.edge-active .edge-line {
+  stroke: var(--accent);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px var(--accent));
+  transition:
+    stroke-width 0.3s ease,
+    filter 0.3s ease;
+}
+
+.edge-group.edge-active .edge-flow {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-dasharray: 20 60;
+  animation: edgeFlowActive 0.8s linear infinite;
+  filter: none;
+  opacity: 0.9;
+}
+
+@keyframes edgeFlowActive {
+  from {
+    stroke-dashoffset: 80;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* Edge delete button (positioned at bezier midpoint) */
@@ -568,7 +615,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
   pointer-events: none;
   z-index: 1000;
   transition:
@@ -588,7 +635,7 @@
 .agent-card.connecting,
 .agent-card.error-state {
   width: 280px;
-  padding: 24px;
+  padding: 20px;
   border-radius: 16px;
   align-items: stretch;
 }
@@ -596,7 +643,7 @@
 .card-setup-header {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
@@ -651,7 +698,7 @@
 }
 
 .card-setup-field {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .card-setup-field label {
@@ -664,7 +711,7 @@
 
 .card-setup-field input {
   width: 100%;
-  padding: 8px;
+  padding: 8px 10px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -760,14 +807,14 @@
 /* Connecting spinner */
 .card-spinner {
   display: inline-block;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: cardSpin 0.6s linear infinite;
   vertical-align: middle;
-  margin-right: 8px;
+  margin-right: 6px;
 }
 
 @keyframes cardSpin {
@@ -935,6 +982,35 @@
   padding: 16px;
 }
 
+.panel-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.panel-footer.visible {
+  opacity: 1;
+}
+
+.panel-footer .save-check {
+  width: 14px;
+  height: 14px;
+  color: var(--success);
+}
+
+.panel-footer .save-text {
+  font-size: 12px;
+  color: var(--success);
+  font-weight: 500;
+}
+
 /* ── Kept: cred-field for workspace dialog ───── */
 
 .cred-field {
@@ -951,7 +1027,7 @@
 
 .cred-field input {
   width: 100%;
-  padding: 8px 16px;
+  padding: 10px 12px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -980,7 +1056,7 @@
 }
 
 .panel-btn {
-  padding: 8px 24px;
+  padding: 10px 20px;
   border-radius: var(--radius-pill);
   font-size: 13px;
   font-weight: 500;
@@ -1128,13 +1204,13 @@
 
 .workspace-frame.drop-target {
   box-shadow:
-    0 0 0 4px rgba(3, 139, 154, 0.18),
-    0 0 24px rgba(3, 139, 154, 0.08);
+    0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 0 24px color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .workspace-frame.selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(3, 139, 154, 0.24);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .workspace-header {
@@ -1345,7 +1421,7 @@
 }
 
 .role-pill.active {
-  background: rgba(3, 139, 154, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -1365,7 +1441,7 @@
   top: 2px;
   bottom: 2px;
   border-radius: 6px;
-  background: rgba(3, 139, 154, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   transition:
     left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1400,10 +1476,14 @@
   min-height: 160px;
 }
 
+#agent-instructions.owner-instructions {
+  min-height: 240px;
+}
+
 .detail-textarea {
   width: 100%;
   min-height: 80px;
-  padding: 16px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -1474,14 +1554,32 @@
   transform: translateX(16px);
 }
 
-/* KPI placeholder */
-.kpi-placeholder {
-  padding: 24px;
-  text-align: center;
-  border: 1px dashed rgba(255, 255, 255, 0.08);
+/* KPI grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.kpi-item {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.2);
-  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-label {
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 
 /* ── Workspace Detail Panel ──────────────────── */
@@ -1713,26 +1811,6 @@
   color: rgba(255, 255, 255, 0.2);
 }
 
-/* ── Capabilities Section ───────────────────── */
-
-.capabilities-field {
-  margin-top: 8px;
-}
-
-.capabilities-sublabel {
-  display: block;
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-#capabilities-section .detail-textarea {
-  min-height: 48px;
-  resize: vertical;
-}
-
 /* ── Workspace Creation Dialog ───────────────── */
 
 .workspace-dialog-overlay {
@@ -1766,29 +1844,409 @@
   margin-bottom: 24px;
 }
 
-/* ── Titlebar drag region ────────────────────── */
-
-.titlebar-drag {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 32px;
-  -webkit-app-region: drag;
-  z-index: 500;
-  pointer-events: auto;
-}
-
 /* ── In-Palette Mode ────────────────────── */
 
 body.in-palette {
   /* transparent background handled by shared.css for corner radius */
 }
 
-body.in-palette .titlebar-drag {
-  display: none;
-}
-
 body.in-palette .panel-header {
   padding-top: 12px;
+}
+
+/* ── Activity Animations ─────────────────────── */
+
+#activity-svg {
+  z-index: 1;
+}
+
+/* Traveling dot along edge — color from design token */
+.activity-dot {
+  fill: var(--accent);
+}
+
+@keyframes nodePulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.08);
+  }
+}
+
+.agent-card.node-active .agent-avatar::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: nodePulse 1.5s ease-in-out infinite;
+}
+
+.agent-card.node-active {
+  border-color: transparent;
+}
+
+/* n8n-style spinning gradient border */
+.glow-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 22px;
+  overflow: hidden;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.glow-ring::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(var(--accent), transparent 25%, transparent 75%, var(--accent));
+  animation: borderSpin 2s linear infinite;
+}
+
+@keyframes borderSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.glow-ring-mask {
+  position: absolute;
+  inset: 2px;
+  border-radius: 20px;
+  background: rgba(30, 30, 30, 0.92);
+}
+
+.activity-bubble {
+  position: absolute;
+  max-width: 200px;
+  padding: 6px 10px;
+  background: rgba(30, 30, 30, 0.92);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.activity-bubble.visible {
+  opacity: 1;
+}
+
+.canvas-legend {
+  position: fixed;
+  top: 60px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(30, 30, 30, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.canvas-legend.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.legend-ring {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: nodePulse 1.5s ease-in-out infinite;
+}
+
+/* Activity bubble clickable when visible */
+.activity-bubble.visible {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* ── Conversation Side Panel ─────────────────── */
+
+.conversation-panel {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 400px;
+  max-width: 100vw;
+  height: 100%;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  z-index: 300;
+  transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.conversation-panel.open {
+  right: 0;
+}
+
+@media (max-width: 600px) {
+  .conversation-panel {
+    width: 100vw;
+    right: -100vw;
+  }
+  .conversation-panel.open {
+    right: 0;
+  }
+}
+
+/* ── Header ── */
+
+.conversation-panel .panel-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.conv-participants {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.conv-participant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conv-participant-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.conv-participant-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.conv-participant-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.conv-separator {
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ── Messages Area ── */
+
+.conv-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.conv-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.conv-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+
+.conv-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-dim);
+  font-size: 13px;
+  text-align: center;
+  padding: 32px;
+  line-height: 1.5;
+}
+
+/* ── Message Bubble ── */
+
+.conv-msg-row {
+  display: flex;
+  gap: 8px;
+  max-width: 85%;
+  animation: convMsgIn 0.2s ease-out;
+}
+
+@keyframes convMsgIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.conv-msg-row.from {
+  align-self: flex-start;
+}
+
+.conv-msg-row.to {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.conv-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-top: 2px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.conv-msg-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.conv-msg-avatar-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.conv-msg-avatar-icon img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert();
+  opacity: 0.4;
+}
+
+.conv-msg-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.conv-msg-sender {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+
+.conv-msg-row.to .conv-msg-sender {
+  text-align: right;
+}
+
+.conv-msg-content {
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.conv-msg-row.from .conv-msg-content {
+  background: var(--surface);
+  color: var(--text);
+  border-top-left-radius: 4px;
+}
+
+.conv-msg-row.to .conv-msg-content {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--text);
+  border-top-right-radius: 4px;
+}
+
+.conv-msg-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.conv-msg-row.to .conv-msg-footer {
+  justify-content: flex-end;
+}
+
+.conv-msg-time {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.conv-msg-type-badge {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-dim);
+}
+
+/* ── Status Bar ── */
+
+.conv-status {
+  padding: 12px 16px;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.conv-status.idle {
+  color: var(--success);
 }

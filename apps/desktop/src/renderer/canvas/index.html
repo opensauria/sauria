@@ -11,11 +11,20 @@
       <img src="/icons/chevron-left.svg" alt="" />
     </button>
 
-    <div class="titlebar-drag"></div>
-
     <div class="canvas-viewport" id="viewport">
       <div class="canvas-world" id="world">
         <svg class="edge-svg" id="edge-svg" viewBox="-5000 -5000 10000 10000"></svg>
+        <svg class="edge-svg" id="activity-svg" viewBox="-5000 -5000 10000 10000">
+          <defs>
+            <filter id="activity-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+        </svg>
       </div>
     </div>
 
@@ -27,21 +36,6 @@
       </div>
       <h2>Add your first agent</h2>
       <p>Drag a platform card from the dock below onto the canvas</p>
-      <p style="font-size: 12px; color: rgba(255, 255, 255, 0.15); margin-top: 8px">
-        <kbd
-          style="
-            display: inline-block;
-            padding: 2px 4px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            font-size: 10px;
-            color: rgba(255, 255, 255, 0.25);
-            background: rgba(255, 255, 255, 0.04);
-          "
-          >&#8984;K</kbd
-        >
-        to open command palette
-      </p>
     </div>
 
     <div class="canvas-toolbar" id="toolbar">
@@ -66,7 +60,7 @@
     <div class="agent-detail-panel" id="agent-detail-panel">
       <div class="panel-header">
         <span class="panel-title">Agent Details</span>
-        <button class="panel-close" id="agent-detail-close" aria-label="Close">
+        <button class="panel-close" id="agent-detail-close">
           <svg viewBox="0 0 24 24" fill="none">
             <path
               d="M18 6L6 18M6 6l12 12"
@@ -80,18 +74,18 @@
       <div class="panel-body">
         <div class="detail-identity" id="agent-detail-identity"></div>
 
-        <div class="detail-section">
+        <div class="detail-section" id="section-role">
           <span class="detail-section-label">Role</span>
           <div class="role-pills" id="agent-role-pills">
             <button class="role-pill" data-role="lead">Lead</button>
             <button class="role-pill" data-role="specialist">Specialist</button>
             <button class="role-pill" data-role="observer">Observer</button>
-            <button class="role-pill" data-role="bridge">Bridge</button>
+            <button class="role-pill" data-role="coordinator">Coordinator</button>
             <button class="role-pill" data-role="assistant">Assistant</button>
           </div>
         </div>
 
-        <div class="detail-section">
+        <div class="detail-section" id="section-autonomy">
           <span class="detail-section-label">Autonomy</span>
           <div class="autonomy-segmented" id="autonomy-segmented">
             <div class="autonomy-highlight" id="autonomy-highlight"></div>
@@ -118,7 +112,7 @@
           </button>
         </div>
 
-        <div class="detail-section">
+        <div class="detail-section" id="section-behavior">
           <span class="detail-section-label">Group Behavior</span>
           <div class="toggle-row">
             <span class="toggle-label">Proactive messages</span>
@@ -134,35 +128,16 @@
           </div>
         </div>
 
-        <div class="detail-section" id="capabilities-section">
-          <span class="detail-section-label">Capabilities</span>
-          <div class="capabilities-field">
-            <span class="capabilities-sublabel">Directories</span>
-            <div class="tag-input-container" id="cap-dirs-tags">
-              <input class="tag-input" id="cap-dirs-input" placeholder="Add directory path..." />
-            </div>
-          </div>
-          <div class="capabilities-field">
-            <span class="capabilities-sublabel">Tools</span>
-            <div class="tag-input-container" id="cap-tools-tags">
-              <input class="tag-input" id="cap-tools-input" placeholder="Add tool name..." />
-            </div>
-          </div>
-          <div class="capabilities-field">
-            <span class="capabilities-sublabel">Description</span>
-            <textarea
-              class="detail-textarea"
-              id="cap-description"
-              placeholder="Describe what this agent can do..."
-              rows="2"
-            ></textarea>
-          </div>
-        </div>
-
-        <div class="detail-section">
+        <div class="detail-section" id="section-kpis">
           <span class="detail-section-label">KPIs</span>
-          <div class="kpi-placeholder">KPI tracking coming soon</div>
+          <div class="kpi-grid" id="kpi-grid"></div>
         </div>
+      </div>
+      <div class="panel-footer" id="panel-footer">
+        <svg class="save-check" viewBox="0 0 24 24" fill="none">
+          <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="save-text">Saved</span>
       </div>
     </div>
 
@@ -170,7 +145,7 @@
     <div class="workspace-detail-panel" id="workspace-detail-panel">
       <div class="panel-header">
         <span class="panel-title">Workspace Details</span>
-        <button class="panel-close" id="workspace-detail-close" aria-label="Close">
+        <button class="panel-close" id="workspace-detail-close">
           <svg viewBox="0 0 24 24" fill="none">
             <path
               d="M18 6L6 18M6 6l12 12"
@@ -278,6 +253,25 @@
       </div>
     </div>
 
+    <!-- Live Conversation Panel -->
+    <div class="conversation-panel" id="conversation-panel">
+      <div class="panel-header">
+        <div class="conv-participants" id="conv-participants"></div>
+        <button class="panel-close" id="conv-panel-close">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path
+              d="M18 6L6 18M6 6l12 12"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+      <div class="conv-messages" id="conv-messages"></div>
+      <div class="conv-status" id="conv-status">Waiting for activity...</div>
+    </div>
+
     <!-- Workspace Creation Dialog -->
     <div class="workspace-dialog-overlay" id="ws-dialog-overlay">
       <div class="workspace-dialog">
@@ -381,41 +375,21 @@
       </div>
     </div>
 
-    <!-- Edge Delete Confirmation Dialog -->
-    <div class="workspace-dialog-overlay" id="edge-delete-overlay">
-      <div class="workspace-dialog" role="alertdialog" aria-labelledby="edge-delete-title">
-        <h3 id="edge-delete-title">Remove Connection</h3>
-        <p
-          style="
-            font-size: 13px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-            margin-bottom: 16px;
-          "
-          id="edge-delete-text"
-        >
-          Are you sure you want to remove this connection?
-        </p>
-        <div class="panel-actions">
-          <button class="panel-btn panel-btn-cancel" id="edge-delete-cancel">Cancel</button>
-          <button
-            class="panel-btn"
-            id="edge-delete-confirm"
-            style="
-              background: rgba(248, 113, 113, 0.12);
-              color: var(--error);
-              border: 1px solid rgba(248, 113, 113, 0.2);
-            "
-          >
-            Remove
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- Cover Flow Dock -->
     <div class="coverflow-dock" id="coverflow-dock">
       <div class="coverflow-track" id="coverflow-track"></div>
+    </div>
+
+    <!-- Activity Legend -->
+    <div class="canvas-legend" id="canvas-legend">
+      <div class="legend-item">
+        <span class="legend-dot"></span>
+        <span>Message in transit</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-ring"></span>
+        <span>Agent processing</span>
+      </div>
     </div>
 
     <!-- Dock Toggle -->

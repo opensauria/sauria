@@ -1,10 +1,9 @@
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, renameSync } from 'node:fs';
 import type BetterSqlite3 from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 import type {
   CanvasGraph,
   InboundMessage,
-  InternalRoute,
   RoutingAction,
   OwnerIdentity,
   OwnerCommand,
@@ -17,11 +16,16 @@ import type { LLMRoutingBrain, RoutingContext } from './llm-router.js';
 import type { AgentMemory } from './agent-memory.js';
 import type { KPITracker } from './kpi-tracker.js';
 import type { CheckpointManager } from './checkpoint.js';
-import type { EscalationManager } from './escalation.js';
-import type { DelegationTracker } from './delegation-tracker.js';
 import { AutonomyEnforcer } from './autonomy.js';
 import { evaluateEdgeRules } from './routing.js';
 import { getLogger } from '../utils/logger.js';
+import { IPC_EVENTS } from '@opensauria/ipc-protocol';
+import type { ActivityMessagePayload } from '@opensauria/ipc-protocol';
+import type { IntegrationRegistry } from '../integrations/registry.js';
+
+const MAX_FORWARD_DEPTH = 3;
+
+type ActivityCallback = (event: string, data: Record<string, unknown>) => void;
 
 interface OrchestratorDeps {
   readonly registry: ChannelRegistry;
@@ -32,13 +36,10 @@ interface OrchestratorDeps {
   readonly agentMemory?: AgentMemory;
   readonly kpiTracker?: KPITracker;
   readonly checkpointManager?: CheckpointManager;
-  readonly escalationManager?: EscalationManager;
-  readonly delegationTracker?: DelegationTracker;
-  readonly enqueueInternal?: (message: InboundMessage) => void;
   readonly canvasPath?: string;
+  readonly onActivity?: ActivityCallback;
+  readonly integrationRegistry?: IntegrationRegistry;
 }
-
-const MAX_INTERNAL_HOPS = 5;
 
 export class AgentOrchestrator {
   private graph: CanvasGraph;
@@ -50,10 +51,9 @@ export class AgentOrchestrator {
   private readonly agentMemory: AgentMemory | null;
   private readonly kpiTracker: KPITracker | null;
   private readonly checkpointManager: CheckpointManager | null;
-  private readonly escalationManager: EscalationManager | null;
-  private readonly delegationTracker: DelegationTracker | null;
-  private readonly enqueueInternal: ((message: InboundMessage) => void) | null;
   private readonly canvasPath: string | null;
+  private readonly onActivity: ActivityCallback | null;
+  private readonly integrationRegistry: IntegrationRegistry | null;
 
   constructor(deps: OrchestratorDeps) {
     this.registry = deps.registry;
@@ -64,52 +64,69 @@ export class AgentOrchestrator {
     this.agentMemory = deps.agentMemory ?? null;
     this.kpiTracker = deps.kpiTracker ?? null;
     this.checkpointManager = deps.checkpointManager ?? null;
-    this.escalationManager = deps.escalationManager ?? null;
-    this.delegationTracker = deps.delegationTracker ?? null;
-    this.enqueueInternal = deps.enqueueInternal ?? null;
     this.canvasPath = deps.canvasPath ?? null;
+    this.onActivity = deps.onActivity ?? null;
+    this.integrationRegistry = deps.integrationRegistry ?? null;
   }
 
-  updateGraph(graph: CanvasGraph): void {
-    this.graph = graph;
+  private recordReplyInMemory(source: InboundMessage, content: string): void {
+    if (!this.agentMemory) return;
+    const conversationId = this.agentMemory.getOrCreateConversation(
+      source.platform,
+      source.groupId,
+      [source.sourceNodeId],
+    );
+    this.agentMemory.recordMessage({
+      conversationId,
+      sourceNodeId: source.sourceNodeId,
+      senderId: source.sourceNodeId,
+      senderIsOwner: false,
+      platform: source.platform,
+      groupId: source.groupId,
+      content,
+      contentType: 'text',
+    });
   }
 
-  async sweepOverdueDelegations(): Promise<void> {
-    if (!this.delegationTracker || !this.escalationManager || !this.agentMemory) return;
+  private contentPreview(content: string): string {
+    return content.length > 60 ? content.slice(0, 57) + '...' : content;
+  }
 
-    const logger = getLogger();
-    const overdue = this.delegationTracker.getOverdueTasks();
+  private emitMessage(from: string, to: string, content: string, actionType: string): void {
+    const fromNode = this.findNode(from);
+    const toNode = this.findNode(to);
+    const payload: ActivityMessagePayload = {
+      id: nanoid(),
+      from,
+      fromLabel: fromNode?.label ?? from,
+      to,
+      toLabel: toNode?.label ?? to,
+      content,
+      actionType,
+      timestamp: new Date().toISOString(),
+    };
+    this.onActivity?.(IPC_EVENTS.ACTIVITY_MESSAGE, payload as unknown as Record<string, unknown>);
+  }
 
-    for (const task of overdue) {
-      const assignedNode = this.findNode(task.assignedTo);
-      const label = assignedNode?.label ?? task.assignedTo;
-      const summary = `Overdue task from ${label}: "${task.title}" (priority: ${task.priority}, deadline: ${task.deadline})`;
-
-      logger.warn('Overdue delegation detected', {
-        taskId: task.id,
-        assignedTo: task.assignedTo,
-        priority: task.priority,
-      });
-
-      const syntheticSource: InboundMessage = {
-        sourceNodeId: task.assignedTo,
-        platform: (assignedNode?.platform ?? 'internal') as Platform,
-        senderId: 'system-sweep',
-        senderIsOwner: false,
-        groupId: null,
-        content: summary,
-        contentType: 'text',
-        timestamp: new Date().toISOString(),
-      };
-
-      try {
-        await this.executeAction({ type: 'escalate', summary }, syntheticSource);
-      } catch {
-        // Best-effort escalation to owner
+  updateGraph(newGraph: CanvasGraph): void {
+    // Detect instruction changes and clear stale conversation context
+    if (this.agentMemory) {
+      const oldInstructions = new Map(this.graph.nodes.map((n) => [n.id, n.instructions]));
+      for (const node of newGraph.nodes) {
+        const prev = oldInstructions.get(node.id);
+        if (prev !== undefined && prev !== node.instructions) {
+          this.agentMemory.clearAgentConversations(node.id);
+        }
       }
-
-      this.delegationTracker.markCancelled(task.id);
+      // Also detect globalInstructions change
+      if (this.graph.globalInstructions !== newGraph.globalInstructions) {
+        for (const node of newGraph.nodes) {
+          this.agentMemory.clearAgentConversations(node.id);
+        }
+      }
     }
+    this.graph = newGraph;
+    this.brain?.clearCache();
   }
 
   isOwnerSender(platform: Platform, senderId: string): boolean {
@@ -135,127 +152,35 @@ export class AgentOrchestrator {
     return this.graph.workspaces.find((w) => w.id === node.workspaceId) ?? null;
   }
 
-  private routeInternally(
-    fromNodeId: string,
-    targetNodeId: string,
-    content: string,
-    existingRoute?: InternalRoute,
-  ): boolean {
-    if (!this.enqueueInternal) return false;
-
-    const targetNode = this.findNode(targetNodeId);
-    if (!targetNode || targetNode.status !== 'connected') return false;
-
-    const hopCount = existingRoute ? existingRoute.hopCount + 1 : 0;
-    const dialogueId = existingRoute?.dialogueId ?? nanoid();
-    const originNodeId = existingRoute?.originNodeId ?? fromNodeId;
-
-    const internalMessage: InboundMessage = {
-      sourceNodeId: targetNodeId,
-      platform: 'internal',
-      senderId: fromNodeId,
-      senderIsOwner: false,
-      groupId: dialogueId,
-      content,
-      contentType: 'text',
-      timestamp: new Date().toISOString(),
-      internalRoute: {
-        originNodeId,
-        fromNodeId,
-        hopCount,
-        dialogueId,
-      },
-    };
-
-    this.enqueueInternal(internalMessage);
-    return true;
-  }
-
   async handleInbound(message: InboundMessage): Promise<void> {
     const logger = getLogger();
     const startTime = Date.now();
     const node = this.findNode(message.sourceNodeId);
     if (!node) return;
 
-    logger.info('Inbound message received', {
-      nodeId: node.id,
-      label: node.label,
-      platform: message.internalRoute ? 'internal' : message.platform,
-      isInternal: !!message.internalRoute,
-      fromNodeId: message.internalRoute?.fromNodeId,
-      contentPreview: message.content.slice(0, 80),
-    });
-
-    // Hop limit for internal routing — prevents infinite loops
-    if (message.internalRoute && message.internalRoute.hopCount >= MAX_INTERNAL_HOPS) {
-      logger.warn('Internal routing hop limit reached', {
-        dialogueId: message.internalRoute.dialogueId,
-        hopCount: message.internalRoute.hopCount,
-        fromNodeId: message.internalRoute.fromNodeId,
+    if ((message.forwardDepth ?? 0) >= MAX_FORWARD_DEPTH) {
+      logger.warn('Forward depth limit reached', {
+        nodeId: message.sourceNodeId,
+        depth: message.forwardDepth,
       });
       return;
     }
 
-    // Owner reply routing: if owner replied and there's a pending escalation, route back
-    if (message.senderIsOwner && this.escalationManager) {
-      const pending =
-        this.escalationManager.findPendingForChannel(message.sourceNodeId) ??
-        this.escalationManager.findMostRecentPending();
-      if (pending) {
-        this.escalationManager.resolve(pending.id);
-        const routed = this.routeInternally(
-          message.sourceNodeId,
-          pending.sourceNodeId,
-          message.content,
-          message.internalRoute,
-        );
-        if (!routed) {
-          const group = this.findGroupForNode(pending.sourceNodeId);
-          await this.registry.sendTo(pending.sourceNodeId, message.content, group);
-        }
-        if (this.agentMemory) {
-          const convId = this.agentMemory.getOrCreateConversation(
-            'internal',
-            pending.conversationId,
-            [pending.sourceNodeId],
-          );
-          this.agentMemory.recordMessage({
-            conversationId: convId,
-            sourceNodeId: message.sourceNodeId,
-            senderId: message.senderId,
-            senderIsOwner: true,
-            platform: 'internal',
-            groupId: pending.conversationId,
-            content: message.content,
-            contentType: 'text',
-          });
-        }
-        return;
-      }
-    }
+    this.onActivity?.(IPC_EVENTS.ACTIVITY_NODE, { nodeId: message.sourceNodeId, state: 'active' });
 
     // Record inbound message in agent memory
     let conversationId: string | null = null;
     if (this.agentMemory) {
-      const workspace = this.findWorkspace(message.sourceNodeId);
-      const platform = message.internalRoute ? 'internal' : message.platform;
-      const groupId = message.internalRoute ? message.internalRoute.dialogueId : message.groupId;
-      const participants = message.internalRoute
-        ? [message.sourceNodeId, message.internalRoute.fromNodeId]
-        : [message.sourceNodeId];
-      conversationId = this.agentMemory.getOrCreateConversation(
-        platform,
-        groupId,
-        participants,
-        workspace?.id,
-      );
+      conversationId = this.agentMemory.getOrCreateConversation(message.platform, message.groupId, [
+        message.sourceNodeId,
+      ]);
       this.agentMemory.recordMessage({
         conversationId,
         sourceNodeId: message.sourceNodeId,
         senderId: message.senderId,
         senderIsOwner: message.senderIsOwner,
-        platform,
-        groupId,
+        platform: message.platform,
+        groupId: message.groupId,
         content: message.content,
         contentType: message.contentType,
       });
@@ -268,23 +193,15 @@ export class AgentOrchestrator {
     if (ruleActions.length > 0) {
       const { immediate, pendingApproval } = this.autonomy.filterActions(node, ruleActions);
       for (const action of immediate) {
-        try {
-          await this.executeAction(action, message);
-        } catch (error) {
-          logger.error('Rule action execution failed', {
-            nodeId: node.id,
-            actionType: action.type,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
+        await this.executeAction(action, message);
       }
       await this.queuePendingApprovals(node, pendingApproval);
     }
 
-    // Step 3: If no rules matched, defer to LLM routing brain as fallback
-    // The brain generates a direct reply even when no explicit LLM edges exist,
-    // ensuring the orchestrator never silently drops messages.
-    if (ruleActions.length === 0 && this.brain) {
+    // Step 3: Defer to LLM routing brain when no rules matched,
+    // OR when this is a forwarded message (so the receiving agent can process and reply).
+    const isForwarded = (message.forwardDepth ?? 0) > 0;
+    if ((ruleActions.length === 0 || isForwarded) && this.brain) {
       const workspace = this.findWorkspace(node.id);
       const teamNodes = workspace
         ? this.graph.nodes.filter((n) => n.workspaceId === workspace.id)
@@ -295,7 +212,6 @@ export class AgentOrchestrator {
         sourceNode: node,
         workspace,
         teamNodes,
-        edges: [...this.graph.edges],
         ruleActions,
         conversationId,
         globalInstructions: this.graph.globalInstructions,
@@ -303,10 +219,6 @@ export class AgentOrchestrator {
 
       try {
         const decision = await this.brain.decideRouting(context);
-        logger.info('LLM routing decision', {
-          nodeId: node.id,
-          actions: decision.actions.map((a) => a.type),
-        });
         const { immediate, pendingApproval } = this.autonomy.filterActions(node, decision.actions);
         for (const action of immediate) {
           await this.executeAction(action, message);
@@ -317,46 +229,10 @@ export class AgentOrchestrator {
           nodeId: node.id,
           error: error instanceof Error ? error.message : String(error),
         });
-
-        try {
-          const fallbackContent =
-            'I encountered an issue processing your message. I have escalated this to the team lead.';
-          if (message.internalRoute) {
-            const isOrigin = message.internalRoute.originNodeId === message.sourceNodeId;
-            if (isOrigin) {
-              await this.registry.sendTo(message.sourceNodeId, fallbackContent, null);
-            } else {
-              const routed = this.routeInternally(
-                message.sourceNodeId,
-                message.internalRoute.fromNodeId,
-                fallbackContent,
-                message.internalRoute,
-              );
-              if (!routed) {
-                await this.registry.sendTo(
-                  message.internalRoute.fromNodeId,
-                  fallbackContent,
-                  this.findGroupForNode(message.internalRoute.fromNodeId),
-                );
-              }
-            }
-          } else {
-            await this.registry.sendTo(message.sourceNodeId, fallbackContent, message.groupId);
-          }
-        } catch {
-          // Best-effort fallback reply
-        }
-
-        if (!message.senderIsOwner && this.escalationManager && this.agentMemory) {
-          try {
-            const summary = `LLM routing failed for message from ${node.label}: ${message.content.slice(0, 200)}`;
-            await this.executeAction({ type: 'escalate', summary }, message);
-          } catch {
-            // Best-effort escalation
-          }
-        }
       }
     }
+
+    this.onActivity?.(IPC_EVENTS.ACTIVITY_NODE, { nodeId: message.sourceNodeId, state: 'idle' });
 
     // Track KPIs
     if (this.kpiTracker) {
@@ -530,7 +406,9 @@ export class AgentOrchestrator {
   private persistGraph(): void {
     if (!this.canvasPath) return;
     try {
-      writeFileSync(this.canvasPath, JSON.stringify(this.graph, null, 2), 'utf-8');
+      const tmpPath = `${this.canvasPath}.tmp`;
+      writeFileSync(tmpPath, JSON.stringify(this.graph, null, 2), 'utf-8');
+      renameSync(tmpPath, this.canvasPath);
     } catch (error) {
       const logger = getLogger();
       logger.warn('Failed to persist canvas graph', {
@@ -552,19 +430,10 @@ export class AgentOrchestrator {
       timestamp: new Date().toISOString(),
     };
 
-    const logger = getLogger();
     let executed = 0;
     for (const action of actions) {
-      try {
-        await this.executeAction(action, syntheticSource);
-        executed++;
-      } catch (error) {
-        logger.error('Approved action execution failed', {
-          agentId,
-          actionType: action.type,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
+      await this.executeAction(action, syntheticSource);
+      executed++;
     }
     return executed;
   }
@@ -582,16 +451,27 @@ export class AgentOrchestrator {
         const enrichedContent = contextPrefix
           ? `${contextPrefix}\n${action.content}`
           : action.content;
-        const routed = this.routeInternally(
-          source.sourceNodeId,
-          action.targetNodeId,
-          enrichedContent,
-          source.internalRoute,
-        );
-        if (!routed) {
-          const group = this.findGroupForNode(action.targetNodeId);
-          await this.registry.sendTo(action.targetNodeId, enrichedContent, group);
-        }
+
+        const syntheticFwd: InboundMessage = {
+          sourceNodeId: action.targetNodeId,
+          platform: source.platform,
+          senderId: source.sourceNodeId,
+          senderIsOwner: false,
+          groupId: source.groupId,
+          content: enrichedContent,
+          contentType: 'text',
+          timestamp: new Date().toISOString(),
+          forwardDepth: (source.forwardDepth ?? 0) + 1,
+          replyToNodeId: source.replyToNodeId ?? source.sourceNodeId,
+        };
+        this.onActivity?.(IPC_EVENTS.ACTIVITY_EDGE, {
+          from: source.sourceNodeId,
+          to: action.targetNodeId,
+          actionType: 'forward',
+          preview: this.contentPreview(action.content),
+        });
+        this.emitMessage(source.sourceNodeId, action.targetNodeId, action.content, 'forward');
+        await this.handleInbound(syntheticFwd);
         break;
       }
       case 'notify': {
@@ -603,69 +483,131 @@ export class AgentOrchestrator {
         const enrichedSummary = contextPrefix
           ? `${contextPrefix}\n${action.summary}`
           : action.summary;
-        const routed = this.routeInternally(
-          source.sourceNodeId,
-          action.targetNodeId,
-          enrichedSummary,
-          source.internalRoute,
-        );
-        if (!routed) {
-          const group = this.findGroupForNode(action.targetNodeId);
-          await this.registry.sendTo(action.targetNodeId, enrichedSummary, group);
-        }
+
+        const syntheticNotify: InboundMessage = {
+          sourceNodeId: action.targetNodeId,
+          platform: source.platform,
+          senderId: source.sourceNodeId,
+          senderIsOwner: false,
+          groupId: source.groupId,
+          content: enrichedSummary,
+          contentType: 'text',
+          timestamp: new Date().toISOString(),
+          forwardDepth: (source.forwardDepth ?? 0) + 1,
+          replyToNodeId: source.replyToNodeId ?? source.sourceNodeId,
+        };
+        this.onActivity?.(IPC_EVENTS.ACTIVITY_EDGE, {
+          from: source.sourceNodeId,
+          to: action.targetNodeId,
+          actionType: 'notify',
+          preview: this.contentPreview(action.summary),
+        });
+        this.emitMessage(source.sourceNodeId, action.targetNodeId, action.summary, 'notify');
+        await this.handleInbound(syntheticNotify);
         break;
       }
       case 'send_to_all': {
-        await this.registry.sendToWorkspace(action.workspaceId, action.content, this.graph);
+        const wsNodes = this.graph.nodes.filter((n) => n.workspaceId === action.workspaceId);
+        for (const target of wsNodes) {
+          if (target.id !== source.sourceNodeId) {
+            const syntheticMsg: InboundMessage = {
+              sourceNodeId: target.id,
+              platform: source.platform,
+              senderId: source.sourceNodeId,
+              senderIsOwner: false,
+              groupId: source.groupId,
+              content: action.content,
+              contentType: 'text',
+              timestamp: new Date().toISOString(),
+              forwardDepth: (source.forwardDepth ?? 0) + 1,
+              replyToNodeId: source.replyToNodeId ?? source.sourceNodeId,
+            };
+            this.onActivity?.(IPC_EVENTS.ACTIVITY_EDGE, {
+              from: source.sourceNodeId,
+              to: target.id,
+              actionType: 'send_to_all',
+              preview: this.contentPreview(action.content),
+            });
+            this.emitMessage(source.sourceNodeId, target.id, action.content, 'send_to_all');
+            await this.handleInbound(syntheticMsg);
+          }
+        }
         break;
       }
       case 'reply': {
-        if (source.internalRoute) {
-          const hasChannel = this.registry.get(source.sourceNodeId) !== null;
-          if (hasChannel) {
-            // Node has an external channel: reply to owner directly
-            await this.registry.sendTo(source.sourceNodeId, action.content, null);
-          } else {
-            // No external channel: route reply back through the chain
-            const routed = this.routeInternally(
-              source.sourceNodeId,
-              source.internalRoute.fromNodeId,
-              action.content,
-              source.internalRoute,
-            );
-            if (!routed) {
-              const group = this.findGroupForNode(source.internalRoute.fromNodeId);
-              await this.registry.sendTo(source.internalRoute.fromNodeId, action.content, group);
-            }
-          }
-        } else {
-          await this.registry.sendTo(source.sourceNodeId, action.content, source.groupId);
-        }
-        if (this.agentMemory) {
-          const platform = source.internalRoute ? 'internal' : source.platform;
-          const groupId = source.internalRoute ? source.internalRoute.dialogueId : source.groupId;
-          const conversationId = this.agentMemory.getOrCreateConversation(platform, groupId, [
-            source.sourceNodeId,
-          ]);
-          this.agentMemory.recordMessage({
-            conversationId,
-            sourceNodeId: source.sourceNodeId,
+        const replyTargetId = source.replyToNodeId ?? source.sourceNodeId;
+        const isForwardedReply =
+          (source.forwardDepth ?? 0) > 0 && replyTargetId !== source.sourceNodeId;
+
+        this.recordReplyInMemory(source, action.content);
+
+        if (isForwardedReply) {
+          // 1. Always route internally back to sender with attribution
+          const sourceLabel =
+            this.findNode(source.sourceNodeId)?.label ?? source.sourceNodeId;
+          const enrichedContent = `[Reply from ${sourceLabel}]\n${action.content}`;
+          const syntheticReply: InboundMessage = {
+            sourceNodeId: replyTargetId,
+            platform: source.platform,
             senderId: source.sourceNodeId,
             senderIsOwner: false,
-            platform,
-            groupId,
-            content: action.content,
+            groupId: source.groupId,
+            content: enrichedContent,
             contentType: 'text',
+            timestamp: new Date().toISOString(),
+            forwardDepth: source.forwardDepth ?? 0,
+            replyToNodeId: source.replyToNodeId,
+          };
+          this.onActivity?.(IPC_EVENTS.ACTIVITY_EDGE, {
+            from: source.sourceNodeId,
+            to: replyTargetId,
+            actionType: 'reply',
+            preview: this.contentPreview(action.content),
           });
+          this.emitMessage(source.sourceNodeId, replyTargetId, action.content, 'reply');
+          await this.handleInbound(syntheticReply);
+        } else {
+          // Direct message — reply to owner via channel
+          await this.registry.sendTo(source.sourceNodeId, action.content, source.groupId);
+          this.onActivity?.(IPC_EVENTS.ACTIVITY_EDGE, {
+            from: source.sourceNodeId,
+            to: source.sourceNodeId,
+            actionType: 'reply',
+            preview: this.contentPreview(action.content),
+          });
+          this.emitMessage(source.sourceNodeId, source.sourceNodeId, action.content, 'reply');
         }
         break;
       }
       case 'group_message': {
-        await this.registry.sendToWorkspace(action.workspaceId, action.content, this.graph);
+        const groupNodes = this.graph.nodes.filter((n) => n.workspaceId === action.workspaceId);
+        for (const target of groupNodes) {
+          if (target.id !== source.sourceNodeId) {
+            const syntheticGroupMsg: InboundMessage = {
+              sourceNodeId: target.id,
+              platform: source.platform,
+              senderId: source.sourceNodeId,
+              senderIsOwner: false,
+              groupId: source.groupId,
+              content: action.content,
+              contentType: 'text',
+              timestamp: new Date().toISOString(),
+              forwardDepth: (source.forwardDepth ?? 0) + 1,
+              replyToNodeId: source.replyToNodeId ?? source.sourceNodeId,
+            };
+            this.onActivity?.(IPC_EVENTS.ACTIVITY_EDGE, {
+              from: source.sourceNodeId,
+              to: target.id,
+              actionType: 'group_message',
+              preview: this.contentPreview(action.content),
+            });
+            this.emitMessage(source.sourceNodeId, target.id, action.content, 'group_message');
+            await this.handleInbound(syntheticGroupMsg);
+          }
+        }
         break;
       }
       case 'assign': {
-        const taskId = nanoid();
         if (this.db) {
           this.db
             .prepare(
@@ -673,28 +615,21 @@ export class AgentOrchestrator {
                VALUES (?, ?, ?, ?, ?, ?)`,
             )
             .run(
-              taskId,
+              nanoid(),
               workspace?.id ?? '',
               action.targetNodeId,
               source.sourceNodeId,
               action.task,
               action.priority,
             );
-          if (this.delegationTracker) {
-            this.delegationTracker.setDeadline(taskId, action.priority);
-          }
         }
-        const taskContent = `[Task] ${action.task}`;
-        const routed = this.routeInternally(
-          source.sourceNodeId,
-          action.targetNodeId,
-          taskContent,
-          source.internalRoute,
-        );
-        if (!routed) {
-          const group = this.findGroupForNode(action.targetNodeId);
-          await this.registry.sendTo(action.targetNodeId, taskContent, group);
-        }
+        this.onActivity?.(IPC_EVENTS.ACTIVITY_EDGE, {
+          from: source.sourceNodeId,
+          to: action.targetNodeId,
+          actionType: 'assign',
+          preview: this.contentPreview(action.task),
+        });
+        this.emitMessage(source.sourceNodeId, action.targetNodeId, action.task, 'assign');
         if (this.kpiTracker) {
           this.kpiTracker.recordTaskCompleted(action.targetNodeId);
         }
@@ -723,26 +658,24 @@ export class AgentOrchestrator {
         }
         break;
       }
-      case 'escalate': {
-        if (this.escalationManager && this.agentMemory) {
-          const convId = this.agentMemory.getOrCreateConversation(source.platform, source.groupId, [
-            source.sourceNodeId,
-          ]);
-          this.escalationManager.create(source.sourceNodeId, convId, action.summary);
+      case 'use_tool': {
+        if (!this.integrationRegistry) {
+          const logger = getLogger();
+          logger.warn('use_tool action received but no integration registry available');
+          break;
         }
-        const sourceNode = this.findNode(source.sourceNodeId);
-        const label = sourceNode?.label ?? source.sourceNodeId;
-        const ownerMessage = `[Escalation from ${label}] ${action.summary}`;
-        for (const node of this.graph.nodes) {
-          if (node.platform === 'owner') continue;
-          if (this.isOwnerChannelNode(node)) {
-            try {
-              await this.registry.sendTo(node.id, ownerMessage, null);
-              break;
-            } catch {
-              // Try next channel
-            }
-          }
+        try {
+          const result = await this.integrationRegistry.callTool(action.integration, action.tool, {
+            ...action.arguments,
+          });
+          const resultSummary =
+            typeof result === 'string' ? result : JSON.stringify(result).slice(0, 500);
+          const replyContent = `${action.content}\n\nResult: ${resultSummary}`;
+          await this.executeAction({ type: 'reply', content: replyContent }, source);
+        } catch (err: unknown) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          const replyContent = `${action.content}\n\nTool error: ${errorMsg}`;
+          await this.executeAction({ type: 'reply', content: replyContent }, source);
         }
         break;
       }

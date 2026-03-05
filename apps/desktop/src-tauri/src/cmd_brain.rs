@@ -210,3 +210,13 @@ pub async fn brain_update_entity(
         )
         .await
 }
+
+#[tauri::command]
+pub async fn get_agent_kpis(
+    node_id: String,
+    client: tauri::State<'_, Arc<DaemonClient>>,
+) -> Result<Value, String> {
+    client
+        .request("kpi:get", serde_json::json!({"nodeId": node_id}))
+        .await
+}

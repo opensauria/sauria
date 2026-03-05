@@ -6,12 +6,12 @@ import type {
   RoutingAction,
   RoutingDecision,
   AgentNode,
-  Edge,
   Workspace,
 } from './types.js';
 import { RoutingCache, buildCacheKey } from './routing-cache.js';
-import { type AgentMemory, estimateTokens } from './agent-memory.js';
+import { AgentMemory, estimateTokens } from './agent-memory.js';
 import { searchByKeyword } from '../db/search.js';
+import type { IntegrationRegistry } from '../integrations/registry.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -22,7 +22,6 @@ export interface RoutingContext {
   readonly sourceNode: AgentNode;
   readonly workspace: Workspace | null;
   readonly teamNodes: readonly AgentNode[];
-  readonly edges: readonly Edge[];
   readonly ruleActions: readonly RoutingAction[];
   readonly conversationId: string | null;
   readonly globalInstructions: string;
@@ -42,6 +41,9 @@ interface RawLLMAction {
   readonly workspaceId?: string;
   readonly fact?: string;
   readonly topics?: readonly string[];
+  readonly integration?: string;
+  readonly tool?: string;
+  readonly arguments?: Readonly<Record<string, unknown>>;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────
@@ -56,26 +58,31 @@ const VALID_ACTION_TYPES = new Set([
   'send_to_all',
   'learn',
   'group_message',
-  'escalate',
+  'use_tool',
 ]);
 
 const VALID_PRIORITIES = new Set(['low', 'normal', 'high']);
-
-const LLM_ROUTING_TIMEOUT_MS = 30_000;
-const MAX_PROMPT_TOKENS = 4000;
 
 // ─── LLMRoutingBrain ────────────────────────────────────────────────
 
 export class LLMRoutingBrain {
   private readonly cache: RoutingCache;
+  private readonly memory: AgentMemory;
+  readonly integrationRegistry: IntegrationRegistry | null;
 
   constructor(
     private readonly router: ModelRouter,
-    private readonly memory: AgentMemory,
     private readonly db: BetterSqlite3.Database,
     cacheTtlMs?: number,
+    integrationRegistry?: IntegrationRegistry,
   ) {
     this.cache = new RoutingCache(cacheTtlMs);
+    this.memory = new AgentMemory(db);
+    this.integrationRegistry = integrationRegistry ?? null;
+  }
+
+  clearCache(): void {
+    this.cache.clear();
   }
 
   async decideRouting(context: RoutingContext): Promise<RoutingDecision> {
@@ -92,7 +99,7 @@ export class LLMRoutingBrain {
       return cached;
     }
 
-    const prompt = buildRoutingPrompt(context, this.memory, this.db);
+    const prompt = buildRoutingPrompt(context, this.memory, this.db, this.integrationRegistry);
     const decision = await this.callLLM(prompt, tier);
 
     this.cache.set(cacheKey, decision);
@@ -138,21 +145,104 @@ export class LLMRoutingBrain {
     const stream =
       tier === 'deep' ? this.router.deepAnalyze(messages) : this.router.reason(messages);
 
-    const collect = async (): Promise<string> => {
-      let result = '';
-      for await (const chunk of stream) {
-        result += chunk.text;
-      }
-      return result;
-    };
+    let result = '';
+    for await (const chunk of stream) {
+      result += chunk.text;
+    }
 
-    const timeout = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('LLM routing timeout')), LLM_ROUTING_TIMEOUT_MS);
-    });
-
-    const result = await Promise.race([collect(), timeout]);
     return parseRoutingResponse(result);
   }
+}
+
+// ─── Forward Content Parser ──────────────────────────────────────────
+
+interface ParsedForward {
+  readonly senderLabel: string;
+  readonly context: readonly string[];
+  readonly actualMessage: string;
+}
+
+function parseForwardedContent(content: string): ParsedForward | null {
+  const senderMatch = content.match(/^\[(?:Forwarded|Reply) from ([^\]]+)\]\s*/);
+  if (!senderMatch) return null;
+
+  const messageMarker = content.indexOf('\n[Message]:\n');
+  if (messageMarker === -1) {
+    return { senderLabel: senderMatch[1]!, context: [], actualMessage: content };
+  }
+
+  const contextBlock = content.slice(senderMatch[0].length, messageMarker);
+  const contextLines = contextBlock
+    .split('\n')
+    .filter((l) => l.startsWith('- '))
+    .map((l) => l.slice(2));
+
+  const actualMessage = content.slice(messageMarker + '\n[Message]:\n'.length).trim();
+
+  return { senderLabel: senderMatch[1]!, context: contextLines, actualMessage };
+}
+
+function buildMessageSection(message: InboundMessage, sourceNode: AgentNode): string[] {
+  const isForwarded = (message.forwardDepth ?? 0) > 0;
+
+  if (!isForwarded) {
+    return [
+      `Incoming message from ${sourceNode.label} (${sourceNode.role}):`,
+      `"${message.content}"`,
+    ];
+  }
+
+  const parsed = parseForwardedContent(message.content);
+  const isReply = message.content.startsWith('[Reply from ');
+
+  if (!parsed) {
+    const verb = isReply ? 'a reply' : 'a forwarded message';
+    return [
+      `${sourceNode.label} (${sourceNode.role}) received ${verb}:`,
+      `"${message.content}"`,
+    ];
+  }
+
+  const verb = isReply ? 'a reply from' : 'a message forwarded by';
+  const lines: string[] = [
+    `${sourceNode.label} (${sourceNode.role}) received ${verb} ${parsed.senderLabel}.`,
+  ];
+
+  if (parsed.context.length > 0) {
+    lines.push('Conversation context leading to this forward:');
+    for (const ctx of parsed.context) {
+      lines.push(`  ${ctx}`);
+    }
+  }
+
+  lines.push('', `The actual request/message:`, `"${parsed.actualMessage}"`);
+  lines.push(
+    '',
+    `CRITICAL: Reply naturally to the actual request above. Do NOT echo or repeat the forwarding metadata. Respond as if ${parsed.senderLabel} asked you directly.`,
+  );
+
+  return lines;
+}
+
+// ─── Language Extraction ─────────────────────────────────────────────
+
+const LANGUAGE_DIRECTIVE_PATTERN =
+  /(?:always\s+(?:reply|respond|answer|write|speak)|(?:reply|respond|answer|write|speak)\s+(?:only\s+)?in)\s+(english|french|spanish|german|italian|portuguese|arabic|chinese|japanese|korean|russian|dutch|swedish|norwegian|danish|finnish|polish|czech|hungarian|romanian|turkish|hindi|thai|vietnamese|indonesian|malay|filipino|hebrew|greek|ukrainian|bulgarian|croatian|serbian|slovak|slovenian|latvian|lithuanian|estonian)/i;
+
+function extractLanguageDirective(instructions: string): string | null {
+  const match = instructions.match(LANGUAGE_DIRECTIVE_PATTERN);
+  return match ? match[1]!.charAt(0).toUpperCase() + match[1]!.slice(1).toLowerCase() : null;
+}
+
+function buildToolsSection(integrationRegistry?: IntegrationRegistry | null): string[] {
+  if (!integrationRegistry) return [];
+  const tools = integrationRegistry.getAvailableTools();
+  if (tools.length === 0) return [];
+
+  const toolLines = tools
+    .slice(0, 20)
+    .map((t) => `- ${t.integrationName}/${t.name}: ${t.description ?? 'no description'}`);
+  return ['Available tools (use "use_tool" action to invoke):', ...toolLines, ''];
 }
 
 // ─── Prompt Building ────────────────────────────────────────────────
@@ -161,36 +251,20 @@ function buildRoutingPrompt(
   context: RoutingContext,
   memory: AgentMemory,
   db: BetterSqlite3.Database,
+  integrationRegistry?: IntegrationRegistry | null,
 ): ChatMessage[] {
   const {
     message,
     sourceNode,
     workspace,
     teamNodes,
-    edges,
     ruleActions,
     conversationId,
     globalInstructions,
   } = context;
 
   const agentList = teamNodes
-    .map((node) => {
-      let line = `- ${node.label} (${node.role}) on ${node.platform}`;
-      if (node.capabilities) {
-        const parts: string[] = [];
-        if (node.capabilities.directories?.length) {
-          parts.push(`dirs: ${node.capabilities.directories.join(', ')}`);
-        }
-        if (node.capabilities.tools?.length) {
-          parts.push(`tools: ${node.capabilities.tools.join(', ')}`);
-        }
-        if (node.capabilities.description) {
-          parts.push(node.capabilities.description);
-        }
-        if (parts.length > 0) line += ` [${parts.join('; ')}]`;
-      }
-      return line;
-    })
+    .map((node) => `- ${node.label} (${node.role}) [nodeId: "${node.id}"] on ${node.platform}`)
     .join('\n');
 
   const ruleActionsText =
@@ -235,7 +309,7 @@ function buildRoutingPrompt(
       }
     }
     if (peerLines.length > 0) {
-      peerMessagesText = ['Recent peer activity:', ...peerLines.slice(0, 3)].join('\n');
+      peerMessagesText = ['Recent peer activity:', ...peerLines.slice(0, 5)].join('\n');
     }
   }
 
@@ -257,103 +331,88 @@ function buildRoutingPrompt(
     }
   }
 
-  // Derive hierarchy from edges
-  const directReports = edges
-    .filter((e) => e.from === sourceNode.id)
-    .map((e) => teamNodes.find((n) => n.id === e.to))
-    .filter((n): n is AgentNode => n !== undefined);
-
-  const supervisors = edges
-    .filter((e) => e.to === sourceNode.id)
-    .map((e) => teamNodes.find((n) => n.id === e.from))
-    .filter((n): n is AgentNode => n !== undefined);
-
-  let hierarchyText = '';
-  if (directReports.length > 0 || supervisors.length > 0) {
-    const lines: string[] = ['Hierarchy:'];
-    if (supervisors.length > 0) {
-      lines.push(`You report to: ${supervisors.map((n) => n.label).join(', ')}`);
-    }
-    if (directReports.length > 0) {
-      lines.push(
-        `Your direct reports: ${directReports.map((n) => `${n.label} (${n.role})`).join(', ')}`,
-      );
-    }
-    hierarchyText = lines.join('\n');
-  }
-
-  // ─── Build prompt sections (ordered by priority for truncation) ─────
-  // Priority: action schema > agents/hierarchy > history > instructions > knowledge/peers
-
-  const characterName = sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '');
-
-  // Core sections (never truncated)
-  const coreSections = [
-    `Role: routing brain for AI agent team.`,
-    `Team: ${workspace?.name ?? 'Unknown'} | Purpose: ${workspace?.purpose ?? 'General'} | Topics: ${workspace?.topics.join(', ') ?? 'None'}`,
+  const promptParts = [
+    'You are the routing brain for a team of AI agents.',
     '',
-    'Agents:',
-    agentList || '(none)',
+    `Team: ${workspace?.name ?? 'Unknown'}`,
+    `Purpose: ${workspace?.purpose ?? 'General'}`,
+    `Topics: ${workspace?.topics.join(', ') ?? 'None'}`,
     '',
-    ...(hierarchyText ? [hierarchyText, ''] : []),
-    `From: ${sourceNode.label} (${sourceNode.role})`,
+    'Agents in this team:',
+    agentList || '(no agents)',
+    '',
+    ...buildMessageSection(message, sourceNode),
     '',
     conversationContext
       ? `Recent conversation context:\n${conversationContext}`
       : 'No prior conversation context.',
     '',
-    ...(message.internalRoute
-      ? [
-          `Forwarded internally from ${
-            teamNodes.find((n) => n.id === message.internalRoute!.fromNodeId)?.label ??
-            message.internalRoute.fromNodeId
-          } (hop ${String(message.internalRoute.hopCount)}). Do NOT forward back to ${message.internalRoute.fromNodeId} unless you have new info.`,
-          'When replying, briefly state who asked you and what for at the start so the recipient has context.',
-          '',
-        ]
-      : []),
+    ...(workspaceFactsText ? [workspaceFactsText, ''] : []),
+    ...(agentFactsText ? [agentFactsText, ''] : []),
+    ...(knowledgeGraphText ? [knowledgeGraphText, ''] : []),
+    ...(peerMessagesText ? [peerMessagesText, ''] : []),
+    ...buildToolsSection(integrationRegistry),
     ruleActionsText,
     '',
-    `Reply in character as ${characterName} (${sourceNode.role ?? 'assistant'}). Never mention being an AI. Never use em dashes or en dashes.`,
-    ...(globalInstructions || sourceNode.instructions
+    `IDENTITY: Your name is ${sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '')}. You are ${sourceNode.role ?? 'assistant'}. Never use any other name. Never mention being Claude, an AI model, or a language model.`,
+    ...(sourceNode.instructions
       ? [
-          'Style:',
-          ...(globalInstructions ? [globalInstructions] : []),
-          ...(sourceNode.instructions ? [sourceNode.instructions] : []),
+          `AGENT PERSONA (this defines WHO you are — embody this fully in every response):`,
+          sourceNode.instructions,
           '',
         ]
       : []),
-    ...(directReports.length > 0
+    'FORMATTING: Write plain text only. Never use asterisks, markdown, bold, italic, bullet points, headers, or any special formatting characters. Keep messages short and natural like a human chat message.',
+    ...(globalInstructions
       ? [
-          'DELEGATION: reply directly if you can; forward to reports for their input; compile responses before replying.',
-          `Delegates: ${directReports.map((n) => `${n.label} (${n.id})`).join(', ')}`,
+          'Communication style (applies to tone and language of all responses):',
+          globalInstructions,
           '',
         ]
       : []),
-    'Output JSON only: {"actions": [{"type": "reply", "content": "..."}, ...]}',
-    'Types: reply, forward (targetNodeId+content), assign (targetNodeId+task+priority:low/normal/high), notify (targetNodeId+summary), send_to_all (workspaceId+content), learn (fact+topics[]), group_message (workspaceId+content), escalate (summary)',
-    ...(message.senderIsOwner ? ['senderIsOwner=true: do NOT escalate, reply directly.'] : []),
+    'Decide what actions to take. Return ONLY valid JSON:',
+    '{"actions": [{"type": "reply", "content": "..."}, ...]}',
+    '',
+    'Valid action types: reply, forward, assign, notify, send_to_all, learn, group_message, use_tool',
+    'For forward/assign/notify: include "targetNodeId"',
+    'For assign: include "task" and "priority" (low/normal/high)',
+    'For notify: include "summary"',
+    'For send_to_all/group_message: include "workspaceId" and "content"',
+    'For learn: include "fact" and "topics" (string array)',
+    'For use_tool: include "integration" (id), "tool" (name), "arguments" (JSON object), and "content" (explanation to owner)',
+    '',
+    'COLLABORATION: When you receive a forwarded message from another agent, ALWAYS reply to confirm understanding and provide your response. Your reply is automatically routed back to the sender AND to the owner if you have your own channel. Like real teamwork — always confirm, never leave colleagues in the dark.',
+    "DELEGATION: When the user asks you to communicate with, ask, or send something to another agent by name, you MUST use the forward action with that agent's targetNodeId. Never answer on behalf of another agent. Never fabricate what another agent would say.",
+    'REPLY vs FORWARD: "reply" sends your response (to owner for direct messages, to sender agent for forwarded messages). "forward" sends to a DIFFERENT agent. Use reply to continue a discussion, forward to involve someone new.',
+    'ATTRIBUTION: When you reply to the owner after receiving a forwarded request from another agent, always mention who asked you and why. Example: "[AgentName] asked me to give my opinion on X. Here is what I think: ..." This gives the owner context about why you are reaching out.',
   ];
 
-  // Lower-priority sections (truncated first if over budget)
-  const softSections = [
-    ...(workspaceFactsText ? [workspaceFactsText] : []),
-    ...(agentFactsText ? [agentFactsText] : []),
-    ...(knowledgeGraphText ? [knowledgeGraphText] : []),
-    ...(peerMessagesText ? [peerMessagesText] : []),
-  ];
+  // Extract explicit language directive from instructions and inject at the very end
+  // for maximum LLM attention (recency bias)
+  const allInstructions = [globalInstructions, sourceNode.instructions].filter(Boolean).join('\n');
+  const detectedLanguage = extractLanguageDirective(allInstructions);
 
-  let systemPrompt = [...coreSections, ...softSections].join('\n');
-
-  // Safety cap: truncate soft sections if over budget
-  const promptTokens = estimateTokens(systemPrompt);
-  if (promptTokens > MAX_PROMPT_TOKENS && softSections.length > 0) {
-    systemPrompt = coreSections.join('\n');
+  if (detectedLanguage) {
+    promptParts.push(
+      '',
+      `MANDATORY LANGUAGE: You MUST write ALL content (replies, forwards, summaries, agent-to-agent messages) in ${detectedLanguage}. This overrides everything else. Even if the user writes in another language, you MUST respond in ${detectedLanguage}.`,
+    );
+  } else {
+    promptParts.push(
+      '',
+      'LANGUAGE: Match the language of the incoming message. If the user writes in French, respond in French. If in English, respond in English.',
+    );
   }
+
+  const systemPrompt = promptParts.join('\n');
+
+  const isForwarded = (message.forwardDepth ?? 0) > 0;
+  const parsed = isForwarded ? parseForwardedContent(message.content) : null;
+  const userContent = parsed?.actualMessage ?? message.content;
 
   return [
     { role: 'system' as const, content: systemPrompt },
-    { role: 'user' as const, content: message.content },
+    { role: 'user' as const, content: userContent },
   ];
 }
 
@@ -433,8 +492,16 @@ function normalizeAction(raw: RawLLMAction): RoutingAction | null {
         ? { type: 'group_message', workspaceId: raw.workspaceId, content: raw.content }
         : null;
 
-    case 'escalate':
-      return raw.summary ? { type: 'escalate', summary: raw.summary } : null;
+    case 'use_tool':
+      return raw.integration && raw.tool && raw.content
+        ? {
+            type: 'use_tool',
+            integration: raw.integration,
+            tool: raw.tool,
+            arguments: raw.arguments ?? {},
+            content: raw.content,
+          }
+        : null;
 
     default:
       return null;

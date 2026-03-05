@@ -13,15 +13,6 @@ export interface OwnerIdentity {
   readonly whatsapp?: { readonly phoneNumber: string };
 }
 
-// ─── Internal Routing ─────────────────────────────────────────────
-
-export interface InternalRoute {
-  readonly originNodeId: string;
-  readonly fromNodeId: string;
-  readonly hopCount: number;
-  readonly dialogueId: string;
-}
-
 // ─── Messages ──────────────────────────────────────────────────────
 
 export interface InboundMessage {
@@ -33,7 +24,8 @@ export interface InboundMessage {
   readonly content: string;
   readonly contentType: 'text' | 'voice' | 'image';
   readonly timestamp: string;
-  readonly internalRoute?: InternalRoute;
+  readonly forwardDepth?: number;
+  readonly replyToNodeId?: string;
 }
 
 export type RoutingAction =
@@ -54,7 +46,13 @@ export type RoutingAction =
       readonly pendingActions: readonly RoutingAction[];
     }
   | { readonly type: 'group_message'; readonly workspaceId: string; readonly content: string }
-  | { readonly type: 'escalate'; readonly summary: string };
+  | {
+      readonly type: 'use_tool';
+      readonly integration: string;
+      readonly tool: string;
+      readonly arguments: Readonly<Record<string, unknown>>;
+      readonly content: string;
+    };
 
 export interface RoutingDecision {
   readonly actions: readonly RoutingAction[];

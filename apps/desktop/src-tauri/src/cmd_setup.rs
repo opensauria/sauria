@@ -90,6 +90,12 @@ pub fn detect_clients() -> Vec<McpClientInfo> {
         clients.push(("Claude Desktop", claude_path));
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        let claude_path = home.join("AppData/Roaming/Claude/claude_desktop_config.json");
+        clients.push(("Claude Desktop", claude_path));
+    }
+
     let cursor_path = home.join(".cursor/mcp.json");
     clients.push(("Cursor", cursor_path));
 

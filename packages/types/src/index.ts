@@ -6,7 +6,6 @@ export type {
   OwnerResponseBehavior,
   PeerBehavior,
   GroupBehavior,
-  AgentCapabilities,
   WorkspaceGroup,
   Checkpoint,
   WorkspaceModels,
@@ -24,7 +23,6 @@ export { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from './canvas.js';
 
 export type {
   OwnerIdentity,
-  InternalRoute,
   InboundMessage,
   RoutingAction,
   RoutingDecision,
@@ -52,3 +50,12 @@ export type {
 } from './db.js';
 
 export type { IpcRequest, IpcResponse } from './ipc.js';
+
+export type {
+  IntegrationCategory,
+  CategoryMeta,
+  McpServerTemplate,
+  IntegrationDefinition,
+  IntegrationStatus,
+  IntegrationTool,
+} from './integrations.js';

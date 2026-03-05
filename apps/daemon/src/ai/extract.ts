@@ -2,12 +2,19 @@ import type { ModelRouter } from './router.js';
 import type { ExtractionResult } from './anti-injection.js';
 import { scrubPII } from '../security/pii-scrubber.js';
 import { sanitizeEntityName } from '../security/sanitize.js';
+import { getLogger } from '../utils/logger.js';
 
 const EMPTY_RESULT: ExtractionResult = {
   entities: [],
   relations: [],
   facts: [],
 };
+
+let extractionFailures = 0;
+
+export function getExtractionFailureCount(): number {
+  return extractionFailures;
+}
 
 function buildExtractionPrompt(content: string): string {
   return `Extract all entities, relations, and facts from the following content.
@@ -53,18 +60,9 @@ export async function extractEntities(
     const raw = await router.extract(prompt);
     return sanitizeResult(raw);
   } catch (error: unknown) {
+    extractionFailures++;
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logWarning(`Entity extraction failed: ${message}`);
+    getLogger().warn('Entity extraction failed', { error: message, failures: extractionFailures });
     return EMPTY_RESULT;
   }
-}
-
-const WARNING_THROTTLE_MS = 300_000;
-let lastWarningTime = 0;
-
-function logWarning(message: string): void {
-  const now = Date.now();
-  if (now - lastWarningTime < WARNING_THROTTLE_MS) return;
-  lastWarningTime = now;
-  process.stderr.write(`[opensauria:extract] WARNING: ${message}\n`);
 }

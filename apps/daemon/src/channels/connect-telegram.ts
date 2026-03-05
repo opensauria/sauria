@@ -16,6 +16,22 @@ interface GetMeResponse {
   readonly result?: TelegramUser;
 }
 
+interface PhotoSize {
+  readonly file_id: string;
+  readonly width: number;
+  readonly height: number;
+}
+
+interface ProfilePhotosResponse {
+  readonly ok: boolean;
+  readonly result?: { readonly photos: ReadonlyArray<ReadonlyArray<PhotoSize>> };
+}
+
+interface GetFileResponse {
+  readonly ok: boolean;
+  readonly result?: { readonly file_path: string };
+}
+
 function handleCancel(): never {
   p.cancel('Setup cancelled.');
   process.exit(0);
@@ -31,6 +47,28 @@ async function validateBotToken(token: string): Promise<TelegramUser> {
   }
 
   return body.result;
+}
+
+async function fetchBotPhoto(token: string, botId: number): Promise<string | null> {
+  try {
+    const photosUrl = `https://api.telegram.org/bot${token}/getUserProfilePhotos?user_id=${String(botId)}&limit=1`;
+    const photosRes = await secureFetch(photosUrl);
+    const photosBody = (await photosRes.json()) as ProfilePhotosResponse;
+
+    const photos = photosBody.result?.photos;
+    if (!photos?.[0]?.length) return null;
+
+    const largest = photos[0].at(-1);
+    if (!largest) return null;
+    const fileUrl = `https://api.telegram.org/bot${token}/getFile?file_id=${largest.file_id}`;
+    const fileRes = await secureFetch(fileUrl);
+    const fileBody = (await fileRes.json()) as GetFileResponse;
+
+    if (!fileBody.result?.file_path) return null;
+    return `https://api.telegram.org/file/bot${token}/${fileBody.result.file_path}`;
+  } catch {
+    return null;
+  }
 }
 
 function generateNodeId(): string {
@@ -97,7 +135,7 @@ export async function connectTelegram(): Promise<void> {
     id: nodeId,
     platform: 'telegram',
     label: `@${botUsername}`,
-    photo: null,
+    photo: await fetchBotPhoto(token, botUser.id),
     position: { x: 200, y: 200 },
     status: 'connected',
     credentials: `channel_token_${nodeId}`,

@@ -4,7 +4,7 @@
   "identifier": "ai.opensauria.desktop",
   "build": {
     "beforeDevCommand": "pnpm run dev:vite",
-    "beforeBuildCommand": "pnpm run build:vite",
+    "beforeBuildCommand": "pnpm run native-deps && pnpm run build:vite",
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173"
   },
@@ -18,12 +18,30 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png"
+    ],
     "resources": {
-      "../../daemon/dist/*.mjs": "daemon/"
+      "../../daemon/dist/": "daemon",
+      "../native-deps/": "node_modules"
     },
     "macOS": {
       "minimumSystemVersion": "11.0"
+    },
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0"]
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
     }
   },
   "plugins": {

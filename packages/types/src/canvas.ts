@@ -8,18 +8,11 @@
 
 // ─── Agent Roles & Autonomy ────────────────────────────────────────
 
-export type AgentRole = 'lead' | 'specialist' | 'observer' | 'bridge' | 'assistant';
+export type AgentRole = 'lead' | 'specialist' | 'observer' | 'coordinator' | 'assistant';
 
 export type AutonomyLevel = 'full' | 'supervised' | 'approval' | 'manual';
 
-export type Platform =
-  | 'telegram'
-  | 'slack'
-  | 'whatsapp'
-  | 'discord'
-  | 'email'
-  | 'owner'
-  | 'internal';
+export type Platform = 'telegram' | 'slack' | 'whatsapp' | 'discord' | 'email' | 'owner';
 
 // ─── Group Behavior ────────────────────────────────────────────────
 
@@ -88,14 +81,6 @@ export interface Workspace {
   readonly groups: readonly WorkspaceGroup[];
 }
 
-// ─── Agent Capabilities ──────────────────────────────────────────
-
-export interface AgentCapabilities {
-  readonly directories?: readonly string[];
-  readonly tools?: readonly string[];
-  readonly description?: string;
-}
-
 // ─── Agent Node ────────────────────────────────────────────────────
 
 /**
@@ -118,7 +103,6 @@ export interface AgentNode {
   readonly autonomy: AutonomyLevel;
   readonly instructions: string;
   readonly groupBehavior?: GroupBehavior;
-  readonly capabilities?: AgentCapabilities;
 }
 
 // ─── Edge ──────────────────────────────────────────────────────────

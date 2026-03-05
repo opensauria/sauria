@@ -1,4 +1,3 @@
-use base64::Engine;
 use serde_json::Value;
 use std::fs;
 use std::sync::Arc;
@@ -102,6 +101,29 @@ async fn connect_telegram(
     let first_name = result.get("first_name").and_then(|v| v.as_str()).unwrap_or("");
     let bot_username = if username.is_empty() { first_name } else { username };
 
+    // Best-effort: fetch bot profile photo
+    let photo_url: Option<String> = async {
+        let photos_res: Value = client
+            .get(format!("{tg_api}/getUserProfilePhotos"))
+            .query(&[("user_id", bot_id.to_string()), ("limit", "1".to_string())])
+            .send().await.ok()?
+            .json().await.ok()?;
+
+        let file_id = photos_res.get("result")?
+            .get("photos")?.as_array()?.first()?
+            .as_array()?.last()?
+            .get("file_id")?.as_str()?;
+
+        let file_res: Value = client
+            .get(format!("{tg_api}/getFile"))
+            .query(&[("file_id", file_id)])
+            .send().await.ok()?
+            .json().await.ok()?;
+
+        let file_path = file_res.get("result")?.get("file_path")?.as_str()?;
+        Some(format!("https://api.telegram.org/file/bot{token}/{file_path}"))
+    }.await;
+
     // Generate nodeId
     let node_id = creds
         .get("nodeId")
@@ -120,9 +142,6 @@ async fn connect_telegram(
 
     vault::vault_store(paths, &format!("channel_token_{node_id}"), token)?;
 
-    // Fetch bot profile photo
-    let photo = fetch_telegram_photo(&client, &tg_api, bot_id).await;
-
     // Update profiles
     let mut profiles = read_profiles(paths);
     if let Some(obj) = profiles.as_object_mut() {
@@ -134,7 +153,7 @@ async fn connect_telegram(
                 "username": bot_username,
                 "firstName": first_name,
                 "userId": user_id,
-                "photo": photo,
+                "photo": photo_url,
                 "connectedAt": chrono_now_iso(),
             }),
         );
@@ -164,7 +183,7 @@ async fn connect_telegram(
         "firstName": first_name,
         "botId": bot_id,
         "nodeId": node_id,
-        "photo": photo,
+        "photo": photo_url,
     }))
 }
 
@@ -327,35 +346,12 @@ async fn connect_discord(
 
     let body: Value = res.json().await.map_err(|e| e.to_string())?;
     let bot_id = body.get("id").and_then(|v| v.as_str()).unwrap_or("");
-    let bot_username = body.get("username").and_then(|v| v.as_str()).unwrap_or("Discord Bot");
-
-    // Construct avatar URL from Discord CDN
-    let photo = body
-        .get("avatar")
-        .and_then(|v| v.as_str())
-        .map(|hash| format!("https://cdn.discordapp.com/avatars/{bot_id}/{hash}.png?size=128"));
 
     vault::vault_store(paths, "discord_bot_token", token)?;
 
     let node_id = creds.get("nodeId").and_then(|v| v.as_str());
     if let Some(nid) = node_id {
         vault::vault_store(paths, &format!("channel_token_{nid}"), token)?;
-
-        // Update profiles
-        let mut profiles = read_profiles(paths);
-        if let Some(obj) = profiles.as_object_mut() {
-            obj.insert(
-                nid.to_string(),
-                serde_json::json!({
-                    "platform": "discord",
-                    "botId": bot_id,
-                    "username": bot_username,
-                    "photo": photo,
-                    "connectedAt": chrono_now_iso(),
-                }),
-            );
-        }
-        write_profiles(paths, &profiles);
     }
 
     let mut config = read_config(paths);
@@ -374,9 +370,8 @@ async fn connect_discord(
 
     Ok(serde_json::json!({
         "success": true,
-        "botUsername": bot_username,
+        "botUsername": body.get("username").and_then(|v| v.as_str()).unwrap_or("Discord Bot"),
         "botId": bot_id,
-        "photo": photo,
     }))
 }
 
@@ -507,45 +502,4 @@ fn chrono_now_iso() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
     format!("{}Z", now.as_secs())
-}
-
-async fn fetch_telegram_photo(
-    client: &reqwest::Client,
-    tg_api: &str,
-    user_id: u64,
-) -> Option<String> {
-    let res: Value = client
-        .get(format!("{tg_api}/getUserProfilePhotos?user_id={user_id}&limit=1"))
-        .send()
-        .await
-        .ok()?
-        .json()
-        .await
-        .ok()?;
-
-    let photos = res.get("result")?.get("photos")?.as_array()?;
-    let sizes = photos.first()?.as_array()?;
-    let file_id = sizes.last()?.get("file_id")?.as_str()?;
-
-    let file_res: Value = client
-        .get(format!("{tg_api}/getFile?file_id={file_id}"))
-        .send()
-        .await
-        .ok()?
-        .json()
-        .await
-        .ok()?;
-
-    let file_path = file_res.get("result")?.get("file_path")?.as_str()?;
-    let token = tg_api.strip_prefix("https://api.telegram.org/bot")?;
-    let download_url = format!("https://api.telegram.org/file/bot{token}/{file_path}");
-
-    let bytes = client.get(&download_url).send().await.ok()?.bytes().await.ok()?;
-    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-    let mime = if file_path.ends_with(".png") {
-        "image/png"
-    } else {
-        "image/jpeg"
-    };
-    Some(format!("data:{mime};base64,{b64}"))
 }

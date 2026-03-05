@@ -1,6 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { initScene, disposeScene } from './scene-manager.js';
-import type { BrainNode, BrainEdge } from './scene-types.js';
 
 /* ── State ───────────────────────────────────────────────────────── */
 let currentView = 'entities';
@@ -42,6 +40,8 @@ const detailBody = document.getElementById('detail-body') as HTMLDivElement;
 const detailDelete = document.getElementById('detail-delete') as HTMLButtonElement;
 const detailClose = document.getElementById('detail-close') as HTMLDivElement;
 const graphWrap = document.getElementById('graph-wrap') as HTMLDivElement;
+const graphCanvas = document.getElementById('graph-canvas') as HTMLCanvasElement;
+const graphCtx = graphCanvas.getContext('2d') as CanvasRenderingContext2D;
 const graphStats = document.getElementById('graph-stats') as HTMLDivElement;
 const deleteDialog = document.getElementById('delete-dialog') as HTMLDivElement;
 const deleteDialogText = document.getElementById('delete-dialog-text') as HTMLDivElement;
@@ -53,8 +53,7 @@ const libraryView = document.getElementById('library-view') as HTMLDivElement;
 const libraryTrack = document.getElementById('library-track') as HTMLDivElement;
 const libraryEmpty = document.getElementById('library-empty') as HTMLDivElement;
 const librarySearchInput = document.getElementById('library-search-input') as HTMLInputElement;
-const brain3dContainer = document.getElementById('brain-3d-container') as HTMLDivElement;
-const brain3dTooltip = document.getElementById('brain-3d-tooltip') as HTMLDivElement;
+const graphControls = document.getElementById('graph-controls') as HTMLDivElement;
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 function formatTs(ts: string | null | undefined): string {
@@ -114,8 +113,7 @@ async function loadStats() {
     stats = await invoke('brain_get_stats');
     renderStats();
     updateNavCounts();
-  } catch (err) {
-    console.error('[brain] loadStats failed:', err);
+  } catch {
     statsBar.innerHTML =
       '<div class="brain-stat"><span style="color: var(--error)">Could not connect to OpenSauria</span></div>';
   }
@@ -123,7 +121,7 @@ async function loadStats() {
 
 function renderStats() {
   if (!stats) return;
-  statsBar.innerHTML = `
+  let html = `
     <div class="brain-stat"><span class="brain-stat-value">${stats.entities}</span> entities</div>
     <div class="brain-stat"><span class="brain-stat-value">${stats.relations}</span> relations</div>
     <div class="brain-stat"><span class="brain-stat-value">${stats.events}</span> events</div>
@@ -131,6 +129,16 @@ function renderStats() {
     <div class="brain-stat"><span class="brain-stat-value">${stats.conversations}</span> conversations</div>
     <div class="brain-stat"><span class="brain-stat-value">${stats.facts}</span> facts</div>
   `;
+
+  if (stats.entities === 0 && stats.events > 0) {
+    const hint =
+      stats.extractionFailures > 0
+        ? `Entity extraction failed ${stats.extractionFailures} time(s) — check that an AI provider is configured`
+        : 'Events recorded but no entities extracted — verify an AI provider is connected';
+    html += `<div class="brain-stat" style="color: var(--text-dim); font-size: 11px; flex-basis: 100%">${hint}</div>`;
+  }
+
+  statsBar.innerHTML = html;
 }
 
 function updateNavCounts() {
@@ -330,11 +338,12 @@ function switchView(view: string) {
     : '';
   (document.getElementById('stats-bar') as HTMLDivElement).style.display = isGraph ? 'none' : '';
 
-  if (!isGraph) {
-    disposeScene();
-  }
-
   if (isGraph) {
+    if (graphMode === 'brain') {
+      loadGraph();
+    } else {
+      loadLibrary();
+    }
     setGraphMode(graphMode);
     return;
   }
@@ -403,8 +412,7 @@ async function loadData(append?: boolean) {
     }
     currentTotal = result.total;
     renderTableRows(append ? result.rows : currentRows, append);
-  } catch (err) {
-    console.error('[brain] loadData failed:', currentView, err);
+  } catch {
     if (!append) {
       tableBody.innerHTML = '';
       emptyState.style.display = 'flex';
@@ -731,15 +739,67 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-/* ── 3D Brain Visualization ──────────────────────────────────────── */
+/* ── Force-Directed Graph ────────────────────────────────────────── */
+interface GraphNode {
+  id: string;
+  name: string;
+  type: string;
+  importance: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+}
 
-async function loadBrain3D(): Promise<void> {
+interface GraphEdge {
+  from: string;
+  to: string;
+  type: string;
+  strength: number;
+}
+
+const graphState: {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  nodeMap: Map<string, GraphNode>;
+  cam: { x: number; y: number; zoom: number };
+  drag: { node: GraphNode; startX: number; startY: number } | null;
+  hover: GraphNode | null;
+  pan: { startX: number; startY: number; camX: number; camY: number } | null;
+  animId: number | null;
+  settled: boolean;
+} = {
+  nodes: [],
+  edges: [],
+  nodeMap: new Map(),
+  cam: { x: 0, y: 0, zoom: 1 },
+  drag: null,
+  hover: null,
+  pan: null,
+  animId: null,
+  settled: false,
+};
+
+const TYPE_COLORS: Record<string, string> = {
+  person: '#3b82f6',
+  project: '#34d399',
+  company: '#a78bfa',
+  event: '#f59e0b',
+  document: '#6b7280',
+  goal: '#038b9a',
+  place: '#eab308',
+  concept: '#ec4899',
+};
+
+const SIM = { repulsion: 800, attraction: 0.005, damping: 0.92, minAlpha: 0.001 };
+
+async function loadGraph() {
   const graphEmpty = document.getElementById('graph-empty') as HTMLDivElement;
   try {
     type ListResult = { rows: Array<Record<string, unknown>>; total: number };
     const [entityResult, relationResult] = await Promise.all([
-      invoke<ListResult>('brain_list_entities', { opts: { limit: 500 } }),
-      invoke<ListResult>('brain_list_relations', { opts: { limit: 1000 } }),
+      invoke('brain_list_entities', { opts: { limit: 200 } }) as Promise<ListResult>,
+      invoke('brain_list_relations', { opts: { limit: 500 } }) as Promise<ListResult>,
     ]);
 
     const entities = entityResult.rows;
@@ -747,55 +807,294 @@ async function loadBrain3D(): Promise<void> {
 
     if (entities.length === 0) {
       graphEmpty.style.display = 'flex';
-      brain3dContainer.style.display = 'none';
+      graphCanvas.style.display = 'none';
       graphStats.textContent = '';
       return;
     }
 
     graphEmpty.style.display = 'none';
-    brain3dContainer.style.display = '';
+    graphCanvas.style.display = 'block';
 
-    const idToIndex = new Map<string, number>();
-    const nodes: BrainNode[] = entities.map((e, i) => {
-      idToIndex.set(e.id as string, i);
-      return {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    resizeCanvas();
+
+    const nodeMap = new Map<string, GraphNode>();
+    const cx = graphCanvas.width / 2 / (devicePixelRatio || 1);
+    const cy = graphCanvas.height / 2 / (devicePixelRatio || 1);
+
+    graphState.nodes = entities.map((e, i) => {
+      const angle = (i / entities.length) * Math.PI * 2;
+      const radius = 120 + Math.random() * 80;
+      const node: GraphNode = {
         id: e.id as string,
         name: (e.name as string) || (e.id as string),
         type: (e.type as string) || 'concept',
         importance: typeof e.importance_score === 'number' ? e.importance_score : 0.3,
-        x: 0,
-        y: 0,
-        z: 0,
+        x: cx + Math.cos(angle) * radius,
+        y: cy + Math.sin(angle) * radius,
         vx: 0,
         vy: 0,
-        vz: 0,
       };
+      nodeMap.set(e.id as string, node);
+      return node;
     });
 
-    const edges: BrainEdge[] = relations
+    graphState.edges = relations
       .filter(
-        (r) => idToIndex.has(r.from_entity_id as string) && idToIndex.has(r.to_entity_id as string),
+        (r) => nodeMap.has(r.from_entity_id as string) && nodeMap.has(r.to_entity_id as string),
       )
       .map((r) => ({
-        from: idToIndex.get(r.from_entity_id as string)!,
-        to: idToIndex.get(r.to_entity_id as string)!,
+        from: r.from_entity_id as string,
+        to: r.to_entity_id as string,
         type: r.type as string,
         strength: typeof r.strength === 'number' ? r.strength : 0.5,
       }));
 
-    graphStats.textContent = `${nodes.length} entities \u00b7 ${edges.length} relations`;
+    graphState.nodeMap = nodeMap;
+    graphState.settled = false;
 
-    disposeScene();
-    initScene(brain3dContainer, brain3dTooltip, nodes, edges, {
-      onNodeClick: (id: string) => showEntityDetail(id),
-      onNodeHover: () => {},
-    });
+    graphStats.textContent = `${graphState.nodes.length} entities \u00b7 ${graphState.edges.length} relations`;
+
+    if (graphState.animId) cancelAnimationFrame(graphState.animId);
+    graphState.cam = { x: 0, y: 0, zoom: 1 };
+    tickGraph();
   } catch {
     graphEmpty.style.display = 'flex';
-    brain3dContainer.style.display = 'none';
+    graphCanvas.style.display = 'none';
+    (graphEmpty.querySelector('div') as HTMLDivElement).textContent = 'Something went wrong';
     graphStats.textContent = '';
   }
 }
+
+function resizeCanvas() {
+  const dpr = devicePixelRatio || 1;
+  const rect = graphWrap.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  graphCanvas.width = rect.width * dpr;
+  graphCanvas.height = rect.height * dpr;
+  graphCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function simulate() {
+  const { nodes, edges, nodeMap } = graphState;
+  if (nodes.length === 0) return;
+
+  let maxV = 0;
+
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i],
+        b = nodes[j];
+      const dx = b.x - a.x,
+        dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const force = SIM.repulsion / (dist * dist);
+      const fx = (dx / dist) * force,
+        fy = (dy / dist) * force;
+      a.vx -= fx;
+      a.vy -= fy;
+      b.vx += fx;
+      b.vy += fy;
+    }
+  }
+
+  for (const e of edges) {
+    const a = nodeMap.get(e.from),
+      b = nodeMap.get(e.to);
+    if (!a || !b) continue;
+    const dx = b.x - a.x,
+      dy = b.y - a.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const force = dist * SIM.attraction * (1 + e.strength);
+    const fx = (dx / dist) * force,
+      fy = (dy / dist) * force;
+    a.vx += fx;
+    a.vy += fy;
+    b.vx -= fx;
+    b.vy -= fy;
+  }
+
+  const cx = graphCanvas.width / 2 / (devicePixelRatio || 1);
+  const cy = graphCanvas.height / 2 / (devicePixelRatio || 1);
+  for (const n of nodes) {
+    n.vx += (cx - n.x) * 0.0005;
+    n.vy += (cy - n.y) * 0.0005;
+    n.vx *= SIM.damping;
+    n.vy *= SIM.damping;
+    if (graphState.drag?.node !== n) {
+      n.x += n.vx;
+      n.y += n.vy;
+    }
+    maxV = Math.max(maxV, Math.abs(n.vx), Math.abs(n.vy));
+  }
+
+  graphState.settled = maxV < SIM.minAlpha;
+}
+
+function drawGraph() {
+  const { nodes, edges, nodeMap, cam, hover } = graphState;
+  const w = graphCanvas.width / (devicePixelRatio || 1);
+  const h = graphCanvas.height / (devicePixelRatio || 1);
+
+  graphCtx.clearRect(0, 0, w, h);
+  graphCtx.save();
+  graphCtx.translate(w / 2 + cam.x, h / 2 + cam.y);
+  graphCtx.scale(cam.zoom, cam.zoom);
+  graphCtx.translate(-w / 2, -h / 2);
+
+  for (const e of edges) {
+    const a = nodeMap.get(e.from),
+      b = nodeMap.get(e.to);
+    if (!a || !b) continue;
+    graphCtx.beginPath();
+    graphCtx.moveTo(a.x, a.y);
+    graphCtx.lineTo(b.x, b.y);
+    graphCtx.strokeStyle = `rgba(255,255,255,${0.04 + e.strength * 0.08})`;
+    graphCtx.lineWidth = 0.5 + e.strength;
+    graphCtx.stroke();
+  }
+
+  for (const n of nodes) {
+    const r = 4 + n.importance * 16;
+    const color = TYPE_COLORS[n.type] || '#666';
+    const isHover = hover === n;
+
+    graphCtx.beginPath();
+    graphCtx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    graphCtx.fillStyle = isHover ? color : color + '99';
+    graphCtx.fill();
+
+    if (isHover) {
+      graphCtx.strokeStyle = color;
+      graphCtx.lineWidth = 2;
+      graphCtx.stroke();
+    }
+
+    if (r > 6 || isHover) {
+      graphCtx.fillStyle = 'rgba(255,255,255,0.8)';
+      graphCtx.font = `${isHover ? 12 : 10}px -apple-system, system-ui, sans-serif`;
+      graphCtx.textAlign = 'center';
+      graphCtx.fillText(truncate(n.name, 18), n.x, n.y + r + 14);
+    }
+  }
+
+  graphCtx.restore();
+}
+
+function tickGraph() {
+  if (currentView !== 'graph' || graphMode !== 'brain') return;
+  if (!graphState.settled) simulate();
+  drawGraph();
+  graphState.animId = requestAnimationFrame(tickGraph);
+}
+
+function screenToGraph(sx: number, sy: number) {
+  const w = graphCanvas.width / (devicePixelRatio || 1);
+  const h = graphCanvas.height / (devicePixelRatio || 1);
+  const { cam } = graphState;
+  return {
+    x: (sx - w / 2 - cam.x) / cam.zoom + w / 2,
+    y: (sy - h / 2 - cam.y) / cam.zoom + h / 2,
+  };
+}
+
+function findNodeAt(gx: number, gy: number): GraphNode | null {
+  for (let i = graphState.nodes.length - 1; i >= 0; i--) {
+    const n = graphState.nodes[i];
+    const r = 4 + n.importance * 16;
+    const dx = n.x - gx,
+      dy = n.y - gy;
+    if (dx * dx + dy * dy <= (r + 4) * (r + 4)) return n;
+  }
+  return null;
+}
+
+graphCanvas.addEventListener('mousedown', (e) => {
+  const rect = graphCanvas.getBoundingClientRect();
+  const { x: gx, y: gy } = screenToGraph(e.clientX - rect.left, e.clientY - rect.top);
+  const node = findNodeAt(gx, gy);
+
+  if (node) {
+    graphState.drag = { node, startX: gx, startY: gy };
+    graphState.settled = false;
+  } else {
+    graphState.pan = {
+      startX: e.clientX,
+      startY: e.clientY,
+      camX: graphState.cam.x,
+      camY: graphState.cam.y,
+    };
+  }
+});
+
+graphCanvas.addEventListener('mousemove', (e) => {
+  const rect = graphCanvas.getBoundingClientRect();
+  const { x: gx, y: gy } = screenToGraph(e.clientX - rect.left, e.clientY - rect.top);
+
+  if (graphState.drag) {
+    graphState.drag.node.x = gx;
+    graphState.drag.node.y = gy;
+    graphState.drag.node.vx = 0;
+    graphState.drag.node.vy = 0;
+    graphState.settled = false;
+  } else if (graphState.pan) {
+    graphState.cam.x = graphState.pan.camX + (e.clientX - graphState.pan.startX);
+    graphState.cam.y = graphState.pan.camY + (e.clientY - graphState.pan.startY);
+  } else {
+    const prev = graphState.hover;
+    graphState.hover = findNodeAt(gx, gy);
+    graphCanvas.style.cursor = graphState.hover ? 'pointer' : 'grab';
+    if (prev !== graphState.hover && graphState.settled) drawGraph();
+  }
+});
+
+graphCanvas.addEventListener('mouseup', (e) => {
+  if (graphState.drag) {
+    const node = graphState.drag.node;
+    const rect = graphCanvas.getBoundingClientRect();
+    const { x: gx, y: gy } = screenToGraph(e.clientX - rect.left, e.clientY - rect.top);
+    const dx = gx - graphState.drag.startX,
+      dy = gy - graphState.drag.startY;
+    if (dx * dx + dy * dy < 9) {
+      showEntityDetail(node.id);
+    }
+    graphState.drag = null;
+  }
+  graphState.pan = null;
+});
+
+graphCanvas.addEventListener(
+  'wheel',
+  (e) => {
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    graphState.cam.zoom = Math.max(0.1, Math.min(5, graphState.cam.zoom * factor));
+    if (graphState.settled) drawGraph();
+  },
+  { passive: false },
+);
+
+(document.getElementById('graph-zoom-in') as HTMLButtonElement).addEventListener('click', () => {
+  graphState.cam.zoom = Math.min(5, graphState.cam.zoom * 1.3);
+  if (graphState.settled) drawGraph();
+});
+
+(document.getElementById('graph-zoom-out') as HTMLButtonElement).addEventListener('click', () => {
+  graphState.cam.zoom = Math.max(0.1, graphState.cam.zoom / 1.3);
+  if (graphState.settled) drawGraph();
+});
+
+(document.getElementById('graph-zoom-reset') as HTMLButtonElement).addEventListener('click', () => {
+  graphState.cam = { x: 0, y: 0, zoom: 1 };
+  if (graphState.settled) drawGraph();
+});
+
+window.addEventListener('resize', () => {
+  if (currentView === 'graph') {
+    resizeCanvas();
+    if (graphState.settled) drawGraph();
+  }
+});
 
 /* ── View Toggle ─────────────────────────────────────────────────── */
 viewToggle.querySelectorAll('.brain-view-seg').forEach((btn) => {
@@ -815,30 +1114,20 @@ function setGraphMode(mode: string) {
     .forEach((s) => s.classList.toggle('active', (s as HTMLButtonElement).dataset.mode === mode));
 
   const isBrain = mode === 'brain';
-  brain3dContainer.style.display = isBrain ? '' : 'none';
+  graphCanvas.style.display = isBrain ? 'block' : 'none';
+  graphControls.style.display = isBrain ? 'flex' : 'none';
   graphStats.style.display = isBrain ? '' : 'none';
   (document.getElementById('graph-empty') as HTMLDivElement).style.display = 'none';
   libraryView.style.display = isBrain ? 'none' : '';
 
   if (isBrain) {
-    loadBrain3D();
+    if (!graphState.settled) tickGraph();
   } else {
-    disposeScene();
     loadLibrary();
   }
 }
 
 /* ── Library Cover Flow ────────────────────────────────────────── */
-const TYPE_COLORS: Record<string, string> = {
-  person: '#3b82f6',
-  project: '#34d399',
-  company: '#a78bfa',
-  event: '#f59e0b',
-  document: '#6b7280',
-  goal: '#038b9a',
-  place: '#eab308',
-  concept: '#ec4899',
-};
 async function loadLibrary() {
   if (!libraryDirty && libraryEntities.length > 0) {
     applyLibraryFilter();
@@ -1092,13 +1381,7 @@ document.addEventListener('keydown', (e) => {
 /* ── Init ────────────────────────────────────────────────────────── */
 async function init() {
   await loadStats();
-  console.log('[brain] stats loaded:', JSON.stringify(stats));
-  const hasEntities = stats !== null && typeof stats.entities === 'number' && stats.entities > 0;
-  const hasConversations =
-    stats !== null && typeof stats.conversations === 'number' && stats.conversations > 0;
-  const defaultView = hasEntities || !hasConversations ? 'entities' : 'conversations';
-  console.log('[brain] defaulting to:', defaultView);
-  switchView(defaultView);
+  switchView('entities');
 }
 
 init();

@@ -13,7 +13,7 @@ struct PageSize {
 
 fn page_size(page: &str) -> PageSize {
     match page {
-        "brain" => PageSize { width: 1000.0, height: 700.0 },
+        "brain" | "integrations" => PageSize { width: 1000.0, height: 700.0 },
         "canvas" => PageSize { width: 1200.0, height: 800.0 },
         "setup" => PageSize { width: 520.0, height: 680.0 },
         _ => PageSize { width: PALETTE_WIDTH, height: PALETTE_HEIGHT },
@@ -30,7 +30,7 @@ pub fn create_palette_window(app: &AppHandle) -> Result<(), String> {
     }
 
     let url = WebviewUrl::App("src/renderer/palette/index.html".into());
-    let _win = WebviewWindowBuilder::new(app, "palette", url)
+    let builder = WebviewWindowBuilder::new(app, "palette", url)
         .title("OpenSauria")
         .inner_size(PALETTE_WIDTH, PALETTE_HEIGHT)
         .resizable(false)
@@ -38,9 +38,9 @@ pub fn create_palette_window(app: &AppHandle) -> Result<(), String> {
         .transparent(true)
         .always_on_top(true)
         .skip_taskbar(true)
-        .visible(false)
-        .build()
-        .map_err(|e| e.to_string())?;
+        .visible(false);
+
+    builder.build().map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -56,6 +56,13 @@ pub fn show_palette(app: &AppHandle) -> Result<(), String> {
         hide_palette(app)?;
         return Ok(());
     }
+
+    // Always reset to palette page when re-showing
+    let nav_url = resolve_page_url(&win, "palette", "")?;
+    let _ = win.navigate(nav_url);
+    let _ = win.set_decorations(false);
+    let _ = win.set_resizable(false);
+    let _ = win.set_always_on_top(true);
 
     center_palette(app)?;
     win.show().map_err(|e| e.to_string())?;
@@ -84,7 +91,10 @@ pub fn navigate_palette_to(app: &AppHandle, page: &str) -> Result<(), String> {
     let _ = win.set_min_size(None::<tauri::LogicalSize<f64>>);
     win.set_resizable(true).map_err(|e| e.to_string())?;
     win.set_always_on_top(false).map_err(|e| e.to_string())?;
-    win.set_decorations(true).map_err(|e| e.to_string())?;
+
+    // Native decorations only for canvas and brain
+    let wants_decorations = page == "canvas" || page == "brain" || page == "integrations";
+    win.set_decorations(wants_decorations).map_err(|e| e.to_string())?;
 
     // Navigate to new page
     let query = if page != "palette" { "?inPalette=1" } else { "" };
@@ -114,6 +124,9 @@ pub fn navigate_palette_back(app: &AppHandle) -> Result<(), String> {
     // Clear constraints so animation can shrink below previous min
     let _ = win.set_min_size(None::<tauri::LogicalSize<f64>>);
 
+    // Restore frameless palette
+    let _ = win.set_decorations(false);
+
     // Navigate back to palette
     let nav_url = resolve_page_url(&win, "palette", "")?;
     win.navigate(nav_url).map_err(|e| format!("navigate_back failed: {e}"))?;
@@ -122,7 +135,6 @@ pub fn navigate_palette_back(app: &AppHandle) -> Result<(), String> {
     let win_clone = win.clone();
     tauri::async_runtime::spawn(async move {
         animate_to_palette(&win_clone).await;
-        let _ = win_clone.set_decorations(false);
         let _ = win_clone.set_always_on_top(true);
         let _ = win_clone.set_resizable(false);
     });
@@ -246,10 +258,9 @@ fn resolve_page_url(
     page: &str,
     query: &str,
 ) -> Result<url::Url, String> {
-    let mut url = win.url().map_err(|e| e.to_string())?;
-    url.set_path(&format!("/src/renderer/{page}/index.html"));
-    url.set_query(query.strip_prefix('?'));
-    Ok(url)
+    let current = win.url().map_err(|e| e.to_string())?;
+    let path = format!("/src/renderer/{page}/index.html{query}");
+    current.join(&path).map_err(|e| e.to_string())
 }
 
 fn center_palette(app: &AppHandle) -> Result<(), String> {
@@ -272,26 +283,5 @@ pub fn send_command_result(app: &AppHandle, text: &str) {
     if let Some(win) = app.get_webview_window("palette") {
         let _ = win.emit("command-result", text);
     }
-}
-
-pub fn show_canvas(app: &AppHandle) -> Result<(), String> {
-    if let Some(win) = app.get_webview_window("canvas") {
-        win.show().map_err(|e| e.to_string())?;
-        win.set_focus().map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    let url = WebviewUrl::App("src/renderer/canvas/index.html".into());
-    let win = WebviewWindowBuilder::new(app, "canvas", url)
-        .title("OpenSauria Canvas")
-        .inner_size(1200.0, 800.0)
-        .min_inner_size(800.0, 600.0)
-        .resizable(true)
-        .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    win.show().map_err(|e| e.to_string())?;
-    Ok(())
 }
 

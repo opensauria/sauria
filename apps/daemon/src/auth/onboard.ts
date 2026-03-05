@@ -2,6 +2,7 @@ import * as p from '@clack/prompts';
 import { openDatabase, closeDatabase } from '../db/connection.js';
 import { applySchema } from '../db/schema.js';
 import { loadConfig, saveConfig, ensureConfigDir } from '../config/loader.js';
+import { paths } from '@opensauria/config';
 import { vaultStore } from '../security/vault-key.js';
 import type { OpenSauriaConfig } from '../config/schema.js';
 import { validateCredential } from './validate.js';
@@ -235,7 +236,7 @@ async function runPostSetup(
   const lines = [
     `Provider:    ${provider} (${authMethod})`,
     formatPresetSummary(preset),
-    `Database:    ~/.opensauria/opensauria.db`,
+    `Database:    ${paths.db}`,
   ];
 
   if (detected.length > 0) {
