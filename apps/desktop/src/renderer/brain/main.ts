@@ -115,7 +115,7 @@ async function loadStats() {
     updateNavCounts();
   } catch {
     statsBar.innerHTML =
-      '<div class="brain-stat"><span style="color: var(--error)">Could not connect to OpenSauria</span></div>';
+      '<div class="brain-stat"><span style="color: var(--error)">Could not connect to Sauria</span></div>';
   }
 }
 

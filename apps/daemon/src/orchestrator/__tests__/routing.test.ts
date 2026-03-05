@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateEdgeRules } from '../routing.js';
 import type { AgentNode, Edge, InboundMessage } from '../types.js';
-import { DEFAULT_GROUP_BEHAVIOR } from '../types.js';
-
 const baseNode: AgentNode = {
   id: 'n1',
   platform: 'telegram',
@@ -16,7 +14,6 @@ const baseNode: AgentNode = {
   role: 'assistant',
   autonomy: 'supervised',
   instructions: '',
-  groupBehavior: DEFAULT_GROUP_BEHAVIOR,
 };
 
 const baseMessage: InboundMessage = {

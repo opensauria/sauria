@@ -8,8 +8,19 @@ interface Migration {
 }
 
 const MIGRATIONS: readonly Migration[] = [
-  // Future migrations go here
-  // { version: 1, description: 'add foo column', up: (db) => { db.exec('ALTER TABLE ...') } },
+  {
+    version: 1,
+    description: 'add deadline column to agent_tasks',
+    up: (db) => {
+      const columns = db
+        .prepare(`PRAGMA table_info(agent_tasks)`)
+        .all() as Array<{ name: string }>;
+      const hasDeadline = columns.some((c) => c.name === 'deadline');
+      if (!hasDeadline) {
+        db.exec(`ALTER TABLE agent_tasks ADD COLUMN deadline TEXT`);
+      }
+    },
+  },
 ];
 
 export function runMigrations(db: BetterSqlite3.Database): void {

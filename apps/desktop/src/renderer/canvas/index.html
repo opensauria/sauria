@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>OpenSauria &mdash; Agent Canvas</title>
+    <title>Sauria &mdash; Agent Canvas</title>
     <link rel="stylesheet" href="../shared.css" />
     <link rel="stylesheet" href="./canvas.css" />
   </head>
@@ -132,10 +132,38 @@
           <span class="detail-section-label">KPIs</span>
           <div class="kpi-grid" id="kpi-grid"></div>
         </div>
+
+        <div class="detail-section" id="section-integrations">
+          <span class="detail-section-label">Integrations</span>
+          <div class="integration-chips" id="agent-integration-chips"></div>
+          <div style="position: relative">
+            <button class="integration-add-btn" id="add-integration-btn">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Add integration</span>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="panel-footer" id="panel-footer">
         <svg class="save-check" viewBox="0 0 24 24" fill="none">
-          <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path
+            d="M20 6L9 17l-5-5"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
         <span class="save-text">Saved</span>
       </div>

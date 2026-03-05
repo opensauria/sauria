@@ -26,6 +26,8 @@ export interface CategoryMeta {
 export interface McpServerTemplate {
   readonly package: string;
   readonly envMapping: Readonly<Record<string, string>>;
+  /** Template transforms for env vars needing value wrapping. Key = credential key, value = template with {value} placeholder. */
+  readonly envValueTemplate?: Readonly<Record<string, string>>;
 }
 
 export interface IntegrationDefinition {
@@ -47,7 +49,15 @@ export interface IntegrationStatus {
   readonly error?: string;
 }
 
+export interface IntegrationInstance {
+  readonly id: string;
+  readonly integrationId: string;
+  readonly label: string;
+  readonly connectedAt: string;
+}
+
 export interface IntegrationTool {
+  readonly instanceId: string;
   readonly integrationId: string;
   readonly integrationName: string;
   readonly name: string;

@@ -83,6 +83,10 @@ fn main() {
             cmd_integrations::integrations_connect,
             cmd_integrations::integrations_disconnect,
             cmd_integrations::integrations_list_tools,
+            cmd_integrations::integrations_connect_instance,
+            cmd_integrations::integrations_disconnect_instance,
+            cmd_integrations::integrations_assign_instance,
+            cmd_integrations::integrations_unassign_instance,
         ])
         .setup(move |app| {
             // Hide dock icon on macOS
@@ -153,5 +157,5 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running OpenSauria");
+        .expect("error while running Sauria");
 }

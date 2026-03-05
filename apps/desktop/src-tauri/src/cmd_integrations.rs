@@ -47,3 +47,65 @@ pub async fn integrations_list_tools(
     };
     client.request("integrations:list-tools", params).await
 }
+
+#[tauri::command]
+pub async fn integrations_connect_instance(
+    instance_id: String,
+    integration_id: String,
+    label: String,
+    credentials: Value,
+    client: tauri::State<'_, Arc<DaemonClient>>,
+) -> Result<Value, String> {
+    client
+        .request(
+            "integrations:connect-instance",
+            serde_json::json!({
+                "instanceId": instance_id,
+                "integrationId": integration_id,
+                "label": label,
+                "credentials": credentials
+            }),
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn integrations_disconnect_instance(
+    instance_id: String,
+    client: tauri::State<'_, Arc<DaemonClient>>,
+) -> Result<Value, String> {
+    client
+        .request(
+            "integrations:disconnect-instance",
+            serde_json::json!({ "instanceId": instance_id }),
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn integrations_assign_instance(
+    node_id: String,
+    instance_id: String,
+    client: tauri::State<'_, Arc<DaemonClient>>,
+) -> Result<Value, String> {
+    client
+        .request(
+            "integrations:assign-instance",
+            serde_json::json!({ "nodeId": node_id, "instanceId": instance_id }),
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn integrations_unassign_instance(
+    node_id: String,
+    instance_id: String,
+    client: tauri::State<'_, Arc<DaemonClient>>,
+) -> Result<Value, String> {
+    client
+        .request(
+            "integrations:unassign-instance",
+            serde_json::json!({ "nodeId": node_id, "instanceId": instance_id }),
+        )
+        .await
+}

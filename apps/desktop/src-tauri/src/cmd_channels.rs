@@ -101,7 +101,7 @@ async fn connect_telegram(
     let first_name = result.get("first_name").and_then(|v| v.as_str()).unwrap_or("");
     let bot_username = if username.is_empty() { first_name } else { username };
 
-    // Best-effort: fetch bot profile photo
+    // Best-effort: fetch bot profile photo as base64 data URI
     let photo_url: Option<String> = async {
         let photos_res: Value = client
             .get(format!("{tg_api}/getUserProfilePhotos"))
@@ -121,7 +121,16 @@ async fn connect_telegram(
             .json().await.ok()?;
 
         let file_path = file_res.get("result")?.get("file_path")?.as_str()?;
-        Some(format!("https://api.telegram.org/file/bot{token}/{file_path}"))
+        let download_url = format!("https://api.telegram.org/file/bot{token}/{file_path}");
+
+        // Download actual image bytes and encode as data URI
+        let img_bytes = client.get(&download_url).send().await.ok()?.bytes().await.ok()?;
+        if img_bytes.is_empty() {
+            return None;
+        }
+        let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &img_bytes);
+        let mime = if file_path.ends_with(".png") { "image/png" } else { "image/jpeg" };
+        Some(format!("data:{mime};base64,{b64}"))
     }.await;
 
     // Generate nodeId

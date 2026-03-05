@@ -2,11 +2,44 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>OpenSauria</title>
+    <title>Sauria &mdash; AI Provider</title>
     <link rel="stylesheet" href="../shared.css" />
     <style>
+      .setup-header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-bottom: 1px solid var(--border);
+        -webkit-app-region: drag;
+        app-region: drag;
+        flex-shrink: 0;
+      }
+
+      .setup-header .palette-back {
+        position: static;
+        display: flex;
+        z-index: auto;
+        -webkit-app-region: no-drag;
+        app-region: no-drag;
+      }
+
+      .setup-title {
+        font-size: 16px;
+        font-weight: 600;
+        white-space: nowrap;
+        -webkit-app-region: no-drag;
+      }
+
       .container {
-        padding: 48px 40px 40px;
+        padding: var(--spacing-xl);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+      }
+
+      .setup-wrapper {
         height: 100vh;
         display: flex;
         flex-direction: column;
@@ -90,6 +123,19 @@
         justify-content: center;
         font-size: 18px;
         flex-shrink: 0;
+      }
+
+      .card-icon .provider-icon {
+        width: 20px;
+        height: 20px;
+        filter: brightness(0) invert();
+      }
+
+      .card-icon .icon-mono {
+        width: 20px;
+        height: 20px;
+        filter: brightness(0) invert();
+        opacity: 0.6;
       }
 
       .card-info h3 {
@@ -282,343 +328,263 @@
       .error-msg.visible {
         display: block;
       }
+
+      .oauth-steps {
+        color: var(--text-secondary);
+        font-size: 13px;
+        margin-top: 8px;
+        line-height: 1.6;
+      }
     </style>
   </head>
   <body>
-    <button class="palette-back" id="palette-back" title="Back">
-      <img src="/icons/chevron-left.svg" alt="" />
-    </button>
-
-    <div class="container">
-      <!-- Step 1: Welcome -->
-      <div class="step active" id="step-welcome">
-        <div class="brand">OpenSauria</div>
-        <h1>Your world, always with you.</h1>
-        <p class="subtitle">
-          OpenSauria connects to your AI tools and makes them smarter. It builds a private knowledge
-          graph from your data and shares context across your apps.
-        </p>
-        <p class="subtitle">Setup takes about 30 seconds.</p>
-        <div class="actions">
-          <button class="btn btn-primary" onclick="goTo('step-mode')">Get started</button>
-        </div>
+    <div class="setup-wrapper">
+      <div class="setup-header" data-tauri-drag-region>
+        <button class="palette-back" id="palette-back" title="Back">
+          <img src="/icons/chevron-left.svg" alt="" />
+        </button>
+        <span class="setup-title">AI Provider</span>
       </div>
 
-      <!-- Step 2: Connection Mode -->
-      <div class="step" id="step-mode">
-        <h1>Choose your AI provider</h1>
-        <p class="subtitle">OpenSauria needs an AI provider to work. How do you want to connect?</p>
-        <div class="cards">
-          <div class="card" data-mode="claude_desktop" onclick="selectMode(this)">
-            <div class="card-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M16.98 7.35l-4.17 8.33a.94.94 0 01-1.68 0L7.02 7.35A.94.94 0 017.86 6h8.28a.94.94 0 01.84 1.35z"
-                  fill="#D97757"
-                />
-              </svg>
-            </div>
-            <div class="card-info">
-              <h3>I have a Claude subscription</h3>
-              <span>Connect with your Anthropic account</span>
-            </div>
-            <span class="badge badge-accent">Recommended</span>
-          </div>
-          <div class="card" data-mode="api_key" onclick="selectMode(this)">
-            <div class="card-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 0h10.5c.69 0 1.25.56 1.25 1.25v7.5c0 .69-.56 1.25-1.25 1.25H6.75c-.69 0-1.25-.56-1.25-1.25v-7.5c0-.69.56-1.25 1.25-1.25z"
-                  stroke="#a1a1a1"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </div>
-            <div class="card-info">
-              <h3>I have an API key</h3>
-              <span>Anthropic, OpenAI, Google</span>
-            </div>
-          </div>
-          <div class="card" data-mode="local" onclick="selectMode(this)">
-            <div class="card-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3v-3a3 3 0 013-3h13.5a3 3 0 013 3v3a3 3 0 01-3 3m-13.5 0v3a3 3 0 003 3h7.5a3 3 0 003-3v-3m-12 0h.008v.008H6.75V14.25zm9 0h.008v.008h-.008V14.25z"
-                  stroke="#a1a1a1"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </div>
-            <div class="card-info">
-              <h3>I run models locally</h3>
-              <span>Ollama, LM Studio, Open WebUI</span>
-            </div>
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-secondary" onclick="goTo('step-welcome')">Back</button>
-          <button class="btn btn-primary" id="btn-mode-next" disabled onclick="goToModeStep()">
-            Continue
-          </button>
-        </div>
-      </div>
-
-      <!-- Step 3a: Claude Subscription (OAuth) -->
-      <div class="step" id="step-claude-desktop">
-        <h1>Sign in to Anthropic</h1>
-        <p class="subtitle">
-          OpenSauria will connect to your Anthropic account to use Claude as its AI engine. No API
-          key needed.
-        </p>
-
-        <div id="oauth-start" style="display: block">
-          <p
-            style="color: var(--text-secondary); font-size: 13px; margin-top: 8px; line-height: 1.6"
-          >
-            1. Click the button below to open Anthropic's login page<br />
-            2. Log in and authorize OpenSauria<br />
-            3. Copy the code shown on screen and paste it back here
+      <div class="container">
+        <!-- Step 1: Welcome -->
+        <div class="step active" id="step-welcome">
+          <div class="brand">Sauria</div>
+          <h1>Your world, always with you.</h1>
+          <p class="subtitle">
+            Sauria connects to your AI tools and makes them smarter. It builds a private knowledge
+            graph from your data and shares context across your apps.
           </p>
-          <p class="error-msg" id="oauth-error" style="margin-top: 16px"></p>
+          <p class="subtitle">Setup takes about 30 seconds.</p>
           <div class="actions">
-            <button class="btn btn-secondary" onclick="goTo('step-mode')">Back</button>
-            <button class="btn btn-primary" id="btn-oauth-start" onclick="startOAuthFlow()">
-              Open Anthropic login
-            </button>
+            <button class="btn btn-primary" id="btn-get-started">Get started</button>
           </div>
         </div>
 
-        <div id="oauth-code" style="display: none">
-          <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px">
-            A code is displayed in your browser. Copy it and paste it here.
+        <!-- Step 2: Connection Mode -->
+        <div class="step" id="step-mode">
+          <h1>Choose your AI provider</h1>
+          <p class="subtitle">Sauria needs an AI provider to work. How do you want to connect?</p>
+          <div class="cards" id="mode-cards">
+            <div class="card" data-mode="claude_desktop">
+              <div class="card-icon">
+                <img src="/icons/anthropic.svg" alt="Anthropic" class="provider-icon" />
+              </div>
+              <div class="card-info">
+                <h3>I have a Claude subscription</h3>
+                <span>Connect with your Anthropic account</span>
+              </div>
+              <span class="badge badge-accent">Recommended</span>
+            </div>
+            <div class="card" data-mode="api_key">
+              <div class="card-icon">
+                <img src="/icons/settings.svg" alt="API Key" class="icon-mono" />
+              </div>
+              <div class="card-info">
+                <h3>I have an API key</h3>
+                <span>Anthropic, OpenAI, Google</span>
+              </div>
+            </div>
+            <div class="card" data-mode="local">
+              <div class="card-icon">
+                <img src="/icons/ollama.svg" alt="Local" class="provider-icon" />
+              </div>
+              <div class="card-info">
+                <h3>I run models locally</h3>
+                <span>Ollama, LM Studio, Open WebUI</span>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-secondary" id="btn-mode-back">Back</button>
+            <button class="btn btn-primary" id="btn-mode-next" disabled>Continue</button>
+          </div>
+        </div>
+
+        <!-- Step 3a: Claude Subscription (OAuth) -->
+        <div class="step" id="step-claude-desktop">
+          <h1>Sign in to Anthropic</h1>
+          <p class="subtitle">
+            Sauria will connect to your Anthropic account to use Claude as its AI engine. No API key
+            needed.
+          </p>
+
+          <div id="oauth-start" style="display: block">
+            <p class="oauth-steps">
+              1. Click the button below to open Anthropic's login page<br />
+              2. Log in and authorize Sauria<br />
+              3. Copy the code shown on screen and paste it back here
+            </p>
+            <p class="error-msg" id="oauth-error" style="margin-top: 16px"></p>
+            <div class="actions">
+              <button class="btn btn-secondary" id="btn-oauth-back">Back</button>
+              <button class="btn btn-primary" id="btn-oauth-start">Open Anthropic login</button>
+            </div>
+          </div>
+
+          <div id="oauth-code" style="display: none">
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px">
+              A code is displayed in your browser. Copy it and paste it here.
+            </p>
+            <div class="input-group">
+              <label for="oauth-code-input">Authorization code</label>
+              <input type="text" id="oauth-code-input" placeholder="Paste code here..." />
+            </div>
+            <p class="error-msg" id="oauth-code-error"></p>
+            <div class="actions">
+              <button class="btn btn-secondary" id="btn-oauth-reset">Back</button>
+              <button class="btn btn-primary" id="btn-oauth-submit" disabled>Connect</button>
+            </div>
+          </div>
+
+          <div id="oauth-loading" style="display: none; text-align: center; padding: 32px 0">
+            <div class="spinner"></div>
+            <p style="color: var(--text-secondary); margin-top: 16px">
+              Connecting to your account...
+            </p>
+          </div>
+        </div>
+
+        <!-- Step 3b: Provider Selection (API key path) -->
+        <div class="step" id="step-provider">
+          <h1>Choose your provider</h1>
+          <p class="subtitle">Which AI provider do you have an API key for?</p>
+          <div class="cards" id="provider-cards">
+            <div class="card" data-provider="anthropic">
+              <div class="card-icon">
+                <img src="/icons/anthropic.svg" alt="Anthropic" class="provider-icon" />
+              </div>
+              <div class="card-info">
+                <h3>Anthropic</h3>
+                <span>Claude Sonnet, Opus</span>
+              </div>
+              <span class="badge badge-accent">Recommended</span>
+            </div>
+            <div class="card" data-provider="openai">
+              <div class="card-icon">
+                <img src="/icons/openai.svg" alt="OpenAI" class="provider-icon" />
+              </div>
+              <div class="card-info">
+                <h3>OpenAI</h3>
+                <span>GPT-4o, o1</span>
+              </div>
+            </div>
+            <div class="card" data-provider="google">
+              <div class="card-icon">
+                <img src="/icons/google-ai.svg" alt="Google" class="provider-icon" />
+              </div>
+              <div class="card-info">
+                <h3>Google</h3>
+                <span>Gemini 2.5 Flash, Pro</span>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-secondary" id="btn-provider-back">Back</button>
+            <button class="btn btn-primary" id="btn-provider-next" disabled>Continue</button>
+          </div>
+        </div>
+
+        <!-- Step 3c: Local Providers -->
+        <div class="step" id="step-local">
+          <h1>Local AI providers</h1>
+          <p class="subtitle" id="local-subtitle">
+            Scanning your machine for running AI providers...
+          </p>
+          <div id="local-scanning" class="scan-status">
+            <div class="spinner"></div>
+            <p>Looking for Ollama, LM Studio, Open WebUI...</p>
+          </div>
+          <div class="cards" id="local-results" style="display: none"></div>
+          <div class="cards" id="local-manual" style="display: none">
+            <div class="card" data-provider="ollama" data-url="http://localhost:11434">
+              <div class="card-icon">O</div>
+              <div class="card-info">
+                <h3>Ollama</h3>
+                <span>localhost:11434</span>
+              </div>
+            </div>
+            <div class="card" data-provider="lm-studio" data-url="http://localhost:1234">
+              <div class="card-icon">L</div>
+              <div class="card-info">
+                <h3>LM Studio</h3>
+                <span>localhost:1234</span>
+              </div>
+            </div>
+            <div class="card" data-provider="open-webui" data-url="http://localhost:3000">
+              <div class="card-icon">W</div>
+              <div class="card-info">
+                <h3>Open WebUI</h3>
+                <span>localhost:3000</span>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-secondary" id="btn-local-back">Back</button>
+            <button class="btn btn-primary" id="btn-local-next" disabled>Continue</button>
+          </div>
+        </div>
+
+        <!-- Step 4: API Key (API key path only) -->
+        <div class="step" id="step-auth">
+          <h1 id="auth-title">Enter your API key</h1>
+          <p class="subtitle" id="auth-subtitle">
+            Your key is stored locally in an encrypted vault. It never leaves your machine.
           </p>
           <div class="input-group">
-            <label for="oauth-code-input">Authorization code</label>
-            <input
-              type="text"
-              id="oauth-code-input"
-              placeholder="Paste code here..."
-              oninput="onOAuthCodeInput()"
-            />
+            <label for="api-key">API Key</label>
+            <input type="password" id="api-key" placeholder="sk-..." />
+            <p class="input-hint" id="auth-hint">
+              Get your key from
+              <a href="#" id="auth-link">the provider console</a>
+            </p>
+            <p class="error-msg" id="auth-error"></p>
           </div>
-          <p class="error-msg" id="oauth-code-error"></p>
           <div class="actions">
-            <button class="btn btn-secondary" onclick="resetOAuth()">Back</button>
-            <button
-              class="btn btn-primary"
-              id="btn-oauth-submit"
-              disabled
-              onclick="submitOAuthCode()"
-            >
-              Connect
-            </button>
+            <button class="btn btn-secondary" id="btn-auth-back">Back</button>
+            <button class="btn btn-primary" id="btn-auth-next" disabled>Continue</button>
           </div>
         </div>
 
-        <div id="oauth-loading" style="display: none; text-align: center; padding: 32px 0">
-          <div class="spinner"></div>
-          <p style="color: var(--text-secondary); margin-top: 16px">
-            Connecting to your account...
+        <!-- Step 5: Configuring -->
+        <div class="step" id="step-configuring">
+          <h1>Setting everything up</h1>
+          <p class="subtitle">This only takes a moment.</p>
+          <ul class="progress-list" id="progress-list">
+            <li class="progress-item active" id="p-verify">
+              <div class="spinner"></div>
+              <span>Verifying connection</span>
+            </li>
+            <li class="progress-item" id="p-store">
+              <div class="progress-dot"></div>
+              <span>Securing credentials</span>
+            </li>
+            <li class="progress-item" id="p-config">
+              <div class="progress-dot"></div>
+              <span>Writing configuration</span>
+            </li>
+            <li class="progress-item" id="p-clients">
+              <div class="progress-dot"></div>
+              <span>Connecting AI clients</span>
+            </li>
+            <li class="progress-item" id="p-finish">
+              <div class="progress-dot"></div>
+              <span>Starting background service</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Step 6: Done -->
+        <div class="step" id="step-done">
+          <div class="success-icon">&#10003;</div>
+          <h1>Sauria is ready</h1>
+          <p class="subtitle">
+            Your AI provider is connected. Sauria is running in the background.
           </p>
-        </div>
-      </div>
-
-      <!-- Step 3b: Provider Selection (API key path) -->
-      <div class="step" id="step-provider">
-        <h1>Choose your provider</h1>
-        <p class="subtitle">Which AI provider do you have an API key for?</p>
-        <div class="cards">
-          <div class="card" data-provider="anthropic" onclick="selectProvider(this)">
-            <div class="card-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M16.98 7.35l-4.17 8.33a.94.94 0 01-1.68 0L7.02 7.35A.94.94 0 017.86 6h8.28a.94.94 0 01.84 1.35z"
-                  fill="#D97757"
-                />
-              </svg>
-            </div>
-            <div class="card-info">
-              <h3>Anthropic</h3>
-              <span>Claude Sonnet, Opus</span>
-            </div>
-            <span class="badge badge-accent">Recommended</span>
+          <ul class="client-list" id="client-list"></ul>
+          <div class="actions">
+            <button class="btn btn-primary" id="btn-done">Done</button>
           </div>
-          <div class="card" data-provider="openai" onclick="selectProvider(this)">
-            <div class="card-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M22.28 9.37a5.93 5.93 0 00-.51-4.88 6.01 6.01 0 00-6.47-2.9A5.95 5.95 0 0010.82.01a6.01 6.01 0 00-5.73 4.15 5.95 5.95 0 00-3.97 2.88 6.01 6.01 0 00.74 7.04 5.93 5.93 0 00.51 4.88 6.01 6.01 0 006.47 2.9A5.95 5.95 0 0013.31 24a6.01 6.01 0 005.73-4.15 5.95 5.95 0 003.97-2.88 6.01 6.01 0 00-.74-7.04z"
-                  fill="#10A37F"
-                />
-              </svg>
-            </div>
-            <div class="card-info">
-              <h3>OpenAI</h3>
-              <span>GPT-4o, o1</span>
-            </div>
-          </div>
-          <div class="card" data-provider="google" onclick="selectProvider(this)">
-            <div class="card-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 001 12c0 1.77.43 3.45 1.18 4.93l3.66-2.84z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-            </div>
-            <div class="card-info">
-              <h3>Google</h3>
-              <span>Gemini 2.5 Flash, Pro</span>
-            </div>
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-secondary" onclick="goTo('step-mode')">Back</button>
-          <button class="btn btn-primary" id="btn-provider-next" disabled onclick="goToAuth()">
-            Continue
-          </button>
-        </div>
-      </div>
-
-      <!-- Step 3c: Local Providers -->
-      <div class="step" id="step-local">
-        <h1>Local AI providers</h1>
-        <p class="subtitle" id="local-subtitle">
-          Scanning your machine for running AI providers...
-        </p>
-        <div id="local-scanning" class="scan-status">
-          <div class="spinner"></div>
-          <p>Looking for Ollama, LM Studio, Open WebUI...</p>
-        </div>
-        <div class="cards" id="local-results" style="display: none"></div>
-        <div class="cards" id="local-manual" style="display: none">
-          <div
-            class="card"
-            data-provider="ollama"
-            data-url="http://localhost:11434"
-            onclick="selectLocalProvider(this)"
-          >
-            <div class="card-icon">O</div>
-            <div class="card-info">
-              <h3>Ollama</h3>
-              <span>localhost:11434</span>
-            </div>
-          </div>
-          <div
-            class="card"
-            data-provider="lm-studio"
-            data-url="http://localhost:1234"
-            onclick="selectLocalProvider(this)"
-          >
-            <div class="card-icon">L</div>
-            <div class="card-info">
-              <h3>LM Studio</h3>
-              <span>localhost:1234</span>
-            </div>
-          </div>
-          <div
-            class="card"
-            data-provider="open-webui"
-            data-url="http://localhost:3000"
-            onclick="selectLocalProvider(this)"
-          >
-            <div class="card-icon">W</div>
-            <div class="card-info">
-              <h3>Open WebUI</h3>
-              <span>localhost:3000</span>
-            </div>
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-secondary" onclick="goTo('step-mode')">Back</button>
-          <button class="btn btn-primary" id="btn-local-next" disabled onclick="configureLocal()">
-            Continue
-          </button>
-        </div>
-      </div>
-
-      <!-- Step 4: API Key (API key path only) -->
-      <div class="step" id="step-auth">
-        <h1 id="auth-title">Enter your API key</h1>
-        <p class="subtitle" id="auth-subtitle">
-          Your key is stored locally in an encrypted vault. It never leaves your machine.
-        </p>
-        <div class="input-group">
-          <label for="api-key">API Key</label>
-          <input type="password" id="api-key" placeholder="sk-..." oninput="onKeyInput()" />
-          <p class="input-hint" id="auth-hint">
-            Get your key from
-            <a href="#" id="auth-link" onclick="openProviderConsole()"> the provider console </a>
-          </p>
-          <p class="error-msg" id="auth-error"></p>
-        </div>
-        <div class="actions">
-          <button class="btn btn-secondary" onclick="goTo('step-provider')">Back</button>
-          <button
-            class="btn btn-primary"
-            id="btn-auth-next"
-            disabled
-            onclick="validateAndConfigure()"
-          >
-            Continue
-          </button>
-        </div>
-      </div>
-
-      <!-- Step 5: Configuring -->
-      <div class="step" id="step-configuring">
-        <h1>Setting everything up</h1>
-        <p class="subtitle">This only takes a moment.</p>
-        <ul class="progress-list" id="progress-list">
-          <li class="progress-item active" id="p-verify">
-            <div class="spinner"></div>
-            <span>Verifying connection</span>
-          </li>
-          <li class="progress-item" id="p-store">
-            <div class="progress-dot"></div>
-            <span>Securing credentials</span>
-          </li>
-          <li class="progress-item" id="p-config">
-            <div class="progress-dot"></div>
-            <span>Writing configuration</span>
-          </li>
-          <li class="progress-item" id="p-clients">
-            <div class="progress-dot"></div>
-            <span>Connecting AI clients</span>
-          </li>
-          <li class="progress-item" id="p-finish">
-            <div class="progress-dot"></div>
-            <span>Starting background service</span>
-          </li>
-        </ul>
-      </div>
-
-      <!-- Step 6: Done -->
-      <div class="step" id="step-done">
-        <div class="success-icon">&#10003;</div>
-        <h1>OpenSauria is ready</h1>
-        <p class="subtitle">
-          Your AI provider is connected. OpenSauria is running in the background.
-        </p>
-        <ul class="client-list" id="client-list"></ul>
-        <div class="actions">
-          <button class="btn btn-primary" onclick="handleDone()">Done</button>
         </div>
       </div>
     </div>

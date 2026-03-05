@@ -4,7 +4,6 @@ import { applySchema } from '../../db/schema.js';
 import { LLMRoutingBrain, parseRoutingResponse } from '../llm-router.js';
 import type { RoutingContext } from '../llm-router.js';
 import type { InboundMessage, AgentNode, Workspace } from '../types.js';
-import { DEFAULT_GROUP_BEHAVIOR } from '../types.js';
 import type { ModelRouter } from '../../ai/router.js';
 import { AgentMemory } from '../agent-memory.js';
 
@@ -23,7 +22,6 @@ const baseNode: AgentNode = {
   role: 'assistant',
   autonomy: 'supervised',
   instructions: 'Handle support queries',
-  groupBehavior: DEFAULT_GROUP_BEHAVIOR,
 };
 
 const baseWorkspace: Workspace = {
