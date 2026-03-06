@@ -19,6 +19,7 @@ interface IntegrationDefinition {
   readonly authType: 'api_key' | 'oauth' | 'token';
   readonly credentialKeys: readonly string[];
   readonly mcpRemote?: McpRemoteServer;
+  readonly oauthProxy?: string;
 }
 
 interface IntegrationTool {
@@ -382,8 +383,8 @@ async function renderTelegramPanel(): Promise<void> {
 function renderConnectForm(item: IntegrationStatus): void {
   const { definition } = item;
 
-  // OAuth + remote MCP: one-click connect
-  if (definition.authType === 'oauth' && definition.mcpRemote) {
+  // OAuth one-click: remote MCP or Worker proxy
+  if (definition.authType === 'oauth' && (definition.mcpRemote || definition.oauthProxy)) {
     renderOAuthConnectForm(item);
     return;
   }
@@ -498,8 +499,8 @@ async function handleConnect(item: IntegrationStatus): Promise<void> {
 }
 
 async function handleOAuthConnect(item: IntegrationStatus): Promise<void> {
-  const remote = item.definition.mcpRemote;
-  if (!remote) return;
+  const { mcpRemote, oauthProxy } = item.definition;
+  if (!mcpRemote && !oauthProxy) return;
 
   const btn = document.getElementById('oauth-connect-btn') as HTMLButtonElement;
   const statusEl = document.getElementById('oauth-status') as HTMLElement;
@@ -509,13 +510,26 @@ async function handleOAuthConnect(item: IntegrationStatus): Promise<void> {
   statusEl.className = 'form-status visible';
 
   try {
-    await invoke('start_integration_oauth', {
-      integrationId: item.id,
-      mcpUrl: remote.url,
-      authUrl: remote.authorizationUrl ?? null,
-      tokenUrl: remote.tokenUrl ?? null,
-      scopes: null,
-    });
+    if (mcpRemote) {
+      // Remote MCP: discover OAuth metadata from MCP server
+      await invoke('start_integration_oauth', {
+        integrationId: item.id,
+        mcpUrl: mcpRemote.url,
+        authUrl: mcpRemote.authorizationUrl ?? null,
+        tokenUrl: mcpRemote.tokenUrl ?? null,
+        scopes: null,
+      });
+    } else {
+      // Worker proxy: redirect via auth.sauria.app/connect/:provider
+      const proxyBase = await invoke<string>('get_auth_proxy_url');
+      await invoke('start_integration_oauth', {
+        integrationId: item.id,
+        mcpUrl: proxyBase,
+        authUrl: `${proxyBase}/connect/${oauthProxy}`,
+        tokenUrl: null,
+        scopes: null,
+      });
+    }
   } catch (err: unknown) {
     btn.disabled = false;
     statusEl.textContent = err instanceof Error ? err.message : String(err);

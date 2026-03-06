@@ -50,6 +50,8 @@ export interface IntegrationDefinition {
   readonly credentialKeys: readonly string[];
   readonly mcpServer: McpServerTemplate;
   readonly mcpRemote?: McpRemoteServer;
+  /** Worker proxy provider key (e.g. 'google'). Used when authType='oauth' but no mcpRemote. */
+  readonly oauthProxy?: string;
 }
 
 export interface IntegrationStatus {

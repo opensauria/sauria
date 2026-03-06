@@ -164,6 +164,14 @@ export class IntegrationRegistry {
       } else {
         // Local MCP path — spawn via npx
         const env: Record<string, string> = {};
+
+        // OAuth proxy path: inject access token via envMapping
+        if (accessToken && definition.oauthProxy) {
+          const envVar = definition.mcpServer.envMapping['accessToken'];
+          if (envVar) env[envVar] = accessToken;
+        }
+
+        // Standard credential keys
         for (const key of definition.credentialKeys) {
           const envVar = definition.mcpServer.envMapping[key];
           const value = credentials[key];
