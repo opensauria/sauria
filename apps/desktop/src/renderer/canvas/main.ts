@@ -25,6 +25,7 @@ interface AgentNode {
   role?: string;
   autonomy?: number | string;
   instructions?: string;
+  description?: string;
   behavior?: {
     proactive?: boolean;
     ownerResponse?: boolean;
@@ -1013,6 +1014,12 @@ function renderNodes() {
         escapeHtml(displayName) +
         '</span>' +
         '<button class="card-setup-close" data-action="close-edit">&times;</button>' +
+        '</div>' +
+        '<div class="card-setup-field">' +
+        '<label>Role</label>' +
+        '<input type="text" data-field="description" placeholder="e.g. Customer support, Research..." value="' +
+        escapeHtml(node.description || '') +
+        '" />' +
         '</div>' +
         fieldsHtml +
         '<div class="card-setup-actions">' +
@@ -2845,9 +2852,14 @@ world.addEventListener('click', function (e) {
   }
 
   if (action === 'close-edit') {
+    // Save description from form input
+    if (node._formData?.description !== undefined) {
+      node.description = node._formData.description;
+    }
     flipCard(card, function () {
       node!._editing = false;
       renderNodes();
+      saveGraph();
     });
     e.stopPropagation();
     return;
@@ -3259,23 +3271,14 @@ function capitalize(s: string): string {
 }
 
 function getBotInfo(node: AgentNode): string {
-  var { meta, platform } = node;
-  if (platform === 'telegram') {
-    return meta.botId ? 'Bot \u00B7 ID ' + meta.botId : 'Bot';
-  }
-  if (platform === 'slack') {
-    return meta.teamId ? 'Team ' + meta.teamId : meta.botUserId ? 'Bot ' + meta.botUserId : '';
-  }
-  if (platform === 'discord') {
-    return meta.botId ? 'Bot \u00B7 ID ' + meta.botId : 'Bot';
-  }
+  if (node.description) return node.description;
+  var { platform } = node;
   if (platform === 'email') {
-    return meta.username && meta.imapHost ? meta.username + '@' + meta.imapHost : meta.username || '';
+    return node.meta.username && node.meta.imapHost
+      ? node.meta.username + '@' + node.meta.imapHost
+      : node.meta.username || '';
   }
-  if (platform === 'whatsapp') {
-    return meta.phoneNumberId ? 'Phone ' + meta.phoneNumberId : '';
-  }
-  return '';
+  return capitalize(platform);
 }
 
 /* ═══════════════════════════════════════════════

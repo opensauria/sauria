@@ -80,6 +80,7 @@ const CATEGORY_ORDER: readonly { readonly id: string; readonly labelKey: string 
 
 let catalog: IntegrationStatus[] = [];
 let telegramBots: readonly TelegramBot[] = [];
+let accountLabels: Record<string, string> = {};
 let searchQuery = '';
 let activeCategory = 'all';
 let openPanelId: string | null = null;
@@ -489,30 +490,32 @@ function renderBothConnectForm(item: IntegrationStatus): void {
   `;
 
   // Toggle between OAuth and API Key modes
-  for (const btn of configBody.querySelectorAll<HTMLButtonElement>('.auth-toggle-btn')) {
+  configBody.querySelectorAll<HTMLButtonElement>('.auth-toggle-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      for (const b of configBody.querySelectorAll<HTMLButtonElement>('.auth-toggle-btn')) {
+      configBody.querySelectorAll<HTMLButtonElement>('.auth-toggle-btn').forEach((b) => {
         b.classList.toggle('active', b === btn);
-      }
+      });
       const isOAuth = btn.dataset['mode'] === 'oauth';
       const oauthSection = configBody.querySelector<HTMLElement>('.auth-mode-oauth');
       const apiKeySection = configBody.querySelector<HTMLElement>('.auth-mode-apikey');
       if (oauthSection) oauthSection.style.display = isOAuth ? '' : 'none';
       if (apiKeySection) apiKeySection.style.display = isOAuth ? 'none' : '';
     });
-  }
+  });
 
   document.getElementById('oauth-connect-btn')?.addEventListener('click', () => handleOAuthConnect(item));
   document.getElementById('config-connect')?.addEventListener('click', () => handleConnect(item));
 }
 
 function renderConnectedPanel(item: IntegrationStatus): void {
+  const label = accountLabels[item.id];
   const toolsList = item.tools
     .slice(0, 15)
     .map((tool) => `<div class="config-tool-item">${tool.name}</div>`)
     .join('');
 
   configBody.innerHTML = `
+    ${label ? `<div class="connected-account"><span class="connected-account-dot"></span><span class="connected-account-label">${label}</span></div>` : ''}
     <div class="config-tools">
       <div class="config-tools-title">${t('integ.availableTools')} (${item.tools.length})</div>
       ${toolsList}
@@ -566,7 +569,7 @@ async function handleConnect(item: IntegrationStatus): Promise<void> {
 }
 
 async function handleOAuthConnect(item: IntegrationStatus): Promise<void> {
-  const { mcpRemote, oauthProxy } = item.definition;
+  const { mcpRemote, oauthProxy, name } = item.definition;
   if (!mcpRemote && !oauthProxy) return;
 
   const btn = document.getElementById('oauth-connect-btn') as HTMLButtonElement;
@@ -578,19 +581,19 @@ async function handleOAuthConnect(item: IntegrationStatus): Promise<void> {
 
   try {
     if (mcpRemote) {
-      // Remote MCP: discover OAuth metadata from MCP server
       await invoke('start_integration_oauth', {
         integrationId: item.id,
+        providerName: name,
         mcpUrl: mcpRemote.url,
         authUrl: mcpRemote.authorizationUrl ?? null,
         tokenUrl: mcpRemote.tokenUrl ?? null,
         scopes: null,
       });
     } else {
-      // Worker proxy: redirect via auth.sauria.app/connect/:provider
       const proxyBase = await invoke<string>('get_auth_proxy_url');
       await invoke('start_integration_oauth', {
         integrationId: item.id,
+        providerName: name,
         mcpUrl: proxyBase,
         authUrl: `${proxyBase}/connect/${oauthProxy}`,
         tokenUrl: null,
@@ -622,6 +625,15 @@ async function handleDisconnect(id: string): Promise<void> {
 async function refreshCatalog(): Promise<void> {
   catalog = (await invoke('integrations_list_catalog')) as IntegrationStatus[];
   renderGrid();
+}
+
+async function refreshAccountLabels(): Promise<void> {
+  try {
+    const labels = await invoke<Record<string, string>>('get_integration_accounts');
+    accountLabels = labels;
+  } catch {
+    // Accounts file may not exist yet
+  }
 }
 
 async function refreshTelegramStatus(): Promise<void> {
@@ -713,8 +725,14 @@ async function invokeWithRetry<T>(cmd: string, args?: Record<string, unknown>): 
 }
 
 // Listen for OAuth completion from deep link callback
-void listen('integration-oauth-complete', async () => {
+void listen<{ accountLabel?: string; integrationId?: string }>('integration-oauth-complete', async (event) => {
+  // Capture account label from the event payload
+  const payload = event.payload;
+  if (payload?.accountLabel && payload?.integrationId) {
+    accountLabels[payload.integrationId] = payload.accountLabel;
+  }
   await refreshCatalog();
+  await refreshAccountLabels();
   const statusEl = document.getElementById('oauth-status');
   if (statusEl) {
     statusEl.textContent = t('integ.oauthSuccess');
@@ -728,13 +746,15 @@ void listen('integration-oauth-complete', async () => {
   }, 800);
 });
 
-// Load both catalogs in parallel
+// Load catalogs and account labels in parallel
 Promise.all([
   invokeWithRetry<IntegrationStatus[]>('integrations_list_catalog').catch(() => []),
   invokeWithRetry<TelegramStatus>('get_telegram_status').catch(() => ({ bots: [] as TelegramBot[] })),
-]).then(([mcpCatalog, tgStatus]) => {
+  invokeWithRetry<Record<string, string>>('get_integration_accounts').catch(() => ({})),
+]).then(([mcpCatalog, tgStatus, labels]) => {
   catalog = mcpCatalog;
   telegramBots = tgStatus.bots ?? [];
+  accountLabels = labels;
   renderTabs();
   renderGrid();
 });

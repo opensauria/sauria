@@ -95,6 +95,7 @@ fn main() {
             // OAuth Integrations
             cmd_oauth_integrations::start_integration_oauth,
             cmd_oauth_integrations::complete_integration_oauth,
+            cmd_oauth_integrations::get_integration_accounts,
         ])
         .setup(move |app| {
             // Hide dock icon on macOS
