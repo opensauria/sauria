@@ -303,6 +303,24 @@
   border-radius: var(--radius-sm);
 }
 
+.oauth-connect-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.oauth-description {
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.oauth-connect-section .btn svg {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
 .config-tools {
   display: flex;
   flex-direction: column;
