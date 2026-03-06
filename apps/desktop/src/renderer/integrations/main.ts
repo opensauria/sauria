@@ -383,8 +383,8 @@ async function renderTelegramPanel(): Promise<void> {
 function renderConnectForm(item: IntegrationStatus): void {
   const { definition } = item;
 
-  // OAuth one-click: remote MCP or Worker proxy
-  if (definition.authType === 'oauth' && (definition.mcpRemote || definition.oauthProxy)) {
+  // OAuth one-click: any service with authType 'oauth' gets the OAuth button
+  if (definition.authType === 'oauth') {
     renderOAuthConnectForm(item);
     return;
   }
@@ -419,8 +419,6 @@ function renderConnectForm(item: IntegrationStatus): void {
 
 function renderOAuthConnectForm(item: IntegrationStatus): void {
   const { definition } = item;
-  const remote = definition.mcpRemote;
-  if (!remote) return;
 
   configBody.innerHTML = `
     ${item.error ? `<div class="config-error">${item.error}</div>` : ''}
