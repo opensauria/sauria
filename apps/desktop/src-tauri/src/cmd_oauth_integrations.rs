@@ -8,7 +8,8 @@ use std::sync::LazyLock;
 use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 
-const CLIENT_ID: &str = "sauria-desktop";
+const DEFAULT_CLIENT_ID: &str = "sauria-desktop";
+const CLIENT_NAME: &str = "Sauria Desktop";
 const REDIRECT_URI: &str = "sauria://oauth/callback";
 
 #[derive(Clone)]
@@ -17,6 +18,7 @@ struct PendingOAuth {
     verifier: String,
     mcp_url: String,
     token_url: Option<String>,
+    client_id: String,
 }
 
 static PENDING: LazyLock<Mutex<HashMap<String, PendingOAuth>>> =
@@ -30,8 +32,9 @@ pub struct OAuthStartResult {
 
 /// Start OAuth flow for an integration.
 /// 1. Discover OAuth metadata from remote MCP server
-/// 2. Generate PKCE verifier + challenge
-/// 3. Open browser to authorization URL
+/// 2. Try dynamic client registration (RFC 7591) if supported
+/// 3. Generate PKCE verifier + challenge
+/// 4. Open browser to authorization URL
 #[tauri::command]
 pub async fn start_integration_oauth(
     integration_id: String,
@@ -40,6 +43,34 @@ pub async fn start_integration_oauth(
     token_url: Option<String>,
     scopes: Option<String>,
 ) -> Result<OAuthStartResult, String> {
+    // Discover OAuth metadata (needed for auth_url, token_url, and registration)
+    let metadata = if auth_url.is_none() || token_url.is_none() {
+        Some(fetch_oauth_metadata(&mcp_url).await?)
+    } else {
+        None
+    };
+
+    let authorize_url = match &auth_url {
+        Some(url) => url.clone(),
+        None => metadata.as_ref().unwrap()["authorization_endpoint"]
+            .as_str()
+            .map(String::from)
+            .ok_or("No authorization_endpoint in metadata")?,
+    };
+
+    let resolved_token_url = match &token_url {
+        Some(url) => Some(url.clone()),
+        None => metadata.as_ref().and_then(|m| m["token_endpoint"].as_str().map(String::from)),
+    };
+
+    // Dynamic client registration (RFC 7591) if server advertises it
+    let client_id = if let Some(reg_endpoint) = metadata.as_ref().and_then(|m| m["registration_endpoint"].as_str()) {
+        try_dynamic_registration(reg_endpoint).await.unwrap_or_else(|_| DEFAULT_CLIENT_ID.to_string())
+    } else {
+        DEFAULT_CLIENT_ID.to_string()
+    };
+
+    // PKCE
     let mut verifier_bytes = [0u8; 48];
     OsRng.fill_bytes(&mut verifier_bytes);
     let verifier = URL_SAFE_NO_PAD.encode(verifier_bytes);
@@ -58,19 +89,15 @@ pub async fn start_integration_oauth(
             provider: integration_id,
             verifier: verifier.clone(),
             mcp_url: mcp_url.clone(),
-            token_url,
+            token_url: resolved_token_url,
+            client_id: client_id.clone(),
         },
     );
-
-    let authorize_url = match auth_url {
-        Some(url) => url,
-        None => discover_auth_url(&mcp_url).await?,
-    };
 
     let url = format!(
         "{}?response_type=code&client_id={}&redirect_uri={}&state={}&code_challenge={}&code_challenge_method=S256{}",
         authorize_url,
-        CLIENT_ID,
+        urlencoding::encode(&client_id),
         urlencoding::encode(REDIRECT_URI),
         state,
         challenge,
@@ -97,7 +124,7 @@ pub async fn complete_integration_oauth(
 ) -> Result<serde_json::Value, String> {
     let pending = pop_pending(&state).await?;
     let token_url = resolve_token_url(&pending).await?;
-    let tokens = exchange_code(&code, &pending.verifier, &token_url).await?;
+    let tokens = exchange_code(&code, &pending.verifier, &token_url, &pending.client_id).await?;
     store_and_connect(&pending.provider, &tokens, &paths, &client).await
 }
 
@@ -134,7 +161,7 @@ pub async fn handle_deep_link_callback(
         // Standard OAuth code exchange
         let pending = pop_pending(&state).await?;
         let token_url = resolve_token_url(&pending).await?;
-        let tokens = exchange_code(&code, &pending.verifier, &token_url).await?;
+        let tokens = exchange_code(&code, &pending.verifier, &token_url, &pending.client_id).await?;
         let paths = handle.state::<crate::paths::Paths>();
         let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
         store_and_connect(&pending.provider, &tokens, &paths, &client).await?
@@ -163,11 +190,17 @@ async fn pop_pending(state: &str) -> Result<PendingOAuth, String> {
 async fn resolve_token_url(pending: &PendingOAuth) -> Result<String, String> {
     match &pending.token_url {
         Some(url) => Ok(url.clone()),
-        None => discover_token_url(&pending.mcp_url).await,
+        None => {
+            let metadata = fetch_oauth_metadata(&pending.mcp_url).await?;
+            metadata["token_endpoint"]
+                .as_str()
+                .map(String::from)
+                .ok_or_else(|| "No token_endpoint in metadata".into())
+        }
     }
 }
 
-async fn exchange_code(code: &str, verifier: &str, token_url: &str) -> Result<TokenSet, String> {
+async fn exchange_code(code: &str, verifier: &str, token_url: &str, client_id: &str) -> Result<TokenSet, String> {
     let http = reqwest::Client::new();
     let resp = http
         .post(token_url)
@@ -175,7 +208,7 @@ async fn exchange_code(code: &str, verifier: &str, token_url: &str) -> Result<To
             "grant_type": "authorization_code",
             "code": code,
             "redirect_uri": REDIRECT_URI,
-            "client_id": CLIENT_ID,
+            "client_id": client_id,
             "code_verifier": verifier,
         }))
         .send()
@@ -240,22 +273,33 @@ async fn store_and_connect(
         .map_err(|e| e.to_string())
 }
 
-// ── OAuth metadata discovery ────────────────────────────────────────────
+// ── OAuth metadata discovery & dynamic registration ─────────────────────
 
-async fn discover_auth_url(mcp_url: &str) -> Result<String, String> {
-    let metadata = fetch_oauth_metadata(mcp_url).await?;
-    metadata["authorization_endpoint"]
+async fn try_dynamic_registration(registration_endpoint: &str) -> Result<String, String> {
+    let http = reqwest::Client::new();
+    let resp = http
+        .post(registration_endpoint)
+        .json(&serde_json::json!({
+            "client_name": CLIENT_NAME,
+            "redirect_uris": [REDIRECT_URI],
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "token_endpoint_auth_method": "none",
+        }))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.status().is_success() {
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format!("Dynamic registration failed: {}", body));
+    }
+
+    let body: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+    body["client_id"]
         .as_str()
         .map(String::from)
-        .ok_or_else(|| "No authorization_endpoint in metadata".into())
-}
-
-async fn discover_token_url(mcp_url: &str) -> Result<String, String> {
-    let metadata = fetch_oauth_metadata(mcp_url).await?;
-    metadata["token_endpoint"]
-        .as_str()
-        .map(String::from)
-        .ok_or_else(|| "No token_endpoint in metadata".into())
+        .ok_or_else(|| "No client_id in registration response".into())
 }
 
 async fn fetch_oauth_metadata(mcp_url: &str) -> Result<serde_json::Value, String> {
