@@ -21,23 +21,34 @@ export async function connectRemoteMcp(
   const headers: Record<string, string> = {
     Authorization: `Bearer ${config.accessToken}`,
   };
+  const url = new URL(config.url);
 
   // Try Streamable HTTP first (MCP 2025-03-26+), fall back to SSE
   try {
-    const transport = new StreamableHTTPClientTransport(new URL(config.url), {
-      requestInit: { headers },
-    });
-    const client = new Client({ name: 'sauria', version: '1.0.0' });
-    await client.connect(transport);
-    logger.info(`Connected to remote MCP: ${config.name} via Streamable HTTP`);
-    return { client, transport };
+    return await connectWithTransport(
+      new StreamableHTTPClientTransport(url, { requestInit: { headers } }),
+      config.name,
+      'Streamable HTTP',
+      logger,
+    );
   } catch {
-    const transport = new SSEClientTransport(new URL(config.url), {
-      requestInit: { headers },
-    });
-    const client = new Client({ name: 'sauria', version: '1.0.0' });
-    await client.connect(transport);
-    logger.info(`Connected to remote MCP: ${config.name} via SSE`);
-    return { client, transport };
+    return connectWithTransport(
+      new SSEClientTransport(url, { requestInit: { headers } }),
+      config.name,
+      'SSE',
+      logger,
+    );
   }
+}
+
+async function connectWithTransport(
+  transport: StreamableHTTPClientTransport | SSEClientTransport,
+  name: string,
+  protocol: string,
+  logger: Logger,
+): Promise<RemoteMcpConnection> {
+  const client = new Client({ name: 'sauria', version: '1.0.0' });
+  await client.connect(transport);
+  logger.info(`Connected to remote MCP: ${name} via ${protocol}`);
+  return { client, transport };
 }
