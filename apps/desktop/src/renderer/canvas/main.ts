@@ -1031,7 +1031,7 @@ function renderNodes() {
       card.className = 'agent-card owner-card' + (node.id === selectedNodeId ? ' selected' : '');
 
       var ownerAvatarInner = node.photo
-        ? '<img src="' + node.photo + '" alt="" />'
+        ? '<img src="' + escapeHtml(node.photo) + '" alt="" />'
         : '<span class="avatar-initials">' + getInitials(node.label) + '</span>';
 
       card.innerHTML =
@@ -1052,7 +1052,7 @@ function renderNodes() {
       /* Connected portrait card */
       card.className = 'agent-card' + (node.id === selectedNodeId ? ' selected' : '');
       var photoHtml = node.photo
-        ? '<img src="' + node.photo + '" alt="" />'
+        ? '<img src="' + escapeHtml(node.photo) + '" alt="" />'
         : platformIcons[node.platform] || '';
       var displayName = node.meta.firstName || node.label.replace(/^@/, '');
       var handle = node.label.startsWith('@') ? node.label : '';
@@ -1520,7 +1520,7 @@ function convKey(a: string, b: string): string {
 function buildParticipant(node: AgentNode | undefined): string {
   if (!node) return '<span class="conv-participant-name">Unknown</span>';
   var photoHtml = node.photo
-    ? '<div class="conv-participant-avatar"><img src="' + node.photo + '" alt="" /></div>'
+    ? '<div class="conv-participant-avatar"><img src="' + escapeHtml(node.photo) + '" alt="" /></div>'
     : '<div class="conv-participant-avatar">' + (platformIcons[node.platform] || '') + '</div>';
   return (
     '<div class="conv-participant">' +
@@ -3327,12 +3327,12 @@ function openAgentDetail(nodeId: string) {
   panelTitle.textContent = isOwner ? t('canvas.ownerSettings') : t('canvas.agentDetails');
   var photoHtml = isOwner
     ? node.photo
-      ? '<img src="' + node.photo + '" alt="" />'
+      ? '<img src="' + escapeHtml(node.photo) + '" alt="" />'
       : '<span class="avatar-initials" style="font-size:12px;">' +
         getInitials(node.label) +
         '</span>'
     : node.photo
-      ? '<img src="' + node.photo + '" alt="" />'
+      ? '<img src="' + escapeHtml(node.photo) + '" alt="" />'
       : platformIcons[node.platform] || '';
   var displayName = isOwner ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
   var platformLabel = isOwner ? t('canvas.youOwner') : capitalize(node.platform);

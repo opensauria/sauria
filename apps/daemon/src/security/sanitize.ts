@@ -89,6 +89,16 @@ export function sanitizeToolMetadata(
   return { name: safeName, description: safeDesc || 'no description' };
 }
 
+/**
+ * Strip prompt injection tokens from text destined for LLM prompts.
+ * Use this for any external/user-supplied data injected into system or user messages.
+ */
+export function stripPromptInjection(input: string, maxLength = 2000): string {
+  let result = stripControlChars(input);
+  result = stripInjectionTokens(result);
+  return result.slice(0, maxLength);
+}
+
 export function deepSanitizeStrings(obj: unknown): unknown {
   if (typeof obj === 'string') {
     return sanitizeEntityName(obj);
