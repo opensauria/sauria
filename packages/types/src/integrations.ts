@@ -46,7 +46,7 @@ export interface IntegrationDefinition {
   readonly description: string;
   readonly icon: string;
   readonly category: IntegrationCategory;
-  readonly authType: 'api_key' | 'oauth' | 'token';
+  readonly authType: 'api_key' | 'oauth' | 'token' | 'both';
   readonly credentialKeys: readonly string[];
   readonly mcpServer: McpServerTemplate;
   readonly mcpRemote?: McpRemoteServer;

@@ -135,7 +135,11 @@ fn main() {
                     if url_string.starts_with("sauria://oauth/callback") {
                         let handle = deep_link_handle.clone();
                         tauri::async_runtime::spawn(async move {
-                            let _ = cmd_oauth_integrations::handle_deep_link_callback(&handle, &url_string).await;
+                            eprintln!("[oauth] Deep link received: {}", url_string);
+                            match cmd_oauth_integrations::handle_deep_link_callback(&handle, &url_string).await {
+                                Ok(()) => eprintln!("[oauth] Callback handled successfully"),
+                                Err(e) => eprintln!("[oauth] Callback error: {}", e),
+                            }
                         });
                     }
                 }

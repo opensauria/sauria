@@ -8,8 +8,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Team messaging and collaboration tools',
     icon: 'slack',
     category: 'communication',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['token'],
     mcpServer: {
       package: '@modelcontextprotocol/server-slack',
       envMapping: { token: 'SLACK_BOT_TOKEN' },
@@ -130,8 +130,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Work management and team coordination',
     icon: 'asana',
     category: 'project_management',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['token'],
     mcpServer: {
       package: '@roychri/mcp-server-asana',
       envMapping: { token: 'ASANA_ACCESS_TOKEN' },
@@ -144,8 +144,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'All-in-one project management platform',
     icon: 'clickup',
     category: 'project_management',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['apiKey'],
     mcpServer: {
       package: 'clickup-mcp-server',
       envMapping: { apiKey: 'CLICKUP_API_KEY' },
@@ -158,8 +158,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Task management and to-do lists',
     icon: 'todoist',
     category: 'project_management',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['token'],
     mcpServer: {
       package: '@abhiz123/todoist-mcp-server',
       envMapping: { token: 'TODOIST_API_TOKEN' },
@@ -204,8 +204,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Code hosting, issues, and pull requests',
     icon: 'github',
     category: 'development',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['token'],
     mcpServer: {
       package: '@modelcontextprotocol/server-github',
       envMapping: { token: 'GITHUB_PERSONAL_ACCESS_TOKEN' },
@@ -262,8 +262,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Frontend deployment and serverless platform',
     icon: 'vercel',
     category: 'development',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['token'],
     mcpServer: {
       package: 'vercel-mcp-server',
       envMapping: { token: 'VERCEL_TOKEN' },
@@ -276,8 +276,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Web hosting and serverless backend services',
     icon: 'netlify',
     category: 'development',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['token'],
     mcpServer: {
       package: '@netlify/mcp',
       envMapping: { token: 'NETLIFY_TOKEN' },
@@ -303,8 +303,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Open source Firebase alternative with Postgres',
     icon: 'supabase',
     category: 'development',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['url', 'apiKey'],
     mcpServer: {
       package: '@supabase/mcp-server-supabase',
       envMapping: {
@@ -409,8 +409,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Microsoft Azure cloud computing platform',
     icon: 'azure',
     category: 'infrastructure',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['subscriptionId', 'tenantId', 'clientId', 'clientSecret'],
     mcpServer: {
       package: '@azure/mcp',
       envMapping: {
@@ -504,8 +504,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Cloud monitoring and security platform',
     icon: 'datadog',
     category: 'monitoring',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['apiKey', 'appKey'],
     mcpServer: {
       package: 'datadog-mcp-server',
       envMapping: { apiKey: 'DATADOG_API_KEY', appKey: 'DATADOG_APP_KEY' },
@@ -531,8 +531,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Incident management and on-call scheduling',
     icon: 'pagerduty',
     category: 'monitoring',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['token'],
     mcpServer: {
       package: 'pagerduty-mcp-server',
       envMapping: { token: 'PAGERDUTY_API_TOKEN' },
@@ -608,8 +608,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Design collaboration and prototyping',
     icon: 'figma',
     category: 'design',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['token'],
     mcpServer: {
       package: 'figma-developer-mcp',
       envMapping: { token: 'FIGMA_ACCESS_TOKEN' },
@@ -639,8 +639,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Online collaborative whiteboard platform',
     icon: 'miro',
     category: 'design',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['token'],
     mcpServer: {
       package: '@llmindset/mcp-miro',
       envMapping: { token: 'MIRO_TOKEN' },
@@ -738,8 +738,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'CRM, marketing, and sales platform',
     icon: 'hubspot',
     category: 'crm',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['apiKey'],
     mcpServer: {
       package: '@hubspot/mcp-server',
       envMapping: { apiKey: 'HUBSPOT_PRIVATE_APP_TOKEN' },
@@ -765,8 +765,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Enterprise CRM and business platform',
     icon: 'salesforce',
     category: 'crm',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['instanceUrl', 'clientId', 'clientSecret'],
     mcpServer: {
       package: '@salesforce/mcp',
       envMapping: {
@@ -814,8 +814,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'No-code automation between web apps',
     icon: 'zapier',
     category: 'automation',
-    authType: 'oauth',
-    credentialKeys: [],
+    authType: 'both',
+    credentialKeys: ['apiKey'],
     mcpServer: {
       package: '@zapier/zapier-sdk-mcp',
       envMapping: { apiKey: 'ZAPIER_API_KEY' },
