@@ -282,7 +282,7 @@ async fn try_dynamic_registration(registration_endpoint: &str) -> Result<String,
         .json(&serde_json::json!({
             "client_name": CLIENT_NAME,
             "redirect_uris": [REDIRECT_URI],
-            "grant_types": ["authorization_code"],
+            "grant_types": ["authorization_code", "refresh_token"],
             "response_types": ["code"],
             "token_endpoint_auth_method": "none",
         }))

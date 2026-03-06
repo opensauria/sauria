@@ -321,6 +321,39 @@
   vertical-align: middle;
 }
 
+/* ── Auth toggle (both mode) ──────────────────── */
+
+.auth-toggle {
+  display: flex;
+  gap: 0;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  margin-bottom: 12px;
+}
+
+.auth-toggle-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-small);
+  font-weight: 500;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.auth-toggle-btn:hover {
+  color: var(--text);
+}
+
+.auth-toggle-btn.active {
+  background: var(--surface-medium);
+  color: var(--text);
+}
+
 .config-tools {
   display: flex;
   flex-direction: column;

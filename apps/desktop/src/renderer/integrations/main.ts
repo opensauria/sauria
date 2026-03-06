@@ -16,7 +16,7 @@ interface IntegrationDefinition {
   readonly description: string;
   readonly icon: string;
   readonly category: string;
-  readonly authType: 'api_key' | 'oauth' | 'token';
+  readonly authType: 'api_key' | 'oauth' | 'token' | 'both';
   readonly credentialKeys: readonly string[];
   readonly mcpRemote?: McpRemoteServer;
   readonly oauthProxy?: string;
@@ -389,6 +389,12 @@ function renderConnectForm(item: IntegrationStatus): void {
     return;
   }
 
+  // Both: toggle between OAuth (MCP remote) and API key fallback
+  if (definition.authType === 'both') {
+    renderBothConnectForm(item);
+    return;
+  }
+
   const fields = definition.credentialKeys
     .map(
       (key) => `
@@ -435,6 +441,69 @@ function renderOAuthConnectForm(item: IntegrationStatus): void {
   `;
 
   document.getElementById('oauth-connect-btn')?.addEventListener('click', () => handleOAuthConnect(item));
+}
+
+function renderBothConnectForm(item: IntegrationStatus): void {
+  const { definition } = item;
+  const fields = definition.credentialKeys
+    .map(
+      (key) => `
+    <div class="config-field">
+      <label class="config-label">${formatLabel(key)}</label>
+      <input
+        class="config-input"
+        type="${key.toLowerCase().includes('secret') || key.toLowerCase().includes('password') ? 'password' : 'text'}"
+        data-key="${key}"
+        placeholder="${t('integ.enter')} ${formatLabel(key)}"
+        autocomplete="off"
+      />
+    </div>
+  `,
+    )
+    .join('');
+
+  configBody.innerHTML = `
+    ${item.error ? `<div class="config-error">${item.error}</div>` : ''}
+    <div class="auth-toggle">
+      <button class="auth-toggle-btn active" data-mode="oauth">${t('integ.oauthTab')}</button>
+      <button class="auth-toggle-btn" data-mode="apikey">${t('integ.apiKeyTab')}</button>
+    </div>
+    <div class="auth-mode-oauth">
+      <div class="oauth-connect-section">
+        <p class="oauth-description">${t('integ.oauthDescription').replace('{name}', definition.name)}</p>
+        <div class="config-actions">
+          <button class="btn btn-primary" id="oauth-connect-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            ${t('integ.connectWith').replace('{name}', definition.name)}
+          </button>
+        </div>
+        <div class="form-status" id="oauth-status"></div>
+      </div>
+    </div>
+    <div class="auth-mode-apikey" style="display:none">
+      ${fields}
+      <div class="config-actions">
+        <button class="btn btn-primary" id="config-connect">${t('integ.connect')}</button>
+      </div>
+    </div>
+  `;
+
+  // Toggle between OAuth and API Key modes
+  for (const btn of configBody.querySelectorAll<HTMLButtonElement>('.auth-toggle-btn')) {
+    btn.addEventListener('click', () => {
+      for (const b of configBody.querySelectorAll<HTMLButtonElement>('.auth-toggle-btn')) {
+        b.classList.toggle('active', b === btn);
+      }
+      const isOAuth = btn.dataset['mode'] === 'oauth';
+      const oauthSection = configBody.querySelector<HTMLElement>('.auth-mode-oauth');
+      const apiKeySection = configBody.querySelector<HTMLElement>('.auth-mode-apikey');
+      if (oauthSection) oauthSection.style.display = isOAuth ? '' : 'none';
+      if (apiKeySection) apiKeySection.style.display = isOAuth ? 'none' : '';
+    });
+  }
+
+  document.getElementById('oauth-connect-btn')?.addEventListener('click', () => handleOAuthConnect(item));
+  document.getElementById('config-connect')?.addEventListener('click', () => handleConnect(item));
 }
 
 function renderConnectedPanel(item: IntegrationStatus): void {
