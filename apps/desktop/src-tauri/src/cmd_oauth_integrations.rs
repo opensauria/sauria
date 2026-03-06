@@ -8,11 +8,15 @@ use std::sync::LazyLock;
 use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 
+const CLIENT_ID: &str = "sauria-desktop";
+const REDIRECT_URI: &str = "sauria://oauth/callback";
+
 #[derive(Clone)]
 struct PendingOAuth {
     provider: String,
     verifier: String,
     mcp_url: String,
+    token_url: Option<String>,
 }
 
 static PENDING: LazyLock<Mutex<HashMap<String, PendingOAuth>>> =
@@ -36,56 +40,38 @@ pub async fn start_integration_oauth(
     token_url: Option<String>,
     scopes: Option<String>,
 ) -> Result<OAuthStartResult, String> {
-    // Generate PKCE verifier
     let mut verifier_bytes = [0u8; 48];
     OsRng.fill_bytes(&mut verifier_bytes);
     let verifier = URL_SAFE_NO_PAD.encode(verifier_bytes);
 
-    // Generate challenge
     let mut hasher = Sha256::new();
     hasher.update(verifier.as_bytes());
     let challenge = URL_SAFE_NO_PAD.encode(hasher.finalize());
 
-    // Generate state
     let mut state_bytes = [0u8; 16];
     OsRng.fill_bytes(&mut state_bytes);
     let state = hex::encode(state_bytes);
 
-    // Store pending
     PENDING.lock().await.insert(
         state.clone(),
         PendingOAuth {
             provider: integration_id,
             verifier: verifier.clone(),
             mcp_url: mcp_url.clone(),
+            token_url,
         },
     );
 
-    // Resolve authorization URL
-    let authorize_url = if let Some(url) = auth_url {
-        url
-    } else {
-        discover_auth_url(&mcp_url).await?
+    let authorize_url = match auth_url {
+        Some(url) => url,
+        None => discover_auth_url(&mcp_url).await?,
     };
 
-    // Store token_url override in pending if provided
-    if let Some(tu) = &token_url {
-        let mut map = PENDING.lock().await;
-        if let Some(pending) = map.get_mut(&state) {
-            // Re-insert with token URL encoded in mcp_url field as fallback
-            let mut updated = pending.clone();
-            updated.mcp_url = format!("{}|token_url={}", pending.mcp_url, tu);
-            map.insert(state.clone(), updated);
-        }
-    }
-
-    // Build authorization URL
-    let redirect_uri = "sauria://oauth/callback";
     let url = format!(
         "{}?response_type=code&client_id={}&redirect_uri={}&state={}&code_challenge={}&code_challenge_method=S256{}",
         authorize_url,
-        "sauria-desktop",
-        urlencoding::encode(redirect_uri),
+        CLIENT_ID,
+        urlencoding::encode(REDIRECT_URI),
         state,
         challenge,
         scopes
@@ -109,7 +95,10 @@ pub async fn complete_integration_oauth(
     paths: tauri::State<'_, crate::paths::Paths>,
     client: tauri::State<'_, std::sync::Arc<crate::daemon_client::DaemonClient>>,
 ) -> Result<serde_json::Value, String> {
-    exchange_and_connect(code, state, &paths, &client).await
+    let pending = pop_pending(&state).await?;
+    let token_url = resolve_token_url(&pending).await?;
+    let tokens = exchange_code(&code, &pending.verifier, &token_url).await?;
+    store_and_connect(&pending.provider, &tokens, &paths, &client).await
 }
 
 /// Handle deep link callback from browser.
@@ -123,113 +112,71 @@ pub async fn handle_deep_link_callback(
     let code = params.get("code").cloned().unwrap_or_default();
     let state = params.get("state").cloned().unwrap_or_default();
 
-    if code.is_empty() || state.is_empty() {
-        // May be a Worker proxy callback with tokens directly
+    let result = if code.is_empty() {
+        // Worker proxy callback — tokens already exchanged
         let access_token = params.get("access_token").cloned().unwrap_or_default();
-        if !access_token.is_empty() {
-            return handle_worker_callback(handle, &state, &access_token, &params).await;
+        if access_token.is_empty() {
+            return Err("Missing code or access_token in callback".into());
         }
-        return Err("Missing code or state in callback".into());
-    }
+        let pending = pop_pending(&state).await?;
+        let tokens = TokenSet {
+            access_token,
+            refresh_token: params.get("refresh_token").cloned().unwrap_or_default(),
+            expires_in: params
+                .get("expires_in")
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(3600),
+        };
+        let paths = handle.state::<crate::paths::Paths>();
+        let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
+        store_and_connect(&pending.provider, &tokens, &paths, &client).await?
+    } else {
+        // Standard OAuth code exchange
+        let pending = pop_pending(&state).await?;
+        let token_url = resolve_token_url(&pending).await?;
+        let tokens = exchange_code(&code, &pending.verifier, &token_url).await?;
+        let paths = handle.state::<crate::paths::Paths>();
+        let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
+        store_and_connect(&pending.provider, &tokens, &paths, &client).await?
+    };
 
-    let paths = handle.state::<crate::paths::Paths>();
-    let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
-
-    let result = exchange_and_connect(code, state, &paths, &client).await?;
-
-    // Emit event to frontend
     let _ = handle.emit("integration-oauth-complete", result);
-
     Ok(())
 }
 
-/// Handle Worker proxy callback (tokens already exchanged by Worker).
-async fn handle_worker_callback(
-    handle: &tauri::AppHandle,
-    state: &str,
-    access_token: &str,
-    params: &HashMap<String, String>,
-) -> Result<(), String> {
-    let pending = {
-        let mut map = PENDING.lock().await;
-        map.remove(state).ok_or("No pending OAuth for this state")?
-    };
+// ── Shared helpers ──────────────────────────────────────────────────────
 
-    let refresh_token = params.get("refresh_token").cloned().unwrap_or_default();
-    let expires_in: u64 = params
-        .get("expires_in")
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(3600);
-
-    let paths = handle.state::<crate::paths::Paths>();
-    let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
-
-    // Store in vault
-    let expires_at = chrono::Utc::now().timestamp_millis() + (expires_in as i64 * 1000);
-    let credential = serde_json::json!({
-        "kind": "oauth",
-        "accessToken": access_token,
-        "refreshToken": refresh_token,
-        "expiresAt": expires_at,
-    });
-    let vault_key = format!("integration_oauth_{}", pending.provider);
-    crate::vault::vault_store(&paths, &vault_key, &credential.to_string())?;
-
-    // Tell daemon to connect
-    let connect_result = client
-        .request(
-            "integrations:connect-instance",
-            serde_json::json!({
-                "instanceId": format!("{}:default", pending.provider),
-                "integrationId": pending.provider,
-                "label": "default",
-                "credentials": { "accessToken": access_token },
-            }),
-        )
-        .await?;
-
-    let _ = handle.emit("integration-oauth-complete", &connect_result);
-
-    Ok(())
+struct TokenSet {
+    access_token: String,
+    refresh_token: String,
+    expires_in: u64,
 }
 
-/// Exchange authorization code for tokens and connect integration.
-async fn exchange_and_connect(
-    code: String,
-    state: String,
-    paths: &crate::paths::Paths,
-    client: &std::sync::Arc<crate::daemon_client::DaemonClient>,
-) -> Result<serde_json::Value, String> {
-    let pending = {
-        let mut map = PENDING.lock().await;
-        map.remove(&state).ok_or("No pending OAuth for this state")?
-    };
+async fn pop_pending(state: &str) -> Result<PendingOAuth, String> {
+    PENDING
+        .lock()
+        .await
+        .remove(state)
+        .ok_or_else(|| "No pending OAuth for this state".into())
+}
 
-    // Extract base mcp_url and optional token_url override
-    let (base_mcp_url, token_url_override) = if pending.mcp_url.contains("|token_url=") {
-        let parts: Vec<&str> = pending.mcp_url.splitn(2, "|token_url=").collect();
-        (parts[0].to_string(), Some(parts[1].to_string()))
-    } else {
-        (pending.mcp_url.clone(), None)
-    };
+async fn resolve_token_url(pending: &PendingOAuth) -> Result<String, String> {
+    match &pending.token_url {
+        Some(url) => Ok(url.clone()),
+        None => discover_token_url(&pending.mcp_url).await,
+    }
+}
 
-    // Discover token endpoint
-    let token_url = if let Some(url) = token_url_override {
-        url
-    } else {
-        discover_token_url(&base_mcp_url).await?
-    };
-
-    // Exchange code for tokens
+async fn exchange_code(code: &str, verifier: &str, token_url: &str) -> Result<TokenSet, String> {
     let http = reqwest::Client::new();
     let resp = http
-        .post(&token_url)
+        .post(token_url)
         .json(&serde_json::json!({
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": "sauria://oauth/callback",
-            "client_id": "sauria-desktop",
-            "code_verifier": pending.verifier,
+            "redirect_uri": REDIRECT_URI,
+            "client_id": CLIENT_ID,
+            "code_verifier": verifier,
         }))
         .send()
         .await
@@ -243,47 +190,58 @@ async fn exchange_and_connect(
 
     let body: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
 
-    let access_token = body["access_token"]
-        .as_str()
-        .ok_or("No access_token in response")?;
-    let refresh_token = body
-        .get("refresh_token")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let expires_in = body
-        .get("expires_in")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(3600);
+    Ok(TokenSet {
+        access_token: body["access_token"]
+            .as_str()
+            .ok_or("No access_token in response")?
+            .to_string(),
+        refresh_token: body
+            .get("refresh_token")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        expires_in: body
+            .get("expires_in")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(3600),
+    })
+}
 
-    // Store in vault
-    let expires_at = chrono::Utc::now().timestamp_millis() + (expires_in as i64 * 1000);
+async fn store_and_connect(
+    provider: &str,
+    tokens: &TokenSet,
+    paths: &crate::paths::Paths,
+    client: &std::sync::Arc<crate::daemon_client::DaemonClient>,
+) -> Result<serde_json::Value, String> {
+    let expires_at =
+        chrono::Utc::now().timestamp_millis() + (tokens.expires_in as i64 * 1000);
+
     let credential = serde_json::json!({
         "kind": "oauth",
-        "accessToken": access_token,
-        "refreshToken": refresh_token,
+        "accessToken": tokens.access_token,
+        "refreshToken": tokens.refresh_token,
         "expiresAt": expires_at,
     });
-    let vault_key = format!("integration_oauth_{}", pending.provider);
+
+    let vault_key = format!("integration_oauth_{}", provider);
     crate::vault::vault_store(paths, &vault_key, &credential.to_string())?;
 
-    // Tell daemon to connect the integration with the token
-    let connect_result = client
+    client
         .request(
             "integrations:connect-instance",
             serde_json::json!({
-                "instanceId": format!("{}:default", pending.provider),
-                "integrationId": pending.provider,
+                "instanceId": format!("{}:default", provider),
+                "integrationId": provider,
                 "label": "default",
-                "credentials": { "accessToken": access_token },
+                "credentials": { "accessToken": tokens.access_token },
             }),
         )
         .await
-        .map_err(|e| e.to_string())?;
-
-    Ok(connect_result)
+        .map_err(|e| e.to_string())
 }
 
-/// Discover OAuth authorization URL from MCP server metadata.
+// ── OAuth metadata discovery ────────────────────────────────────────────
+
 async fn discover_auth_url(mcp_url: &str) -> Result<String, String> {
     let metadata = fetch_oauth_metadata(mcp_url).await?;
     metadata["authorization_endpoint"]
@@ -292,7 +250,6 @@ async fn discover_auth_url(mcp_url: &str) -> Result<String, String> {
         .ok_or_else(|| "No authorization_endpoint in metadata".into())
 }
 
-/// Discover OAuth token URL from MCP server metadata.
 async fn discover_token_url(mcp_url: &str) -> Result<String, String> {
     let metadata = fetch_oauth_metadata(mcp_url).await?;
     metadata["token_endpoint"]
@@ -301,13 +258,13 @@ async fn discover_token_url(mcp_url: &str) -> Result<String, String> {
         .ok_or_else(|| "No token_endpoint in metadata".into())
 }
 
-/// Fetch OAuth metadata from .well-known endpoint.
 async fn fetch_oauth_metadata(mcp_url: &str) -> Result<serde_json::Value, String> {
     let base = mcp_url
         .trim_end_matches("/mcp")
         .trim_end_matches("/sse")
         .trim_end_matches('/');
     let metadata_url = format!("{}/.well-known/oauth-authorization-server", base);
+
     let http = reqwest::Client::new();
     let resp = http
         .get(&metadata_url)
