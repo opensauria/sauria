@@ -10,6 +10,7 @@ interface McpServerConfig {
   readonly command: string;
   readonly args: readonly string[];
   readonly env?: Readonly<Record<string, string>>;
+  readonly cwd?: string;
 }
 
 interface ConnectedClient {
@@ -55,6 +56,7 @@ export class McpClientManager {
       command: config.command,
       args: [...config.args],
       env: config.env ? { ...config.env } : undefined,
+      cwd: config.cwd,
     });
 
     const client = new Client({ name: 'sauria', version: '0.1.0' }, { capabilities: {} });

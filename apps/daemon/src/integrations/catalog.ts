@@ -883,8 +883,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     credentialKeys: ['accessToken'],
     oauthProxy: 'google',
     mcpServer: {
-      package: 'gdrive-mcp',
-      envMapping: { accessToken: 'GDRIVE_ACCESS_TOKEN' },
+      package: '@piotr-agier/google-drive-mcp',
+      envMapping: { accessToken: 'GOOGLE_ACCESS_TOKEN' },
     },
   },
 

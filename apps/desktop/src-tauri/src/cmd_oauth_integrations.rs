@@ -13,14 +13,26 @@ const CLIENT_NAME: &str = "Sauria Desktop";
 const REDIRECT_URI: &str = "sauria://oauth/callback";
 const VAULT_ACCOUNTS_KEY: &str = "integration_accounts";
 
+// ── Pending state ──────────────────────────────────────────────────────
+
+#[derive(Clone)]
+enum PendingOAuthKind {
+    /// Direct MCP OAuth — Rust exchanges the code via PKCE
+    Mcp {
+        verifier: String,
+        token_url: Option<String>,
+        client_id: String,
+    },
+    /// Proxy OAuth — worker exchanges the code, we receive access_token directly
+    Proxy,
+}
+
 #[derive(Clone)]
 struct PendingOAuth {
     provider: String,
     provider_name: String,
-    verifier: String,
     mcp_url: String,
-    token_url: Option<String>,
-    client_id: String,
+    kind: PendingOAuthKind,
 }
 
 static PENDING: LazyLock<Mutex<HashMap<String, PendingOAuth>>> =
@@ -32,8 +44,10 @@ pub struct OAuthStartResult {
     state: String,
 }
 
-/// Start OAuth flow for an integration.
-/// 1. Discover OAuth metadata from remote MCP server
+// ── Start: MCP OAuth (direct) ──────────────────────────────────────────
+
+/// Start OAuth flow for a remote MCP server.
+/// 1. Discover OAuth metadata via .well-known/oauth-authorization-server
 /// 2. Try dynamic client registration (RFC 7591) if supported
 /// 3. Generate PKCE verifier + challenge
 /// 4. Open browser to authorization URL
@@ -46,16 +60,11 @@ pub async fn start_integration_oauth(
     token_url: Option<String>,
     scopes: Option<String>,
 ) -> Result<OAuthStartResult, String> {
-    // Discover OAuth metadata (needed for auth_url, token_url, and registration)
-    let metadata = if auth_url.is_none() || token_url.is_none() {
-        Some(fetch_oauth_metadata(&mcp_url).await?)
-    } else {
-        None
-    };
+    let metadata = fetch_oauth_metadata(&mcp_url).await?;
 
     let authorize_url = match &auth_url {
         Some(url) => url.clone(),
-        None => metadata.as_ref().unwrap()["authorization_endpoint"]
+        None => metadata["authorization_endpoint"]
             .as_str()
             .map(String::from)
             .ok_or("No authorization_endpoint in metadata")?,
@@ -63,38 +72,31 @@ pub async fn start_integration_oauth(
 
     let resolved_token_url = match &token_url {
         Some(url) => Some(url.clone()),
-        None => metadata.as_ref().and_then(|m| m["token_endpoint"].as_str().map(String::from)),
+        None => metadata["token_endpoint"].as_str().map(String::from),
     };
 
-    // Dynamic client registration (RFC 7591) if server advertises it
-    let client_id = if let Some(reg_endpoint) = metadata.as_ref().and_then(|m| m["registration_endpoint"].as_str()) {
-        try_dynamic_registration(reg_endpoint).await.unwrap_or_else(|_| DEFAULT_CLIENT_ID.to_string())
+    let client_id = if let Some(reg_endpoint) = metadata["registration_endpoint"].as_str() {
+        try_dynamic_registration(reg_endpoint)
+            .await
+            .unwrap_or_else(|_| DEFAULT_CLIENT_ID.to_string())
     } else {
         DEFAULT_CLIENT_ID.to_string()
     };
 
-    // PKCE
-    let mut verifier_bytes = [0u8; 48];
-    OsRng.fill_bytes(&mut verifier_bytes);
-    let verifier = URL_SAFE_NO_PAD.encode(verifier_bytes);
-
-    let mut hasher = Sha256::new();
-    hasher.update(verifier.as_bytes());
-    let challenge = URL_SAFE_NO_PAD.encode(hasher.finalize());
-
-    let mut state_bytes = [0u8; 16];
-    OsRng.fill_bytes(&mut state_bytes);
-    let state = hex::encode(state_bytes);
+    let (verifier, challenge) = generate_pkce();
+    let state = generate_state();
 
     PENDING.lock().await.insert(
         state.clone(),
         PendingOAuth {
             provider: integration_id,
             provider_name,
-            verifier: verifier.clone(),
-            mcp_url: mcp_url.clone(),
-            token_url: resolved_token_url,
-            client_id: client_id.clone(),
+            mcp_url,
+            kind: PendingOAuthKind::Mcp {
+                verifier,
+                token_url: resolved_token_url,
+                client_id: client_id.clone(),
+            },
         },
     );
 
@@ -118,7 +120,45 @@ pub async fn start_integration_oauth(
     })
 }
 
-/// Complete OAuth flow — exchange code for tokens.
+// ── Start: Proxy OAuth ─────────────────────────────────────────────────
+
+/// Start OAuth flow via the auth proxy worker.
+/// The worker holds client secrets, exchanges the code, and redirects back
+/// with access_token directly — Rust only needs to track state.
+#[tauri::command]
+pub async fn start_proxy_oauth(
+    integration_id: String,
+    provider_name: String,
+    proxy_url: String,
+    provider_key: String,
+) -> Result<OAuthStartResult, String> {
+    let state = generate_state();
+
+    PENDING.lock().await.insert(
+        state.clone(),
+        PendingOAuth {
+            provider: integration_id,
+            provider_name,
+            mcp_url: proxy_url.clone(),
+            kind: PendingOAuthKind::Proxy,
+        },
+    );
+
+    let url = format!(
+        "{}/connect/{}?state={}",
+        proxy_url, provider_key, state,
+    );
+
+    open::that(&url).map_err(|e| e.to_string())?;
+
+    Ok(OAuthStartResult {
+        started: true,
+        state,
+    })
+}
+
+// ── Complete: manual code exchange (called from frontend) ──────────────
+
 #[tauri::command]
 pub async fn complete_integration_oauth(
     code: String,
@@ -127,14 +167,27 @@ pub async fn complete_integration_oauth(
     client: tauri::State<'_, std::sync::Arc<crate::daemon_client::DaemonClient>>,
 ) -> Result<serde_json::Value, String> {
     let pending = pop_pending(&state).await?;
-    let token_url = resolve_token_url(&pending).await?;
-    let tokens = exchange_code(&code, &pending.verifier, &token_url, &pending.client_id).await?;
+    let (verifier, token_url, client_id) = match &pending.kind {
+        PendingOAuthKind::Mcp { verifier, token_url, client_id } => {
+            (verifier.clone(), token_url.clone(), client_id.clone())
+        }
+        PendingOAuthKind::Proxy => {
+            return Err("complete_integration_oauth called for proxy flow".into());
+        }
+    };
+    let resolved_token_url = resolve_token_url(&token_url, &pending.mcp_url).await?;
+    let tokens = exchange_code(&code, &verifier, &resolved_token_url, &client_id).await?;
     let account_label = fetch_account_label(&tokens.access_token, &pending.mcp_url).await;
-    save_account_label(&paths, &pending.provider, &account_label.clone().unwrap_or_else(|| pending.provider_name.clone()));
+    save_account_label(
+        &paths,
+        &pending.provider,
+        &account_label.clone().unwrap_or_else(|| pending.provider_name.clone()),
+    );
     store_and_connect(&pending.provider, &tokens, &account_label, &paths, &client).await
 }
 
-/// Handle deep link callback from browser.
+// ── Deep link callback handler ─────────────────────────────────────────
+
 pub async fn handle_deep_link_callback(
     handle: &tauri::AppHandle,
     url_str: &str,
@@ -142,66 +195,92 @@ pub async fn handle_deep_link_callback(
     eprintln!("[oauth] Parsing callback URL: {}", url_str);
     let parsed = url::Url::parse(url_str).map_err(|e| e.to_string())?;
     let params: HashMap<String, String> = parsed.query_pairs().into_owned().collect();
-    eprintln!("[oauth] Callback params: {:?}", params.keys().collect::<Vec<_>>());
 
-    let code = params.get("code").cloned().unwrap_or_default();
-    let state = params.get("state").cloned().unwrap_or_default();
+    let mut state = params.get("state").cloned().unwrap_or_default();
 
     if state.is_empty() {
         let pending_count = PENDING.lock().await.len();
-        eprintln!("[oauth] Empty state param. Pending entries: {}. Trying single pending fallback.", pending_count);
-        // If there's exactly one pending OAuth, use it (state may have been lost in redirect)
+        eprintln!("[oauth] Empty state. Pending entries: {}", pending_count);
         if pending_count == 1 {
-            let key = PENDING.lock().await.keys().next().unwrap().clone();
-            return handle_deep_link_callback(handle, &format!("{}&state={}", url_str, key)).await;
+            state = PENDING.lock().await.keys().next().unwrap().clone();
+        } else {
+            return Err("No OAuth state in callback".into());
         }
-        return Err("No OAuth state in callback".into());
     }
 
-    eprintln!("[oauth] State: {}, code empty: {}", &state[..8.min(state.len())], code.is_empty());
+    let pending = pop_pending(&state).await?;
+    let paths = handle.state::<crate::paths::Paths>();
+    let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
 
-    let result = if code.is_empty() {
-        // Worker proxy callback — tokens already exchanged
-        let access_token = params.get("access_token").cloned().unwrap_or_default();
-        if access_token.is_empty() {
-            return Err("Missing code or access_token in callback".into());
+    let result = match &pending.kind {
+        PendingOAuthKind::Proxy => {
+            // Proxy flow — worker already exchanged the code
+            let access_token = params.get("access_token").cloned().unwrap_or_default();
+            if access_token.is_empty() {
+                return Err("Missing access_token in proxy callback".into());
+            }
+            let tokens = TokenSet {
+                access_token: access_token.clone(),
+                refresh_token: params.get("refresh_token").cloned().unwrap_or_default(),
+                expires_in: params
+                    .get("expires_in")
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(3600),
+            };
+            let account_label = fetch_account_label(&access_token, &pending.mcp_url).await;
+            save_account_label(
+                &paths,
+                &pending.provider,
+                &account_label.clone().unwrap_or_else(|| pending.provider_name.clone()),
+            );
+            store_and_connect(&pending.provider, &tokens, &account_label, &paths, &client).await?
         }
-        let pending = pop_pending(&state).await?;
-        let tokens = TokenSet {
-            access_token: access_token.clone(),
-            refresh_token: params.get("refresh_token").cloned().unwrap_or_default(),
-            expires_in: params
-                .get("expires_in")
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(3600),
-        };
-        let account_label = fetch_account_label(&access_token, &pending.mcp_url).await;
-        let paths = handle.state::<crate::paths::Paths>();
-        let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
-        save_account_label(&paths, &pending.provider, &account_label.clone().unwrap_or_else(|| pending.provider_name.clone()));
-        store_and_connect(&pending.provider, &tokens, &account_label, &paths, &client).await?
-    } else {
-        // Standard OAuth code exchange
-        let pending = pop_pending(&state).await?;
-        let token_url = resolve_token_url(&pending).await?;
-        let tokens = exchange_code(&code, &pending.verifier, &token_url, &pending.client_id).await?;
-        let account_label = fetch_account_label(&tokens.access_token, &pending.mcp_url).await;
-        let paths = handle.state::<crate::paths::Paths>();
-        let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
-        save_account_label(&paths, &pending.provider, &account_label.clone().unwrap_or_else(|| pending.provider_name.clone()));
-        store_and_connect(&pending.provider, &tokens, &account_label, &paths, &client).await?
+        PendingOAuthKind::Mcp { verifier, token_url, client_id } => {
+            // MCP flow — exchange code for tokens
+            let code = params.get("code").cloned().unwrap_or_default();
+            if code.is_empty() {
+                return Err("Missing code in MCP OAuth callback".into());
+            }
+            let resolved_token_url = resolve_token_url(token_url, &pending.mcp_url).await?;
+            let tokens = exchange_code(&code, verifier, &resolved_token_url, client_id).await?;
+            let account_label = fetch_account_label(&tokens.access_token, &pending.mcp_url).await;
+            save_account_label(
+                &paths,
+                &pending.provider,
+                &account_label.clone().unwrap_or_else(|| pending.provider_name.clone()),
+            );
+            store_and_connect(&pending.provider, &tokens, &account_label, &paths, &client).await?
+        }
     };
 
     let _ = handle.emit("integration-oauth-complete", result);
     Ok(())
 }
 
-// ── Shared helpers ──────────────────────────────────────────────────────
+// ── Shared helpers ─────────────────────────────────────────────────────
 
 struct TokenSet {
     access_token: String,
     refresh_token: String,
     expires_in: u64,
+}
+
+fn generate_pkce() -> (String, String) {
+    let mut verifier_bytes = [0u8; 48];
+    OsRng.fill_bytes(&mut verifier_bytes);
+    let verifier = URL_SAFE_NO_PAD.encode(verifier_bytes);
+
+    let mut hasher = Sha256::new();
+    hasher.update(verifier.as_bytes());
+    let challenge = URL_SAFE_NO_PAD.encode(hasher.finalize());
+
+    (verifier, challenge)
+}
+
+fn generate_state() -> String {
+    let mut state_bytes = [0u8; 16];
+    OsRng.fill_bytes(&mut state_bytes);
+    hex::encode(state_bytes)
 }
 
 async fn pop_pending(state: &str) -> Result<PendingOAuth, String> {
@@ -212,11 +291,11 @@ async fn pop_pending(state: &str) -> Result<PendingOAuth, String> {
         .ok_or_else(|| "No pending OAuth for this state".into())
 }
 
-async fn resolve_token_url(pending: &PendingOAuth) -> Result<String, String> {
-    match &pending.token_url {
+async fn resolve_token_url(token_url: &Option<String>, mcp_url: &str) -> Result<String, String> {
+    match token_url {
         Some(url) => Ok(url.clone()),
         None => {
-            let metadata = fetch_oauth_metadata(&pending.mcp_url).await?;
+            let metadata = fetch_oauth_metadata(mcp_url).await?;
             metadata["token_endpoint"]
                 .as_str()
                 .map(String::from)
@@ -225,7 +304,12 @@ async fn resolve_token_url(pending: &PendingOAuth) -> Result<String, String> {
     }
 }
 
-async fn exchange_code(code: &str, verifier: &str, token_url: &str, client_id: &str) -> Result<TokenSet, String> {
+async fn exchange_code(
+    code: &str,
+    verifier: &str,
+    token_url: &str,
+    client_id: &str,
+) -> Result<TokenSet, String> {
     let http = reqwest::Client::new();
     let resp = http
         .post(token_url)
@@ -298,17 +382,46 @@ async fn store_and_connect(
         .await
         .map_err(|e| e.to_string())?;
 
-    // Inject account label into the result for the frontend
     if let Some(label) = account_label {
         if let Some(obj) = result.as_object_mut() {
-            obj.insert("accountLabel".to_string(), serde_json::Value::String(label.clone()));
+            obj.insert(
+                "accountLabel".to_string(),
+                serde_json::Value::String(label.clone()),
+            );
         }
     }
 
     Ok(result)
 }
 
-// ── OAuth metadata discovery & dynamic registration ─────────────────────
+// ── OAuth metadata discovery & dynamic registration ────────────────────
+
+async fn fetch_oauth_metadata(mcp_url: &str) -> Result<serde_json::Value, String> {
+    let base = mcp_url
+        .trim_end_matches("/mcp")
+        .trim_end_matches("/sse")
+        .trim_end_matches('/');
+    let metadata_url = format!("{}/.well-known/oauth-authorization-server", base);
+
+    let http = reqwest::Client::new();
+    let resp = http
+        .get(&metadata_url)
+        .send()
+        .await
+        .map_err(|e: reqwest::Error| e.to_string())?;
+
+    if !resp.status().is_success() {
+        return Err(format!(
+            "OAuth metadata fetch failed ({}): {}",
+            resp.status(),
+            metadata_url
+        ));
+    }
+
+    resp.json::<serde_json::Value>()
+        .await
+        .map_err(|e: reqwest::Error| e.to_string())
+}
 
 async fn try_dynamic_registration(registration_endpoint: &str) -> Result<String, String> {
     let http = reqwest::Client::new();
@@ -337,7 +450,8 @@ async fn try_dynamic_registration(registration_endpoint: &str) -> Result<String,
         .ok_or_else(|| "No client_id in registration response".into())
 }
 
-/// Read stored account labels for connected integrations.
+// ── Account labels (encrypted in vault) ────────────────────────────────
+
 #[tauri::command]
 pub async fn get_integration_accounts(
     paths: tauri::State<'_, crate::paths::Paths>,
@@ -345,15 +459,12 @@ pub async fn get_integration_accounts(
     Ok(load_account_labels(&paths))
 }
 
-/// Try to fetch account identity from the OAuth provider (best-effort).
-/// Attempts: 1) userinfo_endpoint from OAuth metadata, 2) common /userinfo path.
 async fn fetch_account_label(access_token: &str, mcp_url: &str) -> Option<String> {
     let http = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()
         .ok()?;
 
-    // Try userinfo_endpoint from OAuth metadata
     let metadata = fetch_oauth_metadata(mcp_url).await.ok();
     let userinfo_url = metadata
         .as_ref()
@@ -367,12 +478,7 @@ async fn fetch_account_label(access_token: &str, mcp_url: &str) -> Option<String
         format!("{}/userinfo", base)
     });
 
-    let resp = http
-        .get(&url)
-        .bearer_auth(access_token)
-        .send()
-        .await
-        .ok()?;
+    let resp = http.get(&url).bearer_auth(access_token).send().await.ok()?;
 
     if !resp.status().is_success() {
         return None;
@@ -380,7 +486,6 @@ async fn fetch_account_label(access_token: &str, mcp_url: &str) -> Option<String
 
     let body: serde_json::Value = resp.json().await.ok()?;
 
-    // Try common identity fields in priority order
     body["email"]
         .as_str()
         .or_else(|| body["preferred_username"].as_str())
@@ -400,7 +505,10 @@ fn load_account_labels(paths: &crate::paths::Paths) -> serde_json::Value {
 fn save_account_label(paths: &crate::paths::Paths, provider: &str, label: &str) {
     let mut labels = load_account_labels(paths);
     if let Some(obj) = labels.as_object_mut() {
-        obj.insert(provider.to_string(), serde_json::Value::String(label.to_string()));
+        obj.insert(
+            provider.to_string(),
+            serde_json::Value::String(label.to_string()),
+        );
     }
     let _ = crate::vault::vault_store(
         paths,
@@ -419,31 +527,4 @@ pub fn remove_account_label_public(paths: &crate::paths::Paths, provider: &str) 
         VAULT_ACCOUNTS_KEY,
         &serde_json::to_string(&labels).unwrap_or_default(),
     );
-}
-
-async fn fetch_oauth_metadata(mcp_url: &str) -> Result<serde_json::Value, String> {
-    let base = mcp_url
-        .trim_end_matches("/mcp")
-        .trim_end_matches("/sse")
-        .trim_end_matches('/');
-    let metadata_url = format!("{}/.well-known/oauth-authorization-server", base);
-
-    let http = reqwest::Client::new();
-    let resp = http
-        .get(&metadata_url)
-        .send()
-        .await
-        .map_err(|e: reqwest::Error| e.to_string())?;
-
-    if !resp.status().is_success() {
-        return Err(format!(
-            "OAuth metadata fetch failed ({}): {}",
-            resp.status(),
-            metadata_url
-        ));
-    }
-
-    resp.json::<serde_json::Value>()
-        .await
-        .map_err(|e: reqwest::Error| e.to_string())
 }

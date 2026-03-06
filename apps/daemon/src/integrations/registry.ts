@@ -5,17 +5,23 @@ import type {
   IntegrationTool,
 } from '@sauria/types';
 import { join, dirname } from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
+import { tmpdir, homedir } from 'node:os';
 import type { McpClientManager } from '../mcp/client.js';
 import type { AuditLogger } from '../security/audit.js';
 import { getLogger } from '../utils/logger.js';
 
 function resolveNpxPath(): string {
-  // npx lives next to node in the same bin directory
   const nodeDir = dirname(process.execPath);
   const npxInNodeDir = join(nodeDir, 'npx');
   if (existsSync(npxInNodeDir)) return npxInNodeDir;
   return 'npx';
+}
+
+function resolveMcpWorkdir(instanceId: string): string {
+  const dir = join(homedir(), '.sauria', 'mcp-workdirs', instanceId);
+  mkdirSync(dir, { recursive: true });
+  return dir;
 }
 
 export interface IntegrationInstanceStatus {
@@ -188,6 +194,7 @@ export class IntegrationRegistry {
           command: npxPath,
           args: ['-y', definition.mcpServer.package],
           env: { ...process.env, ...env } as Record<string, string>,
+          cwd: resolveMcpWorkdir(instanceId),
         });
       }
 
