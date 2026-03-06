@@ -26,6 +26,14 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 fn main() {
     let paths = Paths::resolve();
+
+    // Migrate vault secrets from legacy "opensauria-vault" password (one-shot, idempotent)
+    match vault::migrate_legacy_vault(&paths) {
+        Ok(0) => {}
+        Ok(n) => log::info!("Migrated {n} legacy vault secrets"),
+        Err(e) => log::warn!("Vault migration failed: {e}"),
+    }
+
     let daemon_state = Arc::new(tokio::sync::Mutex::new(DaemonState::new()));
     let daemon_client = Arc::new(DaemonClient::new(&paths));
 

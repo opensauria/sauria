@@ -498,9 +498,13 @@ function refreshProviderStatus() {
     if (!setupCmd) return;
     if (status.connected && status.provider) {
       const method = status.authMethod === 'oauth' ? 'subscription' : 'API key';
-      setupCmd.hint = status.provider + ' (' + method + ')';
+      setupCmd.hint =
+        '<span class="status-dot connected"></span>' +
+        status.provider + ' (' + method + ')';
     } else {
-      setupCmd.hint = '';
+      setupCmd.hint =
+        '<span class="status-dot disconnected"></span>' +
+        t('palette.noProvider');
     }
     if (!devMode) render();
   });
