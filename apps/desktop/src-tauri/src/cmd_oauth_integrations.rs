@@ -8,6 +8,20 @@ use std::sync::LazyLock;
 use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 
+pub fn oauth_log(msg: &str) {
+    let log_path = dirs::home_dir()
+        .unwrap_or_default()
+        .join(".sauria")
+        .join("oauth-debug.log");
+    let timestamp = chrono::Local::now().format("%H:%M:%S%.3f");
+    let line = format!("[{timestamp}] {msg}\n");
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+        .and_then(|mut f| std::io::Write::write_all(&mut f, line.as_bytes()));
+}
+
 const DEFAULT_CLIENT_ID: &str = "sauria-desktop";
 const CLIENT_NAME: &str = "Sauria Desktop";
 const REDIRECT_URI: &str = "sauria://oauth/callback";
@@ -192,15 +206,16 @@ pub async fn handle_deep_link_callback(
     handle: &tauri::AppHandle,
     url_str: &str,
 ) -> Result<(), String> {
-    eprintln!("[oauth] Parsing callback URL: {}", url_str);
+    oauth_log(&format!("Callback URL: {}", url_str));
     let parsed = url::Url::parse(url_str).map_err(|e| e.to_string())?;
     let params: HashMap<String, String> = parsed.query_pairs().into_owned().collect();
+    oauth_log(&format!("Params: {:?}", params.keys().collect::<Vec<_>>()));
 
     let mut state = params.get("state").cloned().unwrap_or_default();
 
     if state.is_empty() {
         let pending_count = PENDING.lock().await.len();
-        eprintln!("[oauth] Empty state. Pending entries: {}", pending_count);
+        oauth_log(&format!("Empty state. Pending: {}", pending_count));
         if pending_count == 1 {
             state = PENDING.lock().await.keys().next().unwrap().clone();
         } else {
@@ -208,15 +223,22 @@ pub async fn handle_deep_link_callback(
         }
     }
 
+    oauth_log(&format!("State: {}..., pending keys: {:?}",
+        &state[..8.min(state.len())],
+        PENDING.lock().await.keys().collect::<Vec<_>>()));
+
     let pending = pop_pending(&state).await?;
+    oauth_log(&format!("Provider: {}, kind: {}", pending.provider,
+        match &pending.kind { PendingOAuthKind::Mcp { .. } => "mcp", PendingOAuthKind::Proxy => "proxy" }));
+
     let paths = handle.state::<crate::paths::Paths>();
     let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
 
     let result = match &pending.kind {
         PendingOAuthKind::Proxy => {
-            // Proxy flow — worker already exchanged the code
             let access_token = params.get("access_token").cloned().unwrap_or_default();
             if access_token.is_empty() {
+                oauth_log("ERROR: Missing access_token in proxy callback");
                 return Err("Missing access_token in proxy callback".into());
             }
             let tokens = TokenSet {
@@ -236,13 +258,20 @@ pub async fn handle_deep_link_callback(
             store_and_connect(&pending.provider, &tokens, &account_label, &paths, &client).await?
         }
         PendingOAuthKind::Mcp { verifier, token_url, client_id } => {
-            // MCP flow — exchange code for tokens
             let code = params.get("code").cloned().unwrap_or_default();
             if code.is_empty() {
+                oauth_log("ERROR: Missing code in MCP callback");
                 return Err("Missing code in MCP OAuth callback".into());
             }
-            let resolved_token_url = resolve_token_url(token_url, &pending.mcp_url).await?;
-            let tokens = exchange_code(&code, verifier, &resolved_token_url, client_id).await?;
+            oauth_log(&format!("MCP code exchange: token_url={:?}, client_id={}", token_url, client_id));
+            let resolved_token_url = match resolve_token_url(token_url, &pending.mcp_url).await {
+                Ok(url) => { oauth_log(&format!("Resolved token URL: {}", url)); url }
+                Err(e) => { oauth_log(&format!("ERROR resolving token URL: {}", e)); return Err(e); }
+            };
+            let tokens = match exchange_code(&code, verifier, &resolved_token_url, client_id).await {
+                Ok(t) => { oauth_log("Token exchange OK"); t }
+                Err(e) => { oauth_log(&format!("ERROR token exchange: {}", e)); return Err(e); }
+            };
             let account_label = fetch_account_label(&tokens.access_token, &pending.mcp_url).await;
             save_account_label(
                 &paths,
@@ -313,13 +342,13 @@ async fn exchange_code(
     let http = reqwest::Client::new();
     let resp = http
         .post(token_url)
-        .json(&serde_json::json!({
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": REDIRECT_URI,
-            "client_id": client_id,
-            "code_verifier": verifier,
-        }))
+        .form(&[
+            ("grant_type", "authorization_code"),
+            ("code", code),
+            ("redirect_uri", REDIRECT_URI),
+            ("client_id", client_id),
+            ("code_verifier", verifier),
+        ])
         .send()
         .await
         .map_err(|e| e.to_string())?;
