@@ -46,6 +46,11 @@
     }
   },
   "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["sauria"]
+      }
+    },
     "shell": {
       "open": true
     },

@@ -7,6 +7,7 @@ mod cmd_channels;
 mod cmd_commands;
 mod cmd_integrations;
 mod cmd_oauth;
+mod cmd_oauth_integrations;
 mod cmd_setup;
 mod daemon_client;
 mod daemon_manager;
@@ -20,6 +21,7 @@ use paths::Paths;
 use std::sync::Arc;
 use tauri::Manager;
 use tauri::path::BaseDirectory;
+use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 fn main() {
@@ -36,6 +38,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_deep_link::init())
         .manage(paths)
         .manage(daemon_state.clone())
         .manage(daemon_client)
@@ -88,6 +91,9 @@ fn main() {
             cmd_integrations::integrations_disconnect_instance,
             cmd_integrations::integrations_assign_instance,
             cmd_integrations::integrations_unassign_instance,
+            // OAuth Integrations
+            cmd_oauth_integrations::start_integration_oauth,
+            cmd_oauth_integrations::complete_integration_oauth,
         ])
         .setup(move |app| {
             // Hide dock icon on macOS
@@ -118,6 +124,21 @@ fn main() {
                     }
                 },
             )?;
+
+            // Handle deep link OAuth callbacks (sauria://oauth/callback?code=xxx&state=yyy)
+            let deep_link_handle = app.handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                let urls = event.urls();
+                for url_str in urls {
+                    let url_string = url_str.to_string();
+                    if url_string.starts_with("sauria://oauth/callback") {
+                        let handle = deep_link_handle.clone();
+                        tauri::async_runtime::spawn(async move {
+                            let _ = cmd_oauth_integrations::handle_deep_link_callback(&handle, &url_string).await;
+                        });
+                    }
+                }
+            });
 
             // Resolve daemon CLI path and node_modules from Tauri bundled resources
             if let Ok(resource_path) = app.path().resolve("daemon/index.mjs", BaseDirectory::Resource) {
