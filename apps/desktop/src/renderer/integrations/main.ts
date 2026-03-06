@@ -1,7 +1,14 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { t, applyTranslations } from '../i18n.js';
 
 // ── Types ─────────────────────────────────────
+
+interface McpRemoteServer {
+  readonly url: string;
+  readonly authorizationUrl?: string;
+  readonly tokenUrl?: string;
+}
 
 interface IntegrationDefinition {
   readonly id: string;
@@ -11,6 +18,7 @@ interface IntegrationDefinition {
   readonly category: string;
   readonly authType: 'api_key' | 'oauth' | 'token';
   readonly credentialKeys: readonly string[];
+  readonly mcpRemote?: McpRemoteServer;
 }
 
 interface IntegrationTool {
@@ -73,6 +81,7 @@ let catalog: IntegrationStatus[] = [];
 let telegramBots: readonly TelegramBot[] = [];
 let searchQuery = '';
 let activeCategory = 'all';
+let openPanelId: string | null = null;
 
 // ── DOM refs ──────────────────────────────────
 
@@ -227,6 +236,7 @@ function renderGrid(): void {
 // ── Config Panel ─────────────────────────────
 
 function openConfigPanel(id: string): void {
+  openPanelId = id;
   if (id === 'telegram') {
     configTitle.textContent = 'Telegram';
     renderTelegramPanel();
@@ -371,6 +381,13 @@ async function renderTelegramPanel(): Promise<void> {
 
 function renderConnectForm(item: IntegrationStatus): void {
   const { definition } = item;
+
+  // OAuth + remote MCP: one-click connect
+  if (definition.authType === 'oauth' && definition.mcpRemote) {
+    renderOAuthConnectForm(item);
+    return;
+  }
+
   const fields = definition.credentialKeys
     .map(
       (key) => `
@@ -397,6 +414,28 @@ function renderConnectForm(item: IntegrationStatus): void {
   `;
 
   document.getElementById('config-connect')?.addEventListener('click', () => handleConnect(item));
+}
+
+function renderOAuthConnectForm(item: IntegrationStatus): void {
+  const { definition } = item;
+  const remote = definition.mcpRemote;
+  if (!remote) return;
+
+  configBody.innerHTML = `
+    ${item.error ? `<div class="config-error">${item.error}</div>` : ''}
+    <div class="oauth-connect-section">
+      <p class="oauth-description">${t('integ.oauthDescription').replace('{name}', definition.name)}</p>
+      <div class="config-actions">
+        <button class="btn btn-primary" id="oauth-connect-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          ${t('integ.connectWith').replace('{name}', definition.name)}
+        </button>
+      </div>
+      <div class="form-status" id="oauth-status"></div>
+    </div>
+  `;
+
+  document.getElementById('oauth-connect-btn')?.addEventListener('click', () => handleOAuthConnect(item));
 }
 
 function renderConnectedPanel(item: IntegrationStatus): void {
@@ -455,6 +494,32 @@ async function handleConnect(item: IntegrationStatus): Promise<void> {
     errorDiv.className = 'config-error';
     errorDiv.textContent = err instanceof Error ? err.message : String(err);
     configBody.prepend(errorDiv);
+  }
+}
+
+async function handleOAuthConnect(item: IntegrationStatus): Promise<void> {
+  const remote = item.definition.mcpRemote;
+  if (!remote) return;
+
+  const btn = document.getElementById('oauth-connect-btn') as HTMLButtonElement;
+  const statusEl = document.getElementById('oauth-status') as HTMLElement;
+
+  btn.disabled = true;
+  statusEl.textContent = t('integ.oauthWaiting');
+  statusEl.className = 'form-status visible';
+
+  try {
+    await invoke('start_integration_oauth', {
+      integrationId: item.id,
+      mcpUrl: remote.url,
+      authUrl: remote.authorizationUrl ?? null,
+      tokenUrl: remote.tokenUrl ?? null,
+      scopes: null,
+    });
+  } catch (err: unknown) {
+    btn.disabled = false;
+    statusEl.textContent = err instanceof Error ? err.message : String(err);
+    statusEl.className = 'form-status visible error';
   }
 }
 
@@ -523,6 +588,7 @@ searchInput.addEventListener('input', () => {
 });
 
 configClose.addEventListener('click', () => {
+  openPanelId = null;
   configPanel.classList.remove('open');
 });
 
@@ -545,6 +611,22 @@ async function invokeWithRetry<T>(cmd: string, args?: Record<string, unknown>): 
     return invoke<T>(cmd, args);
   }
 }
+
+// Listen for OAuth completion from deep link callback
+void listen('integration-oauth-complete', async () => {
+  await refreshCatalog();
+  const statusEl = document.getElementById('oauth-status');
+  if (statusEl) {
+    statusEl.textContent = t('integ.oauthSuccess');
+    statusEl.className = 'form-status visible success';
+  }
+  setTimeout(() => {
+    if (openPanelId) {
+      const updated = catalog.find((c) => c.id === openPanelId);
+      if (updated?.connected) renderConnectedPanel(updated);
+    }
+  }, 800);
+});
 
 // Load both catalogs in parallel
 Promise.all([
