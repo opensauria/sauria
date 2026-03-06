@@ -1,4 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
+import { t, applyTranslations } from '../i18n.js';
+import { TYPE_COLOR_STRINGS as TYPE_COLORS } from './scene-types.js';
 
 /* ── State ───────────────────────────────────────────────────────── */
 let currentView = 'entities';
@@ -62,10 +64,10 @@ function formatTs(ts: string | null | undefined): string {
   if (isNaN(d.getTime())) return ts;
   const now = new Date();
   const diff = now.getTime() - d.getTime();
-  if (diff < 60000) return 'just now';
-  if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
-  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
-  if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+  if (diff < 60000) return t('brain.justNow');
+  if (diff < 3600000) return Math.floor(diff / 60000) + t('brain.mAgo');
+  if (diff < 86400000) return Math.floor(diff / 3600000) + t('brain.hAgo');
+  if (diff < 604800000) return Math.floor(diff / 86400000) + t('brain.dAgo');
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -115,27 +117,27 @@ async function loadStats() {
     updateNavCounts();
   } catch {
     statsBar.innerHTML =
-      '<div class="brain-stat"><span style="color: var(--error)">Could not connect to Sauria</span></div>';
+      '<div class="brain-stat"><span style="color: var(--error)">' + t('brain.connectError') + '</span></div>';
   }
 }
 
 function renderStats() {
   if (!stats) return;
   let html = `
-    <div class="brain-stat"><span class="brain-stat-value">${stats.entities}</span> entities</div>
-    <div class="brain-stat"><span class="brain-stat-value">${stats.relations}</span> relations</div>
-    <div class="brain-stat"><span class="brain-stat-value">${stats.events}</span> events</div>
-    <div class="brain-stat"><span class="brain-stat-value">${stats.observations}</span> observations</div>
-    <div class="brain-stat"><span class="brain-stat-value">${stats.conversations}</span> conversations</div>
-    <div class="brain-stat"><span class="brain-stat-value">${stats.facts}</span> facts</div>
+    <div class="brain-stat"><span class="brain-stat-value">${stats.entities}</span> ${t('brain.statEntities')}</div>
+    <div class="brain-stat"><span class="brain-stat-value">${stats.relations}</span> ${t('brain.statRelations')}</div>
+    <div class="brain-stat"><span class="brain-stat-value">${stats.events}</span> ${t('brain.statEvents')}</div>
+    <div class="brain-stat"><span class="brain-stat-value">${stats.observations}</span> ${t('brain.statObservations')}</div>
+    <div class="brain-stat"><span class="brain-stat-value">${stats.conversations}</span> ${t('brain.statConversations')}</div>
+    <div class="brain-stat"><span class="brain-stat-value">${stats.facts}</span> ${t('brain.statFacts')}</div>
   `;
 
   if (stats.entities === 0 && stats.events > 0) {
     const hint =
       stats.extractionFailures > 0
-        ? `Entity extraction failed ${stats.extractionFailures} time(s) — check that an AI provider is configured`
-        : 'Events recorded but no entities extracted — verify an AI provider is connected';
-    html += `<div class="brain-stat" style="color: var(--text-dim); font-size: 11px; flex-basis: 100%">${hint}</div>`;
+        ? t('brain.extractionError').replace('{0}', String(stats.extractionFailures))
+        : t('brain.noExtractHint');
+    html += `<div class="brain-stat" style="color: var(--text-dim); font-size: var(--font-size-x-small); flex-basis: 100%">${hint}</div>`;
   }
 
   statsBar.innerHTML = html;
@@ -163,8 +165,8 @@ function updateNavCounts() {
 
 /* ── View Configuration ──────────────────────────────────────────── */
 interface ViewConfig {
-  columns: string[];
-  filterOptions: Array<{ value: string; label: string }>;
+  columns: () => string[];
+  filterOptions: () => Array<{ value: string; label: string }>;
   hasSearch: boolean;
   hasFilter: boolean;
   renderRow(r: Record<string, unknown>): string;
@@ -176,17 +178,17 @@ interface ViewConfig {
 
 const viewConfig: Record<string, ViewConfig> = {
   entities: {
-    columns: ['Name', 'Type', 'Importance', 'Mentions', 'Last Updated'],
-    filterOptions: [
-      { value: '', label: 'All types' },
-      { value: 'person', label: 'Person' },
-      { value: 'project', label: 'Project' },
-      { value: 'company', label: 'Company' },
-      { value: 'event', label: 'Event' },
-      { value: 'document', label: 'Document' },
-      { value: 'goal', label: 'Goal' },
-      { value: 'place', label: 'Place' },
-      { value: 'concept', label: 'Concept' },
+    columns: () => [t('brain.colName'), t('brain.colType'), t('brain.colImportance'), t('brain.colMentions'), t('brain.colLastUpdated')],
+    filterOptions: () => [
+      { value: '', label: t('brain.typeAll') },
+      { value: 'person', label: t('brain.typePerson') },
+      { value: 'project', label: t('brain.typeProject') },
+      { value: 'company', label: t('brain.typeCompany') },
+      { value: 'event', label: t('brain.typeEvent') },
+      { value: 'document', label: t('brain.typeDocument') },
+      { value: 'goal', label: t('brain.typeGoal') },
+      { value: 'place', label: t('brain.typePlace') },
+      { value: 'concept', label: t('brain.typeConcept') },
     ],
     hasSearch: true,
     hasFilter: true,
@@ -207,8 +209,8 @@ const viewConfig: Record<string, ViewConfig> = {
     tableName: 'entities',
   },
   relations: {
-    columns: ['From', 'Type', 'To', 'Strength', 'Updated'],
-    filterOptions: [],
+    columns: () => [t('brain.colFrom'), t('brain.colType'), t('brain.colTo'), t('brain.colStrength'), t('brain.colUpdated')],
+    filterOptions: () => [],
     hasSearch: true,
     hasFilter: false,
     renderRow(r) {
@@ -227,8 +229,8 @@ const viewConfig: Record<string, ViewConfig> = {
     tableName: 'relations',
   },
   events: {
-    columns: ['Source', 'Type', 'Importance', 'Timestamp'],
-    filterOptions: [],
+    columns: () => [t('brain.colSource'), t('brain.colType'), t('brain.colImportance'), t('brain.colTimestamp')],
+    filterOptions: () => [],
     hasSearch: true,
     hasFilter: false,
     renderRow(r) {
@@ -247,14 +249,14 @@ const viewConfig: Record<string, ViewConfig> = {
     tableName: 'events',
   },
   observations: {
-    columns: ['Content', 'Type', 'Confidence', 'Created'],
-    filterOptions: [
-      { value: '', label: 'All types' },
-      { value: 'pattern', label: 'Pattern' },
-      { value: 'insight', label: 'Insight' },
-      { value: 'prediction', label: 'Prediction' },
-      { value: 'preference', label: 'Preference' },
-      { value: 'fact', label: 'Fact' },
+    columns: () => [t('brain.colContent'), t('brain.colType'), t('brain.colConfidence'), t('brain.colCreated')],
+    filterOptions: () => [
+      { value: '', label: t('brain.obsAll') },
+      { value: 'pattern', label: t('brain.obsPattern') },
+      { value: 'insight', label: t('brain.obsInsight') },
+      { value: 'prediction', label: t('brain.obsPrediction') },
+      { value: 'preference', label: t('brain.obsPreference') },
+      { value: 'fact', label: t('brain.obsFact') },
     ],
     hasSearch: true,
     hasFilter: true,
@@ -273,8 +275,8 @@ const viewConfig: Record<string, ViewConfig> = {
     tableName: 'observations',
   },
   conversations: {
-    columns: ['Platform', 'Messages', 'Last Message'],
-    filterOptions: [],
+    columns: () => [t('brain.colPlatform'), t('brain.colMessages'), t('brain.colLastMessage')],
+    filterOptions: () => [],
     hasSearch: true,
     hasFilter: false,
     renderRow(r) {
@@ -293,8 +295,8 @@ const viewConfig: Record<string, ViewConfig> = {
     tableName: 'agent_conversations',
   },
   facts: {
-    columns: ['Fact', 'Node', 'Workspace', 'Created'],
-    filterOptions: [],
+    columns: () => [t('brain.colFact'), t('brain.colNode'), t('brain.colWorkspace'), t('brain.colCreated')],
+    filterOptions: () => [],
     hasSearch: true,
     hasFilter: false,
     renderRow(r) {
@@ -350,19 +352,20 @@ function switchView(view: string) {
 
   const cfg = viewConfig[view];
   searchInput.value = '';
-  searchInput.placeholder = `Search ${view}...`;
+  searchInput.placeholder = t('brain.searchView').replace('{0}', view);
   searchInput.disabled = false;
 
-  if (cfg.hasFilter && cfg.filterOptions.length > 0) {
+  const filterOpts = cfg.filterOptions();
+  if (cfg.hasFilter && filterOpts.length > 0) {
     filterSelect.style.display = '';
-    filterSelect.innerHTML = cfg.filterOptions
+    filterSelect.innerHTML = filterOpts
       .map((o) => `<option value="${escHtml(o.value)}">${escHtml(o.label)}</option>`)
       .join('');
   } else {
     filterSelect.style.display = 'none';
   }
 
-  renderTableHead(cfg.columns);
+  renderTableHead(cfg.columns());
   loadData();
 }
 
@@ -416,7 +419,7 @@ async function loadData(append?: boolean) {
     if (!append) {
       tableBody.innerHTML = '';
       emptyState.style.display = 'flex';
-      (emptyState.querySelector('div') as HTMLDivElement).textContent = 'Something went wrong';
+      (emptyState.querySelector('div') as HTMLDivElement).textContent = t('brain.error');
     }
   }
 }
@@ -470,22 +473,22 @@ async function showEntityDetail(id: string) {
   let html = `
     <div class="brain-detail-section">
       <div class="brain-detail-field">
-        <div class="brain-detail-label">Name</div>
+        <div class="brain-detail-label">${t('brain.detailName')}</div>
         <input class="brain-detail-value editable" id="edit-name" value="${escHtml(e.name)}" />
       </div>
       <div class="brain-detail-field">
-        <div class="brain-detail-label">Type</div>
+        <div class="brain-detail-label">${t('brain.detailType')}</div>
         <span class="type-badge type-${escHtml(e.type)}">${escHtml(e.type)}</span>
       </div>
       <div class="brain-detail-field">
-        <div class="brain-detail-label">Summary</div>
+        <div class="brain-detail-label">${t('brain.detailSummary')}</div>
         <textarea class="brain-detail-value editable" id="edit-summary" rows="3">${escHtml(e.summary || '')}</textarea>
       </div>
   `;
 
   const props = parseJson(e.properties);
   if (props && Object.keys(props).length > 0) {
-    html += '<div class="brain-detail-field"><div class="brain-detail-label">Properties</div>';
+    html += `<div class="brain-detail-field"><div class="brain-detail-label">${t('brain.detailProperties')}</div>`;
     for (const [k, v] of Object.entries(props)) {
       html += `<div class="brain-detail-value" style="font-size: 12px; margin-bottom: 4px"><strong>${escHtml(k)}:</strong> ${escHtml(String(v))}</div>`;
     }
@@ -494,15 +497,15 @@ async function showEntityDetail(id: string) {
 
   html += `
       <div class="brain-detail-field">
-        <div class="brain-detail-label">Importance</div>
+        <div class="brain-detail-label">${t('brain.detailImportance')}</div>
         <div class="brain-detail-value">${Math.round(((e.importance_score as number) ?? 0) * 100)}%</div>
       </div>
       <div class="brain-detail-field">
-        <div class="brain-detail-label">Mentions</div>
+        <div class="brain-detail-label">${t('brain.detailMentions')}</div>
         <div class="brain-detail-value">${(e.mention_count as number) ?? 0}</div>
       </div>
       <div class="brain-detail-field">
-        <div class="brain-detail-label">First Seen</div>
+        <div class="brain-detail-label">${t('brain.detailFirstSeen')}</div>
         <div class="brain-detail-value ts">${formatTs(e.first_seen_at as string)}</div>
       </div>
     </div>
@@ -510,7 +513,7 @@ async function showEntityDetail(id: string) {
 
   if (relations.length > 0) {
     html +=
-      '<div class="brain-detail-section"><div class="brain-detail-section-title">Relations</div>';
+      `<div class="brain-detail-section"><div class="brain-detail-section-title">${t('brain.detailRelations')}</div>`;
     for (const r of relations) {
       const isFrom = r.from_entity_id === e.id;
       const otherName = isFrom ? r.to_name || r.to_entity_id : r.from_name || r.from_entity_id;
@@ -526,7 +529,7 @@ async function showEntityDetail(id: string) {
 
   if (events.length > 0) {
     html +=
-      '<div class="brain-detail-section"><div class="brain-detail-section-title">Recent Events</div>';
+      `<div class="brain-detail-section"><div class="brain-detail-section-title">${t('brain.recentEvents')}</div>`;
     for (const ev of events) {
       const parsed = parseJson(ev.parsed_data);
       const text = parsed?.summary || parsed?.title || ev.event_type;
@@ -591,15 +594,15 @@ async function showConversationDetail(conv: Record<string, unknown>) {
   let html = `
     <div class="brain-detail-section">
       <div class="brain-detail-field">
-        <div class="brain-detail-label">Platform</div>
+        <div class="brain-detail-label">${t('brain.detailPlatform')}</div>
         <div class="brain-detail-value">${escHtml(platName)}</div>
       </div>
       <div class="brain-detail-field">
-        <div class="brain-detail-label">Messages</div>
+        <div class="brain-detail-label">${t('brain.detailMessages')}</div>
         <div class="brain-detail-value">${(conv.message_count as number) ?? 0}</div>
       </div>
       <div class="brain-detail-field">
-        <div class="brain-detail-label">Last Message</div>
+        <div class="brain-detail-label">${t('brain.detailLastMessage')}</div>
         <div class="brain-detail-value ts">${formatTs(conv.last_message_at as string)}</div>
       </div>
     </div>
@@ -607,7 +610,7 @@ async function showConversationDetail(conv: Record<string, unknown>) {
 
   if (result.rows.length > 0) {
     html +=
-      '<div class="brain-detail-section"><div class="brain-detail-section-title">Messages</div>';
+      `<div class="brain-detail-section"><div class="brain-detail-section-title">${t('brain.messagesSection')}</div>`;
     for (const m of result.rows) {
       const isCeo = m.sender_is_ceo === 1;
       html += `<div class="brain-message">
@@ -685,9 +688,9 @@ detailDelete.addEventListener('click', () => {
   deleteDialogText.innerHTML = `Delete <span class="brain-dialog-name">${escHtml(name)}</span>?`;
   deleteDialogWarning.textContent =
     table === 'entities'
-      ? 'This will also delete all related relations and embeddings.'
+      ? t('brain.deleteEntityWarn')
       : table === 'agent_conversations'
-        ? 'This will also delete all messages in this conversation.'
+        ? t('brain.deleteConvoWarn')
         : '';
 
   deleteDialog.classList.add('visible');
@@ -780,17 +783,6 @@ const graphState: {
   settled: false,
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  person: '#3b82f6',
-  project: '#34d399',
-  company: '#a78bfa',
-  event: '#f59e0b',
-  document: '#6b7280',
-  goal: '#038b9a',
-  place: '#eab308',
-  concept: '#ec4899',
-};
-
 const SIM = { repulsion: 800, attraction: 0.005, damping: 0.92, minAlpha: 0.001 };
 
 async function loadGraph() {
@@ -853,7 +845,7 @@ async function loadGraph() {
     graphState.nodeMap = nodeMap;
     graphState.settled = false;
 
-    graphStats.textContent = `${graphState.nodes.length} entities \u00b7 ${graphState.edges.length} relations`;
+    graphStats.textContent = t('brain.graphStats').replace('{0}', String(graphState.nodes.length)).replace('{1}', String(graphState.edges.length));
 
     if (graphState.animId) cancelAnimationFrame(graphState.animId);
     graphState.cam = { x: 0, y: 0, zoom: 1 };
@@ -861,7 +853,7 @@ async function loadGraph() {
   } catch {
     graphEmpty.style.display = 'flex';
     graphCanvas.style.display = 'none';
-    (graphEmpty.querySelector('div') as HTMLDivElement).textContent = 'Something went wrong';
+    (graphEmpty.querySelector('div') as HTMLDivElement).textContent = t('brain.error');
     graphStats.textContent = '';
   }
 }
@@ -1215,7 +1207,7 @@ function renderLibraryCards() {
       escHtml(truncate((entity.summary as string) || '', 120)) +
       '</div>' +
       '<div class="brain-library-card-meta">' +
-      (score ? score + ' importance' : '') +
+      (score ? score + ' ' + t('brain.importance') : '') +
       (entity.last_updated_at ? ' \u00b7 ' + formatTs(entity.last_updated_at as string) : '') +
       '</div>';
 
@@ -1380,6 +1372,7 @@ document.addEventListener('keydown', (e) => {
 
 /* ── Init ────────────────────────────────────────────────────────── */
 async function init() {
+  applyTranslations();
   await loadStats();
   switchView('entities');
 }

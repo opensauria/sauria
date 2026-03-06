@@ -7,7 +7,7 @@ import { getModelPreset } from '../auth/model-presets.js';
 import { detectMcpClients } from './detect-clients.js';
 import { registerMcpInAllClients } from './register-mcp.js';
 import { generateDaemonService } from './daemon-service.js';
-import type { OpenSauriaConfig } from '../config/schema.js';
+import type { SauriaConfig } from '../config/schema.js';
 
 export interface SetupOptions {
   readonly provider: string;
@@ -56,7 +56,7 @@ export async function runSilentSetup(options: SetupOptions): Promise<SetupResult
   // Write configuration
   const preset = getModelPreset(provider);
   const config = await loadConfig();
-  const updatedConfig: OpenSauriaConfig = {
+  const updatedConfig: SauriaConfig = {
     ...config,
     models: { ...preset },
     auth: {

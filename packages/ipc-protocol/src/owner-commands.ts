@@ -11,7 +11,7 @@
  */
 
 import { z } from 'zod';
-import type { OwnerCommand } from '@opensauria/types';
+import type { OwnerCommand } from '@sauria/types';
 
 // ─── Zod Validation Schema ────────────────────────────────────────
 

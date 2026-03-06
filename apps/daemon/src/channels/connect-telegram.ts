@@ -71,10 +71,6 @@ async function fetchBotPhoto(token: string, botId: number): Promise<string | nul
   }
 }
 
-function generateNodeId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-
 export async function connectTelegram(): Promise<void> {
   p.intro('Connect Telegram');
 
@@ -111,7 +107,7 @@ export async function connectTelegram(): Promise<void> {
 
   s.start('Storing credentials...');
 
-  const nodeId = generateNodeId();
+  const nodeId = `telegram_${botUser.id}`;
   await vaultStore(`channel_token_${nodeId}`, token);
 
   // Create canvas node for the bot
@@ -131,7 +127,8 @@ export async function connectTelegram(): Promise<void> {
   }
 
   const botUsername = botUser.username ?? botUser.first_name;
-  canvas.nodes.push({
+  const existingIdx = canvas.nodes.findIndex((n: Record<string, unknown>) => n.id === nodeId);
+  const nodeData = {
     id: nodeId,
     platform: 'telegram',
     label: `@${botUsername}`,
@@ -144,7 +141,12 @@ export async function connectTelegram(): Promise<void> {
       userId: String(userId),
       firstName: botUser.first_name,
     },
-  });
+  };
+  if (existingIdx >= 0) {
+    canvas.nodes[existingIdx] = { ...canvas.nodes[existingIdx], ...nodeData };
+  } else {
+    canvas.nodes.push(nodeData);
+  }
   writeFileSync(paths.canvas, JSON.stringify(canvas, null, 2), 'utf-8');
 
   const config = await loadConfig();
@@ -170,7 +172,7 @@ export async function connectTelegram(): Promise<void> {
       `Voice transcription: ${config.channels.telegram.voice.enabled ? 'enabled' : 'disabled'}`,
       '',
       'Restart the daemon to activate:',
-      '  opensauria daemon',
+      '  sauria daemon',
     ].join('\n'),
     'Telegram connected',
   );

@@ -111,6 +111,7 @@ export interface Edge {
 export interface CanvasGraph {
   readonly version: 2;
   readonly globalInstructions: string;
+  readonly language?: string;
   readonly workspaces: readonly Workspace[];
   readonly nodes: readonly AgentNode[];
   readonly edges: readonly Edge[];

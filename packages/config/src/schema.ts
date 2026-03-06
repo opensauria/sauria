@@ -134,7 +134,7 @@ const DEFAULT_MODELS = {
   embeddings: { provider: 'local' as const, model: 'all-MiniLM-L6-v2' },
 };
 
-export const OpenSauriaConfigSchema = z
+export const SauriaConfigSchema = z
   .object({
     models: z
       .object({
@@ -173,6 +173,7 @@ export const OpenSauriaConfigSchema = z
       email: { enabled: false, imapPort: 993, smtpPort: 587, tls: true },
     }),
     owner: OwnerIdentitySchema,
+    language: z.string().max(30).default('auto'),
     orchestrator: OrchestratorConfigSchema,
     integrations: z
       .record(
@@ -185,7 +186,7 @@ export const OpenSauriaConfigSchema = z
   })
   .strict();
 
-export type OpenSauriaConfig = z.infer<typeof OpenSauriaConfigSchema>;
+export type SauriaConfig = z.infer<typeof SauriaConfigSchema>;
 export type ModelConfig = z.infer<typeof ModelConfigSchema>;
 export type AuthConfig = z.infer<typeof AuthConfigSchema>;
 export type McpServerConfig = z.infer<typeof McpServerConfigSchema>;

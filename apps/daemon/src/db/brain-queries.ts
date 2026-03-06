@@ -290,13 +290,14 @@ export function listEvents(
 interface ListConversationsOpts extends PaginationOpts {
   readonly platform?: string;
   readonly search?: string;
+  readonly nodeIds?: readonly string[];
 }
 
 export function listConversations(
   db: BetterSqlite3.Database,
   opts: ListConversationsOpts = {},
 ): PaginatedResult<Record<string, unknown>> {
-  const { offset = 0, limit = DEFAULT_LIMIT, platform, search } = opts;
+  const { offset = 0, limit = DEFAULT_LIMIT, platform, search, nodeIds } = opts;
 
   if (search) {
     const like = `%${search}%`;
@@ -306,6 +307,15 @@ export function listConversations(
     if (platform) {
       conditions.push('c.platform = ?');
       params.push(platform);
+    }
+
+    if (nodeIds && nodeIds.length > 0) {
+      for (const nid of nodeIds) {
+        conditions.push(
+          `EXISTS (SELECT 1 FROM JSON_EACH(c.participant_node_ids) j WHERE j.value = ?)`,
+        );
+        params.push(nid);
+      }
     }
 
     const platformWhere = conditions.length > 0 ? ` AND ${conditions.join(' AND ')}` : '';
@@ -332,17 +342,34 @@ export function listConversations(
     return { rows, total };
   }
 
-  const wherePlatform = platform ? ' WHERE platform = ?' : '';
-  const countParams: unknown[] = platform ? [platform] : [];
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (platform) {
+    conditions.push('platform = ?');
+    params.push(platform);
+  }
+
+  if (nodeIds && nodeIds.length > 0) {
+    for (const nid of nodeIds) {
+      conditions.push(
+        `EXISTS (SELECT 1 FROM JSON_EACH(participant_node_ids) j WHERE j.value = ?)`,
+      );
+      params.push(nid);
+    }
+  }
+
+  const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
+
   const countRow = db
-    .prepare(`SELECT COUNT(*) as total FROM agent_conversations${wherePlatform}`)
-    .get(...countParams);
+    .prepare(`SELECT COUNT(*) as total FROM agent_conversations${where}`)
+    .get(...params);
   const total = isCountRow(countRow) ? countRow.total : 0;
 
-  const queryParams: unknown[] = platform ? [platform, limit, offset] : [limit, offset];
+  const queryParams = [...params, limit, offset];
   const rows = db
     .prepare(
-      `SELECT * FROM agent_conversations${wherePlatform}
+      `SELECT * FROM agent_conversations${where}
        ORDER BY last_message_at DESC LIMIT ? OFFSET ?`,
     )
     .all(...queryParams) as Record<string, unknown>[];

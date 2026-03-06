@@ -14,8 +14,10 @@ static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
 type PendingMap = std::collections::HashMap<u64, oneshot::Sender<Result<Value, String>>>;
 
+type TxHandle = std::sync::Arc<Mutex<Option<mpsc::Sender<(u64, String)>>>>;
+
 pub struct DaemonClient {
-    tx: Mutex<Option<mpsc::Sender<(u64, String)>>>,
+    tx: TxHandle,
     pending: std::sync::Arc<Mutex<PendingMap>>,
     event_handle: Mutex<Option<AppHandle>>,
     #[cfg(unix)]
@@ -27,7 +29,7 @@ pub struct DaemonClient {
 impl DaemonClient {
     pub fn new(paths: &Paths) -> Self {
         Self {
-            tx: Mutex::new(None),
+            tx: std::sync::Arc::new(Mutex::new(None)),
             pending: std::sync::Arc::new(Mutex::new(std::collections::HashMap::new())),
             event_handle: Mutex::new(None),
             #[cfg(unix)]
@@ -50,6 +52,7 @@ impl DaemonClient {
         let (reader, writer) = connect_ipc(self).await?;
         let (send_tx, mut send_rx) = mpsc::channel::<(u64, String)>(64);
         let pending_for_reader = self.pending.clone();
+        let tx_for_reader = self.tx.clone();
         let event_handle = self.event_handle.lock().await.clone();
 
         // Writer task
@@ -100,7 +103,9 @@ impl DaemonClient {
                     }
                 }
             }
-            // Connection closed — reject all pending
+            // Connection closed — clear tx so ensure_connected() reconnects
+            *tx_for_reader.lock().await = None;
+            // Reject all pending requests
             let mut pending = pending_for_reader.lock().await;
             for (_, sender) in pending.drain() {
                 let _ = sender.send(Err("Daemon connection closed".to_string()));
@@ -130,11 +135,15 @@ impl DaemonClient {
         }
 
         {
-            let tx_guard = self.tx.lock().await;
+            let mut tx_guard = self.tx.lock().await;
             if let Some(tx) = tx_guard.as_ref() {
-                tx.send((id, line)).await.map_err(|_| {
-                    "Failed to send to daemon".to_string()
-                })?;
+                if tx.send((id, line)).await.is_err() {
+                    // Writer task is dead — clear tx so next request reconnects
+                    *tx_guard = None;
+                    let mut pending = self.pending.lock().await;
+                    pending.remove(&id);
+                    return Err("Failed to send to daemon".to_string());
+                }
             } else {
                 let mut pending = self.pending.lock().await;
                 pending.remove(&id);

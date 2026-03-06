@@ -89,7 +89,7 @@ fn shell_which(name: &str) -> Option<String> {
 }
 
 fn resolve_daemon_cli() -> String {
-    if let Some(path) = shell_which("opensauria") {
+    if let Some(path) = shell_which("sauria") {
         return path;
     }
 
@@ -123,7 +123,7 @@ fn resolve_daemon_cli() -> String {
         }
     }
 
-    "opensauria".to_string()
+    "sauria".to_string()
 }
 
 fn resolve_node() -> String {
@@ -290,7 +290,7 @@ pub async fn start_daemon(state: &Arc<Mutex<DaemonState>>, paths: &Paths) -> Res
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::from(err_file))
-        .env("OPENSAURIA_HOME", paths.home.to_string_lossy().as_ref());
+        .env("SAURIA_HOME", paths.home.to_string_lossy().as_ref());
 
     if let Some(ref nm) = s.resource_node_modules {
         cmd.env("NODE_PATH", nm);

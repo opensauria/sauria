@@ -19,8 +19,8 @@ import type { CheckpointManager } from './checkpoint.js';
 import { AutonomyEnforcer } from './autonomy.js';
 import { evaluateEdgeRules } from './routing.js';
 import { getLogger } from '../utils/logger.js';
-import { IPC_EVENTS } from '@opensauria/ipc-protocol';
-import type { ActivityMessagePayload } from '@opensauria/ipc-protocol';
+import { IPC_EVENTS } from '@sauria/ipc-protocol';
+import type { ActivityMessagePayload } from '@sauria/ipc-protocol';
 import type { IntegrationRegistry } from '../integrations/registry.js';
 
 const MAX_FORWARD_DEPTH = 3;
@@ -217,6 +217,7 @@ export class AgentOrchestrator {
         ruleActions,
         conversationId,
         globalInstructions: this.graph.globalInstructions,
+        language: this.graph.language,
       };
 
       try {

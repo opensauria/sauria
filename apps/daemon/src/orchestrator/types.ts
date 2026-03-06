@@ -23,8 +23,8 @@ export type {
   KPI,
   AgentPerformance,
   OwnerCommand,
-} from '@opensauria/types';
+} from '@sauria/types';
 
-export { createEmptyGraph } from '@opensauria/types';
+export { createEmptyGraph } from '@sauria/types';
 
-export { OwnerCommandSchema } from '@opensauria/ipc-protocol';
+export { OwnerCommandSchema } from '@sauria/ipc-protocol';

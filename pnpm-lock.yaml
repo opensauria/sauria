@@ -29,16 +29,16 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.26.0
         version: 1.26.0(zod@4.3.6)
-      '@opensauria/config':
+      '@sauria/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@opensauria/ipc-protocol':
+      '@sauria/ipc-protocol':
         specifier: workspace:*
         version: link:../../packages/ipc-protocol
-      '@opensauria/types':
+      '@sauria/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@opensauria/vault':
+      '@sauria/vault':
         specifier: workspace:*
         version: link:../../packages/vault
       better-sqlite3:
@@ -93,7 +93,7 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@opensauria/design-tokens':
+      '@sauria/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
       '@tauri-apps/api':
@@ -108,6 +108,9 @@ importers:
       '@tauri-apps/plugin-shell':
         specifier: 2.2.0
         version: 2.2.0
+      '@tauri-apps/plugin-updater':
+        specifier: 2.5.0
+        version: 2.5.0
     devDependencies:
       '@tauri-apps/cli':
         specifier: 2.5.0
@@ -146,7 +149,7 @@ importers:
 
   packages/ipc-protocol:
     dependencies:
-      '@opensauria/types':
+      '@sauria/types':
         specifier: workspace:*
         version: link:../types
       zod:
@@ -165,7 +168,7 @@ importers:
 
   packages/vault:
     dependencies:
-      '@opensauria/config':
+      '@sauria/config':
         specifier: workspace:*
         version: link:../config
     devDependencies:
@@ -876,6 +879,9 @@ packages:
 
   '@tauri-apps/plugin-shell@2.2.0':
     resolution: {integrity: sha512-iC3Ic1hLmasoboG7BO+7p+AriSoqAwKrIk+Hpk+S/bjTQdXqbl2GbdclghI4gM32X0bls7xHzIFqhRdrlvJeaA==}
+
+  '@tauri-apps/plugin-updater@2.5.0':
+    resolution: {integrity: sha512-CWpwrkgpMESDPgJ0EuXgQTI/U9zeZQ9NLUvMyuWVrsuRez7tJ/3c7y73LAkvkI6+ekUxVaRJrxYrSfd8W+DRvQ==}
 
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
@@ -2403,6 +2409,10 @@ snapshots:
       '@tauri-apps/api': 2.5.0
 
   '@tauri-apps/plugin-shell@2.2.0':
+    dependencies:
+      '@tauri-apps/api': 2.5.0
+
+  '@tauri-apps/plugin-updater@2.5.0':
     dependencies:
       '@tauri-apps/api': 2.5.0
 

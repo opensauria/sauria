@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Sauria &mdash; Agent Canvas</title>
+    <title>Sauria &mdash; Squad</title>
     <link rel="stylesheet" href="../shared.css" />
     <link rel="stylesheet" href="./canvas.css" />
   </head>
@@ -34,24 +34,30 @@
         <img src="/icons/slack.svg" alt="Slack" />
         <img src="/icons/whatsapp.svg" alt="WhatsApp" />
       </div>
-      <h2>Add your first agent</h2>
-      <p>Drag a platform card from the dock below onto the canvas</p>
+      <h2 data-i18n="canvas.addFirstAgent">Add your first agent</h2>
+      <p data-i18n="canvas.dragHint">Drag a platform card from the dock below onto the canvas</p>
     </div>
 
     <div class="canvas-toolbar" id="toolbar">
       <div class="toolbar-group">
-        <button class="toolbar-btn" id="btn-zoom-out" title="Zoom out (Cmd -)">
+        <button class="toolbar-btn" id="btn-zoom-out" data-i18n-title="canvas.zoomOut" title="Zoom out (Cmd -)">
           <img src="/icons/zoom-out.svg" alt="Zoom out" />
         </button>
         <span class="zoom-display" id="zoom-display">100%</span>
-        <button class="toolbar-btn" id="btn-zoom-in" title="Zoom in (Cmd +)">
+        <button class="toolbar-btn" id="btn-zoom-in" data-i18n-title="canvas.zoomIn" title="Zoom in (Cmd +)">
           <img src="/icons/zoom-in.svg" alt="Zoom in" />
         </button>
-        <button class="toolbar-btn" id="btn-zoom-reset" title="Reset zoom (Cmd 0)">
+        <button class="toolbar-btn" id="btn-zoom-reset" data-i18n-title="canvas.zoomReset" title="Reset zoom (Cmd 0)">
           <img src="/icons/maximize.svg" alt="Reset" />
         </button>
       </div>
-      <button class="toolbar-btn" id="btn-add-workspace" title="Add workspace">
+      <button class="toolbar-btn activity-btn" id="btn-activity-feed" data-i18n-title="canvas.activityFeed" title="Activity feed">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        <span class="activity-badge" id="activity-badge"></span>
+      </button>
+      <button class="toolbar-btn" id="btn-add-workspace" data-i18n-title="canvas.addWorkspace" title="Add workspace">
         <img src="/icons/square-plus.svg" alt="Add workspace" />
       </button>
     </div>
@@ -59,7 +65,7 @@
     <!-- Agent Detail Panel -->
     <div class="agent-detail-panel" id="agent-detail-panel">
       <div class="panel-header">
-        <span class="panel-title">Agent Details</span>
+        <span class="panel-title" data-i18n="canvas.agentDetails">Agent Details</span>
         <button class="panel-close" id="agent-detail-close">
           <svg viewBox="0 0 24 24" fill="none">
             <path
@@ -75,66 +81,73 @@
         <div class="detail-identity" id="agent-detail-identity"></div>
 
         <div class="detail-section" id="section-role">
-          <span class="detail-section-label">Role</span>
+          <span class="detail-section-label" data-i18n="canvas.role">Role</span>
           <div class="role-pills" id="agent-role-pills">
-            <button class="role-pill" data-role="lead">Lead</button>
-            <button class="role-pill" data-role="specialist">Specialist</button>
-            <button class="role-pill" data-role="observer">Observer</button>
-            <button class="role-pill" data-role="coordinator">Coordinator</button>
-            <button class="role-pill" data-role="assistant">Assistant</button>
+            <button class="role-pill" data-role="lead" data-i18n="canvas.roleLead">Lead</button>
+            <button class="role-pill" data-role="specialist" data-i18n="canvas.roleSpecialist">Specialist</button>
+            <button class="role-pill" data-role="observer" data-i18n="canvas.roleObserver">Observer</button>
+            <button class="role-pill" data-role="coordinator" data-i18n="canvas.roleCoordinator">Coordinator</button>
+            <button class="role-pill" data-role="assistant" data-i18n="canvas.roleAssistant">Assistant</button>
           </div>
         </div>
 
         <div class="detail-section" id="section-autonomy">
-          <span class="detail-section-label">Autonomy</span>
+          <span class="detail-section-label" data-i18n="canvas.autonomy">Autonomy</span>
           <div class="autonomy-segmented" id="autonomy-segmented">
             <div class="autonomy-highlight" id="autonomy-highlight"></div>
-            <button class="autonomy-seg" data-level="0">Manual</button>
-            <button class="autonomy-seg" data-level="1">Approval</button>
-            <button class="autonomy-seg" data-level="2">Supervised</button>
-            <button class="autonomy-seg" data-level="3">Full</button>
+            <button class="autonomy-seg" data-level="0" data-i18n="canvas.autonomyManual">Manual</button>
+            <button class="autonomy-seg" data-level="1" data-i18n="canvas.autonomyApproval">Approval</button>
+            <button class="autonomy-seg" data-level="2" data-i18n="canvas.autonomySupervised">Supervised</button>
+            <button class="autonomy-seg" data-level="3" data-i18n="canvas.autonomyFull">Full</button>
           </div>
         </div>
 
         <div class="detail-section">
-          <span class="detail-section-label" id="instructions-label">Instructions</span>
+          <span class="detail-section-label" id="instructions-label" data-i18n="canvas.instructions">Instructions</span>
           <textarea
             class="detail-textarea"
             id="agent-instructions"
+            data-i18n-placeholder="canvas.standingOrders"
             placeholder="Standing orders for this agent..."
           ></textarea>
           <button
             class="btn btn-secondary"
             id="insert-template-btn"
-            style="margin-top: 8px; font-size: 12px"
+            style="margin-top: 8px; font-size: var(--font-size-small)"
+            data-i18n="canvas.useTemplate"
           >
             Use Template
           </button>
         </div>
 
+        <div class="detail-section" id="section-language" style="display: none">
+          <span class="detail-section-label" data-i18n="canvas.responseLanguage">Response Language</span>
+          <select class="detail-select" id="detail-language"></select>
+        </div>
+
         <div class="detail-section" id="section-behavior">
-          <span class="detail-section-label">Group Behavior</span>
+          <span class="detail-section-label" data-i18n="canvas.groupBehavior">Group Behavior</span>
           <div class="toggle-row">
-            <span class="toggle-label">Proactive messages</span>
+            <span class="toggle-label" data-i18n="canvas.proactiveMessages">Proactive messages</span>
             <button class="toggle-switch" id="toggle-proactive" type="button"></button>
           </div>
           <div class="toggle-row">
-            <span class="toggle-label">Respond to owner</span>
+            <span class="toggle-label" data-i18n="canvas.respondToOwner">Respond to owner</span>
             <button class="toggle-switch" id="toggle-owner-response" type="button"></button>
           </div>
           <div class="toggle-row">
-            <span class="toggle-label">Peer collaboration</span>
+            <span class="toggle-label" data-i18n="canvas.peerCollaboration">Peer collaboration</span>
             <button class="toggle-switch" id="toggle-peer" type="button"></button>
           </div>
         </div>
 
         <div class="detail-section" id="section-kpis">
-          <span class="detail-section-label">KPIs</span>
+          <span class="detail-section-label" data-i18n="canvas.kpis">KPIs</span>
           <div class="kpi-grid" id="kpi-grid"></div>
         </div>
 
         <div class="detail-section" id="section-integrations">
-          <span class="detail-section-label">Integrations</span>
+          <span class="detail-section-label" data-i18n="canvas.integrations">Integrations</span>
           <div class="integration-chips" id="agent-integration-chips"></div>
           <div style="position: relative">
             <button class="integration-add-btn" id="add-integration-btn">
@@ -150,7 +163,7 @@
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span>Add integration</span>
+              <span data-i18n="canvas.addIntegration">Add integration</span>
             </button>
           </div>
         </div>
@@ -165,14 +178,14 @@
             stroke-linejoin="round"
           />
         </svg>
-        <span class="save-text">Saved</span>
+        <span class="save-text" data-i18n="canvas.saved">Saved</span>
       </div>
     </div>
 
     <!-- Workspace Detail Panel -->
     <div class="workspace-detail-panel" id="workspace-detail-panel">
       <div class="panel-header">
-        <span class="panel-title">Workspace Details</span>
+        <span class="panel-title" data-i18n="canvas.workspaceDetails">Workspace Details</span>
         <button class="panel-close" id="workspace-detail-close">
           <svg viewBox="0 0 24 24" fill="none">
             <path
@@ -186,17 +199,18 @@
       </div>
       <div class="panel-body">
         <div class="detail-section">
-          <span class="detail-section-label">Name</span>
+          <span class="detail-section-label" data-i18n="canvas.name">Name</span>
           <input
             class="detail-input"
             id="ws-detail-name"
             type="text"
+            data-i18n-placeholder="canvas.workspaceName"
             placeholder="Workspace name"
           />
         </div>
 
         <div class="detail-section">
-          <span class="detail-section-label">Color</span>
+          <span class="detail-section-label" data-i18n="canvas.color">Color</span>
           <div class="color-picker-row" id="ws-detail-colors">
             <div class="color-swatch" data-color="#038B9A" style="background: #038b9a"></div>
             <div class="color-swatch" data-color="#27A7E7" style="background: #27a7e7"></div>
@@ -217,23 +231,24 @@
         </div>
 
         <div class="detail-section">
-          <span class="detail-section-label">Purpose</span>
+          <span class="detail-section-label" data-i18n="canvas.purpose">Purpose</span>
           <textarea
             class="detail-textarea"
             id="ws-detail-purpose"
+            data-i18n-placeholder="canvas.workspacePurpose"
             placeholder="What this workspace is for..."
           ></textarea>
         </div>
 
         <div class="detail-section">
-          <span class="detail-section-label">Topics</span>
+          <span class="detail-section-label" data-i18n="canvas.topics">Topics</span>
           <div class="tag-input-container" id="ws-detail-tags">
-            <input class="tag-input" id="ws-tag-input" type="text" placeholder="Add topic..." />
+            <input class="tag-input" id="ws-tag-input" type="text" data-i18n-placeholder="canvas.addTopic" placeholder="Add topic..." />
           </div>
         </div>
 
         <div class="detail-section">
-          <span class="detail-section-label">Daily Budget (USD)</span>
+          <span class="detail-section-label" data-i18n="canvas.dailyBudget">Daily Budget (USD)</span>
           <div class="number-stepper">
             <button
               class="stepper-btn stepper-minus"
@@ -296,25 +311,27 @@
           </svg>
         </button>
       </div>
+      <div class="conv-filters" id="conv-filters"></div>
       <div class="conv-messages" id="conv-messages"></div>
-      <div class="conv-status" id="conv-status">Waiting for activity...</div>
+      <div class="conv-status" id="conv-status" data-i18n="canvas.waitingForActivity">Waiting for activity...</div>
     </div>
 
     <!-- Workspace Creation Dialog -->
     <div class="workspace-dialog-overlay" id="ws-dialog-overlay">
       <div class="workspace-dialog">
-        <h3>New Workspace</h3>
+        <h3 data-i18n="canvas.newWorkspace">New Workspace</h3>
         <div class="cred-field">
-          <label>Name</label>
+          <label data-i18n="canvas.name">Name</label>
           <input
             class="detail-input"
             id="ws-create-name"
             type="text"
+            data-i18n-placeholder="canvas.egMarketing"
             placeholder="e.g. Marketing Team"
           />
         </div>
         <div class="cred-field">
-          <label>Color</label>
+          <label data-i18n="canvas.color">Color</label>
           <div class="color-picker-row" id="ws-create-colors">
             <div class="color-swatch active" data-color="#038B9A" style="background: #038b9a"></div>
             <div class="color-swatch" data-color="#27A7E7" style="background: #27a7e7"></div>
@@ -334,24 +351,26 @@
           </div>
         </div>
         <div class="cred-field">
-          <label>Purpose</label>
+          <label data-i18n="canvas.purpose">Purpose</label>
           <textarea
             class="detail-textarea"
             id="ws-create-purpose"
+            data-i18n-placeholder="canvas.workspacePurpose"
             placeholder="What this workspace is for..."
           ></textarea>
         </div>
         <div class="cred-field">
-          <label>Topics</label>
+          <label data-i18n="canvas.topics">Topics</label>
           <input
             class="detail-input"
             id="ws-create-topics"
             type="text"
+            data-i18n-placeholder="canvas.commaSeparated"
             placeholder="Comma-separated topics..."
           />
         </div>
         <div class="cred-field">
-          <label>Daily Budget (USD)</label>
+          <label data-i18n="canvas.dailyBudget">Daily Budget (USD)</label>
           <div class="number-stepper">
             <button
               class="stepper-btn stepper-minus"
@@ -397,8 +416,19 @@
           </div>
         </div>
         <div class="panel-actions">
-          <button class="panel-btn panel-btn-cancel" id="ws-create-cancel">Cancel</button>
-          <button class="panel-btn panel-btn-primary" id="ws-create-submit">Create</button>
+          <button class="panel-btn panel-btn-cancel" id="ws-create-cancel" data-i18n="common.cancel">Cancel</button>
+          <button class="panel-btn panel-btn-primary" id="ws-create-submit" data-i18n="canvas.create">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <div class="confirm-dialog-overlay" id="confirm-dialog-overlay">
+      <div class="confirm-dialog">
+        <p id="confirm-dialog-message" data-i18n="canvas.removeIntegration">Remove this integration?</p>
+        <div class="confirm-dialog-actions">
+          <button class="panel-btn panel-btn-cancel" id="confirm-dialog-cancel" data-i18n="common.cancel">Cancel</button>
+          <button class="panel-btn panel-btn-danger" id="confirm-dialog-confirm" data-i18n="canvas.remove">Remove</button>
         </div>
       </div>
     </div>
@@ -412,11 +442,11 @@
     <div class="canvas-legend" id="canvas-legend">
       <div class="legend-item">
         <span class="legend-dot"></span>
-        <span>Message in transit</span>
+        <span data-i18n="canvas.messageInTransit">Message in transit</span>
       </div>
       <div class="legend-item">
         <span class="legend-ring"></span>
-        <span>Agent processing</span>
+        <span data-i18n="canvas.agentProcessing">Agent processing</span>
       </div>
     </div>
 

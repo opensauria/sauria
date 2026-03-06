@@ -1,17 +1,17 @@
 /**
  * Filesystem sandbox — all vault file operations must go through these
- * to prevent path traversal attacks escaping OPENSAURIA_HOME.
+ * to prevent path traversal attacks escaping SAURIA_HOME.
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve, sep } from 'node:path';
-import { paths } from '@opensauria/config';
+import { paths } from '@sauria/config';
 
 export class PathTraversalError extends Error {
   override readonly name = 'PathTraversalError';
 
   constructor(requestedPath: string) {
-    super(`Path traversal blocked: "${requestedPath}" is outside OPENSAURIA_HOME`);
+    super(`Path traversal blocked: "${requestedPath}" is outside SAURIA_HOME`);
   }
 }
 

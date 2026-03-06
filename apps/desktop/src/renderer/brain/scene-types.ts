@@ -61,4 +61,15 @@ export const TYPE_COLORS: Record<string, number> = {
   concept: 0xec4899,
 };
 
+export const TYPE_COLOR_STRINGS: Record<string, string> = {
+  person: '#3b82f6',
+  project: '#34d399',
+  company: '#a78bfa',
+  event: '#f59e0b',
+  document: '#6b7280',
+  goal: '#038b9a',
+  place: '#eab308',
+  concept: '#ec4899',
+};
+
 export const DEFAULT_COLOR = 0x888888;

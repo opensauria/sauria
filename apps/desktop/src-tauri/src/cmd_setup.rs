@@ -274,7 +274,7 @@ pub async fn configure(opts: ConfigureOpts, paths: tauri::State<'_, Paths>) -> R
     });
 
     // Check CLI
-    match Command::new("opensauria").args(["doctor"]).output() {
+    match Command::new("sauria").args(["doctor"]).output() {
         Ok(output) if output.status.success() => {
             steps.push(ConfigureStep {
                 label: "CLI available".to_string(),
@@ -284,7 +284,7 @@ pub async fn configure(opts: ConfigureOpts, paths: tauri::State<'_, Paths>) -> R
         _ => {
             steps.push(ConfigureStep {
                 label: "CLI available".to_string(),
-                status: "warning: opensauria CLI not in PATH".to_string(),
+                status: "warning: sauria CLI not in PATH".to_string(),
             });
         }
     }

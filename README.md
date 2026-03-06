@@ -1,6 +1,6 @@
-# OpenSauria
+# Sauria
 
-Your AI knows nothing about you. OpenSauria fixes that.
+Your AI knows nothing about you. Sauria fixes that.
 
 It's a personal AI operating system that runs locally, connects to your data sources, builds a knowledge graph of your world, and shares it with any AI agent through MCP. It also lets you deploy a team of AI agents across messaging platforms that collaborate like a real company — receiving orders, delegating tasks, and exchanging information.
 
@@ -11,7 +11,7 @@ It's a personal AI operating system that runs locally, connects to your data sou
 ```
 User: "Follow up with Marc"
 
-Agent calls opensauria_get_entity("Marc") ->
+Agent calls sauria_get_entity("Marc") ->
   Marc Dupont, CTO at ClientX, last email 12 days ago,
   works_on: "API Migration" (stalled), usually responds in 2-3 days
 
@@ -38,16 +38,16 @@ Messages dispatched to the right agents across platforms
 
 ```bash
 # macOS / Linux
-curl -fsSL https://opensauria.ai/install.sh | bash
+curl -fsSL https://sauria.ai/install.sh | bash
 
 # Windows (PowerShell)
-irm https://opensauria.ai/install.ps1 | iex
+irm https://sauria.ai/install.ps1 | iex
 
 # npm (manual)
-npm install -g opensauria && opensauria onboard
+npm install -g sauria && sauria onboard
 
 # Docker
-docker run -d --name opensauria -v opensauria-data:/data ghcr.io/opensauria/opensauria
+docker run -d --name sauria -v sauria-data:/data ghcr.io/sauria/sauria
 ```
 
 Requires Node.js 24+.
@@ -58,7 +58,7 @@ The installer runs the setup wizard, stores credentials in an encrypted vault, c
 
 The desktop app provides:
 
-- **Agent Canvas** — Infinite viewport where you place and connect AI agents visually. Drag agents from the dock, draw edges to define communication routes, create workspace frames to group teams.
+- **Squad** — Infinite viewport where you place and connect AI agents visually. Drag agents from the dock, draw edges to define communication routes, create workspace frames to group teams.
 - **Command Palette** — Quick access to all commands via `Cmd+Shift+O`.
 - **Setup Wizard** — Guided configuration for API keys, providers, and MCP client registration.
 - **Tray Icon** — Daemon status, quick actions, always running in background.
@@ -66,54 +66,54 @@ The desktop app provides:
 ## CLI
 
 ```bash
-opensauria                    # Show status (or onboard if first run)
-opensauria ask "Who is Marc?" # Natural language query
-opensauria teach "Marc is CTO of ClientX"
-opensauria status             # System overview
-opensauria upcoming           # Deadlines in next 24h
-opensauria insights           # AI-generated observations
-opensauria doctor             # Health checks
+sauria                    # Show status (or onboard if first run)
+sauria ask "Who is Marc?" # Natural language query
+sauria teach "Marc is CTO of ClientX"
+sauria status             # System overview
+sauria upcoming           # Deadlines in next 24h
+sauria insights           # AI-generated observations
+sauria doctor             # Health checks
 ```
 
 | Command                     | Description                       |
 | --------------------------- | --------------------------------- |
-| `opensauria onboard`          | Interactive setup wizard          |
-| `opensauria daemon`           | Start background daemon           |
-| `opensauria ask <question>`   | Natural language query            |
-| `opensauria interactive`      | Interactive REPL mode             |
-| `opensauria status`           | System overview                   |
-| `opensauria focus <entity>`   | Deep dive on an entity            |
-| `opensauria entity <name>`    | Look up entity details            |
-| `opensauria upcoming [hours]` | Upcoming deadlines (default: 24h) |
-| `opensauria insights`         | AI-generated observations         |
-| `opensauria teach <fact>`     | Add knowledge manually            |
-| `opensauria sources`          | List configured data sources      |
-| `opensauria mcp-server`       | Start MCP server (stdio)          |
-| `opensauria doctor`           | Run health checks                 |
-| `opensauria audit [count]`    | Show audit log                    |
-| `opensauria export`           | Encrypted backup                  |
-| `opensauria purge`            | Secure delete all data            |
-| `opensauria config`           | Show current config               |
+| `sauria onboard`          | Interactive setup wizard          |
+| `sauria daemon`           | Start background daemon           |
+| `sauria ask <question>`   | Natural language query            |
+| `sauria interactive`      | Interactive REPL mode             |
+| `sauria status`           | System overview                   |
+| `sauria focus <entity>`   | Deep dive on an entity            |
+| `sauria entity <name>`    | Look up entity details            |
+| `sauria upcoming [hours]` | Upcoming deadlines (default: 24h) |
+| `sauria insights`         | AI-generated observations         |
+| `sauria teach <fact>`     | Add knowledge manually            |
+| `sauria sources`          | List configured data sources      |
+| `sauria mcp-server`       | Start MCP server (stdio)          |
+| `sauria doctor`           | Run health checks                 |
+| `sauria audit [count]`    | Show audit log                    |
+| `sauria export`           | Encrypted backup                  |
+| `sauria purge`            | Secure delete all data            |
+| `sauria config`           | Show current config               |
 
 ## MCP Tools
 
-When running as an MCP server, OpenSauria exposes 7 tools to connected agents:
+When running as an MCP server, Sauria exposes 7 tools to connected agents:
 
 | Tool                       | Description                                             |
 | -------------------------- | ------------------------------------------------------- |
-| `opensauria_query`           | Natural language question answered from knowledge graph |
-| `opensauria_get_entity`      | Entity details + relations + timeline                   |
-| `opensauria_search`          | Hybrid semantic + keyword search                        |
-| `opensauria_get_upcoming`    | Deadlines and meetings in next N hours                  |
-| `opensauria_get_insights`    | AI-generated observations and patterns                  |
-| `opensauria_get_context_for` | Full context dump for a topic                           |
-| `opensauria_add_event`       | Feed an event into the knowledge graph                  |
+| `sauria_query`           | Natural language question answered from knowledge graph |
+| `sauria_get_entity`      | Entity details + relations + timeline                   |
+| `sauria_search`          | Hybrid semantic + keyword search                        |
+| `sauria_get_upcoming`    | Deadlines and meetings in next N hours                  |
+| `sauria_get_insights`    | AI-generated observations and patterns                  |
+| `sauria_get_context_for` | Full context dump for a topic                           |
+| `sauria_add_event`       | Feed an event into the knowledge graph                  |
 
 All inputs validated. Rate limited. Audit logged.
 
 ## Configuration
 
-Config lives at `~/.opensauria/config.json5`:
+Config lives at `~/.sauria/config.json5`:
 
 ```json5
 {

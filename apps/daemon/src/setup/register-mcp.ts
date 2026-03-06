@@ -12,8 +12,8 @@ interface McpConfig {
   [key: string]: unknown;
 }
 
-const OPENSAURIA_MCP_ENTRY: McpServerEntry = {
-  command: 'opensauria',
+const SAURIA_MCP_ENTRY: McpServerEntry = {
+  command: 'sauria',
   args: ['mcp-server'],
 };
 
@@ -51,13 +51,13 @@ export function registerMcpInClient(client: McpClient): RegistrationResult {
 
   const config = readJsonSafe(client.configPath);
 
-  if (config.mcpServers?.['opensauria']) {
+  if (config.mcpServers?.['sauria']) {
     return { client: client.name, status: 'already_registered' };
   }
 
   config.mcpServers = {
     ...config.mcpServers,
-    opensauria: OPENSAURIA_MCP_ENTRY,
+    sauria: SAURIA_MCP_ENTRY,
   };
 
   writeJsonPretty(client.configPath, config);

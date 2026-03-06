@@ -25,7 +25,7 @@
       }
 
       .setup-title {
-        font-size: 16px;
+        font-size: var(--font-size-heading);
         font-weight: 600;
         white-space: nowrap;
         -webkit-app-region: no-drag;
@@ -69,14 +69,14 @@
 
       .subtitle {
         color: var(--text-secondary);
-        font-size: 15px;
+        font-size: var(--font-size-base);
         line-height: 1.5;
         margin-bottom: 32px;
       }
 
       .brand {
         color: var(--text-dim);
-        font-size: 13px;
+        font-size: var(--font-size-label);
         letter-spacing: 2px;
         text-transform: uppercase;
         margin-bottom: 24px;
@@ -139,13 +139,13 @@
       }
 
       .card-info h3 {
-        font-size: 15px;
+        font-size: var(--font-size-base);
         font-weight: 500;
         margin-bottom: 2px;
       }
 
       .card-info span {
-        font-size: 13px;
+        font-size: var(--font-size-label);
         color: var(--text-secondary);
       }
 
@@ -157,7 +157,7 @@
 
       .input-group label {
         display: block;
-        font-size: 13px;
+        font-size: var(--font-size-label);
         color: var(--text-secondary);
         margin-bottom: 8px;
         font-weight: 500;
@@ -170,7 +170,7 @@
         border: 1px solid var(--border);
         border-radius: var(--radius-sm);
         color: var(--text);
-        font-size: 14px;
+        font-size: var(--font-size-base);
         font-family: 'SF Mono', 'Fira Code', monospace;
         outline: none;
         transition: border-color 0.15s ease;
@@ -185,7 +185,7 @@
       }
 
       .input-hint {
-        font-size: 12px;
+        font-size: var(--font-size-small);
         color: var(--text-dim);
         margin-top: 8px;
       }
@@ -218,7 +218,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        font-size: 14px;
+        font-size: var(--font-size-base);
         color: var(--text-secondary);
       }
 
@@ -235,7 +235,7 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        font-size: 12px;
+        font-size: var(--font-size-small);
         transition: all 0.3s ease;
       }
 
@@ -275,7 +275,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 14px;
+        font-size: var(--font-size-base);
         color: var(--text-secondary);
         padding: 8px 12px;
         background: var(--surface);
@@ -296,7 +296,7 @@
         margin-bottom: 24px;
         word-break: break-all;
         font-family: 'SF Mono', 'Fira Code', monospace;
-        font-size: 12px;
+        font-size: var(--font-size-small);
         color: var(--text-dim);
         line-height: 1.6;
         max-height: 80px;
@@ -313,14 +313,14 @@
         gap: 16px;
         flex: 1;
         color: var(--text-secondary);
-        font-size: 14px;
+        font-size: var(--font-size-base);
       }
 
       /* Error */
 
       .error-msg {
         color: var(--error);
-        font-size: 13px;
+        font-size: var(--font-size-label);
         margin-top: 8px;
         display: none;
       }
@@ -331,7 +331,7 @@
 
       .oauth-steps {
         color: var(--text-secondary);
-        font-size: 13px;
+        font-size: var(--font-size-label);
         margin-top: 8px;
         line-height: 1.6;
       }
@@ -423,7 +423,7 @@
           </div>
 
           <div id="oauth-code" style="display: none">
-            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px">
+            <p style="color: var(--text-secondary); font-size: var(--font-size-label); margin-bottom: 16px">
               A code is displayed in your browser. Copy it and paste it here.
             </p>
             <div class="input-group">

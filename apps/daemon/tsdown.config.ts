@@ -5,7 +5,7 @@ export default defineConfig({
   format: 'esm',
   dts: true,
   define: {
-    OPENSAURIA_VERSION: JSON.stringify(process.env['npm_package_version'] ?? '0.0.0'),
+    SAURIA_VERSION: JSON.stringify(process.env['npm_package_version'] ?? '0.0.0'),
   },
   noExternal: [/.*/],
   external: ['better-sqlite3'],

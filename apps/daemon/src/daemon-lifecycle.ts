@@ -13,7 +13,7 @@ import { applySchema } from './db/schema.js';
 import { runMigrations } from './db/migrations.js';
 import { loadConfig, saveConfig } from './config/loader.js';
 import { ensureConfigDir } from './config/loader.js';
-import type { OpenSauriaConfig } from './config/schema.js';
+import type { SauriaConfig } from './config/schema.js';
 import { AuditLogger } from './security/audit.js';
 import { runSecurityChecks } from './security/startup-checks.js';
 import { ModelRouter } from './ai/router.js';
@@ -42,7 +42,7 @@ import { MessageQueue } from './orchestrator/message-queue.js';
 import { AgentMemory } from './orchestrator/agent-memory.js';
 import { KPITracker } from './orchestrator/kpi-tracker.js';
 import { CheckpointManager } from './orchestrator/checkpoint.js';
-import type { IntegrationInstance } from '@opensauria/types';
+import type { IntegrationInstance } from '@sauria/types';
 import { IntegrationRegistry } from './integrations/registry.js';
 import { INTEGRATION_CATALOG } from './integrations/catalog.js';
 import type {
@@ -60,7 +60,7 @@ import { createEmptyGraph, OwnerCommandSchema } from './orchestrator/types.js';
 
 export interface DaemonContext {
   readonly db: BetterSqlite3.Database;
-  readonly config: OpenSauriaConfig;
+  readonly config: SauriaConfig;
   readonly audit: AuditLogger;
   readonly router: ModelRouter;
   readonly mcpClients: McpClientManager;
@@ -77,7 +77,7 @@ export interface DaemonContext {
 }
 
 async function connectMcpSources(
-  config: OpenSauriaConfig,
+  config: SauriaConfig,
   mcpClients: McpClientManager,
 ): Promise<void> {
   const logger = getLogger();
@@ -102,7 +102,7 @@ async function connectMcpSources(
 
 async function autoConnectIntegrations(
   registry: IntegrationRegistry,
-  config: OpenSauriaConfig,
+  config: SauriaConfig,
 ): Promise<void> {
   const logger = getLogger();
   const integrations = config.integrations ?? {};
@@ -283,7 +283,7 @@ function loadCanvasGraph(): CanvasGraph {
   }
 }
 
-function buildOwnerIdentity(config: OpenSauriaConfig): OwnerIdentity {
+function buildOwnerIdentity(config: SauriaConfig): OwnerIdentity {
   return {
     telegram: config.owner.telegram,
     slack: config.owner.slack,
@@ -299,7 +299,7 @@ async function createChannelForNode(
     db: BetterSqlite3.Database;
     router: ModelRouter;
     audit: AuditLogger;
-    config: OpenSauriaConfig;
+    config: SauriaConfig;
     onInbound: (message: InboundMessage) => void;
     globalInstructions: string;
   },
@@ -515,7 +515,7 @@ async function setupOrchestrator(
     db: BetterSqlite3.Database;
     router: ModelRouter;
     audit: AuditLogger;
-    config: OpenSauriaConfig;
+    config: SauriaConfig;
   },
   checkpointManager: CheckpointManager,
   onActivity?: (event: string, data: Record<string, unknown>) => void,
@@ -666,7 +666,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   await ensureConfigDir();
   const db = openDatabase();
   applySchema(db);
-  runMigrations(db);
+  runMigrations(db, paths.home);
   logger.info('Database opened, schema applied, and migrations run');
 
   const config = await loadConfig();

@@ -15,7 +15,11 @@ export type IntegrationCategory =
   | 'crm'
   | 'automation'
   | 'content'
-  | 'storage';
+  | 'storage'
+  | 'social'
+  | 'marketing'
+  | 'support'
+  | 'cms';
 
 export interface CategoryMeta {
   readonly id: IntegrationCategory;

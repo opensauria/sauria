@@ -1,4 +1,4 @@
-import type { IntegrationDefinition } from '@opensauria/types';
+import type { IntegrationDefinition } from '@sauria/types';
 
 export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
   // ── Communication ──────────────────────────────
@@ -11,8 +11,72 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     authType: 'token',
     credentialKeys: ['token'],
     mcpServer: {
-      package: 'slack-mcp-server',
+      package: '@modelcontextprotocol/server-slack',
       envMapping: { token: 'SLACK_BOT_TOKEN' },
+    },
+  },
+  {
+    id: 'gmail',
+    name: 'Gmail',
+    description: 'Read, search, and send emails via Gmail',
+    icon: 'gmail',
+    category: 'communication',
+    authType: 'oauth',
+    credentialKeys: ['clientId', 'clientSecret', 'refreshToken'],
+    mcpServer: {
+      package: 'gmail-mcp-server',
+      envMapping: {
+        clientId: 'GMAIL_CLIENT_ID',
+        clientSecret: 'GMAIL_CLIENT_SECRET',
+        refreshToken: 'GMAIL_REFRESH_TOKEN',
+      },
+    },
+  },
+  {
+    id: 'email-imap',
+    name: 'Email (IMAP)',
+    description: 'Read and send emails via IMAP/SMTP',
+    icon: 'email',
+    category: 'communication',
+    authType: 'api_key',
+    credentialKeys: ['imapHost', 'smtpHost', 'username', 'password'],
+    mcpServer: {
+      package: 'email-mcp-server',
+      envMapping: {
+        imapHost: 'EMAIL_IMAP_HOST',
+        smtpHost: 'EMAIL_SMTP_HOST',
+        username: 'EMAIL_USERNAME',
+        password: 'EMAIL_PASSWORD',
+      },
+    },
+  },
+  {
+    id: 'discord',
+    name: 'Discord',
+    description: 'Community messaging and voice platform',
+    icon: 'discord',
+    category: 'communication',
+    authType: 'token',
+    credentialKeys: ['token'],
+    mcpServer: {
+      package: 'discord-mcp',
+      envMapping: { token: 'DISCORD_TOKEN' },
+    },
+  },
+  {
+    id: 'twilio',
+    name: 'Twilio',
+    description: 'Programmable SMS, voice, and messaging APIs',
+    icon: 'twilio',
+    category: 'communication',
+    authType: 'api_key',
+    credentialKeys: ['accountSid', 'authToken'],
+    mcpServer: {
+      package: '@twilio-alpha/mcp',
+      envMapping: {
+        accountSid: 'TWILIO_ACCOUNT_SID',
+        authToken: 'TWILIO_AUTH_TOKEN',
+      },
     },
   },
 
@@ -37,13 +101,13 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     icon: 'jira',
     category: 'project_management',
     authType: 'api_key',
-    credentialKeys: ['url', 'email', 'apiKey'],
+    credentialKeys: ['siteName', 'email', 'apiKey'],
     mcpServer: {
-      package: 'mcp-atlassian',
+      package: '@aashari/mcp-server-atlassian-jira',
       envMapping: {
-        url: 'JIRA_URL',
-        email: 'JIRA_EMAIL',
-        apiKey: 'JIRA_API_TOKEN',
+        siteName: 'ATLASSIAN_SITE_NAME',
+        email: 'ATLASSIAN_USER_EMAIL',
+        apiKey: 'ATLASSIAN_API_TOKEN',
       },
     },
   },
@@ -86,6 +150,48 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { apiKey: 'CLICKUP_API_KEY' },
     },
   },
+  {
+    id: 'todoist',
+    name: 'Todoist',
+    description: 'Task management and to-do lists',
+    icon: 'todoist',
+    category: 'project_management',
+    authType: 'token',
+    credentialKeys: ['token'],
+    mcpServer: {
+      package: '@abhiz123/todoist-mcp-server',
+      envMapping: { token: 'TODOIST_API_TOKEN' },
+    },
+  },
+  {
+    id: 'monday',
+    name: 'Monday.com',
+    description: 'Work operating system for teams',
+    icon: 'monday',
+    category: 'project_management',
+    authType: 'token',
+    credentialKeys: ['token'],
+    mcpServer: {
+      package: '@mondaydotcomorg/monday-api-mcp',
+      envMapping: { token: 'MONDAY_TOKEN' },
+    },
+  },
+  {
+    id: 'basecamp',
+    name: 'Basecamp',
+    description: 'Project management and team communication',
+    icon: 'basecamp',
+    category: 'project_management',
+    authType: 'token',
+    credentialKeys: ['token', 'accountId'],
+    mcpServer: {
+      package: 'basecamp-mcp-server',
+      envMapping: {
+        token: 'BASECAMP_ACCESS_TOKEN',
+        accountId: 'BASECAMP_ACCOUNT_ID',
+      },
+    },
+  },
 
   // ── Development ────────────────────────────────
   {
@@ -112,6 +218,23 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     mcpServer: {
       package: '@modelcontextprotocol/server-gitlab',
       envMapping: { token: 'GITLAB_TOKEN', url: 'GITLAB_URL' },
+    },
+  },
+  {
+    id: 'bitbucket',
+    name: 'Bitbucket',
+    description: 'Git code hosting with CI/CD pipelines',
+    icon: 'bitbucket',
+    category: 'development',
+    authType: 'api_key',
+    credentialKeys: ['siteName', 'email', 'apiKey'],
+    mcpServer: {
+      package: '@aashari/mcp-server-atlassian-bitbucket',
+      envMapping: {
+        siteName: 'ATLASSIAN_SITE_NAME',
+        email: 'ATLASSIAN_USER_EMAIL',
+        apiKey: 'ATLASSIAN_API_TOKEN',
+      },
     },
   },
   {
@@ -153,6 +276,35 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { token: 'NETLIFY_TOKEN' },
     },
   },
+  {
+    id: 'docker',
+    name: 'Docker',
+    description: 'Container management and orchestration',
+    icon: 'docker',
+    category: 'development',
+    authType: 'token',
+    credentialKeys: ['host'],
+    mcpServer: {
+      package: 'mcp-server-docker',
+      envMapping: { host: 'DOCKER_HOST' },
+    },
+  },
+  {
+    id: 'supabase',
+    name: 'Supabase',
+    description: 'Open source Firebase alternative with Postgres',
+    icon: 'supabase',
+    category: 'development',
+    authType: 'api_key',
+    credentialKeys: ['url', 'apiKey'],
+    mcpServer: {
+      package: '@supabase/mcp-server-supabase',
+      envMapping: {
+        url: 'SUPABASE_URL',
+        apiKey: 'SUPABASE_SERVICE_ROLE_KEY',
+      },
+    },
+  },
 
   // ── Productivity ───────────────────────────────
   {
@@ -165,10 +317,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     credentialKeys: ['apiKey'],
     mcpServer: {
       package: '@notionhq/notion-mcp-server',
-      envMapping: { apiKey: 'OPENAPI_MCP_HEADERS' },
-      envValueTemplate: {
-        apiKey: '{"Authorization":"Bearer {value}","Notion-Version":"2022-06-28"}',
-      },
+      envMapping: { apiKey: 'NOTION_TOKEN' },
     },
   },
   {
@@ -178,13 +327,13 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     icon: 'confluence',
     category: 'productivity',
     authType: 'api_key',
-    credentialKeys: ['url', 'email', 'apiKey'],
+    credentialKeys: ['siteName', 'email', 'apiKey'],
     mcpServer: {
-      package: 'mcp-atlassian',
+      package: '@aashari/mcp-server-atlassian-confluence',
       envMapping: {
-        url: 'CONFLUENCE_URL',
-        email: 'CONFLUENCE_EMAIL',
-        apiKey: 'CONFLUENCE_API_TOKEN',
+        siteName: 'ATLASSIAN_SITE_NAME',
+        email: 'ATLASSIAN_USER_EMAIL',
+        apiKey: 'ATLASSIAN_API_TOKEN',
       },
     },
   },
@@ -229,6 +378,19 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     mcpServer: {
       package: 'airtable-mcp-server',
       envMapping: { apiKey: 'AIRTABLE_API_KEY' },
+    },
+  },
+  {
+    id: 'evernote',
+    name: 'Evernote',
+    description: 'Note-taking and personal organization',
+    icon: 'evernote',
+    category: 'productivity',
+    authType: 'token',
+    credentialKeys: ['token'],
+    mcpServer: {
+      package: '@verygoodplugins/mcp-evernote',
+      envMapping: { token: 'EVERNOTE_TOKEN' },
     },
   },
 
@@ -277,6 +439,39 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { kubeconfig: 'KUBECONFIG' },
     },
   },
+  {
+    id: 'aws',
+    name: 'AWS',
+    description: 'Amazon Web Services cloud platform',
+    icon: 'aws',
+    category: 'infrastructure',
+    authType: 'api_key',
+    credentialKeys: ['accessKeyId', 'secretAccessKey', 'region'],
+    mcpServer: {
+      package: '@aws/mcp',
+      envMapping: {
+        accessKeyId: 'AWS_ACCESS_KEY_ID',
+        secretAccessKey: 'AWS_SECRET_ACCESS_KEY',
+        region: 'AWS_REGION',
+      },
+    },
+  },
+  {
+    id: 'google-cloud',
+    name: 'Google Cloud',
+    description: 'Google Cloud Platform services and APIs',
+    icon: 'googlecloud',
+    category: 'infrastructure',
+    authType: 'api_key',
+    credentialKeys: ['credentialsPath', 'project'],
+    mcpServer: {
+      package: '@google-cloud/gcloud-mcp',
+      envMapping: {
+        credentialsPath: 'GOOGLE_APPLICATION_CREDENTIALS',
+        project: 'GCLOUD_PROJECT',
+      },
+    },
+  },
 
   // ── Monitoring ─────────────────────────────────
   {
@@ -305,6 +500,45 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { apiKey: 'DATADOG_API_KEY', appKey: 'DATADOG_APP_KEY' },
     },
   },
+  {
+    id: 'grafana',
+    name: 'Grafana',
+    description: 'Observability dashboards and alerting',
+    icon: 'grafana',
+    category: 'monitoring',
+    authType: 'api_key',
+    credentialKeys: ['url', 'apiKey'],
+    mcpServer: {
+      package: 'mcp-grafana',
+      envMapping: { url: 'GRAFANA_URL', apiKey: 'GRAFANA_API_KEY' },
+    },
+  },
+  {
+    id: 'pagerduty',
+    name: 'PagerDuty',
+    description: 'Incident management and on-call scheduling',
+    icon: 'pagerduty',
+    category: 'monitoring',
+    authType: 'token',
+    credentialKeys: ['token'],
+    mcpServer: {
+      package: 'pagerduty-mcp-server',
+      envMapping: { token: 'PAGERDUTY_API_TOKEN' },
+    },
+  },
+  {
+    id: 'prometheus',
+    name: 'Prometheus',
+    description: 'Metrics collection and alerting toolkit',
+    icon: 'prometheus',
+    category: 'monitoring',
+    authType: 'token',
+    credentialKeys: ['url'],
+    mcpServer: {
+      package: '@prom-mcp/prometheus-mcp-server',
+      envMapping: { url: 'PROMETHEUS_URL' },
+    },
+  },
 
   // ── E-commerce ─────────────────────────────────
   {
@@ -317,7 +551,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     credentialKeys: ['apiKey'],
     mcpServer: {
       package: '@stripe/mcp',
-      envMapping: { apiKey: 'STRIPE_API_KEY' },
+      envMapping: { apiKey: 'STRIPE_SECRET_KEY' },
     },
   },
   {
@@ -327,12 +561,27 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     icon: 'paypal',
     category: 'ecommerce',
     authType: 'api_key',
-    credentialKeys: ['clientId', 'clientSecret'],
+    credentialKeys: ['accessToken'],
     mcpServer: {
       package: '@paypal/mcp',
       envMapping: {
-        clientId: 'PAYPAL_CLIENT_ID',
-        clientSecret: 'PAYPAL_CLIENT_SECRET',
+        accessToken: 'PAYPAL_ACCESS_TOKEN',
+      },
+    },
+  },
+  {
+    id: 'shopify',
+    name: 'Shopify',
+    description: 'E-commerce platform for online stores',
+    icon: 'shopify',
+    category: 'ecommerce',
+    authType: 'api_key',
+    credentialKeys: ['storeUrl', 'accessToken'],
+    mcpServer: {
+      package: '@shopify/dev-mcp',
+      envMapping: {
+        storeUrl: 'SHOPIFY_STORE_URL',
+        accessToken: 'SHOPIFY_ACCESS_TOKEN',
       },
     },
   },
@@ -347,8 +596,37 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     authType: 'token',
     credentialKeys: ['token'],
     mcpServer: {
-      package: 'figma-mcp-server',
+      package: 'figma-developer-mcp',
       envMapping: { token: 'FIGMA_ACCESS_TOKEN' },
+    },
+  },
+  {
+    id: 'canva',
+    name: 'Canva',
+    description: 'Online design and visual content creation',
+    icon: 'canva',
+    category: 'design',
+    authType: 'oauth',
+    credentialKeys: ['clientId', 'clientSecret'],
+    mcpServer: {
+      package: '@canva/cli',
+      envMapping: {
+        clientId: 'CANVA_CLIENT_ID',
+        clientSecret: 'CANVA_CLIENT_SECRET',
+      },
+    },
+  },
+  {
+    id: 'miro',
+    name: 'Miro',
+    description: 'Online collaborative whiteboard platform',
+    icon: 'miro',
+    category: 'design',
+    authType: 'token',
+    credentialKeys: ['token'],
+    mcpServer: {
+      package: '@llmindset/mcp-miro',
+      envMapping: { token: 'MIRO_TOKEN' },
     },
   },
 
@@ -388,8 +666,50 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     authType: 'token',
     credentialKeys: ['connectionString'],
     mcpServer: {
-      package: 'mysql-mcp-server',
+      package: '@naganpm/mysql-mcp-server',
       envMapping: { connectionString: 'MYSQL_CONNECTION_STRING' },
+    },
+  },
+  {
+    id: 'redis',
+    name: 'Redis',
+    description: 'In-memory data store and cache',
+    icon: 'redis',
+    category: 'data',
+    authType: 'token',
+    credentialKeys: ['url'],
+    mcpServer: {
+      package: '@gongrzhe/server-redis-mcp',
+      envMapping: { url: 'REDIS_URL' },
+    },
+  },
+  {
+    id: 'elasticsearch',
+    name: 'Elasticsearch',
+    description: 'Distributed search and analytics engine',
+    icon: 'elasticsearch',
+    category: 'data',
+    authType: 'api_key',
+    credentialKeys: ['url', 'apiKey'],
+    mcpServer: {
+      package: '@elastic/mcp-server-elasticsearch',
+      envMapping: { url: 'ES_URL', apiKey: 'ES_API_KEY' },
+    },
+  },
+  {
+    id: 'bigquery',
+    name: 'BigQuery',
+    description: 'Serverless data warehouse for analytics',
+    icon: 'bigquery',
+    category: 'data',
+    authType: 'api_key',
+    credentialKeys: ['credentialsPath', 'projectId'],
+    mcpServer: {
+      package: 'mcp-server-bigquery',
+      envMapping: {
+        credentialsPath: 'GOOGLE_APPLICATION_CREDENTIALS',
+        projectId: 'GCP_PROJECT_ID',
+      },
     },
   },
 
@@ -403,8 +723,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     authType: 'api_key',
     credentialKeys: ['apiKey'],
     mcpServer: {
-      package: 'hubspot-mcp-server',
-      envMapping: { apiKey: 'HUBSPOT_API_KEY' },
+      package: '@hubspot/mcp-server',
+      envMapping: { apiKey: 'HUBSPOT_PRIVATE_APP_TOKEN' },
     },
   },
   {
@@ -416,8 +736,53 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     authType: 'api_key',
     credentialKeys: ['apiKey'],
     mcpServer: {
-      package: 'pipedrive-mcp-server',
+      package: '@iamsamuelfraga/mcp-pipedrive',
       envMapping: { apiKey: 'PIPEDRIVE_API_KEY' },
+    },
+  },
+  {
+    id: 'salesforce',
+    name: 'Salesforce',
+    description: 'Enterprise CRM and business platform',
+    icon: 'salesforce',
+    category: 'crm',
+    authType: 'oauth',
+    credentialKeys: ['instanceUrl', 'clientId', 'clientSecret'],
+    mcpServer: {
+      package: '@salesforce/mcp',
+      envMapping: {
+        instanceUrl: 'SALESFORCE_INSTANCE_URL',
+        clientId: 'SALESFORCE_CLIENT_ID',
+        clientSecret: 'SALESFORCE_CLIENT_SECRET',
+      },
+    },
+  },
+
+  // ── Support ────────────────────────────────────
+  {
+    id: 'zendesk',
+    name: 'Zendesk',
+    description: 'Customer support and helpdesk platform',
+    icon: 'zendesk',
+    category: 'support',
+    authType: 'api_key',
+    credentialKeys: ['domain', 'apiToken'],
+    mcpServer: {
+      package: '@sshadows/zendesk-mcp-server',
+      envMapping: { domain: 'ZENDESK_DOMAIN', apiToken: 'ZENDESK_API_TOKEN' },
+    },
+  },
+  {
+    id: 'intercom',
+    name: 'Intercom',
+    description: 'Customer messaging and engagement platform',
+    icon: 'intercom',
+    category: 'support',
+    authType: 'token',
+    credentialKeys: ['token'],
+    mcpServer: {
+      package: 'mcp-intercom',
+      envMapping: { token: 'INTERCOM_API_TOKEN' },
     },
   },
 
@@ -431,8 +796,21 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     authType: 'api_key',
     credentialKeys: ['apiKey'],
     mcpServer: {
-      package: '@zapier/mcp-integration',
+      package: '@zapier/zapier-sdk-mcp',
       envMapping: { apiKey: 'ZAPIER_API_KEY' },
+    },
+  },
+  {
+    id: 'n8n',
+    name: 'n8n',
+    description: 'Open source workflow automation tool',
+    icon: 'n8n',
+    category: 'automation',
+    authType: 'api_key',
+    credentialKeys: ['url', 'apiKey'],
+    mcpServer: {
+      package: 'n8n-mcp',
+      envMapping: { url: 'N8N_URL', apiKey: 'N8N_API_KEY' },
     },
   },
 
@@ -486,6 +864,143 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
         clientSecret: 'GDRIVE_CLIENT_SECRET',
         refreshToken: 'GDRIVE_REFRESH_TOKEN',
       },
+    },
+  },
+
+  // ── Social ─────────────────────────────────────
+  {
+    id: 'x',
+    name: 'X (Twitter)',
+    description: 'Social media posting and monitoring',
+    icon: 'x',
+    category: 'social',
+    authType: 'api_key',
+    credentialKeys: ['bearerToken'],
+    mcpServer: {
+      package: '@iflow-mcp/x-mcp-server',
+      envMapping: { bearerToken: 'TWITTER_BEARER_TOKEN' },
+    },
+  },
+  {
+    id: 'reddit',
+    name: 'Reddit',
+    description: 'Community discussions and content aggregation',
+    icon: 'reddit',
+    category: 'social',
+    authType: 'oauth',
+    credentialKeys: ['clientId', 'clientSecret', 'userAgent'],
+    mcpServer: {
+      package: 'reddit-mcp-server',
+      envMapping: {
+        clientId: 'REDDIT_CLIENT_ID',
+        clientSecret: 'REDDIT_CLIENT_SECRET',
+        userAgent: 'REDDIT_USER_AGENT',
+      },
+    },
+  },
+  {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    description: 'Professional networking and content sharing',
+    icon: 'linkedin',
+    category: 'social',
+    authType: 'oauth',
+    credentialKeys: ['clientId', 'clientSecret'],
+    mcpServer: {
+      package: 'linkedin-mcp-server',
+      envMapping: {
+        clientId: 'LINKEDIN_CLIENT_ID',
+        clientSecret: 'LINKEDIN_CLIENT_SECRET',
+      },
+    },
+  },
+  {
+    id: 'youtube',
+    name: 'YouTube',
+    description: 'Video platform transcripts and metadata',
+    icon: 'youtube',
+    category: 'social',
+    authType: 'api_key',
+    credentialKeys: ['apiKey'],
+    mcpServer: {
+      package: '@iflow-mcp/mcp-youtube-transcript',
+      envMapping: { apiKey: 'YOUTUBE_API_KEY' },
+    },
+  },
+
+  // ── Marketing ──────────────────────────────────
+  {
+    id: 'mailchimp',
+    name: 'Mailchimp',
+    description: 'Email marketing and audience management',
+    icon: 'mailchimp',
+    category: 'marketing',
+    authType: 'api_key',
+    credentialKeys: ['apiKey', 'serverPrefix'],
+    mcpServer: {
+      package: '@agentx-ai/mailchimp-mcp-server',
+      envMapping: {
+        apiKey: 'MAILCHIMP_API_KEY',
+        serverPrefix: 'MAILCHIMP_SERVER_PREFIX',
+      },
+    },
+  },
+  {
+    id: 'brevo',
+    name: 'Brevo',
+    description: 'Email marketing and transactional messaging',
+    icon: 'brevo',
+    category: 'marketing',
+    authType: 'api_key',
+    credentialKeys: ['apiKey'],
+    mcpServer: {
+      package: '@houtini/brevo-mcp',
+      envMapping: { apiKey: 'BREVO_API_KEY' },
+    },
+  },
+  {
+    id: 'sendgrid',
+    name: 'SendGrid',
+    description: 'Email delivery and marketing campaigns',
+    icon: 'sendgrid',
+    category: 'marketing',
+    authType: 'api_key',
+    credentialKeys: ['apiKey'],
+    mcpServer: {
+      package: 'sendgrid-mcp',
+      envMapping: { apiKey: 'SENDGRID_API_KEY' },
+    },
+  },
+
+  // ── CMS ────────────────────────────────────────
+  {
+    id: 'wordpress',
+    name: 'WordPress',
+    description: 'Content management and publishing platform',
+    icon: 'wordpress',
+    category: 'cms',
+    authType: 'api_key',
+    credentialKeys: ['url', 'username', 'password'],
+    mcpServer: {
+      package: 'mcp-wordpress',
+      envMapping: {
+        url: 'WORDPRESS_URL',
+        username: 'WORDPRESS_USERNAME',
+        password: 'WORDPRESS_PASSWORD',
+      },
+    },
+  },
+  {
+    id: 'ghost',
+    name: 'Ghost',
+    description: 'Modern publishing and newsletter platform',
+    icon: 'ghost',
+    category: 'cms',
+    authType: 'api_key',
+    credentialKeys: ['url', 'apiKey'],
+    mcpServer: {
+      package: '@mtane0412/ghost-mcp-server',
+      envMapping: { url: 'GHOST_API_URL', apiKey: 'GHOST_API_KEY' },
     },
   },
 ] as const;

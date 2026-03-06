@@ -26,7 +26,7 @@
 }
 
 .brain-sidebar-section-label {
-  font-size: 10px;
+  font-size: var(--font-size-micro);
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -41,9 +41,9 @@
   padding: 8px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-size-label);
   color: var(--text-secondary);
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
 }
 
 .brain-nav-item:hover {
@@ -69,7 +69,7 @@
 
 .brain-nav-count {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--font-size-x-small);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
@@ -117,7 +117,7 @@
   background: none;
   border: none;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--font-size-label);
   outline: none;
   font-family: inherit;
 }
@@ -132,7 +132,7 @@
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--font-size-label);
   cursor: pointer;
   appearance: none;
   font-family: inherit;
@@ -156,12 +156,12 @@
   display: flex;
   align-items: baseline;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-dim);
 }
 
 .brain-stat-value {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -189,7 +189,7 @@
   background: var(--bg-solid);
   text-align: left;
   padding: 8px 16px;
-  font-size: 11px;
+  font-size: var(--font-size-x-small);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -201,7 +201,7 @@
 
 .brain-table td {
   padding: 10px 16px;
-  font-size: 13px;
+  font-size: var(--font-size-label);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
   overflow: hidden;
@@ -211,7 +211,7 @@
 
 .brain-table tr {
   cursor: pointer;
-  transition: background 0.1s ease;
+  transition: background var(--transition-fast);
 }
 
 .brain-table tbody tr:hover {
@@ -226,43 +226,43 @@
 
 .type-badge {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--font-size-x-small);
   padding: 2px 8px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   font-weight: 500;
 }
 
 .type-person {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.12);
+  color: var(--entity-person);
+  background: color-mix(in srgb, var(--entity-person) 12%, transparent);
 }
 .type-project {
-  color: #34d399;
-  background: rgba(52, 211, 153, 0.12);
+  color: var(--entity-project);
+  background: color-mix(in srgb, var(--entity-project) 12%, transparent);
 }
 .type-company {
-  color: #a78bfa;
-  background: rgba(167, 139, 250, 0.12);
+  color: var(--entity-company);
+  background: color-mix(in srgb, var(--entity-company) 12%, transparent);
 }
 .type-event {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
+  color: var(--entity-event);
+  background: color-mix(in srgb, var(--entity-event) 12%, transparent);
 }
 .type-document {
-  color: #6b7280;
-  background: rgba(107, 114, 128, 0.12);
+  color: var(--entity-document);
+  background: color-mix(in srgb, var(--entity-document) 12%, transparent);
 }
 .type-goal {
-  color: #038b9a;
-  background: rgba(3, 139, 154, 0.12);
+  color: var(--entity-goal);
+  background: color-mix(in srgb, var(--entity-goal) 12%, transparent);
 }
 .type-place {
-  color: #eab308;
-  background: rgba(234, 179, 8, 0.12);
+  color: var(--entity-place);
+  background: color-mix(in srgb, var(--entity-place) 12%, transparent);
 }
 .type-concept {
-  color: #ec4899;
-  background: rgba(236, 72, 153, 0.12);
+  color: var(--entity-concept);
+  background: color-mix(in srgb, var(--entity-concept) 12%, transparent);
 }
 
 .type-pattern {
@@ -319,7 +319,7 @@
   overflow: hidden;
   background: var(--bg-solid);
   transform: translateX(100%);
-  transition: transform 0.2s ease;
+  transition: transform var(--transition-normal);
   z-index: 10;
 }
 
@@ -338,7 +338,7 @@
 }
 
 .brain-detail-title {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   flex: 1;
   min-width: 0;
@@ -355,7 +355,7 @@
   justify-content: center;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background var(--transition-fast);
   flex-shrink: 0;
 }
 
@@ -381,7 +381,7 @@
 }
 
 .brain-detail-section-title {
-  font-size: 11px;
+  font-size: var(--font-size-x-small);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -394,13 +394,13 @@
 }
 
 .brain-detail-label {
-  font-size: 11px;
+  font-size: var(--font-size-x-small);
   color: var(--text-dim);
   margin-bottom: 4px;
 }
 
 .brain-detail-value {
-  font-size: 13px;
+  font-size: var(--font-size-label);
   color: var(--text);
   line-height: 1.5;
 }
@@ -412,7 +412,7 @@
   padding: 8px;
   cursor: text;
   user-select: text;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--transition-fast);
   outline: none;
   min-height: 32px;
 }
@@ -425,7 +425,7 @@ textarea.brain-detail-value.editable {
   resize: vertical;
   min-height: 64px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--font-size-label);
   color: var(--text);
   width: 100%;
   display: block;
@@ -439,10 +439,10 @@ textarea.brain-detail-value.editable {
   gap: 8px;
   padding: 8px;
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background 0.1s ease;
+  transition: background var(--transition-fast);
 }
 
 .brain-relation-item:hover {
@@ -466,7 +466,7 @@ textarea.brain-detail-value.editable {
   gap: 8px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
 .brain-event-item:last-child {
@@ -506,7 +506,7 @@ textarea.brain-detail-value.editable {
 }
 
 .brain-message-sender {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 600;
   color: var(--accent);
 }
@@ -516,14 +516,14 @@ textarea.brain-detail-value.editable {
 }
 
 .brain-message-time {
-  font-size: 11px;
+  font-size: var(--font-size-x-small);
   color: var(--text-dim);
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
 
 .brain-message-content {
-  font-size: 13px;
+  font-size: var(--font-size-label);
   color: var(--text);
   line-height: 1.5;
   white-space: pre-wrap;
@@ -576,13 +576,13 @@ textarea.brain-detail-value.editable {
 }
 
 .brain-dialog-title {
-  font-size: 16px;
+  font-size: var(--font-size-heading);
   font-weight: 600;
   margin-bottom: 8px;
 }
 
 .brain-dialog-text {
-  font-size: 13px;
+  font-size: var(--font-size-label);
   color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: 16px;
@@ -595,7 +595,7 @@ textarea.brain-detail-value.editable {
 
 .brain-dialog-warning {
   color: var(--error);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   margin-bottom: 16px;
 }
 
@@ -606,7 +606,7 @@ textarea.brain-detail-value.editable {
 
 .brain-dialog-actions .btn {
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: var(--font-size-label);
 }
 
 /* ── Empty State ────────────────────────────────────────────────────── */
@@ -618,7 +618,7 @@ textarea.brain-detail-value.editable {
   justify-content: center;
   padding: 48px;
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   gap: 8px;
   flex: 1;
 }
@@ -644,9 +644,9 @@ textarea.brain-detail-value.editable {
   border-radius: var(--radius-sm);
   padding: 8px 24px;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--font-size-label);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
   font-family: inherit;
 }
 
@@ -696,7 +696,7 @@ textarea.brain-detail-value.editable {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   line-height: 0;
   padding: 0;
@@ -712,7 +712,7 @@ textarea.brain-detail-value.editable {
   position: absolute;
   bottom: 16px;
   left: 16px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
@@ -725,7 +725,7 @@ textarea.brain-detail-value.editable {
   align-items: center;
   justify-content: center;
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   gap: 8px;
 }
 
@@ -747,7 +747,7 @@ textarea.brain-detail-value.editable {
   gap: 2px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 2px;
   z-index: 5;
 }
@@ -758,7 +758,7 @@ textarea.brain-detail-value.editable {
   bottom: 2px;
   left: 2px;
   width: calc(50% - 2px);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: rgba(3, 139, 154, 0.15);
   transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
@@ -770,14 +770,14 @@ textarea.brain-detail-value.editable {
 
 .brain-view-seg {
   padding: 6px 24px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 500;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color var(--transition-fast);
   position: relative;
   z-index: 1;
   font-family: inherit;
@@ -819,9 +819,9 @@ textarea.brain-detail-value.editable {
   position: absolute;
   width: 200px;
   height: 280px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: rgba(30, 30, 30, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   backdrop-filter: blur(16px);
   display: flex;
   flex-direction: column;
@@ -830,7 +830,7 @@ textarea.brain-detail-value.editable {
   gap: 8px;
   cursor: pointer;
   user-select: none;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--transition-fast);
   -webkit-box-reflect: below 4px linear-gradient(transparent 75%, rgba(255, 255, 255, 0.06));
 }
 
@@ -853,7 +853,7 @@ textarea.brain-detail-value.editable {
 }
 
 .brain-library-card-name {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--text);
   text-align: center;
@@ -868,14 +868,14 @@ textarea.brain-detail-value.editable {
 
 .brain-library-card-type {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--font-size-x-small);
   padding: 2px 8px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   font-weight: 500;
 }
 
 .brain-library-card-summary {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   text-align: center;
   line-height: 1.4;
@@ -888,7 +888,7 @@ textarea.brain-detail-value.editable {
 }
 
 .brain-library-card-meta {
-  font-size: 11px;
+  font-size: var(--font-size-x-small);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
@@ -911,7 +911,7 @@ textarea.brain-detail-value.editable {
   width: 320px;
   max-width: calc(100% - 48px);
   z-index: 5;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--transition-fast);
 }
 
 .brain-library-search:focus-within {
@@ -931,7 +931,7 @@ textarea.brain-detail-value.editable {
   background: none;
   border: none;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--font-size-label);
   outline: none;
   font-family: inherit;
 }
@@ -950,7 +950,7 @@ textarea.brain-detail-value.editable {
   align-items: center;
   justify-content: center;
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   gap: 8px;
 }
 

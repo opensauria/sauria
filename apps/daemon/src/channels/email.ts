@@ -116,16 +116,16 @@ export class EmailChannel implements Channel {
   async sendAlert(alert: ProactiveAlert): Promise<void> {
     if (Date.now() < this.silenceUntil) return;
     const text = formatAlert(alert);
-    await this.sendEmail(this.deps.username, `[OpenSauria Alert] ${alert.title}`, text);
+    await this.sendEmail(this.deps.username, `[Sauria Alert] ${alert.title}`, text);
   }
 
   async sendMessage(content: string, groupId: string | null): Promise<void> {
     const recipient = groupId ?? this.deps.username;
-    await this.sendEmail(recipient, '[OpenSauria]', content);
+    await this.sendEmail(recipient, '[Sauria]', content);
   }
 
   async sendToGroup(groupId: string, content: string): Promise<void> {
-    await this.sendEmail(groupId, '[OpenSauria]', content);
+    await this.sendEmail(groupId, '[Sauria]', content);
   }
 
   /** Exposed for testing — triggers one poll cycle. */
