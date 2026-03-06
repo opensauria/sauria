@@ -589,15 +589,13 @@ async function handleOAuthConnect(item: IntegrationStatus): Promise<void> {
         tokenUrl: mcpRemote.tokenUrl ?? null,
         scopes: null,
       });
-    } else {
+    } else if (oauthProxy) {
       const proxyBase = await invoke<string>('get_auth_proxy_url');
-      await invoke('start_integration_oauth', {
+      await invoke('start_proxy_oauth', {
         integrationId: item.id,
         providerName: name,
-        mcpUrl: proxyBase,
-        authUrl: `${proxyBase}/connect/${oauthProxy}`,
-        tokenUrl: null,
-        scopes: null,
+        proxyUrl: proxyBase,
+        providerKey: oauthProxy,
       });
     }
   } catch (err: unknown) {

@@ -92,9 +92,12 @@ fn main() {
             cmd_integrations::integrations_disconnect_instance,
             cmd_integrations::integrations_assign_instance,
             cmd_integrations::integrations_unassign_instance,
-            // OAuth Integrations
+            // OAuth Integrations — MCP direct
             cmd_oauth_integrations::start_integration_oauth,
             cmd_oauth_integrations::complete_integration_oauth,
+            // OAuth Integrations — proxy
+            cmd_oauth_integrations::start_proxy_oauth,
+            // OAuth account labels
             cmd_oauth_integrations::get_integration_accounts,
         ])
         .setup(move |app| {
