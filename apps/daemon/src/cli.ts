@@ -1,5 +1,4 @@
 import { existsSync } from 'node:fs';
-import { Command } from 'commander';
 import { openDatabase, closeDatabase } from './db/connection.js';
 import { applySchema } from './db/schema.js';
 import { loadConfig } from './config/loader.js';
@@ -26,6 +25,8 @@ import {
   exportAction,
   purgeAction,
 } from './cli-actions.js';
+
+import { Command } from 'commander';
 
 const program = new Command();
 
