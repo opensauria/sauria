@@ -151,25 +151,37 @@ export class IntegrationRegistry {
     }
 
     const serverName = `integration:${instanceId}`;
-    const env: Record<string, string> = {};
-    for (const key of definition.credentialKeys) {
-      const envVar = definition.mcpServer.envMapping[key];
-      const value = credentials[key];
-      if (!envVar || !value) {
-        throw new Error(`Missing credential: ${key}`);
-      }
-      const template = definition.mcpServer.envValueTemplate?.[key];
-      env[envVar] = template ? template.replace('{value}', value) : value;
-    }
+    const { accessToken } = credentials;
 
     try {
-      const npxPath = resolveNpxPath();
-      await this.mcpClients.connect({
-        name: serverName,
-        command: npxPath,
-        args: ['-y', definition.mcpServer.package],
-        env: { ...process.env, ...env } as Record<string, string>,
-      });
+      if (definition.mcpRemote && accessToken) {
+        // Remote MCP path — connect via HTTP/SSE with OAuth token
+        await this.mcpClients.connectRemote({
+          name: serverName,
+          url: definition.mcpRemote.url,
+          accessToken,
+        });
+      } else {
+        // Local MCP path — spawn via npx
+        const env: Record<string, string> = {};
+        for (const key of definition.credentialKeys) {
+          const envVar = definition.mcpServer.envMapping[key];
+          const value = credentials[key];
+          if (!envVar || !value) {
+            throw new Error(`Missing credential: ${key}`);
+          }
+          const template = definition.mcpServer.envValueTemplate?.[key];
+          env[envVar] = template ? template.replace('{value}', value) : value;
+        }
+
+        const npxPath = resolveNpxPath();
+        await this.mcpClients.connect({
+          name: serverName,
+          command: npxPath,
+          args: ['-y', definition.mcpServer.package],
+          env: { ...process.env, ...env } as Record<string, string>,
+        });
+      }
 
       const rawTools = await this.mcpClients.listTools(serverName);
       const tools: IntegrationTool[] = rawTools.map((t) => ({
@@ -193,6 +205,7 @@ export class IntegrationRegistry {
         integrationId,
         label,
         toolCount: tools.length,
+        remote: !!definition.mcpRemote && !!accessToken,
       });
 
       logger.info(`Integration instance connected: ${label} (${tools.length} tools)`);
@@ -209,6 +222,31 @@ export class IntegrationRegistry {
 
       return { instanceId, integrationId, label, connected: false, tools: [], error: errorMsg };
     }
+  }
+
+  async refreshRemoteConnection(instanceId: string, newAccessToken: string): Promise<void> {
+    const logger = getLogger();
+    const instance = this.instances.get(instanceId);
+    if (!instance) return;
+
+    const definition = this.catalog.find((d) => d.id === instance.integrationId);
+    if (!definition?.mcpRemote) return;
+
+    const serverName = `integration:${instanceId}`;
+
+    try {
+      await this.mcpClients.disconnect(serverName);
+    } catch {
+      // May already be disconnected
+    }
+
+    await this.mcpClients.connectRemote({
+      name: serverName,
+      url: definition.mcpRemote.url,
+      accessToken: newAccessToken,
+    });
+
+    logger.info(`Refreshed remote connection: ${instanceId}`);
   }
 
   async disconnectInstance(instanceId: string): Promise<void> {
