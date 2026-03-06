@@ -12,6 +12,7 @@ import { RoutingCache, buildCacheKey } from './routing-cache.js';
 import { AgentMemory, estimateTokens } from './agent-memory.js';
 import { searchByKeyword } from '../db/search.js';
 import type { IntegrationRegistry } from '../integrations/registry.js';
+import { stripPromptInjection } from '../security/sanitize.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -159,7 +160,7 @@ export class LLMRoutingBrain {
       },
       {
         role: 'user',
-        content: `User asked: "${originalMessage}"\n\nRaw tool result:\n${rawResult}`,
+        content: `User asked: "${stripPromptInjection(originalMessage, 500)}"\n\nRaw tool result:\n${stripPromptInjection(rawResult, 4000)}`,
       },
     ];
 
@@ -431,7 +432,7 @@ function buildRoutingPrompt(
     ...(sourceNode.instructions
       ? [
           `AGENT PERSONA (this defines WHO you are — embody this fully in every response):`,
-          sourceNode.instructions,
+          stripPromptInjection(sourceNode.instructions),
           '',
         ]
       : []),
@@ -439,7 +440,7 @@ function buildRoutingPrompt(
     ...(globalInstructions
       ? [
           'Communication style (applies to tone and language of all responses):',
-          globalInstructions,
+          stripPromptInjection(globalInstructions),
           '',
         ]
       : []),
