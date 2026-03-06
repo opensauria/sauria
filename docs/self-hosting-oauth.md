@@ -2,7 +2,7 @@
 
 Sauria uses a Cloudflare Worker as an OAuth proxy for services that don't expose a remote MCP server (Gmail, Google Calendar, Google Drive, X, Reddit, LinkedIn, Zendesk). The Worker holds your OAuth client secrets and exchanges authorization codes on behalf of the desktop app.
 
-By default, Sauria connects to `https://auth.sauria.app`. You can deploy your own Worker for full control over credentials.
+By default, Sauria connects to `https://auth.sauria.dev`. You can deploy your own Worker for full control over credentials.
 
 ## 1. Deploy the Worker
 
