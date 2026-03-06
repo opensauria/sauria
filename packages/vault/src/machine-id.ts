@@ -5,7 +5,7 @@
  * `mac.home`, etc.) which silently breaks vault decryption. Instead we
  * use the hardware UUID on macOS and a cached random ID elsewhere.
  *
- * The ID is cached to `~/.opensauria/vault/.machine-id` so it survives
+ * The ID is cached to `~/.sauria/vault/.machine-id` so it survives
  * across processes and is only computed once.
  *
  * Windows: uses PowerShell WMI query (Win32_ComputerSystemProduct.UUID).
@@ -17,7 +17,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { userInfo } from 'node:os';
 import { join } from 'node:path';
-import { paths } from '@opensauria/config';
+import { paths } from '@sauria/config';
 
 export function machineId(): string {
   const cacheDir = paths.vault;

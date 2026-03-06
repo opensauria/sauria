@@ -23,7 +23,7 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        border-radius: 12px;
+        border-radius: var(--radius);
         border: 0.5px solid rgba(255, 255, 255, 0.1);
       }
 
@@ -34,7 +34,7 @@
         align-items: center;
         gap: 10px;
         padding: 12px 14px;
-        border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 0.5px solid var(--border);
       }
 
       .wind-mascot {
@@ -49,8 +49,8 @@
         height: 28px;
         flex-shrink: 0;
         cursor: pointer;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
         background: rgba(255, 255, 255, 0.04);
         display: flex;
         align-items: center;
@@ -59,7 +59,7 @@
       }
 
       .search-icon:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: var(--border);
       }
       .search-icon svg {
         width: 16px;
@@ -75,7 +75,7 @@
         border: none;
         outline: none;
         color: var(--text);
-        font-size: 14px;
+        font-size: var(--font-size-base);
         font-family: inherit;
       }
 
@@ -98,8 +98,8 @@
         background: transparent;
       }
       .command-list::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.08);
-        border-radius: 3px;
+        background: var(--border);
+        border-radius: 4px;
       }
 
       .command-row {
@@ -107,20 +107,20 @@
         align-items: center;
         gap: 10px;
         padding: 6px 8px;
-        border-radius: 8px;
+        border-radius: var(--radius-sm);
         cursor: default;
         transition: background 0.08s ease;
         height: 40px;
       }
 
       .command-row.selected {
-        background: rgba(255, 255, 255, 0.08);
+        background: var(--border);
       }
 
       .command-row .icon {
         width: 28px;
         height: 28px;
-        border-radius: 6px;
+        border-radius: var(--radius-sm);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -134,7 +134,7 @@
       }
       .command-row .label {
         flex: 1;
-        font-size: 13px;
+        font-size: var(--font-size-label);
         font-weight: 400;
         color: rgba(255, 255, 255, 0.85);
       }
@@ -142,7 +142,7 @@
         color: #fff;
       }
       .command-row .hint {
-        font-size: 11px;
+        font-size: var(--font-size-x-small);
         color: rgba(255, 255, 255, 0.25);
       }
 
@@ -150,12 +150,12 @@
 
       .result-panel {
         display: none;
-        border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+        border-top: 0.5px solid var(--border);
         padding: 12px 14px;
         max-height: 140px;
         overflow-y: auto;
         font-family: 'SF Mono', 'Fira Code', monospace;
-        font-size: 11px;
+        font-size: var(--font-size-x-small);
         line-height: 1.6;
         color: rgba(255, 255, 255, 0.55);
         white-space: pre-wrap;
@@ -172,7 +172,7 @@
 
       .telegram-form {
         display: none;
-        border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+        border-top: 0.5px solid var(--border);
         padding: 12px;
         background: rgba(0, 0, 0, 0.12);
         animation: fadeIn 0.15s ease;
@@ -186,7 +186,7 @@
       }
 
       .tg-section-title {
-        font-size: 10px;
+        font-size: var(--font-size-micro);
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.8px;
@@ -203,8 +203,8 @@
         gap: 12px;
         padding: 10px 12px;
         background: rgba(255, 255, 255, 0.04);
-        border: 0.5px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
+        border: 0.5px solid var(--border);
+        border-radius: var(--radius);
         margin-bottom: 8px;
         transition: background 0.12s ease;
       }
@@ -216,7 +216,7 @@
       .bot-avatar {
         width: 40px;
         height: 40px;
-        border-radius: 10px;
+        border-radius: var(--radius);
         background: rgba(255, 255, 255, 0.06);
         display: flex;
         align-items: center;
@@ -229,7 +229,7 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        border-radius: 10px;
+        border-radius: var(--radius);
       }
 
       .bot-avatar svg {
@@ -243,7 +243,7 @@
       }
 
       .bot-name {
-        font-size: 13px;
+        font-size: var(--font-size-label);
         font-weight: 500;
         color: rgba(255, 255, 255, 0.9);
         white-space: nowrap;
@@ -252,7 +252,7 @@
       }
 
       .bot-meta {
-        font-size: 11px;
+        font-size: var(--font-size-x-small);
         color: rgba(255, 255, 255, 0.35);
         display: flex;
         align-items: center;
@@ -264,7 +264,7 @@
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: #34d399;
+        background: var(--success);
         flex-shrink: 0;
       }
 
@@ -281,7 +281,7 @@
       .bot-action-btn {
         width: 28px;
         height: 28px;
-        border-radius: 6px;
+        border-radius: var(--radius-sm);
         border: none;
         background: transparent;
         color: rgba(255, 255, 255, 0.3);
@@ -293,13 +293,13 @@
       }
 
       .bot-action-btn:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: var(--border);
         color: rgba(255, 255, 255, 0.6);
       }
 
       .bot-action-btn.danger:hover {
         background: rgba(248, 113, 113, 0.12);
-        color: #f87171;
+        color: var(--error);
       }
 
       .bot-action-btn svg {
@@ -316,10 +316,10 @@
         gap: 8px;
         padding: 10px 12px;
         background: transparent;
-        border: 1.5px dashed rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
+        border: 1.5px dashed var(--border);
+        border-radius: var(--radius);
         color: rgba(255, 255, 255, 0.25);
-        font-size: 12px;
+        font-size: var(--font-size-small);
         font-weight: 500;
         cursor: pointer;
         transition: all 0.15s ease;
@@ -355,7 +355,7 @@
 
       .form-field label {
         display: block;
-        font-size: 11px;
+        font-size: var(--font-size-x-small);
         color: rgba(255, 255, 255, 0.4);
         margin-bottom: 4px;
       }
@@ -365,9 +365,9 @@
         padding: 8px 10px;
         background: rgba(255, 255, 255, 0.06);
         border: 0.5px solid rgba(255, 255, 255, 0.1);
-        border-radius: 6px;
+        border-radius: var(--radius-sm);
         color: var(--text);
-        font-size: 13px;
+        font-size: var(--font-size-label);
         font-family: 'SF Mono', 'Fira Code', monospace;
         outline: none;
         transition: border-color 0.15s ease;
@@ -382,7 +382,7 @@
       }
 
       .form-field .field-hint {
-        font-size: 10px;
+        font-size: var(--font-size-micro);
         color: rgba(255, 255, 255, 0.25);
         margin-top: 4px;
       }
@@ -396,7 +396,7 @@
       .form-btn {
         padding: 6px 14px;
         border-radius: 9999px;
-        font-size: 12px;
+        font-size: var(--font-size-small);
         font-weight: 500;
         border: none;
         cursor: pointer;
@@ -420,7 +420,7 @@
       .form-btn-cancel {
         background: rgba(255, 255, 255, 0.06);
         color: rgba(255, 255, 255, 0.5);
-        border: 0.5px solid rgba(255, 255, 255, 0.08);
+        border: 0.5px solid var(--border);
       }
 
       .form-btn-cancel:hover {
@@ -428,7 +428,7 @@
       }
 
       .form-status {
-        font-size: 12px;
+        font-size: var(--font-size-small);
         margin-top: 8px;
         display: none;
       }
@@ -437,10 +437,10 @@
         display: block;
       }
       .form-status.error {
-        color: #f87171;
+        color: var(--error);
       }
       .form-status.success {
-        color: #34d399;
+        color: var(--success);
       }
 
       /* ── Section header ───────────────── */
@@ -450,7 +450,7 @@
         align-items: center;
         gap: 8px;
         padding: 8px 12px 4px;
-        font-size: 10px;
+        font-size: var(--font-size-micro);
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.8px;
@@ -471,7 +471,7 @@
         gap: 12px;
         padding: 12px 16px;
         border-top: 0.5px solid rgba(255, 255, 255, 0.06);
-        font-size: 11px;
+        font-size: var(--font-size-x-small);
         color: rgba(255, 255, 255, 0.2);
         margin-top: auto;
         flex-shrink: 0;
@@ -487,7 +487,7 @@
         background: rgba(255, 255, 255, 0.06);
         border: 0.5px solid rgba(255, 255, 255, 0.1);
         border-radius: 4px;
-        font-size: 10px;
+        font-size: var(--font-size-micro);
         font-family: inherit;
         color: rgba(255, 255, 255, 0.35);
       }
@@ -499,18 +499,18 @@
       }
 
       .footer .brand-label {
-        margin-left: auto;
         font-weight: 500;
-        font-size: 10px;
+        font-size: var(--font-size-micro);
         letter-spacing: 0.5px;
         color: rgba(255, 255, 255, 0.2);
+        flex: 1;
       }
 
       .settings-btn {
         width: 24px;
         height: 24px;
         border: none;
-        border-radius: 6px;
+        border-radius: var(--radius-sm);
         background: transparent;
         cursor: pointer;
         display: flex;
@@ -523,7 +523,7 @@
       }
 
       .settings-btn:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: var(--border);
       }
 
       .settings-btn.active {
@@ -535,48 +535,81 @@
         height: 14px;
       }
 
-      /* ── Provider status ────────────── */
-
-      .provider-status {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 11px;
-        color: rgba(255, 255, 255, 0.35);
-      }
-
-      .pulse-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: #34d399;
-        flex-shrink: 0;
-        animation: pulse 2s ease-in-out infinite;
-      }
-
-      .pulse-dot.offline {
-        background: rgba(255, 255, 255, 0.15);
-        animation: none;
-      }
-
-      @keyframes pulse {
-        0%,
-        100% {
-          opacity: 1;
-          box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4);
-        }
-        50% {
-          opacity: 0.7;
-          box-shadow: 0 0 0 4px rgba(52, 211, 153, 0);
-        }
-      }
-
       .empty-state {
         padding: 24px;
         text-align: center;
         color: rgba(255, 255, 255, 0.25);
-        font-size: 13px;
+        font-size: var(--font-size-label);
         display: none;
+      }
+
+      /* ── Language panel ──────────────── */
+
+      .language-panel {
+        display: none;
+        border-top: 0.5px solid var(--border);
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.12);
+        animation: fadeIn 0.15s ease;
+        flex: 1;
+        overflow: hidden;
+        flex-direction: column;
+      }
+
+      .language-panel.visible {
+        display: flex;
+      }
+
+      .language-list {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .language-list::-webkit-scrollbar {
+        width: 3px;
+      }
+      .language-list::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .language-list::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+      }
+
+      .lang-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: background 0.08s ease;
+        font-size: var(--font-size-label);
+        color: rgba(255, 255, 255, 0.75);
+        flex-shrink: 0;
+      }
+
+      .lang-option:hover {
+        background: var(--border);
+      }
+
+      .lang-option.active {
+        background: rgba(3, 139, 154, 0.15);
+        color: var(--accent);
+      }
+
+      .lang-option .lang-check {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        opacity: 0;
+      }
+
+      .lang-option.active .lang-check {
+        opacity: 1;
       }
     </style>
   </head>
@@ -643,15 +676,15 @@
             />
           </svg>
         </div>
-        <input type="text" id="search" placeholder="Search commands..." autofocus />
+        <input type="text" id="search" data-i18n-placeholder="palette.searchPlaceholder" placeholder="Search commands..." autofocus />
       </div>
       <div class="command-list" id="command-list"></div>
-      <div class="empty-state" id="empty-state">No matching commands</div>
+      <div class="empty-state" id="empty-state" data-i18n="palette.noResults">No matching commands</div>
       <div class="result-panel" id="result-panel"></div>
 
       <!-- Telegram panel -->
       <div class="telegram-form" id="telegram-form">
-        <div class="tg-section-title">Connected Bots</div>
+        <div class="tg-section-title" data-i18n="palette.connectedBots">Connected Bots</div>
 
         <!-- Bot cards container -->
         <div id="tg-bot-list"></div>
@@ -666,13 +699,13 @@
               stroke-linecap="round"
             />
           </svg>
-          Add Bot
+          <span data-i18n="palette.addBot">Add Bot</span>
         </button>
 
         <!-- Connect form (hidden by default) -->
         <div class="tg-connect-form" id="tg-form-fields">
           <div class="form-field">
-            <label>Your User ID</label>
+            <label data-i18n="palette.yourUserId">Your User ID</label>
             <input
               type="text"
               id="tg-userid"
@@ -680,26 +713,28 @@
               inputmode="numeric"
               autocomplete="off"
             />
-            <div class="field-hint">Get from @userinfobot on Telegram</div>
+            <div class="field-hint" data-i18n="palette.userIdHint">Get from @userinfobot on Telegram</div>
           </div>
           <div class="form-field">
-            <label>Bot Token</label>
+            <label data-i18n="palette.botToken">Bot Token</label>
             <input type="password" id="tg-token" placeholder="123456:ABC-DEF..." />
-            <div class="field-hint">Get from @BotFather on Telegram</div>
+            <div class="field-hint" data-i18n="palette.botTokenHint">Get from @BotFather on Telegram</div>
           </div>
           <div class="form-status" id="tg-status"></div>
           <div class="form-actions">
-            <button class="form-btn form-btn-cancel" id="tg-cancel">Cancel</button>
-            <button class="form-btn form-btn-primary" id="tg-submit" disabled>Connect</button>
+            <button class="form-btn form-btn-cancel" id="tg-cancel" data-i18n="palette.cancel">Cancel</button>
+            <button class="form-btn form-btn-primary" id="tg-submit" disabled data-i18n="palette.connect">Connect</button>
           </div>
         </div>
       </div>
 
+      <!-- Language panel -->
+      <div class="language-panel" id="language-panel">
+        <div class="tg-section-title" data-i18n="palette.interfaceLanguage">Interface Language</div>
+        <div class="language-list" id="language-list"></div>
+      </div>
+
       <div class="footer">
-        <div class="provider-status" id="provider-status">
-          <span class="pulse-dot offline"></span>
-          <span id="provider-label">No provider</span>
-        </div>
         <span class="brand-label">Sauria</span>
         <button class="settings-btn" id="settings-btn" title="Developer settings">
           <svg viewBox="0 0 24 24" fill="none">

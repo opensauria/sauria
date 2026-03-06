@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY apps/daemon/ ./apps/daemon/
 RUN pnpm turbo run build --filter='./packages/*'
-RUN pnpm --filter @opensauria/daemon run build
+RUN pnpm --filter @sauria/daemon run build
 
 # Remove devDependencies for production
 RUN pnpm prune --prod
@@ -20,26 +20,26 @@ RUN pnpm prune --prod
 # Stage 2: Production
 FROM node:24-alpine AS production
 
-RUN addgroup -g 1000 opensauria && \
-    adduser -u 1000 -G opensauria -s /bin/sh -D opensauria
+RUN addgroup -g 1000 sauria && \
+    adduser -u 1000 -G sauria -s /bin/sh -D sauria
 
 WORKDIR /app
 
-COPY --from=build --chown=opensauria:opensauria /app/apps/daemon/dist ./dist
-COPY --from=build --chown=opensauria:opensauria /app/node_modules ./node_modules
-COPY --from=build --chown=opensauria:opensauria /app/apps/daemon/package.json ./package.json
+COPY --from=build --chown=sauria:sauria /app/apps/daemon/dist ./dist
+COPY --from=build --chown=sauria:sauria /app/node_modules ./node_modules
+COPY --from=build --chown=sauria:sauria /app/apps/daemon/package.json ./package.json
 
-RUN mkdir -p /home/opensauria/.opensauria/logs \
-             /home/opensauria/.opensauria/tmp \
-             /home/opensauria/.opensauria/exports \
-             /home/opensauria/.opensauria/vault && \
-    chown -R opensauria:opensauria /home/opensauria/.opensauria
+RUN mkdir -p /home/sauria/.sauria/logs \
+             /home/sauria/.sauria/tmp \
+             /home/sauria/.sauria/exports \
+             /home/sauria/.sauria/vault && \
+    chown -R sauria:sauria /home/sauria/.sauria
 
-USER opensauria
+USER sauria
 
 ENV NODE_ENV=production
 
 ENTRYPOINT ["node", "dist/cli.js"]
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD node -e "require('net').connect('/home/opensauria/.opensauria/daemon.sock').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"
+  CMD node -e "require('net').connect('/home/sauria/.sauria/daemon.sock').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"

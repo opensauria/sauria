@@ -1,4 +1,4 @@
-import type { OpenSauriaConfig, ModelConfig } from '../config/schema.js';
+import type { SauriaConfig, ModelConfig } from '../config/schema.js';
 import { CircuitBreaker } from '../orchestrator/circuit-breaker.js';
 import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
 import type { RateLimiter } from '../security/rate-limiter.js';
@@ -27,7 +27,7 @@ export class ModelRouter {
   private onCost: CostCallback | undefined;
 
   constructor(
-    private readonly config: OpenSauriaConfig,
+    private readonly config: SauriaConfig,
     private readonly getApiKey: ApiKeyGetter,
   ) {
     this.extractionLimiter = createLimiter(

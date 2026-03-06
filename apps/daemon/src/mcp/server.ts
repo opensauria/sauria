@@ -32,7 +32,7 @@ interface McpServerDeps {
 
 export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
   const { db, router, audit } = deps;
-  const server = new McpServer({ name: 'opensauria', version: '0.1.0' });
+  const server = new McpServer({ name: 'sauria', version: '0.1.0' });
   const limiter = createLimiter('mcp', SECURITY_LIMITS.mcp.maxQueriesPerMinute, 60_000);
 
   function guardRateLimit(toolName: ToolName): void {
@@ -52,13 +52,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
   registerTool(
     server,
-    'opensauria_query',
-    TOOL_DEFS.opensauria_query.description,
-    TOOL_DEFS.opensauria_query.schema.shape,
+    'sauria_query',
+    TOOL_DEFS.sauria_query.description,
+    TOOL_DEFS.sauria_query.schema.shape,
     async (raw) => {
-      guardRateLimit('opensauria_query');
-      const { query } = validateToolInput('opensauria_query', raw);
-      auditToolCall('opensauria_query', raw);
+      guardRateLimit('sauria_query');
+      const { query } = validateToolInput('sauria_query', raw);
+      auditToolCall('sauria_query', raw);
       const entities = searchEntities(db, query);
       const context = entities.map(formatEntity).join('\n\n');
       return textResult(await reasonAbout(router, context, query));
@@ -67,13 +67,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
   registerTool(
     server,
-    'opensauria_get_entity',
-    TOOL_DEFS.opensauria_get_entity.description,
-    TOOL_DEFS.opensauria_get_entity.schema.shape,
+    'sauria_get_entity',
+    TOOL_DEFS.sauria_get_entity.description,
+    TOOL_DEFS.sauria_get_entity.schema.shape,
     async (raw) => {
-      guardRateLimit('opensauria_get_entity');
-      const { name } = validateToolInput('opensauria_get_entity', raw);
-      auditToolCall('opensauria_get_entity', raw);
+      guardRateLimit('sauria_get_entity');
+      const { name } = validateToolInput('sauria_get_entity', raw);
+      auditToolCall('sauria_get_entity', raw);
       const entity = getEntityByName(db, name);
       if (!entity) return textResult(`Entity "${name}" not found.`);
       const relations = getEntityRelations(db, entity.id);
@@ -96,13 +96,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
   registerTool(
     server,
-    'opensauria_search',
-    TOOL_DEFS.opensauria_search.description,
-    TOOL_DEFS.opensauria_search.schema.shape,
+    'sauria_search',
+    TOOL_DEFS.sauria_search.description,
+    TOOL_DEFS.sauria_search.schema.shape,
     async (raw) => {
-      guardRateLimit('opensauria_search');
-      const { query, limit } = validateToolInput('opensauria_search', raw);
-      auditToolCall('opensauria_search', raw);
+      guardRateLimit('sauria_search');
+      const { query, limit } = validateToolInput('sauria_search', raw);
+      auditToolCall('sauria_search', raw);
       const results = hybridSearch(db, query, null, limit);
       if (results.length === 0) return textResult('No results found.');
       return textResult(results.map((e, i) => `${i + 1}. ${formatEntity(e)}`).join('\n\n'));
@@ -111,13 +111,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
   registerTool(
     server,
-    'opensauria_get_upcoming',
-    TOOL_DEFS.opensauria_get_upcoming.description,
-    TOOL_DEFS.opensauria_get_upcoming.schema.shape,
+    'sauria_get_upcoming',
+    TOOL_DEFS.sauria_get_upcoming.description,
+    TOOL_DEFS.sauria_get_upcoming.schema.shape,
     async (raw) => {
-      guardRateLimit('opensauria_get_upcoming');
-      const { hours } = validateToolInput('opensauria_get_upcoming', raw);
-      auditToolCall('opensauria_get_upcoming', raw);
+      guardRateLimit('sauria_get_upcoming');
+      const { hours } = validateToolInput('sauria_get_upcoming', raw);
+      auditToolCall('sauria_get_upcoming', raw);
       const events = getUpcomingDeadlines(db, hours);
       if (events.length === 0) return textResult(`No upcoming events in the next ${hours} hours.`);
       const lines = events.map(
@@ -129,13 +129,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
   registerTool(
     server,
-    'opensauria_get_insights',
-    TOOL_DEFS.opensauria_get_insights.description,
-    TOOL_DEFS.opensauria_get_insights.schema.shape,
+    'sauria_get_insights',
+    TOOL_DEFS.sauria_get_insights.description,
+    TOOL_DEFS.sauria_get_insights.schema.shape,
     async (raw) => {
-      guardRateLimit('opensauria_get_insights');
-      const { entityName, limit } = validateToolInput('opensauria_get_insights', raw);
-      auditToolCall('opensauria_get_insights', raw);
+      guardRateLimit('sauria_get_insights');
+      const { entityName, limit } = validateToolInput('sauria_get_insights', raw);
+      auditToolCall('sauria_get_insights', raw);
       let rows: unknown[];
       if (entityName) {
         const entity = getEntityByName(db, entityName);
@@ -172,13 +172,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
   registerTool(
     server,
-    'opensauria_get_context_for',
-    TOOL_DEFS.opensauria_get_context_for.description,
-    TOOL_DEFS.opensauria_get_context_for.schema.shape,
+    'sauria_get_context_for',
+    TOOL_DEFS.sauria_get_context_for.description,
+    TOOL_DEFS.sauria_get_context_for.schema.shape,
     async (raw) => {
-      guardRateLimit('opensauria_get_context_for');
-      const { topic } = validateToolInput('opensauria_get_context_for', raw);
-      auditToolCall('opensauria_get_context_for', raw);
+      guardRateLimit('sauria_get_context_for');
+      const { topic } = validateToolInput('sauria_get_context_for', raw);
+      auditToolCall('sauria_get_context_for', raw);
       const entities = hybridSearch(db, topic, null, 10);
       const sections: string[] = [`Context for: ${topic}\n`];
       for (const entity of entities) {
@@ -208,13 +208,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
   registerTool(
     server,
-    'opensauria_add_event',
-    TOOL_DEFS.opensauria_add_event.description,
-    TOOL_DEFS.opensauria_add_event.schema.shape,
+    'sauria_add_event',
+    TOOL_DEFS.sauria_add_event.description,
+    TOOL_DEFS.sauria_add_event.schema.shape,
     async (raw) => {
-      guardRateLimit('opensauria_add_event');
-      const input = validateToolInput('opensauria_add_event', raw);
-      auditToolCall('opensauria_add_event', raw);
+      guardRateLimit('sauria_add_event');
+      const input = validateToolInput('sauria_add_event', raw);
+      auditToolCall('sauria_add_event', raw);
       const eventId = nanoid();
       const contentHash = audit.hashContent(input.content);
       const entityIds = input.entityNames
@@ -235,13 +235,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
   registerTool(
     server,
-    'opensauria_remember',
-    TOOL_DEFS.opensauria_remember.description,
-    TOOL_DEFS.opensauria_remember.schema.shape,
+    'sauria_remember',
+    TOOL_DEFS.sauria_remember.description,
+    TOOL_DEFS.sauria_remember.schema.shape,
     async (raw) => {
-      guardRateLimit('opensauria_remember');
-      const { entities, relations } = validateToolInput('opensauria_remember', raw);
-      auditToolCall('opensauria_remember', raw);
+      guardRateLimit('sauria_remember');
+      const { entities, relations } = validateToolInput('sauria_remember', raw);
+      auditToolCall('sauria_remember', raw);
 
       const entityIdMap = new Map<string, string>();
 
@@ -291,13 +291,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
     registerTool(
       server,
-      'opensauria_pending_approvals',
-      TOOL_DEFS.opensauria_pending_approvals.description,
-      TOOL_DEFS.opensauria_pending_approvals.schema.shape,
+      'sauria_pending_approvals',
+      TOOL_DEFS.sauria_pending_approvals.description,
+      TOOL_DEFS.sauria_pending_approvals.schema.shape,
       async (raw) => {
-        guardRateLimit('opensauria_pending_approvals');
-        validateToolInput('opensauria_pending_approvals', raw);
-        auditToolCall('opensauria_pending_approvals', raw);
+        guardRateLimit('sauria_pending_approvals');
+        validateToolInput('sauria_pending_approvals', raw);
+        auditToolCall('sauria_pending_approvals', raw);
 
         const pending = cm.getPending();
         if (pending.length === 0) return textResult('No pending approvals.');
@@ -317,13 +317,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
     registerTool(
       server,
-      'opensauria_approve',
-      TOOL_DEFS.opensauria_approve.description,
-      TOOL_DEFS.opensauria_approve.schema.shape,
+      'sauria_approve',
+      TOOL_DEFS.sauria_approve.description,
+      TOOL_DEFS.sauria_approve.schema.shape,
       async (raw) => {
-        guardRateLimit('opensauria_approve');
-        const { approvalId } = validateToolInput('opensauria_approve', raw);
-        auditToolCall('opensauria_approve', raw);
+        guardRateLimit('sauria_approve');
+        const { approvalId } = validateToolInput('sauria_approve', raw);
+        auditToolCall('sauria_approve', raw);
 
         // Get agent ID before approving (approve changes status)
         const pendingList = cm.getPending();
@@ -346,13 +346,13 @@ export async function startMcpServer(deps: McpServerDeps): Promise<McpServer> {
 
     registerTool(
       server,
-      'opensauria_reject',
-      TOOL_DEFS.opensauria_reject.description,
-      TOOL_DEFS.opensauria_reject.schema.shape,
+      'sauria_reject',
+      TOOL_DEFS.sauria_reject.description,
+      TOOL_DEFS.sauria_reject.schema.shape,
       async (raw) => {
-        guardRateLimit('opensauria_reject');
-        const { approvalId } = validateToolInput('opensauria_reject', raw);
-        auditToolCall('opensauria_reject', raw);
+        guardRateLimit('sauria_reject');
+        const { approvalId } = validateToolInput('sauria_reject', raw);
+        auditToolCall('sauria_reject', raw);
 
         cm.reject(approvalId);
         audit.logAction('mcp:approval_rejected', { approvalId });

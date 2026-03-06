@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { t, applyTranslations } from '../i18n.js';
 
 // ── Types ─────────────────────────────────────
 
@@ -45,21 +46,25 @@ interface ConnectResult {
 
 // ── Category Config ──────────────────────────
 
-const CATEGORY_ORDER: readonly { readonly id: string; readonly label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'communication', label: 'Communication' },
-  { id: 'project_management', label: 'Project Mgmt' },
-  { id: 'development', label: 'Development' },
-  { id: 'productivity', label: 'Productivity' },
-  { id: 'infrastructure', label: 'Infrastructure' },
-  { id: 'monitoring', label: 'Monitoring' },
-  { id: 'ecommerce', label: 'E-commerce' },
-  { id: 'design', label: 'Design' },
-  { id: 'data', label: 'Data' },
-  { id: 'crm', label: 'CRM' },
-  { id: 'automation', label: 'Automation' },
-  { id: 'content', label: 'Content' },
-  { id: 'storage', label: 'Storage' },
+const CATEGORY_ORDER: readonly { readonly id: string; readonly labelKey: string }[] = [
+  { id: 'all', labelKey: 'integ.catAll' },
+  { id: 'communication', labelKey: 'integ.catCommunication' },
+  { id: 'project_management', labelKey: 'integ.catProjectMgmt' },
+  { id: 'development', labelKey: 'integ.catDevelopment' },
+  { id: 'productivity', labelKey: 'integ.catProductivity' },
+  { id: 'infrastructure', labelKey: 'integ.catInfrastructure' },
+  { id: 'monitoring', labelKey: 'integ.catMonitoring' },
+  { id: 'ecommerce', labelKey: 'integ.catEcommerce' },
+  { id: 'design', labelKey: 'integ.catDesign' },
+  { id: 'data', labelKey: 'integ.catData' },
+  { id: 'crm', labelKey: 'integ.catCRM' },
+  { id: 'support', labelKey: 'integ.catSupport' },
+  { id: 'automation', labelKey: 'integ.catAutomation' },
+  { id: 'social', labelKey: 'integ.catSocial' },
+  { id: 'marketing', labelKey: 'integ.catMarketing' },
+  { id: 'cms', labelKey: 'integ.catCMS' },
+  { id: 'content', labelKey: 'integ.catContent' },
+  { id: 'storage', labelKey: 'integ.catStorage' },
 ];
 
 // ── State ─────────────────────────────────────
@@ -113,7 +118,7 @@ function renderTabs(): void {
   categoryTabs.innerHTML = tabs
     .map(
       (cat) =>
-        `<button class="category-tab ${cat.id === activeCategory ? 'active' : ''}" data-category="${cat.id}">${cat.label}</button>`,
+        `<button class="category-tab ${cat.id === activeCategory ? 'active' : ''}" data-category="${cat.id}">${t(cat.labelKey)}</button>`,
     )
     .join('');
 
@@ -150,10 +155,10 @@ function renderCard(
       <div class="integration-card-footer">
         ${
           isConnected
-            ? `<span class="badge badge-success">Connected</span>`
-            : `<span class="badge badge-error">Disconnected</span>`
+            ? `<span class="badge badge-success">${t('integ.connected')}</span>`
+            : `<span class="badge badge-error">${t('integ.disconnected')}</span>`
         }
-        ${toolCount > 0 ? `<span class="badge badge-accent">${toolCount} ${id === 'telegram' ? (toolCount === 1 ? 'bot' : 'bots') : 'tools'}</span>` : ''}
+        ${toolCount > 0 ? `<span class="badge badge-accent">${toolCount} ${id === 'telegram' ? (toolCount === 1 ? t('integ.bot') : t('integ.bots')) : t('integ.tools')}</span>` : ''}
       </div>
       <span class="integration-card-category">${category.replaceAll('_', ' ')}</span>
     </div>`;
@@ -204,7 +209,7 @@ function renderGrid(): void {
 
   if (cards.length === 0) {
     grid.innerHTML = `<div class="integrations-loading" style="padding-top:40px">
-      <span style="color:var(--text-dim);font-size:13px">No integrations found</span>
+      <span style="color:var(--text-dim);font-size:13px">${t('integ.noResults')}</span>
     </div>`;
     return;
   }
@@ -258,9 +263,9 @@ async function renderTelegramPanel(): Promise<void> {
           ${avatarHtml}
           <div class="tg-bot-info">
             <div class="tg-bot-name">${name}</div>
-            <div class="tg-bot-status"><span class="tg-bot-dot"></span>Online</div>
+            <div class="tg-bot-status"><span class="tg-bot-dot"></span>${t('integ.online')}</div>
           </div>
-          <button class="tg-bot-disconnect" data-node-id="${bot.nodeId ?? ''}" title="Disconnect">
+          <button class="tg-bot-disconnect" data-node-id="${bot.nodeId ?? ''}" title="${t('integ.disconnect')}">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </button>
         </div>`;
@@ -271,19 +276,19 @@ async function renderTelegramPanel(): Promise<void> {
     ${botCards ? `<div class="tg-bot-list">${botCards}</div>` : ''}
     <div class="tg-connect-section" id="tg-connect-section" style="${connected.length > 0 ? 'display:none' : ''}">
       <div class="config-field">
-        <label class="config-label">Telegram User ID</label>
-        <input class="config-input" type="text" id="tg-userid" placeholder="Get from @userinfobot" autocomplete="off" />
+        <label class="config-label">${t('integ.telegramUserId')}</label>
+        <input class="config-input" type="text" id="tg-userid" placeholder="${t('integ.userIdHint')}" autocomplete="off" />
       </div>
       <div class="config-field">
-        <label class="config-label">Bot Token</label>
-        <input class="config-input" type="password" id="tg-token" placeholder="From @BotFather" autocomplete="off" />
+        <label class="config-label">${t('integ.botToken')}</label>
+        <input class="config-input" type="password" id="tg-token" placeholder="${t('integ.tokenHint')}" autocomplete="off" />
       </div>
       <div class="form-status" id="tg-status"></div>
       <div class="config-actions">
-        <button class="btn btn-primary" id="tg-submit" disabled>Connect Bot</button>
+        <button class="btn btn-primary" id="tg-submit" disabled>${t('integ.connectBot')}</button>
       </div>
     </div>
-    ${connected.length > 0 ? `<button class="tg-add-card" id="tg-add-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span>Add Bot</span></button>` : ''}
+    ${connected.length > 0 ? `<button class="tg-add-card" id="tg-add-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span>${t('integ.addBot')}</span></button>` : ''}
   `;
 
   // Wire disconnect buttons
@@ -325,14 +330,14 @@ async function renderTelegramPanel(): Promise<void> {
       const rawId = userIdInput.value.trim().replace(/\D/g, '');
       const parsedId = parseInt(rawId, 10);
       if (!rawId || isNaN(parsedId) || parsedId <= 0) {
-        statusEl.textContent = 'User ID must be a number (get it from @userinfobot)';
+        statusEl.textContent = t('integ.userIdError');
         statusEl.className = 'form-status visible error';
         userIdInput.focus();
         return;
       }
 
       submitBtn.disabled = true;
-      statusEl.textContent = 'Connecting...';
+      statusEl.textContent = t('integ.connecting');
       statusEl.className = 'form-status visible';
 
       try {
@@ -341,7 +346,7 @@ async function renderTelegramPanel(): Promise<void> {
           credentials: { token: tokenInput.value.trim(), userId: parsedId },
         });
         if (result.success) {
-          statusEl.textContent = `Connected to @${result.botUsername}`;
+          statusEl.textContent = `${t('integ.connectedTo')} @${result.botUsername}`;
           statusEl.className = 'form-status visible success';
           setTimeout(async () => {
             await renderTelegramPanel();
@@ -349,12 +354,12 @@ async function renderTelegramPanel(): Promise<void> {
             renderGrid();
           }, 800);
         } else {
-          statusEl.textContent = result.error ?? 'Connection failed';
+          statusEl.textContent = result.error ?? t('integ.connectionFailed');
           statusEl.className = 'form-status visible error';
           submitBtn.disabled = false;
         }
       } catch {
-        statusEl.textContent = 'Connection failed';
+        statusEl.textContent = t('integ.connectionFailed');
         statusEl.className = 'form-status visible error';
         submitBtn.disabled = false;
       }
@@ -375,7 +380,7 @@ function renderConnectForm(item: IntegrationStatus): void {
         class="config-input"
         type="password"
         data-key="${key}"
-        placeholder="Enter ${formatLabel(key).toLowerCase()}"
+        placeholder="${t('integ.enter')} ${formatLabel(key).toLowerCase()}"
         autocomplete="off"
       />
     </div>
@@ -387,7 +392,7 @@ function renderConnectForm(item: IntegrationStatus): void {
     ${item.error ? `<div class="config-error">${item.error}</div>` : ''}
     ${fields}
     <div class="config-actions">
-      <button class="btn btn-primary" id="config-connect">Connect</button>
+      <button class="btn btn-primary" id="config-connect">${t('integ.connect')}</button>
     </div>
   `;
 
@@ -397,17 +402,17 @@ function renderConnectForm(item: IntegrationStatus): void {
 function renderConnectedPanel(item: IntegrationStatus): void {
   const toolsList = item.tools
     .slice(0, 15)
-    .map((t) => `<div class="config-tool-item">${t.name}</div>`)
+    .map((tool) => `<div class="config-tool-item">${tool.name}</div>`)
     .join('');
 
   configBody.innerHTML = `
     <div class="config-tools">
-      <div class="config-tools-title">Available tools (${item.tools.length})</div>
+      <div class="config-tools-title">${t('integ.availableTools')} (${item.tools.length})</div>
       ${toolsList}
-      ${item.tools.length > 15 ? `<div class="config-tool-item" style="color:var(--text-dim)">+${item.tools.length - 15} more</div>` : ''}
+      ${item.tools.length > 15 ? `<div class="config-tool-item" style="color:var(--text-dim)">+${item.tools.length - 15} ${t('integ.more')}</div>` : ''}
     </div>
     <div class="config-actions">
-      <button class="btn btn-secondary" id="config-disconnect">Disconnect</button>
+      <button class="btn btn-secondary" id="config-disconnect">${t('integ.disconnect')}</button>
     </div>
   `;
 
@@ -432,7 +437,7 @@ async function handleConnect(item: IntegrationStatus): Promise<void> {
 
   const btn = document.getElementById('config-connect') as HTMLButtonElement;
   btn.disabled = true;
-  btn.textContent = 'Connecting...';
+  btn.textContent = t('integ.connecting');
 
   try {
     await invoke('integrations_connect', { id: item.id, credentials });
@@ -445,7 +450,7 @@ async function handleConnect(item: IntegrationStatus): Promise<void> {
     }
   } catch (err: unknown) {
     btn.disabled = false;
-    btn.textContent = 'Connect';
+    btn.textContent = t('integ.connect');
     const errorDiv = document.createElement('div');
     errorDiv.className = 'config-error';
     errorDiv.textContent = err instanceof Error ? err.message : String(err);
@@ -456,7 +461,7 @@ async function handleConnect(item: IntegrationStatus): Promise<void> {
 async function handleDisconnect(id: string): Promise<void> {
   const btn = document.getElementById('config-disconnect') as HTMLButtonElement;
   btn.disabled = true;
-  btn.textContent = 'Disconnecting...';
+  btn.textContent = t('integ.disconnecting');
 
   try {
     await invoke('integrations_disconnect', { id });
@@ -464,7 +469,7 @@ async function handleDisconnect(id: string): Promise<void> {
     configPanel.classList.remove('open');
   } catch {
     btn.disabled = false;
-    btn.textContent = 'Disconnect';
+    btn.textContent = t('integ.disconnect');
   }
 }
 
@@ -529,10 +534,22 @@ document.documentElement.style.background = 'transparent';
   invoke('navigate_back');
 });
 
+applyTranslations();
+
+// Retry-aware invoke: if first attempt fails (stale connection), retry once
+async function invokeWithRetry<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  try {
+    return await invoke<T>(cmd, args);
+  } catch {
+    // First failure clears stale connection; second attempt reconnects
+    return invoke<T>(cmd, args);
+  }
+}
+
 // Load both catalogs in parallel
 Promise.all([
-  invoke<IntegrationStatus[]>('integrations_list_catalog').catch(() => []),
-  invoke<TelegramStatus>('get_telegram_status').catch(() => ({ bots: [] })),
+  invokeWithRetry<IntegrationStatus[]>('integrations_list_catalog').catch(() => []),
+  invokeWithRetry<TelegramStatus>('get_telegram_status').catch(() => ({ bots: [] as TelegramBot[] })),
 ]).then(([mcpCatalog, tgStatus]) => {
   catalog = mcpCatalog;
   telegramBots = tgStatus.bots ?? [];

@@ -11,7 +11,7 @@ describe('DelegationTracker', () => {
   beforeEach(() => {
     db = new Database(':memory:');
     applySchema(db);
-    runMigrations(db);
+    runMigrations(db, '/tmp');
     tracker = new DelegationTracker(db);
   });
 

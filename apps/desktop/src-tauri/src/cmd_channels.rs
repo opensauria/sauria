@@ -24,6 +24,14 @@ fn write_config(paths: &Paths, config: &Value) {
     );
 }
 
+pub fn read_profiles_pub(paths: &Paths) -> Value {
+    read_profiles(paths)
+}
+
+pub fn write_profiles_pub(paths: &Paths, profiles: &Value) {
+    write_profiles(paths, profiles)
+}
+
 fn read_profiles(paths: &Paths) -> Value {
     if !paths.bot_profiles.exists() {
         return Value::Object(Default::default());
@@ -53,6 +61,12 @@ pub async fn connect_channel(
         "slack" => connect_slack(&credentials, &paths, &daemon_state).await,
         "whatsapp" => connect_whatsapp(&credentials, &paths, &daemon_state).await,
         "discord" => connect_discord(&credentials, &paths, &daemon_state).await,
+        "teams" => connect_teams(&credentials, &paths, &daemon_state).await,
+        "messenger" => connect_messenger(&credentials, &paths, &daemon_state).await,
+        "line" => connect_line(&credentials, &paths, &daemon_state).await,
+        "google-chat" => connect_google_chat(&credentials, &paths, &daemon_state).await,
+        "twilio" => connect_twilio(&credentials, &paths, &daemon_state).await,
+        "matrix" => connect_matrix(&credentials, &paths, &daemon_state).await,
         "email" => connect_email(&credentials, &paths, &daemon_state).await,
         "gmail" => Ok(serde_json::json!({
             "success": false,
@@ -133,23 +147,16 @@ async fn connect_telegram(
         Some(format!("data:{mime};base64,{b64}"))
     }.await;
 
-    // Generate nodeId
-    let node_id = creds
-        .get("nodeId")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| {
-            format!(
-                "{}{}",
-                format!("{:x}", std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_millis()),
-                &uuid_fragment()
-            )
-        });
+    // Deterministic nodeId from bot identity
+    let node_id = format!("telegram_{bot_id}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
 
     vault::vault_store(paths, &format!("channel_token_{node_id}"), token)?;
+
+    // Clean up temp vault key if ID changed
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
+    }
 
     // Update profiles
     let mut profiles = read_profiles(paths);
@@ -228,13 +235,19 @@ async fn connect_slack(
         return Ok(serde_json::json!({"success": false, "error": error}));
     }
 
+    let user_id = body.get("user_id").and_then(|v| v.as_str()).unwrap_or("");
+    let node_id = format!("slack_{user_id}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
+
     vault::vault_store(paths, "slack_bot_token", token)?;
     vault::vault_store(paths, "slack_signing_secret", signing_secret)?;
+    vault::vault_store(paths, &format!("channel_token_{node_id}"), token)?;
+    vault::vault_store(paths, &format!("channel_signing_{node_id}"), signing_secret)?;
 
-    let node_id = creds.get("nodeId").and_then(|v| v.as_str());
-    if let Some(nid) = node_id {
-        vault::vault_store(paths, &format!("channel_token_{nid}"), token)?;
-        vault::vault_store(paths, &format!("channel_signing_{nid}"), signing_secret)?;
+    // Clean up temp vault keys if ID changed
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
+        let _ = vault::vault_delete(paths, &format!("channel_signing_{old_node_id}"));
     }
 
     let mut config = read_config(paths);
@@ -244,7 +257,7 @@ async fn connect_slack(
             ch.insert("slack".to_string(), serde_json::json!({
                 "enabled": true,
                 "workspaceId": body.get("team_id").and_then(|v| v.as_str()).unwrap_or(""),
-                "botUserId": body.get("user_id").and_then(|v| v.as_str()).unwrap_or(""),
+                "botUserId": user_id,
             }));
         }
     }
@@ -254,9 +267,10 @@ async fn connect_slack(
 
     Ok(serde_json::json!({
         "success": true,
+        "nodeId": node_id,
         "teamName": body.get("team").and_then(|v| v.as_str()).unwrap_or("Slack"),
         "teamId": body.get("team_id").and_then(|v| v.as_str()).unwrap_or(""),
-        "botUserId": body.get("user_id").and_then(|v| v.as_str()).unwrap_or(""),
+        "botUserId": user_id,
     }))
 }
 
@@ -291,11 +305,15 @@ async fn connect_whatsapp(
         return Ok(serde_json::json!({"success": false, "error": msg}));
     }
 
-    vault::vault_store(paths, "whatsapp_access_token", access_token)?;
+    let node_id = format!("whatsapp_{phone_id}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
 
-    let node_id = creds.get("nodeId").and_then(|v| v.as_str());
-    if let Some(nid) = node_id {
-        vault::vault_store(paths, &format!("channel_token_{nid}"), access_token)?;
+    vault::vault_store(paths, "whatsapp_access_token", access_token)?;
+    vault::vault_store(paths, &format!("channel_token_{node_id}"), access_token)?;
+
+    // Clean up temp vault key if ID changed
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
     }
 
     // Generate verify token
@@ -322,6 +340,7 @@ async fn connect_whatsapp(
 
     Ok(serde_json::json!({
         "success": true,
+        "nodeId": node_id,
         "displayName": body.get("verified_name").or(body.get("display_phone_number"))
             .and_then(|v| v.as_str()).unwrap_or("WhatsApp"),
     }))
@@ -355,12 +374,15 @@ async fn connect_discord(
 
     let body: Value = res.json().await.map_err(|e| e.to_string())?;
     let bot_id = body.get("id").and_then(|v| v.as_str()).unwrap_or("");
+    let node_id = format!("discord_{bot_id}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
 
     vault::vault_store(paths, "discord_bot_token", token)?;
+    vault::vault_store(paths, &format!("channel_token_{node_id}"), token)?;
 
-    let node_id = creds.get("nodeId").and_then(|v| v.as_str());
-    if let Some(nid) = node_id {
-        vault::vault_store(paths, &format!("channel_token_{nid}"), token)?;
+    // Clean up temp vault key if ID changed
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
     }
 
     let mut config = read_config(paths);
@@ -379,8 +401,319 @@ async fn connect_discord(
 
     Ok(serde_json::json!({
         "success": true,
+        "nodeId": node_id,
         "botUsername": body.get("username").and_then(|v| v.as_str()).unwrap_or("Discord Bot"),
         "botId": bot_id,
+    }))
+}
+
+async fn connect_teams(
+    creds: &Value,
+    paths: &Paths,
+    daemon_state: &Arc<Mutex<DaemonState>>,
+) -> Result<Value, String> {
+    let app_id = creds.get("appId").and_then(|v| v.as_str()).unwrap_or("");
+    let app_secret = creds.get("appSecret").and_then(|v| v.as_str()).unwrap_or("");
+    let tenant_id = creds.get("tenantId").and_then(|v| v.as_str()).unwrap_or("common");
+    if app_id.is_empty() || app_secret.is_empty() {
+        return Ok(serde_json::json!({"success": false, "error": "App ID and App Secret required"}));
+    }
+
+    // Validate credentials by fetching an OAuth token from Azure AD
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let token_url = format!(
+        "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    );
+    let body: Value = client
+        .post(&token_url)
+        .form(&[
+            ("grant_type", "client_credentials"),
+            ("client_id", app_id),
+            ("client_secret", app_secret),
+            ("scope", "https://api.botframework.com/.default"),
+        ])
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .json()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if body.get("error").is_some() {
+        let desc = body.get("error_description").and_then(|v| v.as_str()).unwrap_or("Invalid credentials");
+        return Ok(serde_json::json!({"success": false, "error": desc}));
+    }
+
+    let node_id = format!("teams_{app_id}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
+
+    vault::vault_store(paths, &format!("channel_token_{node_id}"), app_secret)?;
+    vault::vault_store(paths, &format!("channel_app_id_{node_id}"), app_id)?;
+
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
+    }
+
+    daemon_manager::restart_daemon(daemon_state, paths).await;
+
+    Ok(serde_json::json!({
+        "success": true,
+        "nodeId": node_id,
+        "displayName": "Teams Bot",
+    }))
+}
+
+async fn connect_messenger(
+    creds: &Value,
+    paths: &Paths,
+    daemon_state: &Arc<Mutex<DaemonState>>,
+) -> Result<Value, String> {
+    let page_token = creds.get("pageAccessToken").and_then(|v| v.as_str()).unwrap_or("");
+    let page_id = creds.get("pageId").and_then(|v| v.as_str()).unwrap_or("");
+    if page_token.is_empty() || page_id.is_empty() {
+        return Ok(serde_json::json!({"success": false, "error": "Page Access Token and Page ID required"}));
+    }
+
+    // Validate token by calling the Graph API
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let body: Value = client
+        .get(format!("https://graph.facebook.com/v18.0/{page_id}"))
+        .query(&[("fields", "name"), ("access_token", page_token)])
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .json()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if let Some(err) = body.get("error") {
+        let msg = err.get("message").and_then(|v| v.as_str()).unwrap_or("Invalid token");
+        return Ok(serde_json::json!({"success": false, "error": msg}));
+    }
+
+    let page_name = body.get("name").and_then(|v| v.as_str()).unwrap_or("Messenger");
+    let node_id = format!("messenger_{page_id}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
+
+    vault::vault_store(paths, &format!("channel_token_{node_id}"), page_token)?;
+
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
+    }
+
+    daemon_manager::restart_daemon(daemon_state, paths).await;
+
+    Ok(serde_json::json!({
+        "success": true,
+        "nodeId": node_id,
+        "displayName": page_name,
+    }))
+}
+
+async fn connect_line(
+    creds: &Value,
+    paths: &Paths,
+    daemon_state: &Arc<Mutex<DaemonState>>,
+) -> Result<Value, String> {
+    let channel_token = creds.get("channelAccessToken").and_then(|v| v.as_str()).unwrap_or("");
+    let channel_secret = creds.get("channelSecret").and_then(|v| v.as_str()).unwrap_or("");
+    if channel_token.is_empty() || channel_secret.is_empty() {
+        return Ok(serde_json::json!({"success": false, "error": "Channel Access Token and Channel Secret required"}));
+    }
+
+    // Validate by calling LINE Bot API
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let res = client
+        .get("https://api.line.me/v2/bot/info")
+        .bearer_auth(channel_token)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        return Ok(serde_json::json!({"success": false, "error": "Invalid LINE credentials"}));
+    }
+
+    let body: Value = res.json().await.map_err(|e| e.to_string())?;
+    let bot_id = body.get("userId").and_then(|v| v.as_str()).unwrap_or("");
+    let display_name = body.get("displayName").and_then(|v| v.as_str()).unwrap_or("LINE Bot");
+
+    let node_id = format!("line_{bot_id}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
+
+    vault::vault_store(paths, &format!("channel_token_{node_id}"), channel_token)?;
+    vault::vault_store(paths, &format!("channel_secret_{node_id}"), channel_secret)?;
+
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
+    }
+
+    daemon_manager::restart_daemon(daemon_state, paths).await;
+
+    Ok(serde_json::json!({
+        "success": true,
+        "nodeId": node_id,
+        "displayName": display_name,
+    }))
+}
+
+async fn connect_google_chat(
+    creds: &Value,
+    paths: &Paths,
+    daemon_state: &Arc<Mutex<DaemonState>>,
+) -> Result<Value, String> {
+    let sa_key = creds.get("serviceAccountKey").and_then(|v| v.as_str()).unwrap_or("");
+    let space_id = creds.get("spaceId").and_then(|v| v.as_str()).unwrap_or("");
+    if sa_key.is_empty() {
+        return Ok(serde_json::json!({"success": false, "error": "Service Account Key (JSON) required"}));
+    }
+
+    // Validate JSON structure
+    let key_json: Value = serde_json::from_str(sa_key)
+        .map_err(|_| "Invalid JSON in service account key".to_string())?;
+
+    let client_email = key_json.get("client_email").and_then(|v| v.as_str()).unwrap_or("");
+    if client_email.is_empty() {
+        return Ok(serde_json::json!({"success": false, "error": "Service account key must contain client_email"}));
+    }
+
+    let sa_id = client_email.split('@').next().unwrap_or("gchat");
+    let node_id = format!("gchat_{sa_id}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
+
+    vault::vault_store(paths, &format!("channel_token_{node_id}"), sa_key)?;
+    if !space_id.is_empty() {
+        vault::vault_store(paths, &format!("channel_space_{node_id}"), space_id)?;
+    }
+
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
+    }
+
+    daemon_manager::restart_daemon(daemon_state, paths).await;
+
+    Ok(serde_json::json!({
+        "success": true,
+        "nodeId": node_id,
+        "displayName": "Google Chat",
+    }))
+}
+
+async fn connect_twilio(
+    creds: &Value,
+    paths: &Paths,
+    daemon_state: &Arc<Mutex<DaemonState>>,
+) -> Result<Value, String> {
+    let account_sid = creds.get("accountSid").and_then(|v| v.as_str()).unwrap_or("");
+    let auth_token = creds.get("authToken").and_then(|v| v.as_str()).unwrap_or("");
+    let phone_number = creds.get("phoneNumber").and_then(|v| v.as_str()).unwrap_or("");
+    if account_sid.is_empty() || auth_token.is_empty() || phone_number.is_empty() {
+        return Ok(serde_json::json!({"success": false, "error": "Account SID, Auth Token, and Phone Number required"}));
+    }
+
+    // Validate by calling Twilio API
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let res = client
+        .get(format!("https://api.twilio.com/2010-04-01/Accounts/{account_sid}.json"))
+        .basic_auth(account_sid, Some(auth_token))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        return Ok(serde_json::json!({"success": false, "error": "Invalid Twilio credentials"}));
+    }
+
+    let body: Value = res.json().await.map_err(|e| e.to_string())?;
+    let friendly_name = body.get("friendly_name").and_then(|v| v.as_str()).unwrap_or(phone_number);
+
+    // Sanitize phone number for node ID
+    let phone_clean = phone_number.replace('+', "").replace('-', "").replace(' ', "");
+    let node_id = format!("twilio_{phone_clean}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
+
+    vault::vault_store(paths, &format!("channel_token_{node_id}"), auth_token)?;
+    vault::vault_store(paths, &format!("channel_sid_{node_id}"), account_sid)?;
+
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
+    }
+
+    daemon_manager::restart_daemon(daemon_state, paths).await;
+
+    Ok(serde_json::json!({
+        "success": true,
+        "nodeId": node_id,
+        "displayName": friendly_name,
+    }))
+}
+
+async fn connect_matrix(
+    creds: &Value,
+    paths: &Paths,
+    daemon_state: &Arc<Mutex<DaemonState>>,
+) -> Result<Value, String> {
+    let homeserver = creds.get("homeserverUrl").and_then(|v| v.as_str()).unwrap_or("");
+    let access_token = creds.get("accessToken").and_then(|v| v.as_str()).unwrap_or("");
+    if homeserver.is_empty() || access_token.is_empty() {
+        return Ok(serde_json::json!({"success": false, "error": "Homeserver URL and Access Token required"}));
+    }
+
+    // Validate by calling Matrix whoami
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let hs = homeserver.trim_end_matches('/');
+    let res = client
+        .get(format!("{hs}/_matrix/client/v3/account/whoami"))
+        .bearer_auth(access_token)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        return Ok(serde_json::json!({"success": false, "error": "Invalid Matrix credentials"}));
+    }
+
+    let body: Value = res.json().await.map_err(|e| e.to_string())?;
+    let user_id = body.get("user_id").and_then(|v| v.as_str()).unwrap_or("");
+
+    // Use user_id for deterministic node ID (e.g. @bot:matrix.org -> matrix_bot_matrix.org)
+    let clean_id = user_id.trim_start_matches('@').replace(':', "_");
+    let node_id = format!("matrix_{clean_id}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
+
+    vault::vault_store(paths, &format!("channel_token_{node_id}"), access_token)?;
+    vault::vault_store(paths, &format!("channel_homeserver_{node_id}"), hs)?;
+
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
+    }
+
+    daemon_manager::restart_daemon(daemon_state, paths).await;
+
+    Ok(serde_json::json!({
+        "success": true,
+        "nodeId": node_id,
+        "displayName": user_id,
     }))
 }
 
@@ -396,11 +729,15 @@ async fn connect_email(
         return Ok(serde_json::json!({"success": false, "error": "IMAP host, username, and password required"}));
     }
 
-    vault::vault_store(paths, "email_password", password)?;
+    let node_id = format!("email_{username}@{imap_host}");
+    let old_node_id = creds.get("nodeId").and_then(|v| v.as_str()).unwrap_or("");
 
-    let node_id = creds.get("nodeId").and_then(|v| v.as_str());
-    if let Some(nid) = node_id {
-        vault::vault_store(paths, &format!("channel_token_{nid}"), password)?;
+    vault::vault_store(paths, "email_password", password)?;
+    vault::vault_store(paths, &format!("channel_token_{node_id}"), password)?;
+
+    // Clean up temp vault key if ID changed
+    if !old_node_id.is_empty() && old_node_id != node_id {
+        let _ = vault::vault_delete(paths, &format!("channel_token_{old_node_id}"));
     }
 
     let smtp_host = creds.get("smtpHost").and_then(|v| v.as_str()).unwrap_or(imap_host);
@@ -426,7 +763,7 @@ async fn connect_email(
 
     daemon_manager::restart_daemon(daemon_state, paths).await;
 
-    Ok(serde_json::json!({"success": true, "displayName": username}))
+    Ok(serde_json::json!({"success": true, "nodeId": node_id, "displayName": username}))
 }
 
 #[tauri::command]
@@ -498,12 +835,6 @@ pub async fn disconnect_channel(
     let _ = daemon_manager::start_daemon(&daemon_state, &paths).await;
 
     Ok(serde_json::json!({"success": true}))
-}
-
-fn uuid_fragment() -> String {
-    let mut bytes = [0u8; 4];
-    rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut bytes);
-    hex::encode(bytes)
 }
 
 fn chrono_now_iso() -> String {

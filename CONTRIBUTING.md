@@ -1,12 +1,12 @@
-# Contributing to OpenSauria
+# Contributing to Sauria
 
-OpenSauria is created and maintained by [Teo Bouancheau](https://github.com/teobouancheau). Contributions are welcome and appreciated.
+Sauria is created and maintained by [Teo Bouancheau](https://github.com/teobouancheau). Contributions are welcome and appreciated.
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/teobouancheau/opensauria.git
-cd opensauria
+git clone https://github.com/teobouancheau/sauria.git
+cd sauria
 npm install
 npm run typecheck
 ```
@@ -64,7 +64,7 @@ One logical change per commit. Imperative mood, max 72 characters.
 
 ## Security Rules
 
-OpenSauria is security-first. These rules are non-negotiable:
+Sauria is security-first. These rules are non-negotiable:
 
 - **No `child_process`, `eval`, `Function()`, `vm.run`** in `src/`.
 - **No `createServer` or `.listen(`** in `src/`. Zero open ports.
@@ -111,4 +111,4 @@ npm run test:watch    # watch mode
 
 By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
 
-OpenSauria is created by Teo Bouancheau. All contributors are credited in release notes.
+Sauria is created by Teo Bouancheau. All contributors are credited in release notes.

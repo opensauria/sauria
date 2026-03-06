@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { t, applyTranslations } from '../i18n.js';
 
 /* ═══════════════════════════════════════════════
    Types
@@ -78,6 +79,7 @@ interface CanvasGraph {
   workspaces: Workspace[];
   instances?: IntegrationInstance[];
   globalInstructions: string;
+  language?: string;
   viewport: Viewport;
 }
 
@@ -90,6 +92,7 @@ interface OwnerProfile {
 interface ConnectResult {
   success: boolean;
   error?: string;
+  nodeId?: string;
   botUsername?: string;
   photo?: string;
   botId?: string;
@@ -187,6 +190,41 @@ var edgeAnimCounts = new Map<string, number>();
 var edgeActiveCounts = new Map<string, number>();
 var legendTimer: ReturnType<typeof setTimeout> | null = null;
 
+/* Confirm dialog */
+var confirmOverlay = document.getElementById('confirm-dialog-overlay') as HTMLDivElement;
+var confirmMessage = document.getElementById('confirm-dialog-message') as HTMLParagraphElement;
+var confirmBtn = document.getElementById('confirm-dialog-confirm') as HTMLButtonElement;
+var confirmCancelBtn = document.getElementById('confirm-dialog-cancel') as HTMLButtonElement;
+var confirmCallback: (() => void) | null = null;
+
+function showConfirmDialog(message: string, onConfirm: () => void): void {
+  confirmMessage.textContent = message;
+  confirmCallback = onConfirm;
+  confirmOverlay.classList.add('open');
+}
+
+function closeConfirmDialog(): void {
+  confirmOverlay.classList.remove('open');
+  confirmCallback = null;
+}
+
+confirmBtn.addEventListener('click', function () {
+  if (confirmCallback) confirmCallback();
+  closeConfirmDialog();
+});
+
+confirmCancelBtn.addEventListener('click', closeConfirmDialog);
+
+confirmOverlay.addEventListener('click', function (e) {
+  if (e.target === confirmOverlay) closeConfirmDialog();
+});
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && confirmOverlay.classList.contains('open')) {
+    closeConfirmDialog();
+  }
+});
+
 /* Integration catalog cache */
 var catalogMap = new Map<string, IntegrationDef>();
 var hoveredNodeId: string | null = null;
@@ -212,6 +250,13 @@ interface ConvMessage {
 var conversationBuffer = new Map<string, ConvMessage[]>();
 var activeConvKey: string | null = null;
 var CONV_MAX_AGE_MS = 5 * 60 * 1000;
+
+/* Activity feed state */
+var feedMode = false;
+var feedFilterNodeId: string | null = null;
+var unreadCount = 0;
+var convFilters = document.getElementById('conv-filters') as HTMLDivElement;
+var activityBadge = document.getElementById('activity-badge') as HTMLSpanElement;
 
 /* ── Shared Edge Geometry ───────────────────── */
 var CARD_FALLBACK_W = 120;
@@ -287,9 +332,96 @@ var platformIcons: Record<string, string> = {
   slack: '<img src="/icons/slack.svg" alt="Slack" />',
   whatsapp: '<img src="/icons/whatsapp.svg" alt="WhatsApp" />',
   discord: '<img src="/icons/discord.svg" alt="Discord" />',
+  teams: '<img src="/icons/teams.svg" alt="Teams" />',
+  messenger: '<img src="/icons/messenger.svg" alt="Messenger" />',
+  line: '<img src="/icons/line.svg" alt="LINE" />',
+  'google-chat': '<img src="/icons/google-chat.svg" alt="Google Chat" />',
+  twilio: '<img src="/icons/twilio.svg" alt="Twilio" />',
+  matrix: '<img src="/icons/matrix.svg" alt="Matrix" class="icon-mono" />',
   gmail: '<img src="/icons/gmail.svg" alt="Gmail" />',
   email: '<img src="/icons/email.svg" alt="Email" class="icon-mono" />',
 };
+
+/* Response language options */
+var RESPONSE_LANGUAGES = [
+  { code: 'auto', label: 'Auto-detect' },
+  { code: 'en', label: 'English' },
+  { code: 'fr', label: 'French / Francais' },
+  { code: 'es', label: 'Spanish / Espanol' },
+  { code: 'de', label: 'German / Deutsch' },
+  { code: 'it', label: 'Italian / Italiano' },
+  { code: 'pt', label: 'Portuguese / Portugues' },
+  { code: 'nl', label: 'Dutch / Nederlands' },
+  { code: 'ru', label: 'Russian' },
+  { code: 'uk', label: 'Ukrainian' },
+  { code: 'pl', label: 'Polish / Polski' },
+  { code: 'cs', label: 'Czech / Cestina' },
+  { code: 'sk', label: 'Slovak / Slovencina' },
+  { code: 'hu', label: 'Hungarian / Magyar' },
+  { code: 'ro', label: 'Romanian / Romana' },
+  { code: 'bg', label: 'Bulgarian' },
+  { code: 'hr', label: 'Croatian / Hrvatski' },
+  { code: 'sr', label: 'Serbian' },
+  { code: 'sl', label: 'Slovenian / Slovenscina' },
+  { code: 'lv', label: 'Latvian / Latviesu' },
+  { code: 'lt', label: 'Lithuanian / Lietuviu' },
+  { code: 'et', label: 'Estonian / Eesti' },
+  { code: 'sv', label: 'Swedish / Svenska' },
+  { code: 'no', label: 'Norwegian / Norsk' },
+  { code: 'da', label: 'Danish / Dansk' },
+  { code: 'fi', label: 'Finnish / Suomi' },
+  { code: 'el', label: 'Greek' },
+  { code: 'tr', label: 'Turkish / Turkce' },
+  { code: 'ar', label: 'Arabic' },
+  { code: 'he', label: 'Hebrew' },
+  { code: 'hi', label: 'Hindi' },
+  { code: 'bn', label: 'Bengali' },
+  { code: 'ta', label: 'Tamil' },
+  { code: 'te', label: 'Telugu' },
+  { code: 'mr', label: 'Marathi' },
+  { code: 'gu', label: 'Gujarati' },
+  { code: 'ur', label: 'Urdu' },
+  { code: 'fa', label: 'Persian / Farsi' },
+  { code: 'zh', label: 'Chinese' },
+  { code: 'ja', label: 'Japanese' },
+  { code: 'ko', label: 'Korean' },
+  { code: 'th', label: 'Thai' },
+  { code: 'vi', label: 'Vietnamese / Tieng Viet' },
+  { code: 'id', label: 'Indonesian / Bahasa Indonesia' },
+  { code: 'ms', label: 'Malay / Bahasa Melayu' },
+  { code: 'tl', label: 'Filipino / Tagalog' },
+  { code: 'sw', label: 'Swahili / Kiswahili' },
+  { code: 'am', label: 'Amharic' },
+  { code: 'yo', label: 'Yoruba' },
+  { code: 'ha', label: 'Hausa' },
+  { code: 'zu', label: 'Zulu / isiZulu' },
+  { code: 'af', label: 'Afrikaans' },
+  { code: 'ca', label: 'Catalan / Catala' },
+  { code: 'eu', label: 'Basque / Euskara' },
+  { code: 'gl', label: 'Galician / Galego' },
+  { code: 'cy', label: 'Welsh / Cymraeg' },
+  { code: 'ga', label: 'Irish / Gaeilge' },
+  { code: 'ka', label: 'Georgian' },
+  { code: 'hy', label: 'Armenian' },
+  { code: 'az', label: 'Azerbaijani' },
+  { code: 'uz', label: 'Uzbek' },
+  { code: 'kk', label: 'Kazakh' },
+  { code: 'mn', label: 'Mongolian' },
+  { code: 'ne', label: 'Nepali' },
+  { code: 'si', label: 'Sinhala' },
+  { code: 'km', label: 'Khmer' },
+  { code: 'lo', label: 'Lao' },
+  { code: 'my', label: 'Burmese' },
+];
+
+/* Populate response language select */
+var responseLangSelect = document.getElementById('detail-language') as HTMLSelectElement;
+for (var rl of RESPONSE_LANGUAGES) {
+  var rlOpt = document.createElement('option');
+  rlOpt.value = rl.code;
+  rlOpt.textContent = rl.label;
+  responseLangSelect.appendChild(rlOpt);
+}
 
 /* Persona templates */
 var CEO_TEMPLATE = [
@@ -355,7 +487,7 @@ async function init() {
   if (!existingOwner) {
     var cx = (window.innerWidth / 2 - vpX) / vpZoom - 60;
     graph.nodes.unshift({
-      id: 'owner-' + generateId(),
+      id: 'owner',
       platform: 'owner',
       label: ownerProfile.fullName || 'You',
       photo: ownerProfile.photo || null,
@@ -558,6 +690,116 @@ function getFieldsForPlatform(platform: string): PlatformField[] {
         type: 'password',
         placeholder: 'MTIz...',
         hint: 'From Discord Developer Portal > Bot > Token',
+      },
+    ],
+    teams: [
+      {
+        key: 'appId',
+        label: 'App ID',
+        type: 'text',
+        placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        hint: 'From Azure Bot Service > Configuration',
+      },
+      {
+        key: 'appSecret',
+        label: 'App Secret',
+        type: 'password',
+        placeholder: 'abc123...',
+        hint: 'Client secret from Azure AD app registration',
+      },
+      {
+        key: 'tenantId',
+        label: 'Tenant ID',
+        type: 'text',
+        placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        hint: 'Azure AD tenant ID (or "common" for multi-tenant)',
+      },
+    ],
+    messenger: [
+      {
+        key: 'pageAccessToken',
+        label: 'Page Access Token',
+        type: 'password',
+        placeholder: 'EAA...',
+        hint: 'From Meta Developer Portal > Messenger > Access Tokens',
+      },
+      {
+        key: 'pageId',
+        label: 'Page ID',
+        type: 'text',
+        placeholder: '1234567890',
+        hint: 'Facebook Page ID (Settings > About)',
+      },
+    ],
+    line: [
+      {
+        key: 'channelAccessToken',
+        label: 'Channel Access Token',
+        type: 'password',
+        placeholder: 'abc123...',
+        hint: 'From LINE Developers > Messaging API > Channel Access Token',
+      },
+      {
+        key: 'channelSecret',
+        label: 'Channel Secret',
+        type: 'password',
+        placeholder: 'abc123...',
+        hint: 'From LINE Developers > Basic Settings',
+      },
+    ],
+    'google-chat': [
+      {
+        key: 'serviceAccountKey',
+        label: 'Service Account Key (JSON)',
+        type: 'password',
+        placeholder: '{"type":"service_account",...}',
+        hint: 'From Google Cloud Console > IAM > Service Accounts > Keys',
+      },
+      {
+        key: 'spaceId',
+        label: 'Space ID',
+        type: 'text',
+        placeholder: 'spaces/AAAAxxx',
+        hint: 'Google Chat space to listen on',
+      },
+    ],
+    twilio: [
+      {
+        key: 'accountSid',
+        label: 'Account SID',
+        type: 'text',
+        placeholder: 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+        hint: 'From Twilio Console > Account Info',
+      },
+      {
+        key: 'authToken',
+        label: 'Auth Token',
+        type: 'password',
+        placeholder: 'abc123...',
+        hint: 'From Twilio Console > Account Info',
+      },
+      {
+        key: 'phoneNumber',
+        label: 'Phone Number',
+        type: 'text',
+        placeholder: '+1234567890',
+        hint: 'Twilio phone number (E.164 format)',
+      },
+    ],
+    matrix: [
+      {
+        key: 'homeserverUrl',
+        label: 'Homeserver URL',
+        type: 'text',
+        placeholder: 'https://matrix.org',
+        hint: 'Matrix homeserver base URL',
+      },
+      {
+        key: 'accessToken',
+        label: 'Access Token',
+        type: 'password',
+        placeholder: 'syt_xxx...',
+        hint: 'From Element > Settings > Help & About > Access Token',
       },
     ],
     gmail: [],
@@ -807,6 +1049,7 @@ function renderNodes() {
         : platformIcons[node.platform] || '';
       var displayName = node.meta.firstName || node.label.replace(/^@/, '');
       var handle = node.label.startsWith('@') ? node.label : '';
+      var botInfo = getBotInfo(node);
 
       card.innerHTML =
         '<button class="card-gear" data-action="gear" title="Settings">' +
@@ -822,6 +1065,7 @@ function renderNodes() {
         escapeHtml(displayName) +
         '</div>' +
         (handle ? '<div class="agent-handle">' + escapeHtml(handle) + '</div>' : '') +
+        (botInfo ? '<div class="agent-bot-info">' + escapeHtml(botInfo) + '</div>' : '') +
         '<span class="platform-badge ' +
         node.platform +
         '">' +
@@ -1238,9 +1482,23 @@ listen<ConvMessage>('activity:message', function (e) {
   }
   conversationBuffer.get(key)!.push(msg);
 
-  /* If this conversation is open, append live */
-  if (activeConvKey === key) {
+  /* If this conversation is open in edge mode, append live */
+  if (activeConvKey === key && !feedMode) {
     appendConversationMessage(msg);
+  }
+
+  /* If feed mode is open, append to feed */
+  if (feedMode && convPanel.classList.contains('open')) {
+    if (!feedFilterNodeId || msg.from === feedFilterNodeId || msg.to === feedFilterNodeId) {
+      appendFeedMessage(msg);
+    }
+  }
+
+  /* Track unread when panel is closed */
+  if (!convPanel.classList.contains('open')) {
+    unreadCount++;
+    activityBadge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+    activityBadge.classList.add('visible');
   }
 
   purgeOldConversations();
@@ -1269,6 +1527,15 @@ function buildParticipant(node: AgentNode | undefined): string {
 function openConversationPanel(fromId: string, toId: string): void {
   var key = convKey(fromId, toId);
   activeConvKey = key;
+  feedMode = false;
+  feedFilterNodeId = null;
+  convFilters.classList.remove('visible');
+
+  var activityBtn = document.getElementById('btn-activity-feed');
+  if (activityBtn) activityBtn.classList.remove('active');
+
+  unreadCount = 0;
+  activityBadge.classList.remove('visible');
 
   closeAgentDetail();
   closeWorkspaceDetail();
@@ -1297,11 +1564,14 @@ function openConversationPanel(fromId: string, toId: string): void {
   }
 
   convPanel.classList.add('open');
+
+  loadEdgeHistory(fromId, toId);
 }
 
 function closeConversationPanel(): void {
   convPanel.classList.remove('open');
   activeConvKey = null;
+  if (feedMode) closeActivityFeed();
 }
 
 function buildMsgBubbleHtml(msg: ConvMessage, side: string): string {
@@ -1391,6 +1661,261 @@ function purgeOldConversations(): void {
 function formatTime(iso: string): string {
   var d = new Date(iso);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+/* ── Activity Feed Functions ──────────────────── */
+
+function openActivityFeed(): void {
+  feedMode = true;
+  feedFilterNodeId = null;
+  activeConvKey = null;
+
+  closeAgentDetail();
+  closeWorkspaceDetail();
+
+  unreadCount = 0;
+  activityBadge.classList.remove('visible');
+
+  var allMessages = collectAllMessages(null);
+  convParticipants.innerHTML =
+    '<div class="conv-feed-title">' +
+    '<span class="conv-feed-title-text">Activity Feed</span>' +
+    '<span class="conv-feed-count">' + allMessages.length + ' messages</span>' +
+    '</div>';
+
+  renderFeedFilters();
+  convFilters.classList.add('visible');
+  renderFeedMessages(allMessages);
+
+  var activityBtn = document.getElementById('btn-activity-feed');
+  if (activityBtn) activityBtn.classList.add('active');
+
+  convPanel.classList.add('open');
+
+  loadFeedHistory();
+}
+
+function closeActivityFeed(): void {
+  feedMode = false;
+  feedFilterNodeId = null;
+  convFilters.classList.remove('visible');
+
+  var activityBtn = document.getElementById('btn-activity-feed');
+  if (activityBtn) activityBtn.classList.remove('active');
+}
+
+function collectAllMessages(filterNodeId: string | null): ConvMessage[] {
+  var all: ConvMessage[] = [];
+  for (var [, msgs] of conversationBuffer) {
+    for (var msg of msgs) {
+      if (!filterNodeId || msg.from === filterNodeId || msg.to === filterNodeId) {
+        all.push(msg);
+      }
+    }
+  }
+  all.sort(function (a, b) {
+    return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+  });
+  return all;
+}
+
+function renderFeedMessages(messages: ConvMessage[]): void {
+  if (messages.length === 0) {
+    convMessages.innerHTML =
+      '<div class="conv-empty">Messages will appear here as agents communicate.</div>';
+    return;
+  }
+  convMessages.innerHTML = messages
+    .map(function (msg) {
+      return buildMsgBubbleHtml(msg, 'from');
+    })
+    .join('');
+  convMessages.scrollTop = convMessages.scrollHeight;
+}
+
+function appendFeedMessage(msg: ConvMessage): void {
+  var emptyMsg = convMessages.querySelector('.conv-empty');
+  if (emptyMsg) emptyMsg.remove();
+
+  var wrapper = document.createElement('div');
+  wrapper.innerHTML = buildMsgBubbleHtml(msg, 'from');
+  var row = wrapper.firstElementChild;
+  if (row) convMessages.appendChild(row);
+  convMessages.scrollTop = convMessages.scrollHeight;
+
+  var countEl = convPanel.querySelector('.conv-feed-count');
+  if (countEl) {
+    var total = convMessages.querySelectorAll('.conv-msg-row').length;
+    countEl.textContent = total + ' messages';
+  }
+}
+
+function renderFeedFilters(): void {
+  var nodeIds = new Set<string>();
+  for (var [key] of conversationBuffer) {
+    var parts = key.split('|');
+    nodeIds.add(parts[0]);
+    nodeIds.add(parts[1]);
+  }
+
+  var html =
+    '<button class="conv-filter-pill active" data-filter-node="">All</button>';
+  for (var nid of nodeIds) {
+    var node = graph.nodes.find(function (n) {
+      return n.id === nid;
+    });
+    if (!node) continue;
+    var avatarHtml = node.photo
+      ? '<div class="conv-filter-pill-avatar"><img src="' + escapeHtml(node.photo) + '" alt="" /></div>'
+      : '';
+    html +=
+      '<button class="conv-filter-pill" data-filter-node="' +
+      escapeHtml(nid) +
+      '">' +
+      avatarHtml +
+      escapeHtml(node.label) +
+      '</button>';
+  }
+  convFilters.innerHTML = html;
+
+  convFilters.querySelectorAll('.conv-filter-pill').forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      var nodeId = (pill as HTMLElement).dataset['filterNode'] || null;
+      feedFilterNodeId = nodeId || null;
+
+      convFilters.querySelectorAll('.conv-filter-pill').forEach(function (p) {
+        p.classList.remove('active');
+      });
+      pill.classList.add('active');
+
+      var filtered = collectAllMessages(feedFilterNodeId);
+      renderFeedMessages(filtered);
+
+      var countEl = convPanel.querySelector('.conv-feed-count');
+      if (countEl) countEl.textContent = filtered.length + ' messages';
+    });
+  });
+}
+
+async function loadFeedHistory(): Promise<void> {
+  try {
+    var result = await invoke<{ rows: Array<Record<string, unknown>>; total: number }>(
+      'brain_list_conversations',
+      { opts: { limit: 20 } },
+    );
+    if (!result?.rows?.length) return;
+
+    for (var conv of result.rows) {
+      var convId = conv['id'] as string;
+      var participants = (conv['participant_node_ids'] as string) || '[]';
+      var nodeIds: string[];
+      try {
+        nodeIds = JSON.parse(participants) as string[];
+      } catch {
+        continue;
+      }
+      if (nodeIds.length < 2) continue;
+
+      var key = convKey(nodeIds[0], nodeIds[1]);
+      var existing = conversationBuffer.get(key);
+      if (existing && existing.length > 0) continue;
+
+      var msgResult = await invoke<{ rows: Array<Record<string, unknown>> }>(
+        'brain_get_conversation',
+        { id: convId, opts: { limit: 50 } },
+      );
+      if (!msgResult?.rows?.length) continue;
+
+      var fromNode = graph.nodes.find(function (n) { return n.id === nodeIds[0]; });
+      var toNode = graph.nodes.find(function (n) { return n.id === nodeIds[1]; });
+
+      var msgs: ConvMessage[] = msgResult.rows.map(function (row) {
+        var sourceId = (row['source_node_id'] as string) || nodeIds[0];
+        var targetId = sourceId === nodeIds[0] ? nodeIds[1] : nodeIds[0];
+        var sourceNode = graph.nodes.find(function (n) { return n.id === sourceId; });
+        var targetNode = graph.nodes.find(function (n) { return n.id === targetId; });
+        return {
+          id: (row['id'] as string) || '',
+          from: sourceId,
+          fromLabel: sourceNode?.label || fromNode?.label || sourceId,
+          to: targetId,
+          toLabel: targetNode?.label || toNode?.label || targetId,
+          content: (row['content'] as string) || '',
+          actionType: (row['role'] as string) || 'message',
+          timestamp: (row['created_at'] as string) || new Date().toISOString(),
+        };
+      });
+
+      conversationBuffer.set(key, msgs);
+    }
+
+    if (feedMode && convPanel.classList.contains('open')) {
+      var allMessages = collectAllMessages(feedFilterNodeId);
+      renderFeedMessages(allMessages);
+      renderFeedFilters();
+
+      var countEl = convPanel.querySelector('.conv-feed-count');
+      if (countEl) countEl.textContent = allMessages.length + ' messages';
+    }
+  } catch {
+    // History loading is best-effort
+  }
+}
+
+async function loadEdgeHistory(fromId: string, toId: string): Promise<void> {
+  try {
+    var result = await invoke<{ rows: Array<Record<string, unknown>>; total: number }>(
+      'brain_list_conversations',
+      { opts: { nodeIds: [fromId, toId], limit: 1 } },
+    );
+    if (!result?.rows?.length) return;
+
+    var convId = result.rows[0]['id'] as string;
+    var msgResult = await invoke<{ rows: Array<Record<string, unknown>> }>(
+      'brain_get_conversation',
+      { id: convId, opts: { limit: 50 } },
+    );
+    if (!msgResult?.rows?.length) return;
+
+    var key = convKey(fromId, toId);
+    var existing = conversationBuffer.get(key) || [];
+    var existingTimestamps = new Set(existing.map(function (m) { return m.timestamp; }));
+
+    var fromNode = graph.nodes.find(function (n) { return n.id === fromId; });
+    var toNode = graph.nodes.find(function (n) { return n.id === toId; });
+
+    var dbMsgs: ConvMessage[] = msgResult.rows
+      .map(function (row) {
+        var sourceId = (row['source_node_id'] as string) || fromId;
+        var targetId = sourceId === fromId ? toId : fromId;
+        var sourceNode = graph.nodes.find(function (n) { return n.id === sourceId; });
+        var targetNode = graph.nodes.find(function (n) { return n.id === targetId; });
+        return {
+          id: (row['id'] as string) || '',
+          from: sourceId,
+          fromLabel: sourceNode?.label || fromNode?.label || sourceId,
+          to: targetId,
+          toLabel: targetNode?.label || toNode?.label || targetId,
+          content: (row['content'] as string) || '',
+          actionType: (row['role'] as string) || 'message',
+          timestamp: (row['created_at'] as string) || new Date().toISOString(),
+        };
+      })
+      .filter(function (m) { return !existingTimestamps.has(m.timestamp); });
+
+    if (dbMsgs.length > 0) {
+      var merged = [...dbMsgs, ...existing].sort(function (a, b) {
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      });
+      conversationBuffer.set(key, merged);
+
+      if (activeConvKey === key && !feedMode) {
+        renderConversationMessages(key);
+      }
+    }
+  } catch {
+    // History loading is best-effort
+  }
 }
 
 (document.getElementById('conv-panel-close') as HTMLButtonElement).addEventListener(
@@ -1883,6 +2408,17 @@ function finishEdgeDrag(e: MouseEvent) {
    Zoom Buttons
    ═══════════════════════════════════════════════ */
 
+(document.getElementById('btn-activity-feed') as HTMLButtonElement).addEventListener(
+  'click',
+  function () {
+    if (feedMode && convPanel.classList.contains('open')) {
+      closeConversationPanel();
+    } else {
+      openActivityFeed();
+    }
+  },
+);
+
 (document.getElementById('btn-zoom-in') as HTMLButtonElement).addEventListener(
   'click',
   function () {
@@ -1927,8 +2463,12 @@ var cfPlatforms = [
   { id: 'slack', name: 'Slack', hint: 'Bot Token + Signing Secret' },
   { id: 'whatsapp', name: 'WhatsApp', hint: 'Phone Number ID + Token' },
   { id: 'discord', name: 'Discord', hint: 'Bot Token' },
-  { id: 'gmail', name: 'Gmail', hint: 'Sign in with Google' },
-  { id: 'email', name: 'Email', hint: 'IMAP + SMTP manual' },
+  { id: 'teams', name: 'Teams', hint: 'Bot ID + Secret' },
+  { id: 'messenger', name: 'Messenger', hint: 'Page Token + Page ID' },
+  { id: 'line', name: 'LINE', hint: 'Channel Token + Secret' },
+  { id: 'google-chat', name: 'Google Chat', hint: 'Service Account Key' },
+  { id: 'twilio', name: 'Twilio SMS', hint: 'Account SID + Auth Token' },
+  { id: 'matrix', name: 'Matrix', hint: 'Homeserver + Token' },
 ];
 
 var cfTrack = document.getElementById('coverflow-track') as HTMLDivElement;
@@ -2218,7 +2758,7 @@ document.addEventListener('mouseup', function (e) {
     var wy = (e.clientY - rect.top - vpY) / vpZoom - 80;
 
     var node: AgentNode = {
-      id: generateId(),
+      id: 'tmp_' + generateId(),
       platform: cfDragPlatform,
       label: capitalize(cfDragPlatform),
       photo: null,
@@ -2384,6 +2924,44 @@ async function handleInlineConnect(node: AgentNode) {
     };
   } else if (platform === 'discord') {
     credentials = { token: (formData.token || '').trim(), nodeId: node.id };
+  } else if (platform === 'teams') {
+    credentials = {
+      appId: (formData.appId || '').trim(),
+      appSecret: (formData.appSecret || '').trim(),
+      tenantId: (formData.tenantId || '').trim(),
+      nodeId: node.id,
+    };
+  } else if (platform === 'messenger') {
+    credentials = {
+      pageAccessToken: (formData.pageAccessToken || '').trim(),
+      pageId: (formData.pageId || '').trim(),
+      nodeId: node.id,
+    };
+  } else if (platform === 'line') {
+    credentials = {
+      channelAccessToken: (formData.channelAccessToken || '').trim(),
+      channelSecret: (formData.channelSecret || '').trim(),
+      nodeId: node.id,
+    };
+  } else if (platform === 'google-chat') {
+    credentials = {
+      serviceAccountKey: (formData.serviceAccountKey || '').trim(),
+      spaceId: (formData.spaceId || '').trim(),
+      nodeId: node.id,
+    };
+  } else if (platform === 'twilio') {
+    credentials = {
+      accountSid: (formData.accountSid || '').trim(),
+      authToken: (formData.authToken || '').trim(),
+      phoneNumber: (formData.phoneNumber || '').trim(),
+      nodeId: node.id,
+    };
+  } else if (platform === 'matrix') {
+    credentials = {
+      homeserverUrl: (formData.homeserverUrl || '').trim(),
+      accessToken: (formData.accessToken || '').trim(),
+      nodeId: node.id,
+    };
   } else if (platform === 'gmail') {
     credentials = { oauth: true, nodeId: node.id };
   } else if (platform === 'email') {
@@ -2406,6 +2984,21 @@ async function handleInlineConnect(node: AgentNode) {
   try {
     var result = await invoke<ConnectResult>('connect_channel', { platform, credentials });
     if (result.success) {
+      /* Replace temp ID with deterministic ID from backend */
+      if (result.nodeId && result.nodeId !== node.id) {
+        var duplicate = graph.nodes.find(function (n) {
+          return n.id === result.nodeId && n.id !== node.id;
+        });
+        if (duplicate) {
+          node.status = 'error';
+          node._statusMsg = 'This bot is already connected on another card';
+          node._statusType = 'error';
+          renderNodes();
+          return;
+        }
+        replaceNodeId(node.id, result.nodeId);
+      }
+
       node.status = 'connected';
       node._statusMsg = '';
       node._statusType = '';
@@ -2422,17 +3015,41 @@ async function handleInlineConnect(node: AgentNode) {
         };
       } else if (platform === 'slack') {
         node.label = result.teamName || 'Slack Bot';
-        node.credentials = 'slack_bot_token';
+        node.credentials = 'channel_token_' + node.id;
         node.meta = { botUserId: result.botUserId || '', teamId: result.teamId || '' };
       } else if (platform === 'whatsapp') {
         node.label = result.displayName || 'WhatsApp';
-        node.credentials = 'whatsapp_access_token';
+        node.credentials = 'channel_token_' + node.id;
         node.meta = { phoneNumberId: credentials.phoneNumberId as string };
       } else if (platform === 'discord') {
         node.label = result.botUsername || 'Discord Bot';
         node.photo = result.photo || null;
-        node.credentials = 'discord_bot_token';
+        node.credentials = 'channel_token_' + node.id;
         node.meta = { botId: result.botId || '' };
+      } else if (platform === 'teams') {
+        node.label = result.displayName || 'Teams Bot';
+        node.credentials = 'channel_token_' + node.id;
+        node.meta = { appId: credentials.appId as string, tenantId: credentials.tenantId as string };
+      } else if (platform === 'messenger') {
+        node.label = result.displayName || 'Messenger';
+        node.credentials = 'channel_token_' + node.id;
+        node.meta = { pageId: credentials.pageId as string };
+      } else if (platform === 'line') {
+        node.label = result.displayName || 'LINE Bot';
+        node.credentials = 'channel_token_' + node.id;
+        node.meta = {};
+      } else if (platform === 'google-chat') {
+        node.label = result.displayName || 'Google Chat';
+        node.credentials = 'channel_token_' + node.id;
+        node.meta = { spaceId: credentials.spaceId as string };
+      } else if (platform === 'twilio') {
+        node.label = result.displayName || credentials.phoneNumber as string || 'Twilio SMS';
+        node.credentials = 'channel_token_' + node.id;
+        node.meta = { phoneNumber: credentials.phoneNumber as string };
+      } else if (platform === 'matrix') {
+        node.label = result.displayName || 'Matrix Bot';
+        node.credentials = 'channel_token_' + node.id;
+        node.meta = { homeserver: credentials.homeserverUrl as string };
       } else if (platform === 'gmail') {
         node.label = result.email || result.displayName || 'Gmail';
         node.photo = result.photo || null;
@@ -2440,7 +3057,7 @@ async function handleInlineConnect(node: AgentNode) {
         node.meta = { email: result.email || '' };
       } else if (platform === 'email') {
         node.label = result.displayName || 'Email';
-        node.credentials = 'email_password';
+        node.credentials = 'channel_token_' + node.id;
         node.meta = {
           username: credentials.username as string,
           imapHost: credentials.imapHost as string,
@@ -2607,6 +3224,24 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+function replaceNodeId(oldId: string, newId: string): void {
+  var node = graph.nodes.find(function (n) {
+    return n.id === oldId;
+  });
+  if (!node) return;
+  node.id = newId;
+  if (node.credentials) {
+    node.credentials = node.credentials.replace(oldId, newId);
+  }
+  for (var i = 0; i < graph.edges.length; i++) {
+    if (graph.edges[i].from === oldId) graph.edges[i].from = newId;
+    if (graph.edges[i].to === oldId) graph.edges[i].to = newId;
+  }
+  if (selectedNodeId === oldId) selectedNodeId = newId;
+  if (detailNodeId === oldId) detailNodeId = newId;
+  if (dragNodeId === oldId) dragNodeId = newId;
+}
+
 function escapeHtml(s: string): string {
   var d = document.createElement('div');
   d.textContent = s;
@@ -2621,6 +3256,26 @@ function getInitials(name: string): string {
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function getBotInfo(node: AgentNode): string {
+  var { meta, platform } = node;
+  if (platform === 'telegram') {
+    return meta.botId ? 'Bot \u00B7 ID ' + meta.botId : 'Bot';
+  }
+  if (platform === 'slack') {
+    return meta.teamId ? 'Team ' + meta.teamId : meta.botUserId ? 'Bot ' + meta.botUserId : '';
+  }
+  if (platform === 'discord') {
+    return meta.botId ? 'Bot \u00B7 ID ' + meta.botId : 'Bot';
+  }
+  if (platform === 'email') {
+    return meta.username && meta.imapHost ? meta.username + '@' + meta.imapHost : meta.username || '';
+  }
+  if (platform === 'whatsapp') {
+    return meta.phoneNumberId ? 'Phone ' + meta.phoneNumberId : '';
+  }
+  return '';
 }
 
 /* ═══════════════════════════════════════════════
@@ -2666,7 +3321,7 @@ function openAgentDetail(nodeId: string) {
 
   /* Panel title */
   var panelTitle = agentDetailPanel.querySelector('.panel-title') as HTMLSpanElement;
-  panelTitle.textContent = isOwner ? 'Owner Settings' : 'Agent Details';
+  panelTitle.textContent = isOwner ? t('canvas.ownerSettings') : t('canvas.agentDetails');
   var photoHtml = isOwner
     ? node.photo
       ? '<img src="' + node.photo + '" alt="" />'
@@ -2677,7 +3332,7 @@ function openAgentDetail(nodeId: string) {
       ? '<img src="' + node.photo + '" alt="" />'
       : platformIcons[node.platform] || '';
   var displayName = isOwner ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
-  var platformLabel = isOwner ? 'You — Organization Owner' : capitalize(node.platform);
+  var platformLabel = isOwner ? t('canvas.youOwner') : capitalize(node.platform);
   var avatarClass = isOwner ? 'detail-avatar owner-avatar' : 'detail-avatar';
   identityEl.innerHTML =
     '<div class="' +
@@ -2694,13 +3349,18 @@ function openAgentDetail(nodeId: string) {
     '</div>' +
     '</div>';
 
-  /* Hide agent-only sections for owner */
+  /* Hide agent-only sections for owner, show language for owner */
   var sectionRole = document.getElementById('section-role') as HTMLDivElement;
   var sectionAutonomy = document.getElementById('section-autonomy') as HTMLDivElement;
   var sectionBehavior = document.getElementById('section-behavior') as HTMLDivElement;
+  var sectionLanguage = document.getElementById('section-language') as HTMLDivElement;
   sectionRole.style.display = isOwner ? 'none' : '';
   sectionAutonomy.style.display = isOwner ? 'none' : '';
   sectionBehavior.style.display = isOwner ? 'none' : '';
+  sectionLanguage.style.display = isOwner ? '' : 'none';
+  if (isOwner) {
+    responseLangSelect.value = graph.language || 'auto';
+  }
 
   /* Role pills */
   var role = node.role || 'assistant';
@@ -2719,13 +3379,12 @@ function openAgentDetail(nodeId: string) {
   var instructionsLabel = document.getElementById('instructions-label') as HTMLSpanElement;
   var instructionsTextarea = document.getElementById('agent-instructions') as HTMLTextAreaElement;
   if (isOwner) {
-    instructionsLabel.textContent = 'Communication Style (all agents)';
-    instructionsTextarea.placeholder =
-      'Define how all agents should respond...\n\nExample:\n- Plain text only, no markdown\n- Concise and direct\n- No emojis';
+    instructionsLabel.textContent = t('canvas.commStyle');
+    instructionsTextarea.placeholder = t('canvas.commStylePlaceholder');
     instructionsTextarea.classList.add('owner-instructions');
   } else {
-    instructionsLabel.textContent = 'Agent Persona';
-    instructionsTextarea.placeholder = "Describe this agent's role, personality, and behavior...";
+    instructionsLabel.textContent = t('canvas.agentPersona');
+    instructionsTextarea.placeholder = t('canvas.agentPersonaPlaceholder');
     instructionsTextarea.classList.remove('owner-instructions');
   }
   instructionsTextarea.value = node.instructions || '';
@@ -2914,6 +3573,12 @@ function bindToggle(id: string, key: string) {
 bindToggle('toggle-proactive', 'proactive');
 bindToggle('toggle-owner-response', 'ownerResponse');
 bindToggle('toggle-peer', 'peer');
+
+/* Response language select */
+responseLangSelect.addEventListener('change', function () {
+  graph.language = this.value === 'auto' ? undefined : this.value;
+  saveGraphFromPanel();
+});
 
 /* ═══════════════════════════════════════════════
    Workspace Detail Panel
@@ -3147,7 +3812,7 @@ function renderWsTags(topics: string[]) {
    Workspace Creation Dialog
    ═══════════════════════════════════════════════ */
 
-var wsCreateColor = '#038B9A';
+var wsCreateColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#038B9A';
 
 (document.getElementById('btn-add-workspace') as HTMLButtonElement).addEventListener(
   'click',
@@ -3157,9 +3822,9 @@ var wsCreateColor = '#038B9A';
     (document.getElementById('ws-create-purpose') as HTMLTextAreaElement).value = '';
     (document.getElementById('ws-create-topics') as HTMLInputElement).value = '';
     (document.getElementById('ws-create-budget') as HTMLInputElement).value = '';
-    wsCreateColor = '#038B9A';
+    wsCreateColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#038B9A';
     document.querySelectorAll('#ws-create-colors .color-swatch').forEach(function (s) {
-      s.classList.toggle('active', (s as HTMLElement).dataset.color === '#038B9A');
+      s.classList.toggle('active', (s as HTMLElement).dataset.color === wsCreateColor);
     });
     /* Reset custom swatch appearance */
     var customSwatch = document.querySelector(
@@ -3483,7 +4148,7 @@ function populateIntegrationSection(nodeId: string) {
       '</span>' +
       '<button class="integration-chip-remove" data-instance-id="' +
       escapeHtml(inst.id) +
-      '">&times;</button>';
+      '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>';
     chipsEl.appendChild(chip);
   }
 
@@ -3491,21 +4156,23 @@ function populateIntegrationSection(nodeId: string) {
   chipsEl.querySelectorAll('.integration-chip-remove').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var iid = (btn as HTMLElement).dataset.instanceId!;
-      invoke('integrations_unassign_instance', { nodeId: nodeId, instanceId: iid }).then(
-        function () {
-          /* Update local graph */
-          var n = graph.nodes.find(function (nd) {
-            return nd.id === nodeId;
-          });
-          if (n && n.integrations) {
-            n.integrations = n.integrations.filter(function (id) {
-              return id !== iid;
+      showConfirmDialog('Remove this integration?', function () {
+        invoke('integrations_unassign_instance', { nodeId: nodeId, instanceId: iid }).then(
+          function () {
+            /* Update local graph */
+            var n = graph.nodes.find(function (nd) {
+              return nd.id === nodeId;
             });
-          }
-          populateIntegrationSection(nodeId);
-          showSavedIndicator();
-        },
-      );
+            if (n && n.integrations) {
+              n.integrations = n.integrations.filter(function (id) {
+                return id !== iid;
+              });
+            }
+            populateIntegrationSection(nodeId);
+            showSavedIndicator();
+          },
+        );
+      });
     });
   });
 
@@ -3527,28 +4194,63 @@ function populateIntegrationSection(nodeId: string) {
       return !assigned.includes(inst.id);
     });
 
-    if (unassigned.length === 0) {
-      drop.innerHTML = '<div class="integration-dropdown-empty">No available instances</div>';
-    } else {
-      for (var ui of unassigned) {
-        var udef = catalogMap.get(ui.integrationId);
-        var uicon =
-          udef && udef.icon
-            ? '<img src="/icons/integrations/' +
-              escapeHtml(udef.icon) +
-              '.svg" alt="" onerror="this.style.display=\'none\'" />'
-            : '';
-        var item = document.createElement('div');
-        item.className = 'integration-dropdown-item';
-        item.dataset.instanceId = ui.id;
-        item.innerHTML = uicon + '<span>' + escapeHtml(ui.label) + '</span>';
-        drop.appendChild(item);
+    var listContainer = document.createElement('div');
+    listContainer.className = 'integration-dropdown-list';
+
+    function renderDropdownItems(filter: string) {
+      listContainer.innerHTML = '';
+      var filtered = unassigned.filter(function (inst) {
+        return !filter || inst.label.toLowerCase().includes(filter.toLowerCase());
+      });
+      if (filtered.length === 0) {
+        listContainer.innerHTML =
+          '<div class="integration-dropdown-empty">' +
+          (unassigned.length === 0 ? 'No available instances' : 'No matches') +
+          '</div>';
+      } else {
+        for (var ui of filtered) {
+          var udef = catalogMap.get(ui.integrationId);
+          var uicon =
+            udef && udef.icon
+              ? '<img src="/icons/integrations/' +
+                escapeHtml(udef.icon) +
+                '.svg" alt="" onerror="this.style.display=\'none\'" />'
+              : '';
+          var item = document.createElement('div');
+          item.className = 'integration-dropdown-item';
+          item.dataset.instanceId = ui.id;
+          item.innerHTML = uicon + '<span>' + escapeHtml(ui.label) + '</span>';
+          listContainer.appendChild(item);
+        }
       }
     }
 
-    addBtn.parentElement!.appendChild(drop);
+    renderDropdownItems('');
+    drop.appendChild(listContainer);
 
-    drop.addEventListener('click', function (ev) {
+    /* Search bar at the bottom */
+    var searchWrap = document.createElement('div');
+    searchWrap.className = 'integration-dropdown-search';
+    searchWrap.innerHTML =
+      '<svg class="integration-search-icon" viewBox="0 0 24 24" fill="none">' +
+      '<circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.5"/>' +
+      '<path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+      '</svg>';
+    var searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search...';
+    searchInput.className = 'integration-search-input';
+    searchWrap.appendChild(searchInput);
+    drop.appendChild(searchWrap);
+
+    searchInput.addEventListener('input', function () {
+      renderDropdownItems(searchInput.value);
+    });
+
+    addBtn.parentElement!.appendChild(drop);
+    searchInput.focus();
+
+    listContainer.addEventListener('click', function (ev) {
       var target = (ev.target as HTMLElement).closest(
         '.integration-dropdown-item',
       ) as HTMLElement | null;
@@ -3582,4 +4284,5 @@ function populateIntegrationSection(nodeId: string) {
 }
 
 /* Boot */
+applyTranslations();
 init();

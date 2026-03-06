@@ -18,6 +18,9 @@ export type {
 
 export { createEmptyGraph } from './canvas.js';
 
+export { SUPPORTED_LANGUAGES } from './languages.js';
+export type { LanguageCode } from './languages.js';
+
 export type {
   OwnerIdentity,
   InboundMessage,

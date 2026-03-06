@@ -1,8 +1,8 @@
-# OpenSauria — Project Rules
+# Sauria — Project Rules
 
-## What is OpenSauria
+## What is Sauria
 
-OpenSauria is a security-first personal AI operating system. It runs as a local daemon that ingests information from multiple sources (MCP servers, email, calendars), builds a persistent knowledge graph (entities, relations, events), and exposes it through channels (Telegram, Slack, WhatsApp, Discord, Email) and an MCP server.
+Sauria is a security-first personal AI operating system. It runs as a local daemon that ingests information from multiple sources (MCP servers, email, calendars), builds a persistent knowledge graph (entities, relations, events), and exposes it through channels (Telegram, Slack, WhatsApp, Discord, Email) and an MCP server.
 
 The desktop app (Tauri v2) provides a visual canvas where users connect AI agents, draw edges between them, and orchestrate multi-agent workflows. The user is the "owner" who gives orders; agents collaborate through the orchestrator.
 
@@ -46,7 +46,7 @@ apps/
       ai/                          # Multi-provider router, extraction, reasoning
       auth/                        # OAuth PKCE, API key validation, onboarding
       channels/                    # Telegram, Slack, WhatsApp, Discord, Email, registry
-      config/                      # Zod schema, loader (re-exports @opensauria/config)
+      config/                      # Zod schema, loader (re-exports @sauria/config)
       db/                          # SQLite schema, world-model queries, search
       engine/                      # Proactive alerts, deadlines, pattern detection
       ingestion/                   # Pipeline, normalizer, dedup, MCP/email/calendar
@@ -68,7 +68,7 @@ apps/
         palette/index.html         # Command palette UI
         setup/index.html           # Setup wizard UI
         brain/index.html           # Brain knowledge graph UI
-        shared.css                 # Imports @opensauria/design-tokens + shared components
+        shared.css                 # Imports @sauria/design-tokens + shared components
     src-tauri/src/
       main.rs                      # Tauri app builder, shortcut, daemon launch
       daemon_manager.rs            # Spawn, kill, health check (cross-platform)
@@ -88,15 +88,15 @@ apps/
     package.json  vite.config.ts
 
 packages/
-  types/                           # @opensauria/types (zero deps)
+  types/                           # @sauria/types (zero deps)
     src/                           # CanvasGraph, AgentNode, Edge, auth, IPC types
-  config/                          # @opensauria/config (deps: zod, @opensauria/types)
+  config/                          # @sauria/config (deps: zod, @sauria/types)
     src/                           # paths.ts, schema.ts, defaults.ts
-  vault/                           # @opensauria/vault (deps: @opensauria/config)
+  vault/                           # @sauria/vault (deps: @sauria/config)
     src/                           # machine-id, derive-password, crypto, fs-sandbox
-  ipc-protocol/                    # @opensauria/ipc-protocol (deps: zod, @opensauria/types)
+  ipc-protocol/                    # @sauria/ipc-protocol (deps: zod, @sauria/types)
     src/                           # IPC methods, owner command parsing
-  design-tokens/                   # @opensauria/design-tokens (zero deps)
+  design-tokens/                   # @sauria/design-tokens (zero deps)
     src/tokens.ts                  # Typed source of truth
     generated/tokens.css           # CSS custom properties (generated)
     generated/tokens.json          # JSON (generated)
@@ -107,12 +107,12 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 ### Dependency Graph
 
 ```
-                @opensauria/types (zero deps)
+                @sauria/types (zero deps)
                 /      |       \
                /       |        \
-@opensauria/config  @opensauria/ipc-protocol  @opensauria/design-tokens
+@sauria/config  @sauria/ipc-protocol  @sauria/design-tokens
        |
-@opensauria/vault
+@sauria/vault
        \              /
         \            /
      apps/daemon    apps/desktop
@@ -150,7 +150,7 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - All user input goes through `sanitizeChannelInput()` before processing
 - Vault secrets encrypted with AES-256-GCM, PBKDF2 key derivation (256k iterations, sha512)
 - Vault password derived from hardware UUID (macOS `IOPlatformUUID`), NOT hostname
-- Machine ID cached at `~/.opensauria/vault/.machine-id` — never changes
+- Machine ID cached at `~/.sauria/vault/.machine-id` — never changes
 - URL allowlist for external fetches (`secureFetch`)
 - PII scrubber before logging
 - Rate limiting on every channel (per-minute caps)
@@ -187,7 +187,7 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 ### Orchestrator
 
 - `CanvasGraph` (v2) is the source of truth: nodes, edges, workspaces
-- Graph stored at `~/.opensauria/canvas.json`, read by daemon on startup
+- Graph stored at `~/.sauria/canvas.json`, read by daemon on startup
 - `MessageQueue` provides owner priority (unshift) and backpressure
 - `evaluateEdgeRules()` for deterministic routing, `LLMRoutingBrain` for intelligent routing
 - `AutonomyEnforcer` filters actions based on agent autonomy level
@@ -256,18 +256,18 @@ For reverse messages (reply B→A on edge A→B), the dot travels `totalLength�
 - Platform-specific Whisper via Python subprocess (`execFile`, no shell)
 - macOS: `mlx-whisper` (Apple Silicon optimized, `mlx-community/whisper-large-v3-turbo`)
 - Linux/Windows: `faster-whisper` (`large-v3-turbo`)
-- Python venv at `~/.opensauria/venv/` (managed separately from Node.js deps)
+- Python venv at `~/.sauria/venv/` (managed separately from Node.js deps)
 - Config: `channels.telegram.voice.model` defaults to `'auto'` (resolves per platform)
 - `TranscriptionService` in `apps/daemon/src/channels/transcription.ts`
 - Max audio size: 20 MB, configurable timeout via `maxDurationSeconds`
 
 ## Desktop UI Design
 
-### Design Tokens (`@opensauria/design-tokens`)
+### Design Tokens (`@sauria/design-tokens`)
 
 Source of truth: `packages/design-tokens/src/tokens.ts` (typed `as const`).
 Generated outputs: `tokens.css` (CSS custom properties), `tokens.json`.
-Desktop `shared.css` imports via `@import '@opensauria/design-tokens/tokens.css'`.
+Desktop `shared.css` imports via `@import '@sauria/design-tokens/tokens.css'`.
 
 ```
 --bg: #1a1a1a          --surface: rgba(255,255,255,0.04)
@@ -275,15 +275,23 @@ Desktop `shared.css` imports via `@import '@opensauria/design-tokens/tokens.css'
 --text-secondary: #999  --text-dim: #555
 --accent: #038B9A       --accent-hover: #027A87
 --success: #34d399      --error: #f87171
+--warning: #f59e0b      --overlay: rgba(0,0,0,0.5)
 --radius: 12px          --radius-sm: 8px
---radius-pill: 9999px
+--radius-lg: 16px       --radius-pill: 9999px
+--font-size-micro: 10px --font-size-small: 12px
+--font-size-base: 14px  --font-size-heading: 16px
+--entity-person: #3b82f6  --entity-project: #34d399  (+ 6 more)
 ```
 
-### Spacing
+### Spacing & Sizing — Multiples of 4 (ALWAYS)
 
-- 8px grid: all spacing multiples of 8 (8, 16, 24, 32, 40, 48...)
+- **All spacing/sizing values must be multiples of 4**: 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48...
+- Applies to: spacing, padding, margin, gap, width, height, border-radius, icon size
+- Never use non-multiples of 4: no 5px, 6px, 9px, 15px, 17px, etc.
+- 2px exception: borders only
+- Preferred grid: 8px increments for spacing (8, 16, 24, 32, 40, 48)
 - 4px for micro-spacing (icon gaps, tight elements)
-- 2px for borders only
+- Font sizes use even type scale: 10, 12, 14, 16, 18, 20, 24
 
 ### Corner Radius
 
@@ -349,11 +357,11 @@ Desktop `shared.css` imports via `@import '@opensauria/design-tokens/tokens.css'
 - Entry point: `apps/desktop/src-tauri/src/main.rs` → Tauri app builder
 - Vite builds renderer to `apps/desktop/dist/` (configured in `tauri.conf.json` → `build.frontendDist`)
 - `tauri.conf.json` is at `apps/desktop/src-tauri/tauri.conf.json`
-- Dev: `pnpm -F opensauria-desktop dev` (Vite HMR + Tauri dev server)
+- Dev: `pnpm -F sauria-desktop dev` (Vite HMR + Tauri dev server)
 - Build: `pnpm -r build` only builds packages/daemon (Turborepo may cache desktop). For a **full production build** always run explicitly: `cd apps/desktop && pnpm run build` — this runs Vite + Rust compilation + `.app` bundling
-- **NEVER manually patch files inside `/Applications/OpenSauria.app/`** — always do a full `tauri build` and replace the entire `.app`. Manual patching leads to frontend/daemon version mismatch.
-- After build, install: `rm -rf /Applications/OpenSauria.app && cp -R apps/desktop/src-tauri/target/release/bundle/macos/OpenSauria.app /Applications/OpenSauria.app`
-- Always kill all processes before restart: `pkill -9 -f "opensauria"; pkill -9 -f "OpenSauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9`
+- **NEVER manually patch files inside `/Applications/Sauria.app/`** — always do a full `tauri build` and replace the entire `.app`. Manual patching leads to frontend/daemon version mismatch.
+- After build, install: `rm -rf /Applications/Sauria.app && cp -R apps/desktop/src-tauri/target/release/bundle/macos/Sauria.app /Applications/Sauria.app`
+- Always kill all processes before restart: `pkill -9 -f "sauria"; pkill -9 -f "Sauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9`
 - Renderer files live in `apps/desktop/src/renderer/{canvas,palette,setup,brain}/`
 - Icons are static assets in `apps/desktop/public/icons/` (served at `/icons/`)
 
@@ -365,14 +373,14 @@ Desktop `shared.css` imports via `@import '@opensauria/design-tokens/tokens.css'
 - Use `app.path().resolve("daemon/index.mjs", BaseDirectory::Resource)` in Rust to resolve at runtime
 - `DaemonState` receives the resolved path from `AppHandle` after Tauri setup (not at construction)
 - Dev mode fallback: daemon dist is at its normal monorepo path (`../../daemon/dist/index.mjs`)
-- Error signature when broken: `daemon.err` shows `Cannot find module '/opensauria'`
+- Error signature when broken: `daemon.err` shows `Cannot find module '/sauria'`
 
 ### tsdown Config (CRITICAL)
 
 - `tsdown.config.ts` MUST use `noExternal: [/.*/]` to inline ALL dependencies (npm + workspace)
 - `external: ['better-sqlite3']` — only native `.node` modules stay external
 - Without `noExternal: [/.*/]`, npm deps (zod, grammy, commander, etc.) remain as imports → crash in bundled `.app`
-- NEVER change to `noExternal: ['@opensauria/*']` — that only inlines workspace packages
+- NEVER change to `noExternal: ['@sauria/*']` — that only inlines workspace packages
 
 ### Native Node Module Bundling
 
@@ -397,10 +405,10 @@ Desktop `shared.css` imports via `@import '@opensauria/design-tokens/tokens.css'
 
 ```
 pnpm -r build                              # Build shared packages + daemon (Turborepo, may cache desktop)
-pnpm -F @opensauria/daemon build           # Rebuild daemon only
+pnpm -F @sauria/daemon build           # Rebuild daemon only
 cd apps/desktop && pnpm run build          # Full production build (Vite + Rust + .app bundle) — ALWAYS use this for production
-pnpm -F opensauria-desktop dev             # Start desktop in dev mode (Vite HMR)
-pnpm -F @opensauria/daemon test            # Run daemon tests
+pnpm -F sauria-desktop dev             # Start desktop in dev mode (Vite HMR)
+pnpm -F @sauria/daemon test            # Run daemon tests
 pnpm -r typecheck                          # Typecheck all packages
 ```
 
@@ -409,25 +417,25 @@ pnpm -r typecheck                          # Typecheck all packages
 Always follow this exact sequence — no shortcuts:
 ```bash
 # 1. Kill everything
-pkill -9 -f "opensauria"; pkill -9 -f "OpenSauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9
+pkill -9 -f "sauria"; pkill -9 -f "Sauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9
 
 # 2. Full production build
 pnpm -r build                              # packages + daemon
 cd apps/desktop && pnpm run build          # Vite + Rust + .app bundle
 
 # 3. Install
-rm -rf /Applications/OpenSauria.app
-cp -R apps/desktop/src-tauri/target/release/bundle/macos/OpenSauria.app /Applications/OpenSauria.app
+rm -rf /Applications/Sauria.app
+cp -R apps/desktop/src-tauri/target/release/bundle/macos/Sauria.app /Applications/Sauria.app
 
 # 4. Launch
-open /Applications/OpenSauria.app
+open /Applications/Sauria.app
 ```
 
-**NEVER manually copy files into `/Applications/OpenSauria.app/Contents/Resources/`** — always rebuild the full `.app`.
+**NEVER manually copy files into `/Applications/Sauria.app/Contents/Resources/`** — always rebuild the full `.app`.
 
 ### Dev Workflow
 
 When changing shared packages (`packages/*`): rebuild with `pnpm -r build` (Turbo handles deps)
-When changing daemon code (`apps/daemon/src/`): `pnpm -F @opensauria/daemon build`
+When changing daemon code (`apps/daemon/src/`): `pnpm -F @sauria/daemon build`
 When changing desktop main (`apps/desktop/src-tauri/src/`): Rust recompiles on `tauri dev`
 When changing renderer files (`apps/desktop/src/renderer/`): Vite hot-reloads in dev mode

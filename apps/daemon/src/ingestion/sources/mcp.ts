@@ -14,7 +14,7 @@ export class McpSourceClient {
       args: config.args,
     });
 
-    const client = new Client({ name: 'opensauria', version: '0.1.0' }, { capabilities: {} });
+    const client = new Client({ name: 'sauria', version: '0.1.0' }, { capabilities: {} });
 
     await client.connect(transport);
 

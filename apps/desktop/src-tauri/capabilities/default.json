@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "OpenSauria desktop capabilities",
+  "description": "Sauria desktop capabilities",
   "windows": ["palette", "canvas", "brain", "setup"],
   "permissions": [
     "core:default",

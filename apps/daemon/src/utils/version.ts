@@ -1,5 +1,5 @@
-declare const OPENSAURIA_VERSION: string;
+declare const SAURIA_VERSION: string;
 
 export function getVersion(): string {
-  return OPENSAURIA_VERSION;
+  return SAURIA_VERSION;
 }

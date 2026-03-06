@@ -1,7 +1,10 @@
 {
-  "name": "@opensauria/types",
-  "version": "0.1.0",
+  "name": "@sauria/types",
+  "version": "1.0.0",
   "private": true,
+  "author": "Teo Bouancheau <t.bouancheau@gmail.com>",
+  "license": "BUSL-1.1",
+  "repository": { "type": "git", "url": "https://github.com/teobouancheau/sauria.git", "directory": "packages/types" },
   "type": "module",
   "exports": {
     ".": {

@@ -1,7 +1,10 @@
 [package]
-name = "opensauria-desktop"
-version = "0.1.0"
+name = "sauria-desktop"
+version = "1.0.0"
 edition = "2021"
+authors = ["Teo Bouancheau <t.bouancheau@gmail.com>"]
+license = "BUSL-1.1"
+repository = "https://github.com/teobouancheau/sauria"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -11,6 +14,7 @@ tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-opener = "2"
+tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["net", "io-util", "time", "process", "fs", "sync", "macros"] }

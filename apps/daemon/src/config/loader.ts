@@ -1,12 +1,12 @@
 import { chmod } from 'node:fs/promises';
 import JSON5 from 'json5';
 import { paths } from './paths.js';
-import { OpenSauriaConfigSchema } from './schema.js';
-import type { OpenSauriaConfig } from './schema.js';
+import { SauriaConfigSchema } from './schema.js';
+import type { SauriaConfig } from './schema.js';
 import { DEFAULT_CONFIG } from './defaults.js';
 import { safeMkdir, safeReadFile, safeWriteFile } from '../security/fs-sandbox.js';
 
-export async function loadConfig(): Promise<OpenSauriaConfig> {
+export async function loadConfig(): Promise<SauriaConfig> {
   let raw: string;
 
   try {
@@ -20,11 +20,11 @@ export async function loadConfig(): Promise<OpenSauriaConfig> {
   }
 
   const parsed: unknown = JSON5.parse(raw);
-  return OpenSauriaConfigSchema.parse(parsed);
+  return SauriaConfigSchema.parse(parsed);
 }
 
-export async function saveConfig(config: OpenSauriaConfig): Promise<void> {
-  const validated = OpenSauriaConfigSchema.parse(config);
+export async function saveConfig(config: SauriaConfig): Promise<void> {
+  const validated = SauriaConfigSchema.parse(config);
   const serialized = JSON5.stringify(validated, { space: 2 });
 
   await safeWriteFile(paths.config, serialized);

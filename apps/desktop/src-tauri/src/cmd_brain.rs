@@ -100,8 +100,10 @@ pub async fn brain_list_events(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListConversationsOpts {
     platform: Option<String>,
+    node_ids: Option<Vec<String>>,
     offset: Option<u64>,
     limit: Option<u64>,
 }
@@ -113,6 +115,7 @@ pub async fn brain_list_conversations(
 ) -> Result<Value, String> {
     let params = serde_json::json!({
         "platform": opts.platform,
+        "nodeIds": opts.node_ids,
         "offset": opts.offset,
         "limit": opts.limit,
     });

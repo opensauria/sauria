@@ -102,7 +102,7 @@ async function checkDatabaseSize(): Promise<void> {
     }
 
     if (info.size >= SECURITY_LIMITS.database.maxSizeWarnBytes) {
-      console.warn(`[opensauria] Warning: database size ${info.size} exceeds warning threshold`);
+      console.warn(`[sauria] Warning: database size ${info.size} exceeds warning threshold`);
     }
   } catch (err: unknown) {
     if (err instanceof SecurityCheckError) {

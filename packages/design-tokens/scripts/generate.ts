@@ -9,7 +9,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { colors, radii, spacing, typography, transitions } from '../src/tokens.js';
+import { colors, radii, spacing, typography, transitions, entityColors } from '../src/tokens.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outDir = join(__dirname, '..', 'generated');
@@ -31,7 +31,7 @@ function generateCssProperties(
 }
 
 const lines: string[] = [
-  '/* Auto-generated from @opensauria/design-tokens — do not edit manually */',
+  '/* Auto-generated from @sauria/design-tokens — do not edit manually */',
   '',
   ':root {',
   ...generateCssProperties('', colors).map((l) =>
@@ -51,9 +51,13 @@ const lines: string[] = [
     small: typography.sizeSmall,
     xSmall: typography.sizeXSmall,
     label: typography.sizeLabel,
+    micro: typography.sizeMicro,
+    heading: typography.sizeHeading,
   }),
   '',
   ...generateCssProperties('transition', transitions),
+  '',
+  ...generateCssProperties('entity', entityColors),
   '}',
   '',
 ];
@@ -87,6 +91,9 @@ for (const [key, value] of Object.entries(typography)) {
 }
 for (const [key, value] of Object.entries(transitions)) {
   jsonTokens[`transition.${camelToKebab(key)}`] = value;
+}
+for (const [key, value] of Object.entries(entityColors)) {
+  jsonTokens[`entity.${key}`] = value;
 }
 
 writeFileSync(join(outDir, 'tokens.json'), JSON.stringify(jsonTokens, null, 2) + '\n');

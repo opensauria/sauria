@@ -3,7 +3,7 @@ import type {
   IntegrationInstance,
   IntegrationStatus,
   IntegrationTool,
-} from '@opensauria/types';
+} from '@sauria/types';
 import { join, dirname } from 'node:path';
 import { existsSync } from 'node:fs';
 import type { McpClientManager } from '../mcp/client.js';

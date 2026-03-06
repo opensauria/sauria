@@ -157,7 +157,7 @@ describe('WhatsAppChannel', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      await channel.sendMessage('Hello from OpenSauria', null);
+      await channel.sendMessage('Hello from Sauria', null);
 
       expect(mockFetch).toHaveBeenCalledWith(
         'https://graph.facebook.com/v18.0/123456789/messages',
@@ -171,7 +171,7 @@ describe('WhatsAppChannel', () => {
             messaging_product: 'whatsapp',
             to: '123456789',
             type: 'text',
-            text: { body: 'Hello from OpenSauria' },
+            text: { body: 'Hello from Sauria' },
           }),
         }),
       );
@@ -339,7 +339,7 @@ describe('WhatsAppChannel', () => {
       await channel.start();
       const port = getAssignedPort(channel);
 
-      const payload = buildWebhookPayload('123456789', '+1999888777', 'Hello OpenSauria');
+      const payload = buildWebhookPayload('123456789', '+1999888777', 'Hello Sauria');
       const body = JSON.stringify(payload);
       const signature = signPayload(body, 'test-app-secret');
 
@@ -350,7 +350,7 @@ describe('WhatsAppChannel', () => {
         expect.objectContaining({
           platform: 'whatsapp',
           senderId: '+1999888777',
-          content: 'Hello OpenSauria',
+          content: 'Hello Sauria',
           contentType: 'text',
         }),
       );

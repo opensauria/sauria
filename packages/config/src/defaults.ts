@@ -1,7 +1,7 @@
-import { OpenSauriaConfigSchema } from './schema.js';
-import type { OpenSauriaConfig } from './schema.js';
+import { SauriaConfigSchema } from './schema.js';
+import type { SauriaConfig } from './schema.js';
 
-export const DEFAULT_CONFIG: OpenSauriaConfig = OpenSauriaConfigSchema.parse({});
+export const DEFAULT_CONFIG: SauriaConfig = SauriaConfigSchema.parse({});
 
 /**
  * Model presets per provider — used by desktop setup wizard.

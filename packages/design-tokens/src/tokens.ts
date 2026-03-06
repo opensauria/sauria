@@ -19,11 +19,14 @@ export const colors = {
   accentHover: '#027a87',
   success: '#34d399',
   error: '#f87171',
+  warning: '#f59e0b',
+  overlay: 'rgba(0, 0, 0, 0.5)',
 } as const;
 
 export const radii = {
   default: '12px',
   sm: '8px',
+  lg: '16px',
   pill: '9999px',
 } as const;
 
@@ -42,8 +45,10 @@ export const typography = {
   fontFamilyMono: "'Geist Mono', monospace",
   sizeBase: '14px',
   sizeSmall: '12px',
-  sizeXSmall: '11px',
-  sizeLabel: '13px',
+  sizeXSmall: '12px',
+  sizeLabel: '14px',
+  sizeMicro: '10px',
+  sizeHeading: '16px',
 } as const;
 
 export const transitions = {
@@ -51,8 +56,20 @@ export const transitions = {
   normal: '0.2s ease',
 } as const;
 
+export const entityColors = {
+  person: '#3b82f6',
+  project: '#34d399',
+  company: '#a78bfa',
+  event: '#f59e0b',
+  document: '#6b7280',
+  goal: '#038b9a',
+  place: '#eab308',
+  concept: '#ec4899',
+} as const;
+
 export type Colors = typeof colors;
 export type Radii = typeof radii;
 export type Spacing = typeof spacing;
 export type Typography = typeof typography;
 export type Transitions = typeof transitions;
+export type EntityColors = typeof entityColors;

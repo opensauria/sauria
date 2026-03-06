@@ -2,9 +2,9 @@ import * as p from '@clack/prompts';
 import { openDatabase, closeDatabase } from '../db/connection.js';
 import { applySchema } from '../db/schema.js';
 import { loadConfig, saveConfig, ensureConfigDir } from '../config/loader.js';
-import { paths } from '@opensauria/config';
+import { paths } from '@sauria/config';
 import { vaultStore } from '../security/vault-key.js';
-import type { OpenSauriaConfig } from '../config/schema.js';
+import type { SauriaConfig } from '../config/schema.js';
 import { validateCredential } from './validate.js';
 import {
   generateCodeVerifier,
@@ -184,7 +184,7 @@ async function setupLocal(): Promise<{
       'open-webui': 'http://localhost:3000',
     };
     baseUrl = urls[provider] ?? 'http://localhost:11434';
-    p.log.info(`Start ${provider} before running OpenSauria.`);
+    p.log.info(`Start ${provider} before running Sauria.`);
   }
 
   // Store the base URL so the router knows where to connect
@@ -229,7 +229,7 @@ async function runPostSetup(
   if (daemon) {
     daemonSpin.stop(`Daemon ready (${daemon.platform}).`);
   } else {
-    daemonSpin.stop('Daemon: run `opensauria daemon` manually.');
+    daemonSpin.stop('Daemon: run `sauria daemon` manually.');
   }
 
   // Summary
@@ -246,16 +246,16 @@ async function runPostSetup(
   p.note(lines.join('\n'), 'Setup Complete');
 
   if (detected.length > 0) {
-    p.outro('Restart your AI client and OpenSauria is ready.');
+    p.outro('Restart your AI client and Sauria is ready.');
   } else {
-    p.outro('Run `opensauria daemon` to start.');
+    p.outro('Run `sauria daemon` to start.');
   }
 }
 
 // ─── Main ───────────────────────────────────────────────────────────────
 
 export async function runOnboarding(): Promise<void> {
-  p.intro('Welcome to OpenSauria');
+  p.intro('Welcome to Sauria');
 
   const mode = await chooseConnectionMode();
 
@@ -288,7 +288,7 @@ export async function runOnboarding(): Promise<void> {
   // Config
   const preset = getModelPreset(provider);
   const config = await loadConfig();
-  const updatedConfig: OpenSauriaConfig = {
+  const updatedConfig: SauriaConfig = {
     ...config,
     models: { ...preset },
     auth: { ...config.auth, [provider]: { method: authMethod } },

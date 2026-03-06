@@ -16,12 +16,12 @@ pub struct Paths {
 
 impl Paths {
     pub fn resolve() -> Self {
-        let home = std::env::var("OPENSAURIA_HOME")
+        let home = std::env::var("SAURIA_HOME")
             .map(PathBuf::from)
             .unwrap_or_else(|_| {
                 dirs::home_dir()
                     .unwrap_or_else(|| PathBuf::from("/tmp"))
-                    .join(".opensauria")
+                    .join(".sauria")
             });
 
         Self {

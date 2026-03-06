@@ -1,4 +1,4 @@
-@import '@opensauria/design-tokens/tokens.css';
+@import '@sauria/design-tokens/tokens.css';
 
 * {
   margin: 0;
@@ -34,9 +34,9 @@ body {
 
 .badge {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--font-size-x-small);
   padding: 3px 8px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   font-weight: 500;
   flex-shrink: 0;
 }
@@ -64,11 +64,11 @@ body {
 .btn {
   padding: 12px 24px;
   border-radius: var(--radius-pill);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   border: none;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
   flex: 1;
 }
 
@@ -108,8 +108,8 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  background: var(--border);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -147,7 +147,7 @@ body {
   justify-content: center;
   z-index: 600;
   padding: 0;
-  transition: background 0.15s ease;
+  transition: background var(--transition-fast);
 }
 
 .palette-back:hover {
@@ -169,5 +169,50 @@ body.in-palette .palette-back {
 /* html background: transparent set via JS to prevent body bg propagation */
 
 body.in-palette {
-  animation: fadeIn 0.15s ease;
+  animation: fadeIn var(--transition-fast);
+}
+
+/* ── Update Banner ──────────────────────────── */
+
+.update-banner {
+  position: fixed;
+  bottom: -48px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-small);
+  color: var(--text);
+  backdrop-filter: blur(12px);
+  transition: bottom 0.3s ease;
+  z-index: 9999;
+}
+
+.update-banner.visible {
+  bottom: 16px;
+}
+
+.update-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.update-btn:hover {
+  background: var(--accent-hover);
+}
+
+.update-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }

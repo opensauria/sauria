@@ -1,20 +1,31 @@
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 
 use crate::daemon_manager;
 use crate::paths::Paths;
+use crate::vault;
 
 #[tauri::command]
 pub fn get_canvas_graph(paths: tauri::State<'_, Paths>) -> Value {
     if !paths.canvas.exists() {
         return empty_graph();
     }
-    fs::read_to_string(&paths.canvas)
+    let mut canvas = fs::read_to_string(&paths.canvas)
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_else(empty_graph)
+        .unwrap_or_else(empty_graph);
+
+    if migrate_node_ids(&mut canvas, &paths) {
+        let _ = fs::write(
+            &paths.canvas,
+            serde_json::to_string_pretty(&canvas).unwrap_or_default(),
+        );
+    }
+
+    canvas
 }
 
 #[tauri::command]
@@ -242,6 +253,165 @@ fn resolve_owner_photo() -> Option<String> {
     }
 
     None
+}
+
+fn compute_deterministic_id(node: &Value) -> Option<String> {
+    let platform = node.get("platform")?.as_str()?;
+    let meta = node.get("meta")?;
+
+    match platform {
+        "owner" => Some("owner".to_string()),
+        "telegram" => {
+            let bot_id = meta.get("botId").and_then(|v| v.as_str()).filter(|s| !s.is_empty())?;
+            Some(format!("telegram_{bot_id}"))
+        }
+        "slack" => {
+            let user_id = meta.get("botUserId").and_then(|v| v.as_str()).filter(|s| !s.is_empty())?;
+            Some(format!("slack_{user_id}"))
+        }
+        "whatsapp" => {
+            let phone_id = meta.get("phoneNumberId").and_then(|v| v.as_str()).filter(|s| !s.is_empty())?;
+            Some(format!("whatsapp_{phone_id}"))
+        }
+        "discord" => {
+            let bot_id = meta.get("botId").and_then(|v| v.as_str()).filter(|s| !s.is_empty())?;
+            Some(format!("discord_{bot_id}"))
+        }
+        "email" => {
+            let username = meta.get("username").and_then(|v| v.as_str()).filter(|s| !s.is_empty())?;
+            let imap_host = meta.get("imapHost").and_then(|v| v.as_str()).filter(|s| !s.is_empty())?;
+            Some(format!("email_{username}@{imap_host}"))
+        }
+        _ => None,
+    }
+}
+
+fn migrate_node_ids(canvas: &mut Value, paths: &Paths) -> bool {
+    let mut mappings: HashMap<String, String> = HashMap::new();
+
+    // Collect ID mappings for connected nodes
+    let nodes = match canvas.get("nodes").and_then(|n| n.as_array()) {
+        Some(nodes) => nodes.clone(),
+        None => return false,
+    };
+
+    let mut used_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for node in &nodes {
+        if let Some(id) = node.get("id").and_then(|v| v.as_str()) {
+            used_ids.insert(id.to_string());
+        }
+    }
+
+    for node in &nodes {
+        let old_id = match node.get("id").and_then(|v| v.as_str()) {
+            Some(id) => id.to_string(),
+            None => continue,
+        };
+
+        let status = node.get("status").and_then(|v| v.as_str()).unwrap_or("");
+        let platform = node.get("platform").and_then(|v| v.as_str()).unwrap_or("");
+
+        // Only migrate connected nodes with meta, or owner nodes
+        if platform == "owner" {
+            if old_id != "owner" {
+                mappings.insert(old_id, "owner".to_string());
+            }
+            continue;
+        }
+
+        if status != "connected" {
+            continue;
+        }
+
+        let new_id = match compute_deterministic_id(node) {
+            Some(id) => id,
+            None => continue,
+        };
+
+        if old_id == new_id {
+            continue;
+        }
+
+        // Avoid collision: if another node already has this deterministic ID, skip
+        if used_ids.contains(&new_id) && !mappings.values().any(|v| v == &new_id) {
+            continue;
+        }
+
+        mappings.insert(old_id, new_id);
+    }
+
+    if mappings.is_empty() {
+        return false;
+    }
+
+    // Apply mappings to nodes
+    if let Some(nodes) = canvas.get_mut("nodes").and_then(|n| n.as_array_mut()) {
+        for node in nodes.iter_mut() {
+            let old_id = match node.get("id").and_then(|v| v.as_str()) {
+                Some(id) => id.to_string(),
+                None => continue,
+            };
+            if let Some(new_id) = mappings.get(&old_id) {
+                node["id"] = Value::String(new_id.clone());
+                // Update credentials reference
+                if let Some(creds) = node.get("credentials").and_then(|v| v.as_str()) {
+                    let updated = creds.replace(&old_id, new_id);
+                    node["credentials"] = Value::String(updated);
+                }
+            }
+        }
+    }
+
+    // Apply mappings to edges
+    if let Some(edges) = canvas.get_mut("edges").and_then(|n| n.as_array_mut()) {
+        for edge in edges.iter_mut() {
+            if let Some(from) = edge.get("from").and_then(|v| v.as_str()) {
+                if let Some(new_id) = mappings.get(from) {
+                    edge["from"] = Value::String(new_id.clone());
+                }
+            }
+            if let Some(to) = edge.get("to").and_then(|v| v.as_str()) {
+                if let Some(new_id) = mappings.get(to) {
+                    edge["to"] = Value::String(new_id.clone());
+                }
+            }
+        }
+    }
+
+    // Migrate vault keys and bot profiles
+    let mut profiles = crate::cmd_channels::read_profiles_pub(paths);
+    let mut profiles_changed = false;
+    for (old_id, new_id) in &mappings {
+        // Migrate vault key
+        if vault::vault_exists(paths, &format!("channel_token_{old_id}")) {
+            if let Ok(()) = vault::vault_rename(paths, &format!("channel_token_{old_id}"), &format!("channel_token_{new_id}")) {
+                // renamed
+            }
+        }
+        if vault::vault_exists(paths, &format!("channel_signing_{old_id}")) {
+            let _ = vault::vault_rename(paths, &format!("channel_signing_{old_id}"), &format!("channel_signing_{new_id}"));
+        }
+
+        // Migrate bot profile entry
+        if let Some(obj) = profiles.as_object_mut() {
+            if let Some(profile) = obj.remove(old_id) {
+                obj.insert(new_id.clone(), profile);
+                profiles_changed = true;
+            }
+        }
+    }
+    if profiles_changed {
+        crate::cmd_channels::write_profiles_pub(paths, &profiles);
+    }
+
+    // Write sidecar migration file for daemon SQLite migration
+    let sidecar_path = paths.home.join("node-id-migrations.json");
+    let _ = fs::write(
+        &sidecar_path,
+        serde_json::to_string_pretty(&mappings).unwrap_or_default(),
+    );
+
+    true
 }
 
 fn empty_graph() -> Value {

@@ -82,7 +82,7 @@ export class TelegramChannel implements Channel {
   private setupCommands(): void {
     this.bot.command('start', (ctx) =>
       ctx.reply(
-        'OpenSauria is ready. Use /ask, /status, /entity, /upcoming, /insights, /teach, or /silence.',
+        'Sauria is ready. Use /ask, /status, /entity, /upcoming, /insights, /teach, or /silence.',
       ),
     );
     this.bot.command('ask', async (ctx) => {
@@ -266,7 +266,7 @@ export class TelegramChannel implements Channel {
       | { ts: string | null }
       | undefined;
     const lines = [
-      'OpenSauria Status',
+      'Sauria Status',
       `Entities: ${String(countRows(db, 'SELECT COUNT(*) AS c FROM entities'))}`,
       `Events: ${String(countRows(db, 'SELECT COUNT(*) AS c FROM events'))}`,
       `Last ingestion: ${lastRow?.ts ?? 'never'}`,

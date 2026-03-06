@@ -92,7 +92,7 @@ fn resolve_platform_id() -> String {
 fn derive_vault_password(paths: &Paths) -> String {
     let mid = machine_id(paths);
     let username = whoami::username();
-    let input = format!("{mid}:{username}:opensauria-vault");
+    let input = format!("{mid}:{username}:sauria-vault");
     let hash = Sha256::digest(input.as_bytes());
     hex::encode(hash)
 }
@@ -172,4 +172,13 @@ pub fn vault_delete(paths: &Paths, name: &str) -> Result<(), String> {
 
 pub fn vault_exists(paths: &Paths, name: &str) -> bool {
     secret_file_path(paths, name).exists()
+}
+
+pub fn vault_rename(paths: &Paths, old_name: &str, new_name: &str) -> Result<(), String> {
+    let old_path = secret_file_path(paths, old_name);
+    let new_path = secret_file_path(paths, new_name);
+    if !old_path.exists() {
+        return Err(format!("Vault key not found: {old_name}"));
+    }
+    fs::rename(&old_path, &new_path).map_err(|e| e.to_string())
 }

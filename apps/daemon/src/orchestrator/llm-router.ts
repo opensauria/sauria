@@ -27,6 +27,7 @@ export interface RoutingContext {
   readonly ruleActions: readonly RoutingAction[];
   readonly conversationId: string | null;
   readonly globalInstructions: string;
+  readonly language?: string;
 }
 
 interface LLMRoutingResponse {
@@ -249,10 +250,29 @@ function buildMessageSection(message: InboundMessage, sourceNode: AgentNode): st
   return lines;
 }
 
+// ─── Language Mapping ────────────────────────────────────────────────
+
+const LANGUAGE_CODE_TO_NAME: Readonly<Record<string, string>> = {
+  en: 'English', fr: 'French', es: 'Spanish', de: 'German', it: 'Italian',
+  pt: 'Portuguese', nl: 'Dutch', ru: 'Russian', uk: 'Ukrainian', pl: 'Polish',
+  cs: 'Czech', sk: 'Slovak', hu: 'Hungarian', ro: 'Romanian', bg: 'Bulgarian',
+  hr: 'Croatian', sr: 'Serbian', sl: 'Slovenian', lv: 'Latvian', lt: 'Lithuanian',
+  et: 'Estonian', sv: 'Swedish', no: 'Norwegian', da: 'Danish', fi: 'Finnish',
+  el: 'Greek', tr: 'Turkish', ar: 'Arabic', he: 'Hebrew', hi: 'Hindi',
+  bn: 'Bengali', ta: 'Tamil', te: 'Telugu', mr: 'Marathi', gu: 'Gujarati',
+  ur: 'Urdu', fa: 'Persian', zh: 'Chinese', ja: 'Japanese', ko: 'Korean',
+  th: 'Thai', vi: 'Vietnamese', id: 'Indonesian', ms: 'Malay', tl: 'Filipino',
+  sw: 'Swahili', am: 'Amharic', yo: 'Yoruba', ha: 'Hausa', zu: 'Zulu',
+  af: 'Afrikaans', ca: 'Catalan', eu: 'Basque', gl: 'Galician', cy: 'Welsh',
+  ga: 'Irish', ka: 'Georgian', hy: 'Armenian', az: 'Azerbaijani', uz: 'Uzbek',
+  kk: 'Kazakh', mn: 'Mongolian', ne: 'Nepali', si: 'Sinhala', km: 'Khmer',
+  lo: 'Lao', my: 'Burmese',
+};
+
 // ─── Language Extraction ─────────────────────────────────────────────
 
 const LANGUAGE_DIRECTIVE_PATTERN =
-  /(?:always\s+(?:reply|respond|answer|write|speak)|(?:reply|respond|answer|write|speak)\s+(?:only\s+)?in)\s+(english|french|spanish|german|italian|portuguese|arabic|chinese|japanese|korean|russian|dutch|swedish|norwegian|danish|finnish|polish|czech|hungarian|romanian|turkish|hindi|thai|vietnamese|indonesian|malay|filipino|hebrew|greek|ukrainian|bulgarian|croatian|serbian|slovak|slovenian|latvian|lithuanian|estonian)/i;
+  /(?:always\s+(?:reply|respond|answer|write|speak)|(?:reply|respond|answer|write|speak)\s+(?:only\s+)?in)\s+(english|french|spanish|german|italian|portuguese|arabic|chinese|japanese|korean|russian|dutch|swedish|norwegian|danish|finnish|polish|czech|hungarian|romanian|turkish|hindi|thai|vietnamese|indonesian|malay|filipino|hebrew|greek|ukrainian|bulgarian|croatian|serbian|slovak|slovenian|latvian|lithuanian|estonian|bengali|tamil|telugu|marathi|gujarati|urdu|persian|farsi|swahili|amharic|yoruba|hausa|zulu|afrikaans|catalan|basque|galician|welsh|irish|georgian|armenian|azerbaijani|uzbek|kazakh|mongolian|nepali|sinhala|khmer|lao|burmese)/i;
 
 function extractLanguageDirective(instructions: string): string | null {
   const match = instructions.match(LANGUAGE_DIRECTIVE_PATTERN);
@@ -460,14 +480,20 @@ function buildRoutingPrompt(
   }
 
   // Extract explicit language directive from instructions and inject at the very end
-  // for maximum LLM attention (recency bias)
+  // for maximum LLM attention (recency bias).
+  // Priority: agent instruction directive > graph-level language setting > auto-detect
   const allInstructions = [globalInstructions, sourceNode.instructions].filter(Boolean).join('\n');
   const detectedLanguage = extractLanguageDirective(allInstructions);
+  const graphLanguage = context.language && context.language !== 'auto'
+    ? (LANGUAGE_CODE_TO_NAME[context.language] ?? context.language)
+    : null;
 
-  if (detectedLanguage) {
+  const effectiveLanguage = detectedLanguage ?? graphLanguage;
+
+  if (effectiveLanguage) {
     promptParts.push(
       '',
-      `MANDATORY LANGUAGE: You MUST write ALL content (replies, forwards, summaries, agent-to-agent messages) in ${detectedLanguage}. This overrides everything else. Even if the user writes in another language, you MUST respond in ${detectedLanguage}.`,
+      `MANDATORY LANGUAGE: You MUST write ALL content (replies, forwards, summaries, agent-to-agent messages) in ${effectiveLanguage}. This overrides everything else. Even if the user writes in another language, you MUST respond in ${effectiveLanguage}.`,
     );
   } else {
     promptParts.push(

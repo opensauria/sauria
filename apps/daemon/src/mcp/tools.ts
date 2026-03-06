@@ -83,49 +83,49 @@ const rememberSchema = z.object({
 });
 
 export const TOOL_DEFS = {
-  opensauria_query: {
+  sauria_query: {
     description: 'Ask a natural language question about your world model',
     schema: querySchema,
   },
-  opensauria_get_entity: {
+  sauria_get_entity: {
     description:
       'Get detailed information about a specific entity including relations and timeline',
     schema: getEntitySchema,
   },
-  opensauria_search: {
+  sauria_search: {
     description: 'Search the world model using hybrid semantic + keyword search',
     schema: searchSchema,
   },
-  opensauria_get_upcoming: {
+  sauria_get_upcoming: {
     description: 'Get upcoming deadlines, meetings, and events',
     schema: getUpcomingSchema,
   },
-  opensauria_get_insights: {
+  sauria_get_insights: {
     description: 'Get recent AI-generated insights and observations',
     schema: getInsightsSchema,
   },
-  opensauria_get_context_for: {
+  sauria_get_context_for: {
     description: 'Get comprehensive context dump for a topic or entity',
     schema: getContextForSchema,
   },
-  opensauria_add_event: {
+  sauria_add_event: {
     description: 'Feed a new event into the world model (requires authorization)',
     schema: addEventSchema,
   },
-  opensauria_remember: {
+  sauria_remember: {
     description:
       'Store structured knowledge: entities (people, projects, companies, etc.) and their relations. Use this whenever you learn something new about the user or their world.',
     schema: rememberSchema,
   },
-  opensauria_pending_approvals: {
+  sauria_pending_approvals: {
     description: 'List all pending approval requests from agents that require owner authorization',
     schema: pendingApprovalsSchema,
   },
-  opensauria_approve: {
+  sauria_approve: {
     description: 'Approve a pending action by ID and execute the queued actions',
     schema: approveSchema,
   },
-  opensauria_reject: {
+  sauria_reject: {
     description: 'Reject a pending action by ID, discarding the queued actions',
     schema: rejectSchema,
   },

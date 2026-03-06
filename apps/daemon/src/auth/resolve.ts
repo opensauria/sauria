@@ -112,7 +112,7 @@ export async function resolveApiKey(providerName: string): Promise<string> {
   if (!credential) {
     const envName = envVarName(providerName);
     throw new Error(
-      `Missing credentials for ${providerName}. ` + `Run "opensauria onboard" or set ${envName}.`,
+      `Missing credentials for ${providerName}. ` + `Run "sauria onboard" or set ${envName}.`,
     );
   }
 

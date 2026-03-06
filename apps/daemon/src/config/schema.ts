@@ -1,17 +1,17 @@
-// Re-export from canonical @opensauria/config package.
+// Re-export from canonical @sauria/config package.
 export {
-  OpenSauriaConfigSchema,
+  SauriaConfigSchema,
   ModelConfigSchema,
   AuthConfigSchema,
   McpServerConfigSchema,
   ChannelsConfigSchema,
-} from '@opensauria/config';
+} from '@sauria/config';
 
 export type {
-  OpenSauriaConfig,
+  SauriaConfig,
   ModelConfig,
   AuthConfig,
   McpServerConfig,
   OwnerIdentityConfig,
   OrchestratorConfig,
-} from '@opensauria/config';
+} from '@sauria/config';

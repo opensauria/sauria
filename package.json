@@ -1,8 +1,8 @@
 {
-  "name": "opensauria-monorepo",
+  "name": "sauria-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "OpenSauria monorepo — security-first personal AI operating system.",
+  "description": "Sauria monorepo — security-first personal AI operating system.",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
   "author": {
@@ -12,11 +12,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/teobouancheau/opensauria.git"
+    "url": "https://github.com/teobouancheau/sauria.git"
   },
-  "homepage": "https://github.com/teobouancheau/opensauria",
+  "homepage": "https://github.com/teobouancheau/sauria",
   "bugs": {
-    "url": "https://github.com/teobouancheau/opensauria/issues"
+    "url": "https://github.com/teobouancheau/sauria/issues"
   },
   "engines": {
     "node": ">=24",
@@ -24,10 +24,10 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "build:daemon": "turbo run build --filter=@opensauria/daemon",
-    "build:desktop": "turbo run build --filter=opensauria-desktop",
-    "dev:daemon": "pnpm --filter @opensauria/daemon run dev",
-    "dev:desktop": "pnpm --filter opensauria-desktop run dev",
+    "build:daemon": "turbo run build --filter=@sauria/daemon",
+    "build:desktop": "turbo run build --filter=sauria-desktop",
+    "dev:daemon": "pnpm --filter @sauria/daemon run dev",
+    "dev:desktop": "pnpm --filter sauria-desktop run dev",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
@@ -38,5 +38,5 @@
     "turbo": "2.5.4",
     "typescript": "5.9.3"
   },
-  "license": "MIT"
+  "license": "BUSL-1.1"
 }
