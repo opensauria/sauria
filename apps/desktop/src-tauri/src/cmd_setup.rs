@@ -65,7 +65,7 @@ pub fn get_status(paths: tauri::State<'_, Paths>) -> StatusResult {
     }
 }
 
-const DEFAULT_AUTH_PROXY_URL: &str = "https://auth.sauria.app";
+const DEFAULT_AUTH_PROXY_URL: &str = "https://auth.sauria.dev";
 
 #[tauri::command]
 pub fn get_auth_proxy_url(paths: tauri::State<'_, Paths>) -> String {
