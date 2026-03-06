@@ -2,6 +2,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { t, applyTranslations } from '../i18n.js';
 
+function escapeHtml(s: string): string {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(s));
+  return d.innerHTML;
+}
+
 // ── Types ─────────────────────────────────────
 
 interface McpRemoteServer {
@@ -511,11 +517,11 @@ function renderConnectedPanel(item: IntegrationStatus): void {
   const label = accountLabels[item.id];
   const toolsList = item.tools
     .slice(0, 15)
-    .map((tool) => `<div class="config-tool-item">${tool.name}</div>`)
+    .map((tool) => `<div class="config-tool-item">${escapeHtml(tool.name)}</div>`)
     .join('');
 
   configBody.innerHTML = `
-    ${label ? `<div class="connected-account"><span class="connected-account-dot"></span><span class="connected-account-label">${label}</span></div>` : ''}
+    ${label ? `<div class="connected-account"><span class="connected-account-dot"></span><span class="connected-account-label">${escapeHtml(label)}</span></div>` : ''}
     <div class="config-tools">
       <div class="config-tools-title">${t('integ.availableTools')} (${item.tools.length})</div>
       ${toolsList}

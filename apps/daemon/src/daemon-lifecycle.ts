@@ -105,10 +105,13 @@ async function connectMcpSources(
 async function autoConnectIntegrations(
   registry: IntegrationRegistry,
   config: SauriaConfig,
+  canvasGraph: CanvasGraph,
 ): Promise<void> {
   const logger = getLogger();
-  const integrations = config.integrations ?? {};
+  const connected = new Set<string>();
 
+  // 1. Reconnect API-key integrations from config
+  const integrations = config.integrations ?? {};
   for (const [id, settings] of Object.entries(integrations)) {
     if (!settings?.enabled) continue;
     try {
@@ -121,14 +124,36 @@ async function autoConnectIntegrations(
         if (value) creds[key] = value;
       }
 
-      if (Object.keys(creds).length < definition.credentialKeys.length) {
-        logger.warn(`Skipping integration ${id}: missing credentials`);
-        continue;
-      }
+      if (Object.keys(creds).length < definition.credentialKeys.length) continue;
 
       await registry.connect(id, creds);
+      connected.add(id);
     } catch (err: unknown) {
       logger.error(`Failed to auto-connect integration: ${id}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  // 2. Reconnect OAuth integrations from canvas instances
+  for (const instance of canvasGraph.instances ?? []) {
+    if (connected.has(instance.integrationId)) continue;
+    try {
+      const oauthJson = await vaultGet(`integration_oauth_${instance.integrationId}`);
+      if (!oauthJson) continue;
+      const oauth = JSON.parse(oauthJson) as { accessToken?: string };
+      if (!oauth.accessToken) continue;
+
+      await registry.connectInstance(
+        instance.id,
+        instance.integrationId,
+        instance.label,
+        { accessToken: oauth.accessToken },
+      );
+      connected.add(instance.integrationId);
+      logger.info(`Auto-reconnected OAuth integration: ${instance.integrationId}`);
+    } catch (err: unknown) {
+      logger.error(`Failed to auto-connect OAuth integration: ${instance.integrationId}`, {
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -693,7 +718,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
 
   // ─── Integration registry ───────────────────────────────────────────
   const integrationRegistry = new IntegrationRegistry(mcpClients, audit, INTEGRATION_CATALOG);
-  await autoConnectIntegrations(integrationRegistry, config);
+  await autoConnectIntegrations(integrationRegistry, config, loadCanvasGraph());
 
   // ─── Token refresh service for OAuth integrations ──────────────────────
   const tokenRefreshService = new TokenRefreshService(integrationRegistry, logger);
@@ -849,12 +874,45 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     const integrationId = params['integrationId'] as string;
     const label = params['label'] as string;
     const credentials = params['credentials'] as Record<string, string>;
-    return integrationRegistry.connectInstance(instanceId, integrationId, label, credentials);
+    const result = await integrationRegistry.connectInstance(instanceId, integrationId, label, credentials);
+
+    // Persist instance in canvas graph so the canvas UI can see it
+    const currentGraph = loadCanvasGraph();
+    const alreadyExists = (currentGraph.instances ?? []).some((i) => i.id === instanceId);
+    if (!alreadyExists) {
+      const instance: IntegrationInstance = {
+        id: instanceId,
+        integrationId,
+        label,
+        connectedAt: new Date().toISOString(),
+      };
+      const updatedGraph = {
+        ...currentGraph,
+        instances: [...(currentGraph.instances ?? []), instance],
+      };
+      writeFileSync(paths.canvas, JSON.stringify(updatedGraph, null, 2), 'utf-8');
+      if (orchestrator) orchestrator.updateGraph(updatedGraph);
+    }
+
+    return result;
   });
 
   ipcServer.registerMethod('integrations:disconnect-instance', async (_db, params) => {
     const instanceId = params['instanceId'] as string;
     await integrationRegistry.disconnectInstance(instanceId);
+
+    // Remove instance from canvas graph
+    const currentGraph = loadCanvasGraph();
+    const updatedInstances = (currentGraph.instances ?? []).filter((i) => i.id !== instanceId);
+    const updatedNodes = currentGraph.nodes.map((n) => {
+      if (!n.integrations) return n;
+      const filtered = n.integrations.filter((iid) => iid !== instanceId);
+      return filtered.length === n.integrations.length ? n : { ...n, integrations: filtered };
+    });
+    const updatedGraph = { ...currentGraph, instances: updatedInstances, nodes: updatedNodes };
+    writeFileSync(paths.canvas, JSON.stringify(updatedGraph, null, 2), 'utf-8');
+    if (orchestrator) orchestrator.updateGraph(updatedGraph);
+
     return { success: true };
   });
 

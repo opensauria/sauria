@@ -43,14 +43,15 @@ export class TokenRefreshService {
     if (!credential.refreshToken) return;
 
     try {
+      const formBody = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: credential.refreshToken,
+        client_id: 'sauria-desktop',
+      });
       const resp = await fetch(tokenUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          grant_type: 'refresh_token',
-          refresh_token: credential.refreshToken,
-          client_id: 'sauria-desktop',
-        }),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formBody.toString(),
       });
 
       if (!resp.ok) {
