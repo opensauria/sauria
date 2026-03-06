@@ -151,6 +151,7 @@ interface RawNode {
   readonly role?: string;
   readonly autonomy?: string | number;
   readonly instructions?: string;
+  readonly description?: string;
   readonly behavior?: AgentNode['behavior'];
   readonly integrations?: readonly string[];
 }
@@ -225,6 +226,7 @@ function normalizeNode(raw: RawNode): AgentNode {
     role,
     autonomy,
     instructions: raw.instructions ?? '',
+    description: typeof raw.description === 'string' ? raw.description : undefined,
     behavior: raw.behavior,
     integrations: raw.integrations,
   };

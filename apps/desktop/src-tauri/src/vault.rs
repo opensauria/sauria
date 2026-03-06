@@ -153,6 +153,40 @@ pub fn vault_store(paths: &Paths, name: &str, value: &str) -> Result<(), String>
     Ok(())
 }
 
+pub fn vault_read(paths: &Paths, name: &str) -> Result<String, String> {
+    let file_path = secret_file_path(paths, name);
+    if !file_path.exists() {
+        return Err(format!("Vault key not found: {name}"));
+    }
+
+    let file_data = fs::read(&file_path).map_err(|e| e.to_string())?;
+    if file_data.len() < SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH {
+        return Err("Vault file too short".to_string());
+    }
+
+    let salt = &file_data[..SALT_LENGTH];
+    let iv = &file_data[SALT_LENGTH..SALT_LENGTH + IV_LENGTH];
+    let auth_tag = &file_data[SALT_LENGTH + IV_LENGTH..SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH];
+    let encrypted = &file_data[SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH..];
+
+    let password = derive_vault_password(paths);
+    let key = derive_wrapping_key(&password, salt);
+
+    let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| e.to_string())?;
+    let nonce = Nonce::from_slice(iv);
+
+    // Reassemble ciphertext + auth tag (aes-gcm expects them concatenated)
+    let mut ciphertext = Vec::with_capacity(encrypted.len() + AUTH_TAG_LENGTH);
+    ciphertext.extend_from_slice(encrypted);
+    ciphertext.extend_from_slice(auth_tag);
+
+    let plaintext = cipher
+        .decrypt(nonce, ciphertext.as_slice())
+        .map_err(|_| "Vault decryption failed".to_string())?;
+
+    String::from_utf8(plaintext).map_err(|e| e.to_string())
+}
+
 pub fn vault_delete(paths: &Paths, name: &str) -> Result<(), String> {
     let file_path = secret_file_path(paths, name);
     if !file_path.exists() {

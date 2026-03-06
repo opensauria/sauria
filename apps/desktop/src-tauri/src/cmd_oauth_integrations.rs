@@ -11,10 +11,12 @@ use tokio::sync::Mutex;
 const DEFAULT_CLIENT_ID: &str = "sauria-desktop";
 const CLIENT_NAME: &str = "Sauria Desktop";
 const REDIRECT_URI: &str = "sauria://oauth/callback";
+const VAULT_ACCOUNTS_KEY: &str = "integration_accounts";
 
 #[derive(Clone)]
 struct PendingOAuth {
     provider: String,
+    provider_name: String,
     verifier: String,
     mcp_url: String,
     token_url: Option<String>,
@@ -38,6 +40,7 @@ pub struct OAuthStartResult {
 #[tauri::command]
 pub async fn start_integration_oauth(
     integration_id: String,
+    provider_name: String,
     mcp_url: String,
     auth_url: Option<String>,
     token_url: Option<String>,
@@ -87,6 +90,7 @@ pub async fn start_integration_oauth(
         state.clone(),
         PendingOAuth {
             provider: integration_id,
+            provider_name,
             verifier: verifier.clone(),
             mcp_url: mcp_url.clone(),
             token_url: resolved_token_url,
@@ -125,7 +129,9 @@ pub async fn complete_integration_oauth(
     let pending = pop_pending(&state).await?;
     let token_url = resolve_token_url(&pending).await?;
     let tokens = exchange_code(&code, &pending.verifier, &token_url, &pending.client_id).await?;
-    store_and_connect(&pending.provider, &tokens, &paths, &client).await
+    let account_label = fetch_account_label(&tokens.access_token, &pending.mcp_url).await;
+    save_account_label(&paths, &pending.provider, &account_label.clone().unwrap_or_else(|| pending.provider_name.clone()));
+    store_and_connect(&pending.provider, &tokens, &account_label, &paths, &client).await
 }
 
 /// Handle deep link callback from browser.
@@ -147,24 +153,28 @@ pub async fn handle_deep_link_callback(
         }
         let pending = pop_pending(&state).await?;
         let tokens = TokenSet {
-            access_token,
+            access_token: access_token.clone(),
             refresh_token: params.get("refresh_token").cloned().unwrap_or_default(),
             expires_in: params
                 .get("expires_in")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(3600),
         };
+        let account_label = fetch_account_label(&access_token, &pending.mcp_url).await;
         let paths = handle.state::<crate::paths::Paths>();
         let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
-        store_and_connect(&pending.provider, &tokens, &paths, &client).await?
+        save_account_label(&paths, &pending.provider, &account_label.clone().unwrap_or_else(|| pending.provider_name.clone()));
+        store_and_connect(&pending.provider, &tokens, &account_label, &paths, &client).await?
     } else {
         // Standard OAuth code exchange
         let pending = pop_pending(&state).await?;
         let token_url = resolve_token_url(&pending).await?;
         let tokens = exchange_code(&code, &pending.verifier, &token_url, &pending.client_id).await?;
+        let account_label = fetch_account_label(&tokens.access_token, &pending.mcp_url).await;
         let paths = handle.state::<crate::paths::Paths>();
         let client = handle.state::<std::sync::Arc<crate::daemon_client::DaemonClient>>();
-        store_and_connect(&pending.provider, &tokens, &paths, &client).await?
+        save_account_label(&paths, &pending.provider, &account_label.clone().unwrap_or_else(|| pending.provider_name.clone()));
+        store_and_connect(&pending.provider, &tokens, &account_label, &paths, &client).await?
     };
 
     let _ = handle.emit("integration-oauth-complete", result);
@@ -243,6 +253,7 @@ async fn exchange_code(code: &str, verifier: &str, token_url: &str, client_id: &
 async fn store_and_connect(
     provider: &str,
     tokens: &TokenSet,
+    account_label: &Option<String>,
     paths: &crate::paths::Paths,
     client: &std::sync::Arc<crate::daemon_client::DaemonClient>,
 ) -> Result<serde_json::Value, String> {
@@ -259,7 +270,7 @@ async fn store_and_connect(
     let vault_key = format!("integration_oauth_{}", provider);
     crate::vault::vault_store(paths, &vault_key, &credential.to_string())?;
 
-    client
+    let mut result = client
         .request(
             "integrations:connect-instance",
             serde_json::json!({
@@ -270,7 +281,16 @@ async fn store_and_connect(
             }),
         )
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    // Inject account label into the result for the frontend
+    if let Some(label) = account_label {
+        if let Some(obj) = result.as_object_mut() {
+            obj.insert("accountLabel".to_string(), serde_json::Value::String(label.clone()));
+        }
+    }
+
+    Ok(result)
 }
 
 // ── OAuth metadata discovery & dynamic registration ─────────────────────
@@ -300,6 +320,90 @@ async fn try_dynamic_registration(registration_endpoint: &str) -> Result<String,
         .as_str()
         .map(String::from)
         .ok_or_else(|| "No client_id in registration response".into())
+}
+
+/// Read stored account labels for connected integrations.
+#[tauri::command]
+pub async fn get_integration_accounts(
+    paths: tauri::State<'_, crate::paths::Paths>,
+) -> Result<serde_json::Value, String> {
+    Ok(load_account_labels(&paths))
+}
+
+/// Try to fetch account identity from the OAuth provider (best-effort).
+/// Attempts: 1) userinfo_endpoint from OAuth metadata, 2) common /userinfo path.
+async fn fetch_account_label(access_token: &str, mcp_url: &str) -> Option<String> {
+    let http = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .ok()?;
+
+    // Try userinfo_endpoint from OAuth metadata
+    let metadata = fetch_oauth_metadata(mcp_url).await.ok();
+    let userinfo_url = metadata
+        .as_ref()
+        .and_then(|m| m["userinfo_endpoint"].as_str().map(String::from));
+
+    let url = userinfo_url.unwrap_or_else(|| {
+        let base = mcp_url
+            .trim_end_matches("/mcp")
+            .trim_end_matches("/sse")
+            .trim_end_matches('/');
+        format!("{}/userinfo", base)
+    });
+
+    let resp = http
+        .get(&url)
+        .bearer_auth(access_token)
+        .send()
+        .await
+        .ok()?;
+
+    if !resp.status().is_success() {
+        return None;
+    }
+
+    let body: serde_json::Value = resp.json().await.ok()?;
+
+    // Try common identity fields in priority order
+    body["email"]
+        .as_str()
+        .or_else(|| body["preferred_username"].as_str())
+        .or_else(|| body["name"].as_str())
+        .or_else(|| body["login"].as_str())
+        .or_else(|| body["username"].as_str())
+        .map(String::from)
+}
+
+fn load_account_labels(paths: &crate::paths::Paths) -> serde_json::Value {
+    crate::vault::vault_read(paths, VAULT_ACCOUNTS_KEY)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| serde_json::json!({}))
+}
+
+fn save_account_label(paths: &crate::paths::Paths, provider: &str, label: &str) {
+    let mut labels = load_account_labels(paths);
+    if let Some(obj) = labels.as_object_mut() {
+        obj.insert(provider.to_string(), serde_json::Value::String(label.to_string()));
+    }
+    let _ = crate::vault::vault_store(
+        paths,
+        VAULT_ACCOUNTS_KEY,
+        &serde_json::to_string(&labels).unwrap_or_default(),
+    );
+}
+
+pub fn remove_account_label_public(paths: &crate::paths::Paths, provider: &str) {
+    let mut labels = load_account_labels(paths);
+    if let Some(obj) = labels.as_object_mut() {
+        obj.remove(provider);
+    }
+    let _ = crate::vault::vault_store(
+        paths,
+        VAULT_ACCOUNTS_KEY,
+        &serde_json::to_string(&labels).unwrap_or_default(),
+    );
 }
 
 async fn fetch_oauth_metadata(mcp_url: &str) -> Result<serde_json::Value, String> {
