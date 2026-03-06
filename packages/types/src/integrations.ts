@@ -34,6 +34,12 @@ export interface McpServerTemplate {
   readonly envValueTemplate?: Readonly<Record<string, string>>;
 }
 
+export interface McpRemoteServer {
+  readonly url: string;
+  readonly authorizationUrl?: string;
+  readonly tokenUrl?: string;
+}
+
 export interface IntegrationDefinition {
   readonly id: string;
   readonly name: string;
@@ -43,6 +49,7 @@ export interface IntegrationDefinition {
   readonly authType: 'api_key' | 'oauth' | 'token';
   readonly credentialKeys: readonly string[];
   readonly mcpServer: McpServerTemplate;
+  readonly mcpRemote?: McpRemoteServer;
 }
 
 export interface IntegrationStatus {
