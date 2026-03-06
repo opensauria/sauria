@@ -55,6 +55,7 @@ fn main() {
             cmd_setup::get_daemon_status,
             cmd_setup::start_daemon_cmd,
             cmd_setup::stop_daemon_cmd,
+            cmd_setup::get_auth_proxy_url,
             // OAuth
             cmd_oauth::start_oauth,
             cmd_oauth::complete_oauth,

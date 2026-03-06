@@ -23,14 +23,11 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     icon: 'gmail',
     category: 'communication',
     authType: 'oauth',
-    credentialKeys: ['clientId', 'clientSecret', 'refreshToken'],
+    credentialKeys: [],
+    oauthProxy: 'google',
     mcpServer: {
       package: 'gmail-mcp-server',
-      envMapping: {
-        clientId: 'GMAIL_CLIENT_ID',
-        clientSecret: 'GMAIL_CLIENT_SECRET',
-        refreshToken: 'GMAIL_REFRESH_TOKEN',
-      },
+      envMapping: { accessToken: 'GMAIL_ACCESS_TOKEN' },
     },
   },
   {
@@ -358,14 +355,11 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     icon: 'googlecalendar',
     category: 'productivity',
     authType: 'oauth',
-    credentialKeys: ['clientId', 'clientSecret', 'refreshToken'],
+    credentialKeys: [],
+    oauthProxy: 'google',
     mcpServer: {
       package: 'google-calendar-mcp',
-      envMapping: {
-        clientId: 'GCAL_CLIENT_ID',
-        clientSecret: 'GCAL_CLIENT_SECRET',
-        refreshToken: 'GCAL_REFRESH_TOKEN',
-      },
+      envMapping: { accessToken: 'GCAL_ACCESS_TOKEN' },
     },
   },
   {
@@ -791,11 +785,12 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Customer support and helpdesk platform',
     icon: 'zendesk',
     category: 'support',
-    authType: 'api_key',
-    credentialKeys: ['domain', 'apiToken'],
+    authType: 'oauth',
+    credentialKeys: [],
+    oauthProxy: 'zendesk',
     mcpServer: {
       package: '@sshadows/zendesk-mcp-server',
-      envMapping: { domain: 'ZENDESK_DOMAIN', apiToken: 'ZENDESK_API_TOKEN' },
+      envMapping: { accessToken: 'ZENDESK_ACCESS_TOKEN' },
     },
   },
   {
@@ -884,14 +879,11 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     icon: 'googledrive',
     category: 'storage',
     authType: 'oauth',
-    credentialKeys: ['clientId', 'clientSecret', 'refreshToken'],
+    credentialKeys: [],
+    oauthProxy: 'google',
     mcpServer: {
       package: 'gdrive-mcp',
-      envMapping: {
-        clientId: 'GDRIVE_CLIENT_ID',
-        clientSecret: 'GDRIVE_CLIENT_SECRET',
-        refreshToken: 'GDRIVE_REFRESH_TOKEN',
-      },
+      envMapping: { accessToken: 'GDRIVE_ACCESS_TOKEN' },
     },
   },
 
@@ -902,11 +894,12 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     description: 'Social media posting and monitoring',
     icon: 'x',
     category: 'social',
-    authType: 'api_key',
-    credentialKeys: ['bearerToken'],
+    authType: 'oauth',
+    credentialKeys: [],
+    oauthProxy: 'x',
     mcpServer: {
       package: '@iflow-mcp/x-mcp-server',
-      envMapping: { bearerToken: 'TWITTER_BEARER_TOKEN' },
+      envMapping: { accessToken: 'TWITTER_ACCESS_TOKEN' },
     },
   },
   {
@@ -916,14 +909,11 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     icon: 'reddit',
     category: 'social',
     authType: 'oauth',
-    credentialKeys: ['clientId', 'clientSecret', 'userAgent'],
+    credentialKeys: [],
+    oauthProxy: 'reddit',
     mcpServer: {
       package: 'reddit-mcp-server',
-      envMapping: {
-        clientId: 'REDDIT_CLIENT_ID',
-        clientSecret: 'REDDIT_CLIENT_SECRET',
-        userAgent: 'REDDIT_USER_AGENT',
-      },
+      envMapping: { accessToken: 'REDDIT_ACCESS_TOKEN' },
     },
   },
   {
@@ -933,13 +923,11 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     icon: 'linkedin',
     category: 'social',
     authType: 'oauth',
-    credentialKeys: ['clientId', 'clientSecret'],
+    credentialKeys: [],
+    oauthProxy: 'linkedin',
     mcpServer: {
       package: 'linkedin-mcp-server',
-      envMapping: {
-        clientId: 'LINKEDIN_CLIENT_ID',
-        clientSecret: 'LINKEDIN_CLIENT_SECRET',
-      },
+      envMapping: { accessToken: 'LINKEDIN_ACCESS_TOKEN' },
     },
   },
   {

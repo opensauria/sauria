@@ -65,6 +65,20 @@ pub fn get_status(paths: tauri::State<'_, Paths>) -> StatusResult {
     }
 }
 
+const DEFAULT_AUTH_PROXY_URL: &str = "https://auth.sauria.app";
+
+#[tauri::command]
+pub fn get_auth_proxy_url(paths: tauri::State<'_, Paths>) -> String {
+    if let Ok(content) = fs::read_to_string(&paths.config) {
+        if let Ok(config) = serde_json::from_str::<Value>(&content) {
+            if let Some(url) = config.get("authProxyUrl").and_then(|v| v.as_str()) {
+                return url.to_string();
+            }
+        }
+    }
+    DEFAULT_AUTH_PROXY_URL.to_string()
+}
+
 #[derive(Serialize)]
 pub struct McpClientInfo {
     name: String,
