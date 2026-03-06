@@ -36,5 +36,8 @@ urlencoding = "2"
 regex = "1"
 libc = "0.2"
 
+[dev-dependencies]
+tempfile = "3"
+
 [features]
 custom-protocol = ["tauri/custom-protocol"]
