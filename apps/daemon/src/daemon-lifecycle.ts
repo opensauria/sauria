@@ -45,6 +45,7 @@ import { CheckpointManager } from './orchestrator/checkpoint.js';
 import type { IntegrationInstance } from '@sauria/types';
 import { IntegrationRegistry } from './integrations/registry.js';
 import { INTEGRATION_CATALOG } from './integrations/catalog.js';
+import { TokenRefreshService } from './integrations/token-refresh.js';
 import type {
   CanvasGraph,
   OwnerIdentity,
@@ -72,6 +73,7 @@ export interface DaemonContext {
   readonly queue: MessageQueue | null;
   readonly ipcServer: DaemonIpcServer;
   readonly integrationRegistry: IntegrationRegistry;
+  readonly tokenRefreshService: TokenRefreshService;
   readonly canvasWatcher: FSWatcher | null;
   readonly ownerCommandWatcher: FSWatcher | null;
 }
@@ -691,6 +693,27 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   const integrationRegistry = new IntegrationRegistry(mcpClients, audit, INTEGRATION_CATALOG);
   await autoConnectIntegrations(integrationRegistry, config);
 
+  // ─── Token refresh service for OAuth integrations ──────────────────────
+  const tokenRefreshService = new TokenRefreshService(integrationRegistry, logger);
+
+  // Schedule refreshes for any existing OAuth credentials
+  for (const def of INTEGRATION_CATALOG) {
+    if (!def.mcpRemote) continue;
+    const vaultKey = `integration_oauth_${def.id}`;
+    const stored = await vaultGet(vaultKey);
+    if (!stored) continue;
+    try {
+      const cred = JSON.parse(stored) as { expiresAt?: number };
+      if (cred.expiresAt) {
+        const base = def.mcpRemote.url.replace(/\/mcp$/, '').replace(/\/sse$/, '').replace(/\/$/, '');
+        const tokenUrl = `${base}/.well-known/oauth-authorization-server`;
+        tokenRefreshService.scheduleRefresh(def.id, tokenUrl, cred.expiresAt);
+      }
+    } catch {
+      // Ignore malformed credentials
+    }
+  }
+
   // ─── IPC server (must start before orchestrator so broadcast is available) ─
   const ipcServer = await startIpcServer(paths.socket, db, Date.now());
 
@@ -1032,6 +1055,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     refreshInterval,
     ipcServer,
     integrationRegistry,
+    tokenRefreshService,
     registry,
     orchestrator,
     queue,
@@ -1068,6 +1092,9 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
 
   ctx.engine.stop();
   logger.info('Proactive engine stopped');
+
+  ctx.tokenRefreshService.stop();
+  logger.info('Token refresh service stopped');
 
   await ctx.integrationRegistry.disconnectAll();
   logger.info('Integration registry disconnected');
