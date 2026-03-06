@@ -14,12 +14,33 @@ pub fn oauth_log(msg: &str) {
         .join(".sauria")
         .join("oauth-debug.log");
     let timestamp = chrono::Local::now().format("%H:%M:%S%.3f");
-    let line = format!("[{timestamp}] {msg}\n");
+    // Redact sensitive values from log output
+    let redacted = redact_sensitive(msg);
+    let line = format!("[{timestamp}] {redacted}\n");
     let _ = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(&log_path)
         .and_then(|mut f| std::io::Write::write_all(&mut f, line.as_bytes()));
+}
+
+fn redact_sensitive(msg: &str) -> String {
+    let mut result = msg.to_string();
+    for key in &["access_token=", "code=", "refresh_token="] {
+        if let Some(start) = result.find(key) {
+            let value_start = start + key.len();
+            let value_end = result[value_start..]
+                .find('&')
+                .map(|i| value_start + i)
+                .unwrap_or(result.len());
+            let value = &result[value_start..value_end];
+            if value.len() > 8 {
+                let redacted_value = format!("{}...redacted", &value[..8]);
+                result = format!("{}{}{}", &result[..value_start], redacted_value, &result[value_end..]);
+            }
+        }
+    }
+    result
 }
 
 const DEFAULT_CLIENT_ID: &str = "sauria-desktop";
@@ -47,7 +68,10 @@ struct PendingOAuth {
     provider_name: String,
     mcp_url: String,
     kind: PendingOAuthKind,
+    created_at: std::time::Instant,
 }
+
+const PENDING_STATE_TTL: std::time::Duration = std::time::Duration::from_secs(600);
 
 static PENDING: LazyLock<Mutex<HashMap<String, PendingOAuth>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -106,6 +130,7 @@ pub async fn start_integration_oauth(
             provider: integration_id,
             provider_name,
             mcp_url,
+            created_at: std::time::Instant::now(),
             kind: PendingOAuthKind::Mcp {
                 verifier,
                 token_url: resolved_token_url,
@@ -154,6 +179,7 @@ pub async fn start_proxy_oauth(
             provider: integration_id,
             provider_name,
             mcp_url: proxy_url.clone(),
+            created_at: std::time::Instant::now(),
             kind: PendingOAuthKind::Proxy,
         },
     );
@@ -313,11 +339,14 @@ fn generate_state() -> String {
 }
 
 async fn pop_pending(state: &str) -> Result<PendingOAuth, String> {
-    PENDING
-        .lock()
-        .await
-        .remove(state)
-        .ok_or_else(|| "No pending OAuth for this state".into())
+    let mut map = PENDING.lock().await;
+    // Purge expired entries
+    map.retain(|_, v| v.created_at.elapsed() < PENDING_STATE_TTL);
+    let entry = map.remove(state).ok_or("No pending OAuth for this state")?;
+    if entry.created_at.elapsed() >= PENDING_STATE_TTL {
+        return Err("OAuth state expired".into());
+    }
+    Ok(entry)
 }
 
 async fn resolve_token_url(token_url: &Option<String>, mcp_url: &str) -> Result<String, String> {

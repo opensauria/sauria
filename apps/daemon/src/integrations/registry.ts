@@ -9,6 +9,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import type { McpClientManager } from '../mcp/client.js';
 import type { AuditLogger } from '../security/audit.js';
+import { sanitizeToolMetadata } from '../security/sanitize.js';
 import { getLogger } from '../utils/logger.js';
 
 function resolveNpxPath(): string {
@@ -199,13 +200,16 @@ export class IntegrationRegistry {
       }
 
       const rawTools = await this.mcpClients.listTools(serverName);
-      const tools: IntegrationTool[] = rawTools.map((t) => ({
-        instanceId,
-        integrationId,
-        integrationName: definition.name,
-        name: t.name,
-        description: t.description,
-      }));
+      const tools: IntegrationTool[] = rawTools.map((t) => {
+        const safe = sanitizeToolMetadata(t.name, t.description);
+        return {
+          instanceId,
+          integrationId,
+          integrationName: definition.name,
+          name: safe.name,
+          description: safe.description,
+        };
+      });
 
       this.instances.set(instanceId, {
         instanceId,
