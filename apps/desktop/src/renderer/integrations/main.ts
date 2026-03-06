@@ -170,7 +170,7 @@ function renderCard(
         }
         ${toolCount > 0 ? `<span class="badge badge-accent">${toolCount} ${id === 'telegram' ? (toolCount === 1 ? t('integ.bot') : t('integ.bots')) : t('integ.tools')}</span>` : ''}
       </div>
-      <span class="integration-card-category">${category.replaceAll('_', ' ')}</span>
+      <span class="integration-card-category">${formatCategory(category)}</span>
     </div>`;
 }
 
@@ -398,7 +398,7 @@ function renderConnectForm(item: IntegrationStatus): void {
         class="config-input"
         type="password"
         data-key="${key}"
-        placeholder="${t('integ.enter')} ${formatLabel(key).toLowerCase()}"
+        placeholder="${t('integ.enter')} ${formatLabel(key)}"
         autocomplete="off"
       />
     </div>
@@ -569,15 +569,34 @@ async function refreshTelegramStatus(): Promise<void> {
 const ACRONYMS: Record<string, string> = {
   api: 'API',
   url: 'URL',
-  id: 'ID',
-  oauth: 'OAuth',
   uri: 'URI',
+  id: 'ID',
+  sid: 'SID',
+  imap: 'IMAP',
+  smtp: 'SMTP',
+  oauth: 'OAuth',
   ssh: 'SSH',
   http: 'HTTP',
   https: 'HTTPS',
   sql: 'SQL',
   crm: 'CRM',
+  cdn: 'CDN',
+  dns: 'DNS',
+  ip: 'IP',
 };
+
+function formatCategory(category: string): string {
+  const tab = CATEGORY_ORDER.find((c) => c.id === category);
+  if (tab) return t(tab.labelKey);
+  return category
+    .replaceAll('_', ' ')
+    .split(' ')
+    .map((w) => {
+      const lower = w.toLowerCase();
+      return ACRONYMS[lower] ?? lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(' ');
+}
 
 function formatLabel(key: string): string {
   const words = key
