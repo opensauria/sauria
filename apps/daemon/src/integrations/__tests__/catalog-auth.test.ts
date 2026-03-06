@@ -55,16 +55,17 @@ describe('integration catalog structure', () => {
     }
   });
 
-  it('every both integration has mcpRemote and non-empty credentialKeys', () => {
+  it('every both integration has mcpRemote or oauthProxy, and non-empty credentialKeys', () => {
     const bothIntegrations = INTEGRATION_CATALOG.filter(
       (i) => i.authType === 'both',
     );
 
     for (const integration of bothIntegrations) {
+      const hasRemoteOrProxy = integration.mcpRemote !== undefined || integration.oauthProxy !== undefined;
       expect(
-        integration.mcpRemote,
-        `${integration.id} has authType 'both' but no mcpRemote`,
-      ).toBeDefined();
+        hasRemoteOrProxy,
+        `${integration.id} has authType 'both' but neither mcpRemote nor oauthProxy`,
+      ).toBe(true);
       expect(
         integration.credentialKeys.length,
         `${integration.id} has authType 'both' but empty credentialKeys`,
@@ -216,7 +217,6 @@ describe('known OAuth services (dynamic registration)', () => {
     'linear',
     'jira',
     'monday',
-    'notion',
     'cloudflare',
     'sentry',
     'stripe',
@@ -252,6 +252,14 @@ describe('known services with both auth paths (oauth + api_key fallback)', () =>
     'hubspot',
     'salesforce',
     'zapier',
+    'notion',
+    'gmail',
+    'google-calendar',
+    'google-drive',
+    'x',
+    'reddit',
+    'linkedin',
+    'zendesk',
   ] as const;
 
   for (const id of BOTH_AUTH_IDS) {
@@ -263,8 +271,8 @@ describe('known services with both auth paths (oauth + api_key fallback)', () =>
   }
 });
 
-describe('known OAuth services with oauthProxy', () => {
-  const PROXY_OAUTH_IDS = [
+describe('known services with oauthProxy', () => {
+  const PROXY_IDS = [
     'gmail',
     'google-calendar',
     'google-drive',
@@ -274,11 +282,10 @@ describe('known OAuth services with oauthProxy', () => {
     'zendesk',
   ] as const;
 
-  for (const id of PROXY_OAUTH_IDS) {
-    it(`${id} has authType 'oauth' with oauthProxy defined`, () => {
+  for (const id of PROXY_IDS) {
+    it(`${id} has oauthProxy defined`, () => {
       const integration = findById(id);
       expect(integration, `${id} not found in catalog`).toBeDefined();
-      expect(integration!.authType).toBe('oauth');
       expect(
         integration!.oauthProxy,
         `${id} is missing oauthProxy`,

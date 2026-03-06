@@ -139,11 +139,26 @@ pub async fn handle_deep_link_callback(
     handle: &tauri::AppHandle,
     url_str: &str,
 ) -> Result<(), String> {
+    eprintln!("[oauth] Parsing callback URL: {}", url_str);
     let parsed = url::Url::parse(url_str).map_err(|e| e.to_string())?;
     let params: HashMap<String, String> = parsed.query_pairs().into_owned().collect();
+    eprintln!("[oauth] Callback params: {:?}", params.keys().collect::<Vec<_>>());
 
     let code = params.get("code").cloned().unwrap_or_default();
     let state = params.get("state").cloned().unwrap_or_default();
+
+    if state.is_empty() {
+        let pending_count = PENDING.lock().await.len();
+        eprintln!("[oauth] Empty state param. Pending entries: {}. Trying single pending fallback.", pending_count);
+        // If there's exactly one pending OAuth, use it (state may have been lost in redirect)
+        if pending_count == 1 {
+            let key = PENDING.lock().await.keys().next().unwrap().clone();
+            return handle_deep_link_callback(handle, &format!("{}&state={}", url_str, key)).await;
+        }
+        return Err("No OAuth state in callback".into());
+    }
+
+    eprintln!("[oauth] State: {}, code empty: {}", &state[..8.min(state.len())], code.is_empty());
 
     let result = if code.is_empty() {
         // Worker proxy callback — tokens already exchanged
