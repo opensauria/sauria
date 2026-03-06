@@ -2,6 +2,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import type { AuditLogger } from '../security/audit.js';
 import { SECURITY_LIMITS } from '../security/rate-limiter.js';
+import { connectRemoteMcp, type RemoteMcpConfig } from './remote-client.js';
+import { getLogger } from '../utils/logger.js';
 
 interface McpServerConfig {
   readonly name: string;
@@ -13,7 +15,8 @@ interface McpServerConfig {
 interface ConnectedClient {
   readonly name: string;
   readonly client: Client;
-  readonly transport: StdioClientTransport;
+  readonly transport: unknown;
+  readonly isRemote: boolean;
 }
 
 interface ToolInfo {
@@ -58,8 +61,25 @@ export class McpClientManager {
 
     await client.connect(transport);
 
-    this.clients.set(config.name, { name: config.name, client, transport });
+    this.clients.set(config.name, { name: config.name, client, transport, isRemote: false });
     this.audit.logAction('mcp:client_connect', { server: config.name });
+  }
+
+  async connectRemote(config: RemoteMcpConfig): Promise<void> {
+    if (this.clients.has(config.name)) {
+      throw new Error(`Server "${config.name}" is already connected.`);
+    }
+
+    if (this.clients.size >= SECURITY_LIMITS.mcp.maxConcurrentClients) {
+      throw new Error(
+        `Maximum concurrent MCP clients (${SECURITY_LIMITS.mcp.maxConcurrentClients}) reached.`,
+      );
+    }
+
+    const logger = getLogger();
+    const { client, transport } = await connectRemoteMcp(config, logger);
+    this.clients.set(config.name, { name: config.name, client, transport, isRemote: true });
+    this.audit.logAction('mcp:client_connect', { server: config.name, remote: true });
   }
 
   async disconnect(name: string): Promise<void> {
