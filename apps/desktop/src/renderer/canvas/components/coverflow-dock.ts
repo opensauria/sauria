@@ -1,17 +1,16 @@
-import { LitElement, html, css } from 'lit';
+import { nothing } from 'lit';
+import { LightDomElement } from '../light-dom-element.js';
 import { customElement, property, state } from 'lit/decorators.js';
 import { CF_PLATFORMS, PLATFORM_ICONS } from '../constants.js';
-import { escapeHtml, capitalize } from '../helpers.js';
+import { escapeHtml } from '../helpers.js';
+import { CoverflowDragHandler } from './coverflow-drag-handler.js';
 
 const STIFFNESS = 0.06;
 const DAMPING = 0.78;
 const SCROLL_THRESHOLD = 50;
 
-/**
- * Coverflow dock — drag-to-canvas agent platform selector with spring physics.
- */
 @customElement('coverflow-dock')
-export class CoverflowDock extends LitElement {
+export class CoverflowDock extends LightDomElement {
   @property({ type: Boolean }) collapsed = true;
 
   @state() private activeIndex = 0;
@@ -20,43 +19,35 @@ export class CoverflowDock extends LitElement {
   private isAnimating = false;
   private scrollAccum = 0;
   private scrollTimer: ReturnType<typeof setTimeout> | null = null;
-
-  /* Drag-from-dock state */
-  private isDragging = false;
-  private dragPlatform: string | null = null;
-  private ghost: HTMLDivElement | null = null;
-
-  /* Bound handlers for document-level events */
-  private boundMouseMove = this.handleDocMouseMove.bind(this);
-  private boundMouseUp = this.handleDocMouseUp.bind(this);
-  private boundBlur = this.handleBlur.bind(this);
-
-  createRenderRoot() {
-    return this;
-  }
+  private rafHandle = 0;
+  private readonly dragHandler = new CoverflowDragHandler(this);
 
   connectedCallback(): void {
     super.connectedCallback();
-    document.addEventListener('mousemove', this.boundMouseMove);
-    document.addEventListener('mouseup', this.boundMouseUp);
-    window.addEventListener('blur', this.boundBlur);
+    this.dragHandler.attach();
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    document.removeEventListener('mousemove', this.boundMouseMove);
-    document.removeEventListener('mouseup', this.boundMouseUp);
-    window.removeEventListener('blur', this.boundBlur);
+    this.dragHandler.detach();
+    cancelAnimationFrame(this.rafHandle);
     if (this.scrollTimer) clearTimeout(this.scrollTimer);
   }
 
   render() {
-    return html``;
+    return nothing;
   }
 
   updated(): void {
     this.className = 'coverflow-dock' + (this.collapsed ? ' collapsed' : '');
     this.buildTrack();
+  }
+
+  resetToIndex(idx: number): void {
+    this.activeIndex = idx;
+    this.currentIndex = idx;
+    this.velocity = 0;
+    this.updateTransforms();
   }
 
   private buildTrack(): void {
@@ -70,7 +61,7 @@ export class CoverflowDock extends LitElement {
 
       track.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
       track.addEventListener('click', this.handleTrackClick.bind(this));
-      track.addEventListener('mousedown', this.handleTrackMouseDown.bind(this));
+      track.addEventListener('mousedown', (e) => { this.dragHandler.handleTrackMouseDown(e); });
     }
 
     if (track.children.length !== CF_PLATFORMS.length) {
@@ -130,22 +121,13 @@ export class CoverflowDock extends LitElement {
     }
 
     this.updateTransforms();
-    requestAnimationFrame(this.springTick);
+    this.rafHandle = requestAnimationFrame(this.springTick);
   };
 
   private startAnimation(): void {
-    if (!this.isAnimating) {
-      this.isAnimating = true;
-      requestAnimationFrame(this.springTick);
-    }
-  }
-
-  /** Reset spring to a given index (instant). */
-  resetToIndex(idx: number): void {
-    this.activeIndex = idx;
-    this.currentIndex = idx;
-    this.velocity = 0;
-    this.updateTransforms();
+    if (this.isAnimating) return;
+    this.isAnimating = true;
+    this.rafHandle = requestAnimationFrame(this.springTick);
   }
 
   private handleWheel(e: WheelEvent): void {
@@ -172,76 +154,6 @@ export class CoverflowDock extends LitElement {
     if (idx !== this.activeIndex) {
       this.activeIndex = idx;
       this.startAnimation();
-    }
-  }
-
-  private handleTrackMouseDown(e: MouseEvent): void {
-    const card = (e.target as HTMLElement).closest('.coverflow-card') as HTMLElement | null;
-    if (!card || e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    this.dragPlatform = card.dataset.platform!;
-    this.isDragging = true;
-
-    this.ghost = document.createElement('div');
-    this.ghost.className = 'coverflow-ghost';
-    this.ghost.innerHTML =
-      '<div class="cf-icon">' + (PLATFORM_ICONS[this.dragPlatform] ?? '') + '</div>' +
-      '<div class="cf-name">' + escapeHtml(capitalize(this.dragPlatform)) + '</div>';
-    this.ghost.style.left = e.clientX - 48 + 'px';
-    this.ghost.style.top = e.clientY - 64 + 'px';
-    document.body.appendChild(this.ghost);
-  }
-
-  private handleDocMouseMove(e: MouseEvent): void {
-    if (!this.isDragging || !this.ghost) return;
-    this.ghost.style.left = e.clientX - 48 + 'px';
-    this.ghost.style.top = e.clientY - 64 + 'px';
-
-    const dockRect = this.getBoundingClientRect();
-    if (e.clientY < dockRect.top) {
-      this.ghost.classList.add('above-dock');
-    } else {
-      this.ghost.classList.remove('above-dock');
-    }
-  }
-
-  private handleDocMouseUp(e: MouseEvent): void {
-    if (!this.isDragging) return;
-    this.isDragging = false;
-
-    const dockRect = this.getBoundingClientRect();
-    const droppedAboveDock = e.clientY < dockRect.top;
-
-    if (this.ghost) {
-      this.ghost.remove();
-      this.ghost = null;
-    }
-
-    if (droppedAboveDock && this.dragPlatform) {
-      this.dispatchEvent(
-        new CustomEvent('platform-drop', {
-          bubbles: true,
-          composed: true,
-          detail: {
-            platform: this.dragPlatform,
-            clientX: e.clientX,
-            clientY: e.clientY,
-          },
-        }),
-      );
-    }
-
-    this.dragPlatform = null;
-  }
-
-  private handleBlur(): void {
-    if (this.isDragging && this.ghost) {
-      this.ghost.remove();
-      this.ghost = null;
-      this.isDragging = false;
-      this.dragPlatform = null;
     }
   }
 }
