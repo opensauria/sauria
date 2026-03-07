@@ -12,7 +12,9 @@ export interface CanvasEventHost extends CanvasContext {
     handleWheel(e: WheelEvent): void;
   };
   readonly drag: {
+    startNodeDrag(nodeId: string, e: MouseEvent): void;
     startEdgeDrag(port: HTMLElement, e: MouseEvent): void;
+    startWsDrag(wsId: string, e: MouseEvent): void;
     startWsResize(wsId: string, dir: string, e: MouseEvent): void;
   };
   selectedNodeId: string | null;
@@ -25,7 +27,7 @@ export interface CanvasEventHost extends CanvasContext {
 
 export function handleViewportMouseDown(host: CanvasEventHost, e: MouseEvent): void {
   const target = e.target as HTMLElement;
-  if (target.closest('.agent-card') || target.closest('.workspace-header') || target.closest('.coverflow-dock')) return;
+  if (target.closest('.coverflow-dock')) return;
 
   const port = target.closest('.port') as HTMLElement | null;
   if (port) {
@@ -35,6 +37,18 @@ export function handleViewportMouseDown(host: CanvasEventHost, e: MouseEvent): v
   const resizeHandle = target.closest('.workspace-resize') as HTMLElement | null;
   if (resizeHandle) {
     host.drag.startWsResize(resizeHandle.dataset.wsId ?? '', resizeHandle.dataset.dir ?? 'br', e);
+    return;
+  }
+  const card = target.closest('.agent-card') as HTMLElement | null;
+  if (card && e.button === 0) {
+    const nodeId = card.dataset.nodeId;
+    if (nodeId) host.drag.startNodeDrag(nodeId, e);
+    return;
+  }
+  const wsHeader = target.closest('.workspace-header') as HTMLElement | null;
+  if (wsHeader && e.button === 0) {
+    const wsId = wsHeader.dataset.workspaceId ?? '';
+    if (wsId) host.drag.startWsDrag(wsId, e);
     return;
   }
   if (e.button === 0) {

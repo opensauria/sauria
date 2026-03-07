@@ -72,6 +72,9 @@ export class EdgeLayer extends LightDomElement {
       svg = document.createElementNS(ns, 'svg') as SVGSVGElement;
       svg.id = 'edge-svg';
       svg.classList.add('edge-svg');
+      svg.setAttribute('width', '10000');
+      svg.setAttribute('height', '10000');
+      svg.setAttribute('viewBox', '-5000 -5000 10000 10000');
       this.prepend(svg);
     }
     this.rebuildSvg(svg);

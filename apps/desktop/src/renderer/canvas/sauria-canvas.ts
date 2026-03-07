@@ -11,6 +11,8 @@ import { listIntegrationCatalog, navigateBack } from './ipc.js';
 import { initLocale } from '../i18n.js';
 import { handleCardAction, handleNodeUpdate, handlePlatformDrop, handleWorkspaceCreate, handleWorkspaceUpdate, handleWsLockToggle } from './canvas-actions.js';
 import { handleViewportMouseDown, handleKeydown, handleCardHover, handleCardHoverLeave, openConversation, toggleFeed } from './canvas-events.js';
+import type { EdgeLayer } from './components/edge-layer.js';
+import type { EdgeActivity } from './components/edge-activity.js';
 
 /* Side-effect imports register custom elements */
 import './components/empty-state.js';
@@ -58,7 +60,11 @@ export class SauriaCanvas extends LightDomElement {
       getZoom: () => this.viewport.zoom,
       getVpXY: () => ({ x: this.viewport.x, y: this.viewport.y }),
       onNodeDragged: () => this.requestUpdate(),
-      onNodeDropped: () => { this.graphSync.save(); this.requestUpdate(); },
+      onNodeDropped: (nodeId: string, dragDist: number) => {
+        if (dragDist < 5) this.selectedNodeId = nodeId;
+        this.graphSync.save();
+        this.requestUpdate();
+      },
       onEdgeCreated: (fromId, toId) => {
         this.graphSync.graph.edges.push({ id: generateId(), from: fromId, to: toId, edgeType: 'default', rules: [] });
         this.graphSync.save();
@@ -84,6 +90,8 @@ export class SauriaCanvas extends LightDomElement {
     await initLocale();
     await this.graphSync.init();
     document.addEventListener('keydown', this.onKeydown);
+    document.addEventListener('mousemove', this.onMouseMove);
+    document.addEventListener('mouseup', this.onMouseUp);
     listIntegrationCatalog().then((catalog) => {
       for (const item of catalog) this.catalogMap.set(item.id ?? item.definition.id, item.definition);
     }).catch(() => {});
@@ -92,9 +100,27 @@ export class SauriaCanvas extends LightDomElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     document.removeEventListener('keydown', this.onKeydown);
+    document.removeEventListener('mousemove', this.onMouseMove);
+    document.removeEventListener('mouseup', this.onMouseUp);
   }
 
   private onKeydown = (e: KeyboardEvent): void => { handleKeydown(this, e); };
+
+  private onMouseMove = (e: MouseEvent): void => {
+    if (this.viewport.updatePan(e)) {
+      this.requestUpdate();
+      return;
+    }
+    this.drag.handleMouseMove(e);
+  };
+
+  private onMouseUp = (e: MouseEvent): void => {
+    if (this.viewport.stopPan()) {
+      this.requestUpdate();
+      return;
+    }
+    this.drag.handleMouseUp(e);
+  };
 
   private dispatchCardAction(e: CustomEvent): void {
     const { action, nodeId } = e.detail;
@@ -169,6 +195,12 @@ export class SauriaCanvas extends LightDomElement {
 
   updated(): void {
     const world = this.querySelector('.canvas-world') as HTMLElement | null;
-    if (world) this.viewport.applyTransform(world);
+    if (world) {
+      this.viewport.applyTransform(world);
+      const edgeLayer = this.querySelector('edge-layer') as EdgeLayer | null;
+      const edgeActivity = this.querySelector('edge-activity') as EdgeActivity | null;
+      if (edgeLayer && !edgeLayer.worldEl) { edgeLayer.worldEl = world; }
+      if (edgeActivity && !edgeActivity.worldEl) { edgeActivity.worldEl = world; }
+    }
   }
 }

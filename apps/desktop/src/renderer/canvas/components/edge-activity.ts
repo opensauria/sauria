@@ -30,7 +30,10 @@ export class EdgeActivity extends LightDomElement {
     if (!this.querySelector('#activity-svg')) {
       const svg = document.createElementNS(SVG_NS, 'svg') as SVGSVGElement;
       svg.id = 'activity-svg';
-      svg.classList.add('activity-svg');
+      svg.classList.add('edge-svg');
+      svg.setAttribute('width', '10000');
+      svg.setAttribute('height', '10000');
+      svg.setAttribute('viewBox', '-5000 -5000 10000 10000');
 
       const defs = document.createElementNS(SVG_NS, 'defs');
       const filter = document.createElementNS(SVG_NS, 'filter');
