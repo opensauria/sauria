@@ -35,7 +35,7 @@ body {
 .badge {
   margin-left: auto;
   font-size: var(--font-size-x-small);
-  padding: 3px 8px;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   font-weight: 500;
   flex-shrink: 0;
@@ -99,8 +99,8 @@ body {
 /* ── Scrollbars ──────────────────────────────── */
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {

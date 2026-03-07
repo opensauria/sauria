@@ -2,18 +2,33 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod cmd_brain;
+mod cmd_brain_types;
 mod cmd_canvas;
+mod cmd_canvas_helpers;
+mod cmd_canvas_migrate;
 mod cmd_channels;
+mod cmd_channels_connect;
+mod cmd_channels_disconnect;
+mod cmd_channels_email;
+mod cmd_channels_generic;
+mod cmd_channels_telegram;
+mod cmd_channels_validators;
 mod cmd_commands;
 mod cmd_integrations;
 mod cmd_oauth;
 mod cmd_oauth_integrations;
 mod cmd_setup;
+mod cmd_setup_helpers;
+mod cmd_setup_models;
+mod cmd_setup_validate;
 mod daemon_client;
+mod daemon_ipc;
 mod daemon_manager;
+mod daemon_process;
 mod paths;
 mod vault;
 mod windows;
+mod windows_nav;
 
 use daemon_client::DaemonClient;
 use daemon_manager::DaemonState;

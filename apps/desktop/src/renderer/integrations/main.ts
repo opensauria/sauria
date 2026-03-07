@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { t, applyTranslations } from '../i18n.js';
+import { t, applyTranslations, initLocale } from '../i18n.js';
 
 function escapeHtml(s: string): string {
   const d = document.createElement('div');
@@ -716,7 +716,7 @@ document.documentElement.style.background = 'transparent';
   invoke('navigate_back');
 });
 
-applyTranslations();
+initLocale().then(() => applyTranslations());
 
 // Retry-aware invoke: if first attempt fails (stale connection), retry once
 async function invokeWithRetry<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {

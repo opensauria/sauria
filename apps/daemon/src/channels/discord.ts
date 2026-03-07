@@ -2,32 +2,17 @@ import type { ProactiveAlert } from '../engine/proactive.js';
 import type { AuditLogger } from '../security/audit.js';
 import type { IngestPipeline } from '../ingestion/pipeline.js';
 import type { InboundMessage } from '../orchestrator/types.js';
-import { sanitizeChannelInput } from '../security/sanitize.js';
-import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
 import { secureFetch } from '../security/url-allowlist.js';
-import { formatAlert, type Channel } from './base.js';
+import { ChannelGuards, PollController, formatAlert, type Channel } from './base.js';
+import {
+  processInboundMessage,
+  type DiscordMessage,
+  type DiscordApiChannel,
+} from './discord-handlers.js';
 
 const DISCORD_API_BASE = 'https://discord.com/api/v10';
 const POLL_INTERVAL_MS = 3_000;
 const FETCH_TIMEOUT_MS = 10_000;
-
-interface DiscordMessage {
-  readonly id: string;
-  readonly author: {
-    readonly id: string;
-    readonly username: string;
-    readonly bot?: boolean;
-  };
-  readonly content: string;
-  readonly timestamp: string;
-}
-
-interface DiscordApiChannel {
-  readonly id: string;
-  readonly type: number;
-  readonly name?: string;
-  readonly guild_id?: string;
-}
 
 export interface DiscordDeps {
   readonly token: string;
@@ -42,15 +27,9 @@ export interface DiscordDeps {
 
 export class DiscordChannel implements Channel {
   readonly name = 'discord';
-  private readonly limiter = createLimiter(
-    'discord',
-    SECURITY_LIMITS.channels.maxInboundMessagesPerMinute,
-    60_000,
-  );
+  private readonly guards = new ChannelGuards('discord');
+  private readonly poller = new PollController(POLL_INTERVAL_MS);
   private readonly latestMessageIds = new Map<string, string>();
-  private pollTimer: ReturnType<typeof setTimeout> | null = null;
-  private stopped = false;
-  private silenceUntil = 0;
   private resolvedChannelIds: string[] = [];
 
   constructor(private readonly deps: DiscordDeps) {}
@@ -58,35 +37,24 @@ export class DiscordChannel implements Channel {
   async start(): Promise<void> {
     const { audit, channelIds, guildId } = this.deps;
     audit.logAction('discord:start', { guildId, channelIds: [...channelIds] });
-
-    // If no channel IDs provided but guild ID exists, resolve text channels
     if (channelIds.length === 0 && guildId) {
       this.resolvedChannelIds = await this.resolveGuildTextChannels(guildId);
     } else {
       this.resolvedChannelIds = [...channelIds];
     }
-
     for (const channelId of this.resolvedChannelIds) {
       await this.initializeChannelTimestamp(channelId);
     }
-
-    this.stopped = false;
-    this.schedulePoll();
+    this.poller.start(() => this.pollAllChannels());
   }
 
   async stop(): Promise<void> {
     this.deps.audit.logAction('discord:stop', {});
-    this.stopped = true;
-
-    if (this.pollTimer) {
-      clearTimeout(this.pollTimer);
-      this.pollTimer = null;
-    }
+    this.poller.stop();
   }
 
   async sendAlert(alert: ProactiveAlert): Promise<void> {
-    if (Date.now() < this.silenceUntil) return;
-
+    if (this.guards.isSilenced()) return;
     const text = formatAlert(alert);
     const firstChannel = this.resolvedChannelIds[0];
     if (firstChannel) {
@@ -99,7 +67,6 @@ export class DiscordChannel implements Channel {
       await this.postMessage(groupId, content);
       return;
     }
-
     for (const channelId of this.resolvedChannelIds) {
       await this.postMessage(channelId, content);
     }
@@ -110,27 +77,20 @@ export class DiscordChannel implements Channel {
   }
 
   silenceFor(hours: number): void {
-    this.silenceUntil = Date.now() + hours * 3_600_000;
+    this.guards.silence(hours);
   }
 
-  /** Exposed for testing — triggers one poll cycle across all channels. */
+  /** Exposed for testing -- triggers one poll cycle across all channels. */
   async pollOnce(): Promise<void> {
     await this.pollAllChannels();
-  }
-
-  private schedulePoll(): void {
-    if (this.stopped) return;
-    this.pollTimer = setTimeout(async () => {
-      await this.pollAllChannels();
-      this.schedulePoll();
-    }, POLL_INTERVAL_MS);
   }
 
   private async resolveGuildTextChannels(guildId: string): Promise<string[]> {
     const { audit } = this.deps;
     try {
-      const response = await this.discordFetch<DiscordApiChannel[]>(`/guilds/${guildId}/channels`);
-      // Type 0 = text channel
+      const response = await this.discordFetch<DiscordApiChannel[]>(
+        `/guilds/${guildId}/channels`,
+      );
       return response.filter((c) => c.type === 0).map((c) => c.id);
     } catch (error) {
       audit.logAction(
@@ -169,25 +129,19 @@ export class DiscordChannel implements Channel {
   private async pollChannel(channelId: string): Promise<void> {
     const { audit } = this.deps;
     const afterId = this.latestMessageIds.get(channelId) ?? '0';
-
     try {
       const url =
         afterId === '0'
           ? `/channels/${channelId}/messages?limit=20`
           : `/channels/${channelId}/messages?after=${afterId}&limit=20`;
-
       const messages = await this.discordFetch<DiscordMessage[]>(url);
       if (messages.length === 0) return;
 
-      // Discord returns newest first, reverse for chronological processing
       const sorted = [...messages].reverse();
-
       for (const msg of sorted) {
         if (msg.author.bot) continue;
-        await this.processInboundMessage(channelId, msg);
+        await processInboundMessage(channelId, msg, this.deps, this.guards);
       }
-
-      // Track newest message ID
       const newest = messages[0];
       if (newest) {
         this.latestMessageIds.set(channelId, newest.id);
@@ -201,84 +155,14 @@ export class DiscordChannel implements Channel {
     }
   }
 
-  private async processInboundMessage(channelId: string, message: DiscordMessage): Promise<void> {
-    const { audit, pipeline, onInbound, ownerId, nodeId } = this.deps;
-    const rawText = message.content;
-
-    if (!rawText.trim()) return;
-
-    if (!this.limiter.tryConsume()) {
-      audit.logAction('discord:rate_limited', {
-        channelId,
-        senderId: message.author.id,
-      });
-      return;
-    }
-
-    let sanitizedText: string;
-    try {
-      sanitizedText = sanitizeChannelInput(rawText);
-    } catch (error) {
-      audit.logAction(
-        'discord:sanitize_error',
-        { channelId, error: String(error) },
-        { success: false },
-      );
-      return;
-    }
-
-    const isOwner = Boolean(ownerId && message.author.id === ownerId);
-
-    try {
-      await pipeline.ingestEvent('discord:message', {
-        content: sanitizedText,
-        timestamp: new Date().toISOString(),
-        channelId,
-        senderId: message.author.id,
-      });
-    } catch (error) {
-      audit.logAction(
-        'discord:ingest_error',
-        { channelId, error: String(error) },
-        { success: false },
-      );
-    }
-
-    audit.logAction('discord:message_received', {
-      channelId,
-      senderId: message.author.id,
-      isOwner,
-      textLength: sanitizedText.length,
-    });
-
-    if (onInbound) {
-      const inbound: InboundMessage = {
-        sourceNodeId: nodeId ?? 'discord-default',
-        platform: 'discord',
-        senderId: message.author.id,
-        senderIsOwner: isOwner,
-        groupId: channelId,
-        content: sanitizedText,
-        contentType: 'text',
-        timestamp: message.timestamp,
-      };
-      onInbound(inbound);
-    }
-  }
-
   private async postMessage(channelId: string, text: string): Promise<void> {
     const { audit } = this.deps;
-
     try {
       await this.discordFetch<unknown>(`/channels/${channelId}/messages`, {
         method: 'POST',
         body: JSON.stringify({ content: text }),
       });
-
-      audit.logAction('discord:message_sent', {
-        channelId,
-        textLength: text.length,
-      });
+      audit.logAction('discord:message_sent', { channelId, textLength: text.length });
     } catch (error) {
       audit.logAction(
         'discord:send_error',
@@ -294,7 +178,6 @@ export class DiscordChannel implements Channel {
   ): Promise<T> {
     const { token } = this.deps;
     const url = `${DISCORD_API_BASE}${path}`;
-
     const response = await secureFetch(url, {
       method: init?.method ?? 'GET',
       headers: {
@@ -304,11 +187,9 @@ export class DiscordChannel implements Channel {
       body: init?.body,
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
-
     if (!response.ok) {
       throw new Error(`Discord API error: ${String(response.status)}`);
     }
-
     return (await response.json()) as T;
   }
 }

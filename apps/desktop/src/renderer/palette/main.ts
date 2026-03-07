@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { t, getLocale, setLocale, applyTranslations, UI_LANGUAGES } from '../i18n.js';
+import { t, getLocale, setLocale, applyTranslations, initLocale, UI_LANGUAGES } from '../i18n.js';
 
 interface StatusResult {
   connected: boolean;
@@ -561,8 +561,8 @@ function showLanguagePanel() {
   updateLangHint();
 }
 
-function selectLanguage(code: string) {
-  setLocale(code);
+async function selectLanguage(code: string) {
+  await setLocale(code);
   applyTranslations();
   renderLanguageList();
   updateLangHint();
@@ -592,9 +592,11 @@ langPanel.addEventListener('keydown', function (e) {
 });
 
 /* Set hint on startup */
-updateLangHint();
-applyTranslations();
-render();
+initLocale().then(() => {
+  updateLangHint();
+  applyTranslations();
+  render();
+});
 
 /* ═══════════════════════════════════════════════
    Auto-Update Check

@@ -1,23 +1,19 @@
+import { join } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { homedir } from 'node:os';
 import type {
   IntegrationDefinition,
   IntegrationInstance,
   IntegrationStatus,
   IntegrationTool,
 } from '@sauria/types';
-import { join, dirname } from 'node:path';
-import { existsSync, mkdirSync } from 'node:fs';
-import { tmpdir, homedir } from 'node:os';
 import type { McpClientManager } from '../mcp/client.js';
 import type { AuditLogger } from '../security/audit.js';
-import { sanitizeToolMetadata } from '../security/sanitize.js';
+import {
+  connectIntegrationInstance,
+  disconnectIntegrationInstance,
+} from './registry-connect.js';
 import { getLogger } from '../utils/logger.js';
-
-function resolveNpxPath(): string {
-  const nodeDir = dirname(process.execPath);
-  const npxInNodeDir = join(nodeDir, 'npx');
-  if (existsSync(npxInNodeDir)) return npxInNodeDir;
-  return 'npx';
-}
 
 function resolveMcpWorkdir(instanceId: string): string {
   const dir = join(homedir(), '.sauria', 'mcp-workdirs', instanceId);
@@ -34,7 +30,7 @@ export interface IntegrationInstanceStatus {
   readonly error?: string;
 }
 
-interface ConnectedInstance {
+export interface ConnectedInstance {
   readonly instanceId: string;
   readonly integrationId: string;
   readonly label: string;
@@ -50,8 +46,6 @@ export class IntegrationRegistry {
     private readonly audit: AuditLogger,
     private readonly catalog: readonly IntegrationDefinition[],
   ) {}
-
-  // ─── Legacy API (backward compat) ──────────────────────────────────
 
   async connect(id: string, credentials: Record<string, string>): Promise<IntegrationStatus> {
     const instanceId = `${id}:default`;
@@ -77,7 +71,6 @@ export class IntegrationRegistry {
       await this.disconnectInstance(instanceId);
       return;
     }
-    // Fallback: try direct instanceId (may already be an instance key)
     if (this.instances.has(id)) {
       await this.disconnectInstance(id);
     }
@@ -122,7 +115,6 @@ export class IntegrationRegistry {
     toolName: string,
     args: Record<string, unknown>,
   ): Promise<unknown> {
-    // Try as instanceId first, then as legacy integrationId
     const instanceId = this.instances.has(integrationId)
       ? integrationId
       : `${integrationId}:default`;
@@ -131,7 +123,6 @@ export class IntegrationRegistry {
       throw new Error(`Integration not connected: ${integrationId}`);
     }
 
-    // Strip "IntegrationName/" prefix if LLM included it
     const slashIdx = toolName.indexOf('/');
     const resolvedTool = slashIdx > 0 ? toolName.slice(slashIdx + 1) : toolName;
 
@@ -143,104 +134,34 @@ export class IntegrationRegistry {
     return [...this.instances.keys()];
   }
 
-  // ─── Instance API (new) ────────────────────────────────────────────
-
   async connectInstance(
     instanceId: string,
     integrationId: string,
     label: string,
     credentials: Record<string, string>,
   ): Promise<IntegrationInstanceStatus> {
-    const logger = getLogger();
     const definition = this.catalog.find((d) => d.id === integrationId);
     if (!definition) {
       throw new Error(`Unknown integration: ${integrationId}`);
     }
 
-    const serverName = `integration:${instanceId}`;
     const { accessToken } = credentials;
 
-    try {
-      if (definition.mcpRemote && accessToken) {
-        // Remote MCP path — connect via HTTP/SSE with OAuth token
-        await this.mcpClients.connectRemote({
-          name: serverName,
-          url: definition.mcpRemote.url,
-          accessToken,
-        });
-      } else {
-        // Local MCP path — spawn via npx
-        const env: Record<string, string> = {};
-
-        // OAuth proxy path: inject access token via envMapping
-        if (accessToken && definition.oauthProxy) {
-          const envVar = definition.mcpServer.envMapping['accessToken'];
-          if (envVar) env[envVar] = accessToken;
-        }
-
-        // Standard credential keys
-        for (const key of definition.credentialKeys) {
-          const envVar = definition.mcpServer.envMapping[key];
-          const value = credentials[key];
-          if (!envVar || !value) {
-            throw new Error(`Missing credential: ${key}`);
-          }
-          const template = definition.mcpServer.envValueTemplate?.[key];
-          env[envVar] = template ? template.replace('{value}', value) : value;
-        }
-
-        const npxPath = resolveNpxPath();
-        await this.mcpClients.connect({
-          name: serverName,
-          command: npxPath,
-          args: ['-y', definition.mcpServer.package],
-          env: { ...process.env, ...env } as Record<string, string>,
-          cwd: resolveMcpWorkdir(instanceId),
-        });
-      }
-
-      const rawTools = await this.mcpClients.listTools(serverName);
-      const tools: IntegrationTool[] = rawTools.map((t) => {
-        const safe = sanitizeToolMetadata(t.name, t.description);
-        return {
-          instanceId,
-          integrationId,
-          integrationName: definition.name,
-          name: safe.name,
-          description: safe.description,
-        };
-      });
-
-      this.instances.set(instanceId, {
-        instanceId,
-        integrationId,
-        label,
-        tools,
-        connectedAt: new Date().toISOString(),
-      });
-
-      this.audit.logAction('integration:connect', {
-        instanceId,
-        integrationId,
-        label,
-        toolCount: tools.length,
-        remote: !!definition.mcpRemote && !!accessToken,
-      });
-
-      logger.info(`Integration instance connected: ${label} (${tools.length} tools)`);
-
-      return { instanceId, integrationId, label, connected: true, tools };
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      logger.error(`Failed to connect integration instance: ${label}`, { error: errorMsg });
-      this.audit.logAction(
-        'integration:connect',
-        { instanceId, integrationId, error: errorMsg },
-        { success: false },
+    // Remote MCP path — connect via HTTP/SSE with OAuth token
+    if (definition.mcpRemote && accessToken) {
+      return connectIntegrationInstance(
+        instanceId, integrationId, label, credentials,
+        definition, this.mcpClients, this.audit, this.instances,
+        { remote: true, workdir: resolveMcpWorkdir(instanceId) },
       );
-
-      return { instanceId, integrationId, label, connected: false, tools: [], error: errorMsg };
     }
+
+    // Local MCP path — spawn via npx
+    return connectIntegrationInstance(
+      instanceId, integrationId, label, credentials,
+      definition, this.mcpClients, this.audit, this.instances,
+      { remote: false, workdir: resolveMcpWorkdir(instanceId) },
+    );
   }
 
   async refreshRemoteConnection(instanceId: string, newAccessToken: string): Promise<void> {
@@ -269,18 +190,9 @@ export class IntegrationRegistry {
   }
 
   async disconnectInstance(instanceId: string): Promise<void> {
-    const logger = getLogger();
-    const serverName = `integration:${instanceId}`;
-
-    try {
-      await this.mcpClients.disconnect(serverName);
-    } catch {
-      // Server may already be disconnected
-    }
-
-    this.instances.delete(instanceId);
-    this.audit.logAction('integration:disconnect', { instanceId });
-    logger.info(`Integration instance disconnected: ${instanceId}`);
+    return disconnectIntegrationInstance(
+      instanceId, this.mcpClients, this.audit, this.instances,
+    );
   }
 
   getToolsForInstances(instanceIds: readonly string[]): IntegrationTool[] {
