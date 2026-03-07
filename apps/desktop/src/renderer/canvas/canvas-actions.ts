@@ -31,10 +31,7 @@ export function handleCardAction(
     return;
   }
   if (action === 'gear') {
-    if (node.platform === 'owner') return; // detail panel opened by caller
-    node._editing = true;
-    ctx.requestUpdate();
-    return;
+    return; // detail panel opened by caller for all nodes
   }
   if (action === 'close-edit') {
     if (node._formData?.description !== undefined) {

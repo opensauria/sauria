@@ -61,7 +61,10 @@ export class SauriaCanvas extends LightDomElement {
       getVpXY: () => ({ x: this.viewport.x, y: this.viewport.y }),
       onNodeDragged: () => this.requestUpdate(),
       onNodeDropped: (nodeId: string, dragDist: number) => {
-        if (dragDist < 5) this.selectedNodeId = nodeId;
+        if (dragDist < 5) {
+          this.selectedNodeId = nodeId;
+          this.detailNode = this.graphSync.graph.nodes.find((n) => n.id === nodeId) ?? null;
+        }
         this.graphSync.save();
         this.requestUpdate();
       },
@@ -126,7 +129,7 @@ export class SauriaCanvas extends LightDomElement {
     const { action, nodeId } = e.detail;
     if (action === 'gear') {
       const node = this.graphSync.graph.nodes.find((n) => n.id === nodeId);
-      if (node?.platform === 'owner') { this.detailNode = node; return; }
+      if (node) { this.detailNode = node; return; }
     }
     handleCardAction(this, action, nodeId);
     if ((action === 'cancel' || action === 'disconnect') && this.selectedNodeId === nodeId) this.selectedNodeId = null;

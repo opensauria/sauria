@@ -88,9 +88,8 @@ export async function startDaemonContext(): Promise<DaemonContext> {
 
   mcpClients.startHealthMonitor();
 
-  const canvasGraph = loadCanvasGraph();
   const integrationRegistry = new IntegrationRegistry(mcpClients, audit, INTEGRATION_CATALOG);
-  await autoConnectIntegrations(integrationRegistry, config, canvasGraph);
+  await autoConnectIntegrations(integrationRegistry, config);
 
   // Token refresh service for OAuth integrations
   const tokenRefreshService = new TokenRefreshService(integrationRegistry, logger);

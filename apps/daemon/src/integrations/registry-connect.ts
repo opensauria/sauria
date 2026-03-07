@@ -22,6 +22,7 @@ export async function connectIntegrationInstance(
   mcpClients: McpClientManager,
   audit: AuditLogger,
   instances: Map<string, ConnectedInstance>,
+  _options?: { remote?: boolean; workdir?: string },
 ): Promise<IntegrationInstanceStatus> {
   const logger = getLogger();
   const serverName = `integration:${instanceId}`;

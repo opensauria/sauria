@@ -81,7 +81,6 @@ const searchEl = document.getElementById('search') as HTMLInputElement;
 const listEl = document.getElementById('command-list')!;
 const emptyEl = document.getElementById('empty-state')!;
 const resultEl = document.getElementById('result-panel')!;
-const mascotEl = document.getElementById('mascot')!;
 const backBtn = document.getElementById('back-btn')!;
 const tgForm = document.getElementById('telegram-form')!;
 const tgBotList = document.getElementById('tg-bot-list')!;
@@ -104,10 +103,8 @@ function toggleDevMode() {
   settingsBtn.classList.toggle('active', devMode);
   searchEl.placeholder = devMode ? t('palette.devTools') : t('palette.searchPlaceholder');
   if (devMode) {
-    mascotEl.style.display = 'none';
     backBtn.classList.remove('hidden');
   } else {
-    mascotEl.style.display = '';
     backBtn.classList.add('hidden');
   }
   render();
@@ -161,13 +158,11 @@ function render() {
 
 function enterSubView() {
   inSubView = true;
-  mascotEl.style.display = 'none';
   backBtn.classList.remove('hidden');
 }
 
 function exitSubView() {
   inSubView = false;
-  mascotEl.style.display = '';
   backBtn.classList.add('hidden');
   tgForm.className = 'telegram-form';
   resultEl.className = 'result-panel';
