@@ -3,6 +3,7 @@ import { LightDomElement } from '../light-dom-element.js';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { AgentNode, Edge } from '../types.js';
 import { computeEdgeGeometry } from '../helpers.js';
+import { fire } from '../fire.js';
 
 /**
  * SVG edge layer — Light DOM for coordinate consistency with canvas-world.
@@ -38,7 +39,7 @@ export class EdgeLayer extends LightDomElement {
     if (this.edgeHideTimeout) clearTimeout(this.edgeHideTimeout);
     this.hoveredEdgeId = hit.dataset.edgeId ?? null;
     if (this.hoveredEdgeId) {
-      this.fire('edge-hover', { edgeId: this.hoveredEdgeId });
+      fire(this,'edge-hover', { edgeId: this.hoveredEdgeId });
     }
   };
 
@@ -47,7 +48,7 @@ export class EdgeLayer extends LightDomElement {
     if (!hit) return;
     this.edgeHideTimeout = setTimeout(() => {
       this.hoveredEdgeId = null;
-      this.fire('edge-hover-leave');
+      fire(this,'edge-hover-leave');
     }, 300);
   };
 
@@ -58,7 +59,7 @@ export class EdgeLayer extends LightDomElement {
     if (!edgeId) return;
     const edge = this.edges.find((ed) => ed.id === edgeId);
     if (!edge) return;
-    this.fire('edge-click', { fromId: edge.from, toId: edge.to });
+    fire(this,'edge-click', { fromId: edge.from, toId: edge.to });
   };
 
   render() {
