@@ -1,4 +1,5 @@
-import { LitElement, html } from 'lit';
+import { html, nothing } from 'lit';
+import { LightDomElement } from '../light-dom-element.js';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { AgentNode, Edge } from '../types.js';
 import { computeEdgeGeometry } from '../helpers.js';
@@ -8,17 +9,13 @@ import { computeEdgeGeometry } from '../helpers.js';
  * Renders gradient edges between connected nodes.
  */
 @customElement('edge-layer')
-export class EdgeLayer extends LitElement {
+export class EdgeLayer extends LightDomElement {
   @property({ attribute: false }) edges: Edge[] = [];
   @property({ attribute: false }) nodes: AgentNode[] = [];
   @property({ attribute: false }) worldEl: HTMLElement | null = null;
 
   @state() private hoveredEdgeId: string | null = null;
   private edgeHideTimeout: ReturnType<typeof setTimeout> | null = null;
-
-  createRenderRoot() {
-    return this;
-  }
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -33,12 +30,6 @@ export class EdgeLayer extends LitElement {
     this.removeEventListener('mouseout', this.handleMouseOut);
     this.removeEventListener('click', this.handleClick);
     if (this.edgeHideTimeout) clearTimeout(this.edgeHideTimeout);
-  }
-
-  private fire(name: string, detail?: unknown): void {
-    this.dispatchEvent(
-      new CustomEvent(name, { bubbles: true, composed: true, detail }),
-    );
   }
 
   private handleMouseOver = (e: Event): void => {
@@ -71,7 +62,7 @@ export class EdgeLayer extends LitElement {
   };
 
   render() {
-    return html``;
+    return nothing;
   }
 
   updated(): void {

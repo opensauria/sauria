@@ -3,15 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { t } from '../../i18n.js';
 import { generateId } from '../helpers.js';
 import type { Workspace } from '../types.js';
-
-const PRESET_COLORS = [
-  '#038B9A',
-  '#27A7E7',
-  '#34d399',
-  '#f59e0b',
-  '#f87171',
-  '#a78bfa',
-];
+import { PRESET_COLORS } from '../constants.js';
 
 @customElement('workspace-dialog')
 export class WorkspaceDialog extends LitElement {
@@ -63,7 +55,7 @@ export class WorkspaceDialog extends LitElement {
     .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
     button {
       padding: 8px 16px; border: none; border-radius: var(--radius-sm, 8px);
-      font-size: 13px; cursor: pointer; transition: background 0.15s ease;
+      font-size: 14px; cursor: pointer; transition: background 0.15s ease;
     }
     .btn-cancel { background: var(--surface); color: var(--text-secondary); }
     .btn-cancel:hover { background: rgba(255,255,255,0.08); }

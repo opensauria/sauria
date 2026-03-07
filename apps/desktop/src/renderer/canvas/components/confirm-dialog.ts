@@ -49,7 +49,7 @@ export class ConfirmDialog extends LitElement {
       padding: 8px 16px;
       border: none;
       border-radius: var(--radius-sm, 8px);
-      font-size: 13px;
+      font-size: 14px;
       cursor: pointer;
       transition: background 0.15s ease;
     }

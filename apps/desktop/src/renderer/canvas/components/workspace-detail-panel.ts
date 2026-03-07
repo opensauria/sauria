@@ -2,10 +2,8 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { t } from '../../i18n.js';
 import type { Workspace } from '../types.js';
-
-const PRESET_COLORS = [
-  '#038B9A', '#27A7E7', '#34d399', '#f59e0b', '#f87171', '#a78bfa',
-];
+import { PRESET_COLORS } from '../constants.js';
+import { fire } from '../fire.js';
 
 @customElement('workspace-detail-panel')
 export class WorkspaceDetailPanel extends LitElement {
@@ -37,7 +35,7 @@ export class WorkspaceDetailPanel extends LitElement {
       background: none; border: none; cursor: pointer; color: var(--text-secondary, #999);
       border-radius: var(--radius-sm, 8px);
     }
-    .close-btn:hover { background: rgba(255,255,255,0.06); }
+    .close-btn:hover { background: var(--surface-hover); }
     .body { padding: 16px; flex: 1; }
     .section { margin-bottom: 16px; }
     .label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
@@ -50,48 +48,30 @@ export class WorkspaceDetailPanel extends LitElement {
     textarea { resize: vertical; min-height: 60px; }
     input:focus, textarea:focus { border-color: var(--accent); }
     .colors { display: flex; gap: 8px; }
-    .swatch {
-      width: 24px; height: 24px; border-radius: 50%;
-      border: 2px solid transparent; cursor: pointer;
-    }
+    .swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
     .swatch.active { border-color: var(--text); }
     .tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
     .tag {
       display: inline-flex; align-items: center; gap: 4px;
-      padding: 2px 8px; background: var(--surface); border-radius: 4px;
-      font-size: 12px; color: var(--text-secondary);
+      padding: 2px 8px; background: var(--surface); border-radius: 4px; font-size: 12px; color: var(--text-secondary);
     }
-    .tag-remove {
-      background: none; border: none; color: var(--text-dim); cursor: pointer;
-      font-size: 12px; padding: 0;
-    }
-    .tag-input {
-      flex: 1; min-width: 80px; border: none; padding: 4px;
-      background: transparent; color: var(--text); font-size: 12px; outline: none;
-    }
-    .stepper {
-      display: flex; align-items: center; gap: 4px;
-    }
+    .tag-remove { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 12px; padding: 0; }
+    .tag-input { flex: 1; min-width: 80px; border: none; padding: 4px; background: transparent; color: var(--text); font-size: 12px; outline: none; }
+    .stepper { display: flex; align-items: center; gap: 4px; }
     .stepper-btn {
       width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius-sm, 8px); cursor: pointer; color: var(--text-secondary);
     }
-    .stepper-input {
-      width: 60px; text-align: center;
-    }
+    .stepper-input { width: 60px; text-align: center; }
   `;
 
-  private fire(name: string, detail?: unknown): void {
-    this.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true, detail }));
-  }
-
   private handleInput(field: string, value: string): void {
-    this.fire('workspace-update', { field, value });
+    fire(this, 'workspace-update', { field, value });
   }
 
   private handleColorClick(color: string): void {
-    this.fire('workspace-update', { field: 'color', value: color });
+    fire(this, 'workspace-update', { field: 'color', value: color });
   }
 
   private handleTagKeydown(e: KeyboardEvent): void {
@@ -99,19 +79,19 @@ export class WorkspaceDetailPanel extends LitElement {
     e.preventDefault();
     const val = this.tagInput.trim();
     if (!val) return;
-    this.fire('workspace-update', { field: 'addTopic', value: val });
+    fire(this, 'workspace-update', { field: 'addTopic', value: val });
     this.tagInput = '';
   }
 
   private handleRemoveTag(idx: number): void {
-    this.fire('workspace-update', { field: 'removeTopic', value: idx });
+    fire(this, 'workspace-update', { field: 'removeTopic', value: idx });
   }
 
   private handleBudgetStep(delta: number): void {
     const ws = this.workspace;
     if (!ws) return;
     const next = Math.max(0, (ws.budget ?? 0) + delta);
-    this.fire('workspace-update', { field: 'budget', value: String(next) });
+    fire(this, 'workspace-update', { field: 'budget', value: String(next) });
   }
 
   render() {
@@ -122,7 +102,7 @@ export class WorkspaceDetailPanel extends LitElement {
       <div class="panel ${isOpen ? 'open' : ''}">
         <div class="header">
           <span class="title">${t('canvas.workspaceDetails')}</span>
-          <button class="close-btn" @click=${() => this.fire('close')}>
+          <button class="close-btn" @click=${() => fire(this, 'close')}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
               <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
