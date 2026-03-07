@@ -4,6 +4,7 @@ import { customElement, property } from 'lit/decorators.js';
 import type { Workspace } from '../types.js';
 import { escapeHtml, hexToRgba } from '../helpers.js';
 import { LOCK_SVG, UNLOCK_SVG, GEAR_SVG } from '../constants.js';
+import { fire } from '../fire.js';
 
 @customElement('workspace-frame')
 export class WorkspaceFrame extends LightDomElement {
@@ -14,13 +15,13 @@ export class WorkspaceFrame extends LightDomElement {
   private handleLockClick(e: MouseEvent): void {
     e.preventDefault();
     e.stopPropagation();
-    this.fire('workspace-lock-toggle', { wsId: this.workspace.id });
+    fire(this,'workspace-lock-toggle', { wsId: this.workspace.id });
   }
 
   private handleGearClick(e: MouseEvent): void {
     e.preventDefault();
     e.stopPropagation();
-    this.fire('workspace-edit', { wsId: this.workspace.id });
+    fire(this,'workspace-edit', { wsId: this.workspace.id });
   }
 
   render() {
