@@ -7,7 +7,7 @@
  * - `t(key)` for programmatic access
  */
 
-import { CATALOGS, type Translations } from './i18n-catalogs.js';
+import { CATALOGS, loadLocale, type Translations } from './i18n-catalogs.js';
 
 export type { Translations };
 
@@ -17,6 +17,11 @@ let currentLocale = localStorage.getItem(STORAGE_KEY) ?? 'en';
 
 // ─── Public API ──────────────────────────────────────────────────────
 
+/** Load the stored locale eagerly on startup. Call once at app init. */
+export async function initLocale(): Promise<void> {
+  if (currentLocale !== 'en') await loadLocale(currentLocale);
+}
+
 export function t(key: string): string {
   return CATALOGS[currentLocale]?.[key] ?? CATALOGS.en![key] ?? key;
 }
@@ -25,7 +30,8 @@ export function getLocale(): string {
   return currentLocale;
 }
 
-export function setLocale(locale: string): void {
+export async function setLocale(locale: string): Promise<void> {
+  await loadLocale(locale);
   currentLocale = locale;
   localStorage.setItem(STORAGE_KEY, locale);
 }
