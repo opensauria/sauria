@@ -4,8 +4,7 @@ import type { IngestPipeline } from '../ingestion/pipeline.js';
 import type { InboundMessage } from '../orchestrator/types.js';
 import { sanitizeChannelInput, InputTooLongError } from '../security/sanitize.js';
 import { scrubPII } from '../security/pii-scrubber.js';
-import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
-import { formatAlert, type Channel } from './base.js';
+import { ChannelGuards, PollController, formatAlert, type Channel } from './base.js';
 
 const POLL_INTERVAL_MS = 30_000;
 const SMTP_TIMEOUT_MS = 15_000;
@@ -34,14 +33,8 @@ interface ParsedEmail {
 
 export class EmailChannel implements Channel {
   readonly name = 'email';
-  private readonly limiter = createLimiter(
-    'email',
-    SECURITY_LIMITS.channels.maxInboundMessagesPerMinute,
-    60_000,
-  );
-  private pollTimer: ReturnType<typeof setTimeout> | null = null;
-  private stopped = false;
-  private silenceUntil = 0;
+  private readonly guards = new ChannelGuards('email');
+  private readonly poller = new PollController(POLL_INTERVAL_MS);
   private lastSeenUid = 0;
   private imapClient: ImapFlowClient | null = null;
   private smtpTransport: NodemailerTransport | null = null;
@@ -85,18 +78,12 @@ export class EmailChannel implements Channel {
       audit.logAction('email:smtp_connect_error', { error: String(error) }, { success: false });
     }
 
-    this.stopped = false;
-    this.schedulePoll();
+    this.poller.start(() => this.pollInbox());
   }
 
   async stop(): Promise<void> {
     this.deps.audit.logAction('email:stop', {});
-    this.stopped = true;
-
-    if (this.pollTimer) {
-      clearTimeout(this.pollTimer);
-      this.pollTimer = null;
-    }
+    this.poller.stop();
 
     if (this.imapClient) {
       try {
@@ -114,7 +101,7 @@ export class EmailChannel implements Channel {
   }
 
   async sendAlert(alert: ProactiveAlert): Promise<void> {
-    if (Date.now() < this.silenceUntil) return;
+    if (this.guards.isSilenced()) return;
     const text = formatAlert(alert);
     await this.sendEmail(this.deps.username, `[Sauria Alert] ${alert.title}`, text);
   }
@@ -131,14 +118,6 @@ export class EmailChannel implements Channel {
   /** Exposed for testing — triggers one poll cycle. */
   async pollOnce(): Promise<void> {
     await this.pollInbox();
-  }
-
-  private schedulePoll(): void {
-    if (this.stopped) return;
-    this.pollTimer = setTimeout(async () => {
-      await this.pollInbox();
-      this.schedulePoll();
-    }, POLL_INTERVAL_MS);
   }
 
   private async pollInbox(): Promise<void> {
@@ -195,7 +174,7 @@ export class EmailChannel implements Channel {
 
     if (!email.text.trim()) return;
 
-    if (!this.limiter.tryConsume()) {
+    if (!this.guards.tryConsume()) {
       audit.logAction('email:rate_limited', { from: email.from });
       return;
     }

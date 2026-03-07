@@ -3,9 +3,8 @@ import type { AuditLogger } from '../security/audit.js';
 import type { IngestPipeline } from '../ingestion/pipeline.js';
 import type { InboundMessage } from '../orchestrator/types.js';
 import { sanitizeChannelInput } from '../security/sanitize.js';
-import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
 import { secureFetch } from '../security/url-allowlist.js';
-import { formatAlert, type Channel } from './base.js';
+import { ChannelGuards, PollController, formatAlert, type Channel } from './base.js';
 
 const DISCORD_API_BASE = 'https://discord.com/api/v10';
 const POLL_INTERVAL_MS = 3_000;
@@ -42,15 +41,9 @@ export interface DiscordDeps {
 
 export class DiscordChannel implements Channel {
   readonly name = 'discord';
-  private readonly limiter = createLimiter(
-    'discord',
-    SECURITY_LIMITS.channels.maxInboundMessagesPerMinute,
-    60_000,
-  );
+  private readonly guards = new ChannelGuards('discord');
+  private readonly poller = new PollController(POLL_INTERVAL_MS);
   private readonly latestMessageIds = new Map<string, string>();
-  private pollTimer: ReturnType<typeof setTimeout> | null = null;
-  private stopped = false;
-  private silenceUntil = 0;
   private resolvedChannelIds: string[] = [];
 
   constructor(private readonly deps: DiscordDeps) {}
@@ -70,22 +63,16 @@ export class DiscordChannel implements Channel {
       await this.initializeChannelTimestamp(channelId);
     }
 
-    this.stopped = false;
-    this.schedulePoll();
+    this.poller.start(() => this.pollAllChannels());
   }
 
   async stop(): Promise<void> {
     this.deps.audit.logAction('discord:stop', {});
-    this.stopped = true;
-
-    if (this.pollTimer) {
-      clearTimeout(this.pollTimer);
-      this.pollTimer = null;
-    }
+    this.poller.stop();
   }
 
   async sendAlert(alert: ProactiveAlert): Promise<void> {
-    if (Date.now() < this.silenceUntil) return;
+    if (this.guards.isSilenced()) return;
 
     const text = formatAlert(alert);
     const firstChannel = this.resolvedChannelIds[0];
@@ -110,20 +97,12 @@ export class DiscordChannel implements Channel {
   }
 
   silenceFor(hours: number): void {
-    this.silenceUntil = Date.now() + hours * 3_600_000;
+    this.guards.silence(hours);
   }
 
   /** Exposed for testing — triggers one poll cycle across all channels. */
   async pollOnce(): Promise<void> {
     await this.pollAllChannels();
-  }
-
-  private schedulePoll(): void {
-    if (this.stopped) return;
-    this.pollTimer = setTimeout(async () => {
-      await this.pollAllChannels();
-      this.schedulePoll();
-    }, POLL_INTERVAL_MS);
   }
 
   private async resolveGuildTextChannels(guildId: string): Promise<string[]> {
@@ -207,7 +186,7 @@ export class DiscordChannel implements Channel {
 
     if (!rawText.trim()) return;
 
-    if (!this.limiter.tryConsume()) {
+    if (!this.guards.tryConsume()) {
       audit.logAction('discord:rate_limited', {
         channelId,
         senderId: message.author.id,

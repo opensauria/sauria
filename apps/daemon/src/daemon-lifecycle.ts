@@ -66,10 +66,9 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   const db = openDatabase();
   applySchema(db);
   runMigrations(db, paths.home);
-  logger.info('Database opened, schema applied, and migrations run');
 
   const config = await loadConfig();
-  logger.info('Config loaded');
+  logger.info('Database ready, config loaded');
 
   const audit = new AuditLogger(db);
   const router = new ModelRouter(config, resolveApiKey);
@@ -83,6 +82,8 @@ export async function startDaemonContext(): Promise<DaemonContext> {
 
   const mcpClients = new McpClientManager(audit);
   await connectMcpSources(config, mcpClients);
+
+  mcpClients.startHealthMonitor();
 
   const integrationRegistry = new IntegrationRegistry(mcpClients, audit, INTEGRATION_CATALOG);
   await autoConnectIntegrations(integrationRegistry, config);
@@ -184,10 +185,9 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
   logger.info('Proactive engine stopped');
 
   await ctx.integrationRegistry.disconnectAll();
-  logger.info('Integration registry disconnected');
-
+  ctx.mcpClients.stopHealthMonitor();
   await ctx.mcpClients.disconnectAll();
-  logger.info('MCP clients disconnected');
+  logger.info('Integrations and MCP clients disconnected');
 
   await ctx.ipcServer.close();
 

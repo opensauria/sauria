@@ -379,7 +379,7 @@ fn migrate_node_ids(canvas: &mut Value, paths: &Paths) -> bool {
     }
 
     // Migrate vault keys and bot profiles
-    let mut profiles = crate::cmd_channels::read_profiles_pub(paths);
+    let mut profiles = crate::cmd_channels::read_profiles(paths);
     let mut profiles_changed = false;
     for (old_id, new_id) in &mappings {
         // Migrate vault key
@@ -401,7 +401,7 @@ fn migrate_node_ids(canvas: &mut Value, paths: &Paths) -> bool {
         }
     }
     if profiles_changed {
-        crate::cmd_channels::write_profiles_pub(paths, &profiles);
+        crate::cmd_channels::write_profiles(paths, &profiles);
     }
 
     // Write sidecar migration file for daemon SQLite migration

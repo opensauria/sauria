@@ -6,7 +6,7 @@ import type { CanvasGraph } from './orchestrator/types.js';
 import type { SauriaConfig } from './config/schema.js';
 import { INTEGRATION_CATALOG } from './integrations/catalog.js';
 import { vaultStore, vaultDelete } from './security/vault-key.js';
-import { persistCanvasGraphDebounced } from './graph-loader.js';
+import { persistCanvasGraphDebounced } from './graph-persistence.js';
 import { paths } from './config/paths.js';
 
 export interface IntegrationIpcDeps {
