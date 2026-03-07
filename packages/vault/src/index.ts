@@ -21,3 +21,5 @@ export {
   safeWriteFile,
   safeMkdir,
 } from './fs-sandbox.js';
+
+export { vaultExport, vaultImport } from './backup.js';

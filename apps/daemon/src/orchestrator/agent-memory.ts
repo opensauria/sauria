@@ -1,5 +1,12 @@
 import type BetterSqlite3 from 'better-sqlite3';
 import { nanoid } from 'nanoid';
+import {
+  isConversationRow,
+  queryAgentFacts,
+  queryWorkspaceFacts,
+  queryConversationHistory,
+  queryHistoryWithinBudget,
+} from './agent-memory-queries.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -29,71 +36,6 @@ export interface RecordedMessage {
   readonly routingDecision?: string;
 }
 
-interface AgentMessageRow {
-  readonly id: string;
-  readonly conversation_id: string;
-  readonly source_node_id: string;
-  readonly sender_id: string;
-  readonly sender_is_ceo: number;
-  readonly platform: string;
-  readonly group_id: string | null;
-  readonly content: string;
-  readonly content_type: string;
-  readonly routing_decision: string | null;
-  readonly created_at: string;
-}
-
-interface AgentFactRow {
-  readonly fact: string;
-}
-
-interface ConversationRow {
-  readonly id: string;
-}
-
-// ─── Type Guards ────────────────────────────────────────────────────
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isAgentMessageRow(value: unknown): value is AgentMessageRow {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value['id'] === 'string' &&
-    typeof value['conversation_id'] === 'string' &&
-    typeof value['content'] === 'string'
-  );
-}
-
-function isAgentFactRow(value: unknown): value is AgentFactRow {
-  if (!isRecord(value)) return false;
-  return typeof value['fact'] === 'string';
-}
-
-function isConversationRow(value: unknown): value is ConversationRow {
-  if (!isRecord(value)) return false;
-  return typeof value['id'] === 'string';
-}
-
-// ─── Converters ─────────────────────────────────────────────────────
-
-function toAgentMessage(row: AgentMessageRow): AgentMessage {
-  return {
-    id: row.id,
-    conversationId: row.conversation_id,
-    sourceNodeId: row.source_node_id,
-    senderId: row.sender_id,
-    senderIsOwner: row.sender_is_ceo === 1,
-    platform: row.platform,
-    groupId: row.group_id,
-    content: row.content,
-    contentType: row.content_type,
-    routingDecision: row.routing_decision,
-    createdAt: row.created_at,
-  };
-}
-
 // ─── Utilities ──────────────────────────────────────────────────────
 
 export function estimateTokens(text: string): number {
@@ -121,29 +63,11 @@ export class AgentMemory {
   }
 
   getAgentFacts(nodeId: string, limit: number): string[] {
-    const rows: unknown[] = this.db
-      .prepare(
-        `SELECT fact FROM agent_memory
-         WHERE node_id = ?
-         ORDER BY created_at DESC
-         LIMIT ?`,
-      )
-      .all(nodeId, limit);
-
-    return rows.filter(isAgentFactRow).map((row) => row.fact);
+    return queryAgentFacts(this.db, nodeId, limit);
   }
 
   getWorkspaceFacts(workspaceId: string, limit: number): string[] {
-    const rows: unknown[] = this.db
-      .prepare(
-        `SELECT fact FROM agent_memory
-         WHERE workspace_id = ?
-         ORDER BY created_at DESC
-         LIMIT ?`,
-      )
-      .all(workspaceId, limit);
-
-    return rows.filter(isAgentFactRow).map((row) => row.fact);
+    return queryWorkspaceFacts(this.db, workspaceId, limit);
   }
 
   getRecentMessagesForContext(
@@ -161,42 +85,11 @@ export class AgentMemory {
   }
 
   getHistoryWithinBudget(conversationId: string, maxTokens: number): AgentMessage[] {
-    if (maxTokens <= 0) return [];
-
-    const rows: unknown[] = this.db
-      .prepare(
-        `SELECT * FROM agent_messages
-         WHERE conversation_id = ?
-         ORDER BY rowid DESC
-         LIMIT 50`,
-      )
-      .all(conversationId);
-
-    const allMessages = rows.filter(isAgentMessageRow).map(toAgentMessage);
-    const result: AgentMessage[] = [];
-    let tokenCount = 0;
-
-    for (const msg of allMessages) {
-      const msgTokens = estimateTokens(msg.content);
-      if (tokenCount + msgTokens > maxTokens) break;
-      tokenCount += msgTokens;
-      result.push(msg);
-    }
-
-    return result.reverse();
+    return queryHistoryWithinBudget(this.db, conversationId, maxTokens);
   }
 
   getConversationHistory(conversationId: string, limit: number): AgentMessage[] {
-    const rows: unknown[] = this.db
-      .prepare(
-        `SELECT * FROM agent_messages
-         WHERE conversation_id = ?
-         ORDER BY rowid DESC
-         LIMIT ?`,
-      )
-      .all(conversationId, limit);
-
-    return rows.filter(isAgentMessageRow).map(toAgentMessage).reverse();
+    return queryConversationHistory(this.db, conversationId, limit);
   }
 
   recordMessage(message: RecordedMessage): void {
