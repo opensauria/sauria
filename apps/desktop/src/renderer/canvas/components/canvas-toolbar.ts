@@ -17,16 +17,17 @@ export class CanvasToolbar extends LitElement {
     .canvas-toolbar {
       position: fixed;
       bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 16px;
       display: flex;
       align-items: center;
       gap: 4px;
       padding: 4px;
-      background: var(--surface, rgba(255, 255, 255, 0.04));
+      background: rgba(30, 30, 30, 0.9);
       border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
       border-radius: var(--radius, 12px);
-      z-index: 50;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 200;
       transition: bottom 0.3s ease;
     }
     :host([dock-hidden]) .canvas-toolbar {
