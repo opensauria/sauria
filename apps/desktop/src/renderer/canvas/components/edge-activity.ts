@@ -1,4 +1,5 @@
-import { LitElement, html } from 'lit';
+import { html, nothing } from 'lit';
+import { LightDomElement } from '../light-dom-element.js';
 import { customElement, property } from 'lit/decorators.js';
 import type { AgentNode, Edge } from '../types.js';
 import { computeEdgeGeometry } from '../helpers.js';
@@ -13,7 +14,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
  * Light DOM for SVG coordinate consistency.
  */
 @customElement('edge-activity')
-export class EdgeActivity extends LitElement {
+export class EdgeActivity extends LightDomElement {
   @property({ attribute: false }) edges: Edge[] = [];
   @property({ attribute: false }) nodes: AgentNode[] = [];
   @property({ attribute: false }) worldEl: HTMLElement | null = null;
@@ -21,12 +22,8 @@ export class EdgeActivity extends LitElement {
   private edgeAnimCounts = new Map<string, number>();
   private edgeActiveCounts = new Map<string, number>();
 
-  createRenderRoot() {
-    return this;
-  }
-
   render() {
-    return html``;
+    return nothing;
   }
 
   updated(): void {

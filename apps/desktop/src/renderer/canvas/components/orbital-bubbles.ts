@@ -1,4 +1,5 @@
-import { LitElement, html } from 'lit';
+import { html, nothing } from 'lit';
+import { LightDomElement } from '../light-dom-element.js';
 import { customElement, property } from 'lit/decorators.js';
 import type { AgentNode, IntegrationDef, IntegrationInstance } from '../types.js';
 import { escapeHtml } from '../helpers.js';
@@ -12,17 +13,13 @@ const HIDE_DELAY_MS = 150;
  * Light DOM — positioned in canvas-world coordinate space.
  */
 @customElement('orbital-bubbles')
-export class OrbitalBubbles extends LitElement {
+export class OrbitalBubbles extends LightDomElement {
   @property({ attribute: false }) node: AgentNode | null = null;
   @property({ attribute: false }) instances: IntegrationInstance[] = [];
   @property({ attribute: false }) catalogMap = new Map<string, IntegrationDef>();
   @property({ attribute: false }) worldEl: HTMLElement | null = null;
 
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
-
-  createRenderRoot() {
-    return this;
-  }
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -78,13 +75,13 @@ export class OrbitalBubbles extends LitElement {
   };
 
   render() {
-    return html``;
+    return nothing;
   }
 
   updated(): void {
     /* Clear old bubbles */
     const existing = this.querySelectorAll('.orbital-bubble');
-    for (const el of existing) el.remove();
+    existing.forEach((el) => el.remove());
 
     const node = this.node;
     if (!node || !this.worldEl) return;

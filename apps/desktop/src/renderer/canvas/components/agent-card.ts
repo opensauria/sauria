@@ -1,4 +1,5 @@
-import { LitElement, html, css } from 'lit';
+import { html, nothing } from 'lit';
+import { LightDomElement } from '../light-dom-element.js';
 import { customElement, property } from 'lit/decorators.js';
 import type { AgentNode } from '../types.js';
 import { PLATFORM_ICONS, GEAR_SVG } from '../constants.js';
@@ -9,14 +10,10 @@ import { escapeHtml, getInitials, getBotInfo } from '../helpers.js';
  * Renders 4 variants: owner, connected, setup/connecting/error, editing.
  */
 @customElement('agent-card')
-export class AgentCard extends LitElement {
+export class AgentCard extends LightDomElement {
   @property({ attribute: false }) node!: AgentNode;
   @property({ type: Boolean }) selected = false;
   @property({ type: Boolean }) active = false;
-
-  createRenderRoot() {
-    return this;
-  }
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -52,7 +49,7 @@ export class AgentCard extends LitElement {
 
   render() {
     const node = this.node;
-    if (!node) return html``;
+    if (!node) return nothing;
 
     this.dataset.nodeId = node.id;
     this.style.left = node.position.x + 'px';
@@ -147,7 +144,7 @@ export class AgentCard extends LitElement {
       <div class="agent-name">${displayName}</div>
       ${botInfo
         ? html`<div class="agent-bot-info">${botInfo}</div>`
-        : ''}
+        : nothing}
       <span class="platform-badge ${node.platform}">${node.platform}</span>
       <div class="port port-input" data-node-id=${node.id} data-port="input"></div>
       <div class="port port-output" data-node-id=${node.id} data-port="output"></div>

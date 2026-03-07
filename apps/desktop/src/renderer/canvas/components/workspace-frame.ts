@@ -1,25 +1,15 @@
-import { LitElement, html, css } from 'lit';
+import { html, nothing } from 'lit';
+import { LightDomElement } from '../light-dom-element.js';
 import { customElement, property } from 'lit/decorators.js';
 import type { Workspace } from '../types.js';
 import { escapeHtml, hexToRgba } from '../helpers.js';
 import { LOCK_SVG, UNLOCK_SVG, GEAR_SVG } from '../constants.js';
 
 @customElement('workspace-frame')
-export class WorkspaceFrame extends LitElement {
+export class WorkspaceFrame extends LightDomElement {
   @property({ attribute: false }) workspace!: Workspace;
   @property({ type: Boolean }) selected = false;
   @property({ type: Number }) agentCount = 0;
-
-  /* Light DOM — positioned inside .canvas-world, needs same coordinate space */
-  createRenderRoot() {
-    return this;
-  }
-
-  private fire(name: string, detail?: unknown): void {
-    this.dispatchEvent(
-      new CustomEvent(name, { bubbles: true, composed: true, detail }),
-    );
-  }
 
   private handleLockClick(e: MouseEvent): void {
     e.preventDefault();
@@ -35,7 +25,7 @@ export class WorkspaceFrame extends LitElement {
 
   render() {
     const ws = this.workspace;
-    if (!ws) return html``;
+    if (!ws) return nothing;
     const isLocked = ws.locked === true;
 
     /* We render directly into the parent (Light DOM), so set host styles */
@@ -58,7 +48,7 @@ export class WorkspaceFrame extends LitElement {
         <span class="workspace-count">${this.agentCount}</span>
         ${ws.purpose
           ? html`<span class="workspace-purpose">${ws.purpose}</span>`
-          : ''}
+          : nothing}
         <button
           class="ws-lock ${isLocked ? 'locked' : ''}"
           title=${isLocked ? 'Unlock' : 'Lock'}

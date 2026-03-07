@@ -1,4 +1,5 @@
-import { LitElement, html } from 'lit';
+import { html, nothing } from 'lit';
+import { LightDomElement } from '../light-dom-element.js';
 import { customElement, property } from 'lit/decorators.js';
 import type { AgentNode } from '../types.js';
 import { PLATFORM_ICONS, getFieldsForPlatform } from '../constants.js';
@@ -9,15 +10,11 @@ import { escapeHtml, capitalize } from '../helpers.js';
  * Light DOM to inherit canvas styles.
  */
 @customElement('agent-card-setup')
-export class AgentCardSetup extends LitElement {
+export class AgentCardSetup extends LightDomElement {
   @property({ attribute: false }) node!: AgentNode;
   @property({ type: Boolean }) isConnecting = false;
 
-  createRenderRoot() {
-    return this;
-  }
-
-  private fire(action: string): void {
+  private fireAction(action: string): void {
     this.dispatchEvent(
       new CustomEvent('card-action', {
         bubbles: true,
@@ -29,7 +26,7 @@ export class AgentCardSetup extends LitElement {
 
   render() {
     const node = this.node;
-    if (!node) return html``;
+    if (!node) return nothing;
 
     if (node._editing) return this.renderEditMode(node);
     if (node.platform === 'gmail') return this.renderGmail(node);
@@ -42,15 +39,15 @@ export class AgentCardSetup extends LitElement {
       <div class="card-setup-header">
         <div class="cf-icon"></div>
         <span class="card-setup-title">Gmail</span>
-        <button class="card-setup-close" data-action="cancel" @click=${() => this.fire('cancel')}>&times;</button>
+        <button class="card-setup-close" data-action="cancel" @click=${() => this.fireAction('cancel')}>&times;</button>
       </div>
       <div class="card-setup-field" style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;margin-bottom:8px;">
         Sign in securely with your Google account. No passwords stored.
       </div>
       ${statusHtml}
       <div class="card-setup-actions">
-        <button class="btn-cancel" ?disabled=${this.isConnecting} @click=${() => this.fire('cancel')}>Cancel</button>
-        <button class="btn-connect" style="background:#4285F4;" ?disabled=${this.isConnecting} @click=${() => this.fire('connect')}>Sign in with Google</button>
+        <button class="btn-cancel" ?disabled=${this.isConnecting} @click=${() => this.fireAction('cancel')}>Cancel</button>
+        <button class="btn-connect" style="background:#4285F4;" ?disabled=${this.isConnecting} @click=${() => this.fireAction('connect')}>Sign in with Google</button>
       </div>
     `;
   }
@@ -63,7 +60,7 @@ export class AgentCardSetup extends LitElement {
       <div class="card-setup-header">
         <div class="cf-icon"></div>
         <span class="card-setup-title">${capitalize(node.platform)}</span>
-        <button class="card-setup-close" data-action="cancel" @click=${() => this.fire('cancel')}>&times;</button>
+        <button class="card-setup-close" data-action="cancel" @click=${() => this.fireAction('cancel')}>&times;</button>
       </div>
       ${fields.map((f) => {
         const val = (node._formData && node._formData[f.key]) || '';
@@ -78,14 +75,14 @@ export class AgentCardSetup extends LitElement {
               ?disabled=${this.isConnecting}
               @input=${(e: InputEvent) => this.handleFieldInput(f.key, e)}
             />
-            ${f.hint ? html`<div class="card-field-hint">${f.hint}</div>` : ''}
+            ${f.hint ? html`<div class="card-field-hint">${f.hint}</div>` : nothing}
           </div>
         `;
       })}
       ${statusHtml}
       <div class="card-setup-actions">
-        <button class="btn-cancel" ?disabled=${this.isConnecting} @click=${() => this.fire('cancel')}>Cancel</button>
-        <button class="btn-connect" ?disabled=${this.isConnecting} @click=${() => this.fire('connect')}>
+        <button class="btn-cancel" ?disabled=${this.isConnecting} @click=${() => this.fireAction('cancel')}>Cancel</button>
+        <button class="btn-connect" ?disabled=${this.isConnecting} @click=${() => this.fireAction('connect')}>
           ${node.status === 'error' ? 'Retry' : 'Connect'}
         </button>
       </div>
@@ -101,7 +98,7 @@ export class AgentCardSetup extends LitElement {
       <div class="card-setup-header">
         <div class="cf-icon"></div>
         <span class="card-setup-title">${displayName}</span>
-        <button class="card-setup-close" @click=${() => this.fire('close-edit')}>&times;</button>
+        <button class="card-setup-close" @click=${() => this.fireAction('close-edit')}>&times;</button>
       </div>
       <div class="card-setup-field">
         <label>Role</label>
@@ -122,8 +119,8 @@ export class AgentCardSetup extends LitElement {
         `,
       )}
       <div class="card-setup-actions">
-        <button class="btn-cancel" @click=${() => this.fire('disconnect')}>Disconnect</button>
-        <button class="btn-connect" @click=${() => this.fire('close-edit')}>Done</button>
+        <button class="btn-cancel" @click=${() => this.fireAction('disconnect')}>Disconnect</button>
+        <button class="btn-connect" @click=${() => this.fireAction('close-edit')}>Done</button>
       </div>
     `;
   }
@@ -135,7 +132,7 @@ export class AgentCardSetup extends LitElement {
     if (node._statusMsg) {
       return html`<div class="card-setup-status ${node._statusType || ''}">${node._statusMsg}</div>`;
     }
-    return '';
+    return nothing;
   }
 
   private handleFieldInput(key: string, e: InputEvent): void {
