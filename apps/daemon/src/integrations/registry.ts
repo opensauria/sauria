@@ -1,3 +1,6 @@
+import { join } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { homedir } from 'node:os';
 import type {
   IntegrationDefinition,
   IntegrationInstance,
@@ -10,6 +13,13 @@ import {
   connectIntegrationInstance,
   disconnectIntegrationInstance,
 } from './registry-connect.js';
+import { getLogger } from '../utils/logger.js';
+
+function resolveMcpWorkdir(instanceId: string): string {
+  const dir = join(homedir(), '.sauria', 'mcp-workdirs', instanceId);
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
 
 export interface IntegrationInstanceStatus {
   readonly instanceId: string;
@@ -134,10 +144,49 @@ export class IntegrationRegistry {
     if (!definition) {
       throw new Error(`Unknown integration: ${integrationId}`);
     }
+
+    const { accessToken } = credentials;
+
+    // Remote MCP path — connect via HTTP/SSE with OAuth token
+    if (definition.mcpRemote && accessToken) {
+      return connectIntegrationInstance(
+        instanceId, integrationId, label, credentials,
+        definition, this.mcpClients, this.audit, this.instances,
+        { remote: true, workdir: resolveMcpWorkdir(instanceId) },
+      );
+    }
+
+    // Local MCP path — spawn via npx
     return connectIntegrationInstance(
       instanceId, integrationId, label, credentials,
       definition, this.mcpClients, this.audit, this.instances,
+      { remote: false, workdir: resolveMcpWorkdir(instanceId) },
     );
+  }
+
+  async refreshRemoteConnection(instanceId: string, newAccessToken: string): Promise<void> {
+    const logger = getLogger();
+    const instance = this.instances.get(instanceId);
+    if (!instance) return;
+
+    const definition = this.catalog.find((d) => d.id === instance.integrationId);
+    if (!definition?.mcpRemote) return;
+
+    const serverName = `integration:${instanceId}`;
+
+    try {
+      await this.mcpClients.disconnect(serverName);
+    } catch {
+      // May already be disconnected
+    }
+
+    await this.mcpClients.connectRemote({
+      name: serverName,
+      url: definition.mcpRemote.url,
+      accessToken: newAccessToken,
+    });
+
+    logger.info(`Refreshed remote connection: ${instanceId}`);
   }
 
   async disconnectInstance(instanceId: string): Promise<void> {

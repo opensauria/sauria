@@ -2,6 +2,7 @@ use serde_json::Value;
 use std::sync::Arc;
 
 use crate::daemon_client::DaemonClient;
+use crate::paths::Paths;
 
 #[tauri::command]
 pub async fn integrations_list_catalog(
@@ -29,8 +30,10 @@ pub async fn integrations_connect(
 #[tauri::command]
 pub async fn integrations_disconnect(
     id: String,
+    paths: tauri::State<'_, Paths>,
     client: tauri::State<'_, Arc<DaemonClient>>,
 ) -> Result<Value, String> {
+    crate::cmd_oauth_integrations::remove_account_label_public(&paths, &id);
     client
         .request("integrations:disconnect", serde_json::json!({ "id": id }))
         .await

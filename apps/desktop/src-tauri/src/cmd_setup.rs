@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::fs;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -34,6 +35,20 @@ pub fn get_status(paths: tauri::State<'_, Paths>) -> StatusResult {
         auth_method,
         connected: has_oauth_token || configured,
     }
+}
+
+const DEFAULT_AUTH_PROXY_URL: &str = "https://auth.sauria.dev";
+
+#[tauri::command]
+pub fn get_auth_proxy_url(paths: tauri::State<'_, Paths>) -> String {
+    if let Ok(content) = fs::read_to_string(&paths.config) {
+        if let Ok(config) = serde_json::from_str::<Value>(&content) {
+            if let Some(url) = config.get("authProxyUrl").and_then(|v| v.as_str()) {
+                return url.to_string();
+            }
+        }
+    }
+    DEFAULT_AUTH_PROXY_URL.to_string()
 }
 
 #[tauri::command]

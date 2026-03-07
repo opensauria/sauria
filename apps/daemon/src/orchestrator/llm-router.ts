@@ -13,6 +13,7 @@ import { AgentMemory } from './agent-memory.js';
 import type { IntegrationRegistry } from '../integrations/registry.js';
 import { buildRoutingPrompt } from './routing-prompt.js';
 import { parseRoutingResponse } from './routing-parser.js';
+import { stripPromptInjection } from '../security/sanitize.js';
 
 // Re-export for backward compatibility
 export { parseRoutingResponse } from './routing-parser.js';
@@ -130,7 +131,7 @@ export class LLMRoutingBrain {
       },
       {
         role: 'user',
-        content: `User asked: "${originalMessage}"\n\nRaw tool result:\n${rawResult}`,
+        content: `User asked: "${stripPromptInjection(originalMessage, 500)}"\n\nRaw tool result:\n${stripPromptInjection(rawResult, 4000)}`,
       },
     ];
 

@@ -1,7 +1,20 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { t, applyTranslations } from '../i18n.js';
 
+function escapeHtml(s: string): string {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(s));
+  return d.innerHTML;
+}
+
 // ── Types ─────────────────────────────────────
+
+interface McpRemoteServer {
+  readonly url: string;
+  readonly authorizationUrl?: string;
+  readonly tokenUrl?: string;
+}
 
 interface IntegrationDefinition {
   readonly id: string;
@@ -9,8 +22,10 @@ interface IntegrationDefinition {
   readonly description: string;
   readonly icon: string;
   readonly category: string;
-  readonly authType: 'api_key' | 'oauth' | 'token';
+  readonly authType: 'api_key' | 'oauth' | 'token' | 'both';
   readonly credentialKeys: readonly string[];
+  readonly mcpRemote?: McpRemoteServer;
+  readonly oauthProxy?: string;
 }
 
 interface IntegrationTool {
@@ -71,8 +86,10 @@ const CATEGORY_ORDER: readonly { readonly id: string; readonly labelKey: string 
 
 let catalog: IntegrationStatus[] = [];
 let telegramBots: readonly TelegramBot[] = [];
+let accountLabels: Record<string, string> = {};
 let searchQuery = '';
 let activeCategory = 'all';
+let openPanelId: string | null = null;
 
 // ── DOM refs ──────────────────────────────────
 
@@ -160,7 +177,7 @@ function renderCard(
         }
         ${toolCount > 0 ? `<span class="badge badge-accent">${toolCount} ${id === 'telegram' ? (toolCount === 1 ? t('integ.bot') : t('integ.bots')) : t('integ.tools')}</span>` : ''}
       </div>
-      <span class="integration-card-category">${category.replaceAll('_', ' ')}</span>
+      <span class="integration-card-category">${formatCategory(category)}</span>
     </div>`;
 }
 
@@ -227,6 +244,7 @@ function renderGrid(): void {
 // ── Config Panel ─────────────────────────────
 
 function openConfigPanel(id: string): void {
+  openPanelId = id;
   if (id === 'telegram') {
     configTitle.textContent = 'Telegram';
     renderTelegramPanel();
@@ -371,6 +389,19 @@ async function renderTelegramPanel(): Promise<void> {
 
 function renderConnectForm(item: IntegrationStatus): void {
   const { definition } = item;
+
+  // OAuth one-click: any service with authType 'oauth' gets the OAuth button
+  if (definition.authType === 'oauth') {
+    renderOAuthConnectForm(item);
+    return;
+  }
+
+  // Both: toggle between OAuth (MCP remote) and API key fallback
+  if (definition.authType === 'both') {
+    renderBothConnectForm(item);
+    return;
+  }
+
   const fields = definition.credentialKeys
     .map(
       (key) => `
@@ -380,7 +411,7 @@ function renderConnectForm(item: IntegrationStatus): void {
         class="config-input"
         type="password"
         data-key="${key}"
-        placeholder="${t('integ.enter')} ${formatLabel(key).toLowerCase()}"
+        placeholder="${t('integ.enter')} ${formatLabel(key)}"
         autocomplete="off"
       />
     </div>
@@ -399,13 +430,98 @@ function renderConnectForm(item: IntegrationStatus): void {
   document.getElementById('config-connect')?.addEventListener('click', () => handleConnect(item));
 }
 
-function renderConnectedPanel(item: IntegrationStatus): void {
-  const toolsList = item.tools
-    .slice(0, 15)
-    .map((tool) => `<div class="config-tool-item">${tool.name}</div>`)
+function renderOAuthConnectForm(item: IntegrationStatus): void {
+  const { definition } = item;
+
+  configBody.innerHTML = `
+    ${item.error ? `<div class="config-error">${item.error}</div>` : ''}
+    <div class="oauth-connect-section">
+      <p class="oauth-description">${t('integ.oauthDescription').replace('{name}', definition.name)}</p>
+      <div class="config-actions">
+        <button class="btn btn-primary" id="oauth-connect-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          ${t('integ.connectWith').replace('{name}', definition.name)}
+        </button>
+      </div>
+      <div class="form-status" id="oauth-status"></div>
+    </div>
+  `;
+
+  document.getElementById('oauth-connect-btn')?.addEventListener('click', () => handleOAuthConnect(item));
+}
+
+function renderBothConnectForm(item: IntegrationStatus): void {
+  const { definition } = item;
+  const fields = definition.credentialKeys
+    .map(
+      (key) => `
+    <div class="config-field">
+      <label class="config-label">${formatLabel(key)}</label>
+      <input
+        class="config-input"
+        type="${key.toLowerCase().includes('secret') || key.toLowerCase().includes('password') ? 'password' : 'text'}"
+        data-key="${key}"
+        placeholder="${t('integ.enter')} ${formatLabel(key)}"
+        autocomplete="off"
+      />
+    </div>
+  `,
+    )
     .join('');
 
   configBody.innerHTML = `
+    ${item.error ? `<div class="config-error">${item.error}</div>` : ''}
+    <div class="auth-toggle">
+      <button class="auth-toggle-btn active" data-mode="oauth">${t('integ.oauthTab')}</button>
+      <button class="auth-toggle-btn" data-mode="apikey">${t('integ.apiKeyTab')}</button>
+    </div>
+    <div class="auth-mode-oauth">
+      <div class="oauth-connect-section">
+        <p class="oauth-description">${t('integ.oauthDescription').replace('{name}', definition.name)}</p>
+        <div class="config-actions">
+          <button class="btn btn-primary" id="oauth-connect-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            ${t('integ.connectWith').replace('{name}', definition.name)}
+          </button>
+        </div>
+        <div class="form-status" id="oauth-status"></div>
+      </div>
+    </div>
+    <div class="auth-mode-apikey" style="display:none">
+      ${fields}
+      <div class="config-actions">
+        <button class="btn btn-primary" id="config-connect">${t('integ.connect')}</button>
+      </div>
+    </div>
+  `;
+
+  // Toggle between OAuth and API Key modes
+  configBody.querySelectorAll<HTMLButtonElement>('.auth-toggle-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      configBody.querySelectorAll<HTMLButtonElement>('.auth-toggle-btn').forEach((b) => {
+        b.classList.toggle('active', b === btn);
+      });
+      const isOAuth = btn.dataset['mode'] === 'oauth';
+      const oauthSection = configBody.querySelector<HTMLElement>('.auth-mode-oauth');
+      const apiKeySection = configBody.querySelector<HTMLElement>('.auth-mode-apikey');
+      if (oauthSection) oauthSection.style.display = isOAuth ? '' : 'none';
+      if (apiKeySection) apiKeySection.style.display = isOAuth ? 'none' : '';
+    });
+  });
+
+  document.getElementById('oauth-connect-btn')?.addEventListener('click', () => handleOAuthConnect(item));
+  document.getElementById('config-connect')?.addEventListener('click', () => handleConnect(item));
+}
+
+function renderConnectedPanel(item: IntegrationStatus): void {
+  const label = accountLabels[item.id];
+  const toolsList = item.tools
+    .slice(0, 15)
+    .map((tool) => `<div class="config-tool-item">${escapeHtml(tool.name)}</div>`)
+    .join('');
+
+  configBody.innerHTML = `
+    ${label ? `<div class="connected-account"><span class="connected-account-dot"></span><span class="connected-account-label">${escapeHtml(label)}</span></div>` : ''}
     <div class="config-tools">
       <div class="config-tools-title">${t('integ.availableTools')} (${item.tools.length})</div>
       ${toolsList}
@@ -458,6 +574,43 @@ async function handleConnect(item: IntegrationStatus): Promise<void> {
   }
 }
 
+async function handleOAuthConnect(item: IntegrationStatus): Promise<void> {
+  const { mcpRemote, oauthProxy, name } = item.definition;
+  if (!mcpRemote && !oauthProxy) return;
+
+  const btn = document.getElementById('oauth-connect-btn') as HTMLButtonElement;
+  const statusEl = document.getElementById('oauth-status') as HTMLElement;
+
+  btn.disabled = true;
+  statusEl.textContent = t('integ.oauthWaiting');
+  statusEl.className = 'form-status visible';
+
+  try {
+    if (mcpRemote) {
+      await invoke('start_integration_oauth', {
+        integrationId: item.id,
+        providerName: name,
+        mcpUrl: mcpRemote.url,
+        authUrl: mcpRemote.authorizationUrl ?? null,
+        tokenUrl: mcpRemote.tokenUrl ?? null,
+        scopes: null,
+      });
+    } else if (oauthProxy) {
+      const proxyBase = await invoke<string>('get_auth_proxy_url');
+      await invoke('start_proxy_oauth', {
+        integrationId: item.id,
+        providerName: name,
+        proxyUrl: proxyBase,
+        providerKey: oauthProxy,
+      });
+    }
+  } catch (err: unknown) {
+    btn.disabled = false;
+    statusEl.textContent = err instanceof Error ? err.message : String(err);
+    statusEl.className = 'form-status visible error';
+  }
+}
+
 async function handleDisconnect(id: string): Promise<void> {
   const btn = document.getElementById('config-disconnect') as HTMLButtonElement;
   btn.disabled = true;
@@ -478,6 +631,15 @@ async function refreshCatalog(): Promise<void> {
   renderGrid();
 }
 
+async function refreshAccountLabels(): Promise<void> {
+  try {
+    const labels = await invoke<Record<string, string>>('get_integration_accounts');
+    accountLabels = labels;
+  } catch {
+    // Accounts file may not exist yet
+  }
+}
+
 async function refreshTelegramStatus(): Promise<void> {
   try {
     const status = await invoke<TelegramStatus>('get_telegram_status');
@@ -492,15 +654,34 @@ async function refreshTelegramStatus(): Promise<void> {
 const ACRONYMS: Record<string, string> = {
   api: 'API',
   url: 'URL',
-  id: 'ID',
-  oauth: 'OAuth',
   uri: 'URI',
+  id: 'ID',
+  sid: 'SID',
+  imap: 'IMAP',
+  smtp: 'SMTP',
+  oauth: 'OAuth',
   ssh: 'SSH',
   http: 'HTTP',
   https: 'HTTPS',
   sql: 'SQL',
   crm: 'CRM',
+  cdn: 'CDN',
+  dns: 'DNS',
+  ip: 'IP',
 };
+
+function formatCategory(category: string): string {
+  const tab = CATEGORY_ORDER.find((c) => c.id === category);
+  if (tab) return t(tab.labelKey);
+  return category
+    .replaceAll('_', ' ')
+    .split(' ')
+    .map((w) => {
+      const lower = w.toLowerCase();
+      return ACRONYMS[lower] ?? lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(' ');
+}
 
 function formatLabel(key: string): string {
   const words = key
@@ -523,6 +704,7 @@ searchInput.addEventListener('input', () => {
 });
 
 configClose.addEventListener('click', () => {
+  openPanelId = null;
   configPanel.classList.remove('open');
 });
 
@@ -546,13 +728,37 @@ async function invokeWithRetry<T>(cmd: string, args?: Record<string, unknown>): 
   }
 }
 
-// Load both catalogs in parallel
+// Listen for OAuth completion from deep link callback
+void listen<{ accountLabel?: string; integrationId?: string }>('integration-oauth-complete', async (event) => {
+  // Capture account label from the event payload
+  const payload = event.payload;
+  if (payload?.accountLabel && payload?.integrationId) {
+    accountLabels[payload.integrationId] = payload.accountLabel;
+  }
+  await refreshCatalog();
+  await refreshAccountLabels();
+  const statusEl = document.getElementById('oauth-status');
+  if (statusEl) {
+    statusEl.textContent = t('integ.oauthSuccess');
+    statusEl.className = 'form-status visible success';
+  }
+  setTimeout(() => {
+    if (openPanelId) {
+      const updated = catalog.find((c) => c.id === openPanelId);
+      if (updated?.connected) renderConnectedPanel(updated);
+    }
+  }, 800);
+});
+
+// Load catalogs and account labels in parallel
 Promise.all([
   invokeWithRetry<IntegrationStatus[]>('integrations_list_catalog').catch(() => []),
   invokeWithRetry<TelegramStatus>('get_telegram_status').catch(() => ({ bots: [] as TelegramBot[] })),
-]).then(([mcpCatalog, tgStatus]) => {
+  invokeWithRetry<Record<string, string>>('get_integration_accounts').catch(() => ({})),
+]).then(([mcpCatalog, tgStatus, labels]) => {
   catalog = mcpCatalog;
   telegramBots = tgStatus.bots ?? [];
+  accountLabels = labels;
   renderTabs();
   renderGrid();
 });
