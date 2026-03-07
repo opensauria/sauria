@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { t, applyTranslations } from '../i18n.js';
+import { t, applyTranslations, initLocale } from '../i18n.js';
 import { TYPE_COLOR_STRINGS as TYPE_COLORS } from './scene-types.js';
 
 /* ── State ───────────────────────────────────────────────────────── */
@@ -1372,6 +1372,7 @@ document.addEventListener('keydown', (e) => {
 
 /* ── Init ────────────────────────────────────────────────────────── */
 async function init() {
+  await initLocale();
   applyTranslations();
   await loadStats();
   switchView('entities');
