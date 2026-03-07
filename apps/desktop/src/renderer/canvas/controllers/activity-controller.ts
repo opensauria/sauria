@@ -15,7 +15,7 @@ export interface ActivityCallbacks {
 
 export class ActivityController implements ReactiveController {
   private readonly host: ReactiveControllerHost;
-  private cb!: ActivityCallbacks;
+  private readonly cb: ActivityCallbacks;
   private unlisteners: UnlistenFn[] = [];
   private nodeIdleTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -25,8 +25,9 @@ export class ActivityController implements ReactiveController {
   readonly conversationBuffer = new Map<string, ConvMessage[]>();
   unreadCount = 0;
 
-  constructor(host: ReactiveControllerHost) {
+  constructor(host: ReactiveControllerHost, cb: ActivityCallbacks) {
     this.host = host;
+    this.cb = cb;
     host.addController(this);
   }
 
@@ -37,10 +38,6 @@ export class ActivityController implements ReactiveController {
     this.unlisteners = [];
     for (const timer of this.nodeIdleTimers.values()) clearTimeout(timer);
     this.nodeIdleTimers.clear();
-  }
-
-  setCallbacks(cb: ActivityCallbacks): void {
-    this.cb = cb;
   }
 
   async start(): Promise<void> {
