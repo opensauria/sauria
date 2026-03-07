@@ -8,7 +8,7 @@
             "type": "command",
             "command": ".claude/hooks/rebuild.sh",
             "timeout": 300,
-            "statusMessage": "Rebuilding OpenSauria..."
+            "statusMessage": "Rebuilding Sauria"
           }
         ]
       }
