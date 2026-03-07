@@ -55,6 +55,7 @@ export function handleViewportMouseDown(host: CanvasEventHost, e: MouseEvent): v
     host.viewport.startPan(e);
     host.selectedNodeId = null;
     host.selectedWorkspaceId = null;
+    host.detailNode = null;
   }
 }
 
