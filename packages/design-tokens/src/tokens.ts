@@ -17,6 +17,7 @@ export const colors = {
   textDim: '#555',
   accent: '#038b9a',
   accentHover: '#027a87',
+  accentSubtle: 'rgba(3, 139, 154, 0.15)',
   success: '#34d399',
   error: '#f87171',
   warning: '#f59e0b',
