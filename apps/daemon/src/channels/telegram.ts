@@ -21,6 +21,7 @@ import {
 } from '../db/world-model.js';
 import { scrubPII } from '../security/pii-scrubber.js';
 import { formatAlert, type Channel } from './base.js';
+import { getLogger } from '../utils/logger.js';
 
 const TELEGRAM_FILE_API = 'https://api.telegram.org/file/bot';
 const MAX_VOICE_BYTES = 20 * 1024 * 1024;
@@ -66,9 +67,10 @@ export class TelegramChannel implements Channel {
     this.bot.use(async (ctx, next) => {
       const fromId = ctx.from?.id;
       if (!fromId || !this.allowedUsers.has(fromId)) {
-        process.stderr.write(
-          `[telegram:auth] Rejected user ${String(fromId)} — allowed: [${[...this.allowedUsers].join(',')}]\n`,
-        );
+        getLogger().warn('Rejected unauthorized Telegram user', {
+          userId: String(fromId),
+          allowed: [...this.allowedUsers],
+        });
         return;
       }
       if (!this.limiter.tryConsume()) {
@@ -205,7 +207,7 @@ export class TelegramChannel implements Channel {
       await this.handleAsk(ctx, text);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      process.stderr.write(`[telegram:voice_error] ${errMsg}\n`);
+      getLogger().error('Telegram voice processing failed', { error: errMsg });
       audit.logAction('telegram:voice_error', { error: errMsg }, { success: false });
       await ctx.reply('Failed to process voice message. Please try again.');
     }
@@ -247,7 +249,7 @@ export class TelegramChannel implements Channel {
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       const errStack = error instanceof Error ? error.stack : '';
-      process.stderr.write(`[telegram:ask_error] ${errMsg}\n${errStack}\n`);
+      getLogger().error('Telegram ask failed', { error: errMsg, stack: errStack });
       audit.logAction(
         'telegram:ask_error',
         {
@@ -337,18 +339,20 @@ export class TelegramChannel implements Channel {
 
   async start(): Promise<void> {
     this.deps.audit.logAction('telegram:start', {});
-    process.stderr.write(
-      `[telegram:start] nodeId=${this.deps.nodeId ?? 'none'} allowedUsers=[${[...this.allowedUsers].join(',')}]\n`,
-    );
+    const logger = getLogger();
+    logger.info('Telegram channel starting', {
+      nodeId: this.deps.nodeId ?? 'none',
+      allowedUsers: [...this.allowedUsers],
+    });
     this.bot.catch((err) => {
-      process.stderr.write(`[telegram:bot_error] ${String(err)}\n`);
+      logger.error('Telegram bot error', { error: String(err) });
       this.deps.audit.logAction('telegram:error', { error: String(err) }, { success: false });
     });
     void this.bot.start({
       onStart: () => {
-        process.stderr.write(
-          `[telegram:polling] Bot polling started for nodeId=${this.deps.nodeId ?? 'none'}\n`,
-        );
+        logger.info('Telegram bot polling started', {
+          nodeId: this.deps.nodeId ?? 'none',
+        });
       },
     });
   }
