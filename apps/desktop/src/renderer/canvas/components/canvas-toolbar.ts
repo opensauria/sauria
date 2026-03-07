@@ -103,14 +103,26 @@ export class CanvasToolbar extends LitElement {
     return html`
       <div class="canvas-toolbar">
         <div class="toolbar-group">
-          <button class="toolbar-btn" title=${t('canvas.zoomOut')} @click=${() => fire(this, 'zoom-out')}>
+          <button
+            class="toolbar-btn"
+            title=${t('canvas.zoomOut')}
+            @click=${() => fire(this, 'zoom-out')}
+          >
             <img src="/icons/zoom-out.svg" alt="Zoom out" />
           </button>
           <span class="zoom-display">${zoomPct}</span>
-          <button class="toolbar-btn" title=${t('canvas.zoomIn')} @click=${() => fire(this, 'zoom-in')}>
+          <button
+            class="toolbar-btn"
+            title=${t('canvas.zoomIn')}
+            @click=${() => fire(this, 'zoom-in')}
+          >
             <img src="/icons/zoom-in.svg" alt="Zoom in" />
           </button>
-          <button class="toolbar-btn" title=${t('canvas.zoomReset')} @click=${() => fire(this, 'zoom-reset')}>
+          <button
+            class="toolbar-btn"
+            title=${t('canvas.zoomReset')}
+            @click=${() => fire(this, 'zoom-reset')}
+          >
             <img src="/icons/maximize.svg" alt="Reset" />
           </button>
         </div>
@@ -119,14 +131,25 @@ export class CanvasToolbar extends LitElement {
           title=${t('canvas.activityFeed')}
           @click=${() => fire(this, 'toggle-feed')}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           <span class="activity-badge ${this.unreadCount > 0 ? 'visible' : ''}">
             ${this.unreadCount > 99 ? '99+' : this.unreadCount}
           </span>
         </button>
-        <button class="toolbar-btn" title=${t('canvas.addWorkspace')} @click=${() => fire(this, 'add-workspace')}>
+        <button
+          class="toolbar-btn"
+          title=${t('canvas.addWorkspace')}
+          @click=${() => fire(this, 'add-workspace')}
+        >
           <img src="/icons/square-plus.svg" alt="Add workspace" />
         </button>
       </div>

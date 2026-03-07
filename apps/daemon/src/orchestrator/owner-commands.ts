@@ -1,8 +1,4 @@
-import type {
-  AgentNode,
-  CanvasGraph,
-  OwnerCommand,
-} from './types.js';
+import type { AgentNode, CanvasGraph, OwnerCommand } from './types.js';
 import type { ChannelRegistry } from '../channels/registry.js';
 import type { KPITracker } from './kpi-tracker.js';
 import type { OwnerIdentity } from './types.js';
@@ -194,4 +190,3 @@ async function handleReview(
   }
   logger.info('Owner review sent', { agentId: node.id });
 }
-

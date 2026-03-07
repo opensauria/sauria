@@ -60,7 +60,9 @@ export async function createChannelForNode(
       : null;
 
     const pipeline = new IngestPipeline(
-      db, router, audit,
+      db,
+      router,
+      audit,
       createLimiter(`tg_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
     );
 
@@ -72,8 +74,16 @@ export async function createChannelForNode(
       configUserIds.length > 0 ? configUserIds : nodeUserId ? [nodeUserId] : [];
 
     return new TelegramChannel({
-      token, allowedUserIds, db, router, audit, pipeline, transcription,
-      nodeId: node.id, ownerId: ownerTelegramId ?? nodeUserId, onInbound,
+      token,
+      allowedUserIds,
+      db,
+      router,
+      audit,
+      pipeline,
+      transcription,
+      nodeId: node.id,
+      ownerId: ownerTelegramId ?? nodeUserId,
+      onInbound,
       instructions: combinedInstructions,
     });
   }
@@ -89,13 +99,25 @@ export async function createChannelForNode(
     }
 
     const pipeline = new IngestPipeline(
-      db, router, audit,
-      createLimiter(`slack_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
+      db,
+      router,
+      audit,
+      createLimiter(
+        `slack_ingest_${node.id}`,
+        SECURITY_LIMITS.ingestion.maxEventsPerHour,
+        3_600_000,
+      ),
     );
 
     return new SlackChannel({
-      token, signingSecret, channelIds: [], ownerId: config.owner.slack?.userId,
-      nodeId: node.id, audit, pipeline, onInbound,
+      token,
+      signingSecret,
+      channelIds: [],
+      ownerId: config.owner.slack?.userId,
+      nodeId: node.id,
+      audit,
+      pipeline,
+      onInbound,
     });
   }
 
@@ -107,13 +129,25 @@ export async function createChannelForNode(
     }
 
     const pipeline = new IngestPipeline(
-      db, router, audit,
-      createLimiter(`discord_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
+      db,
+      router,
+      audit,
+      createLimiter(
+        `discord_ingest_${node.id}`,
+        SECURITY_LIMITS.ingestion.maxEventsPerHour,
+        3_600_000,
+      ),
     );
 
     return new DiscordChannel({
-      token, guildId: config.channels.discord.guildId, channelIds: [],
-      ownerId: config.channels.discord.botUserId, nodeId: node.id, audit, pipeline, onInbound,
+      token,
+      guildId: config.channels.discord.guildId,
+      channelIds: [],
+      ownerId: config.channels.discord.botUserId,
+      nodeId: node.id,
+      audit,
+      pipeline,
+      onInbound,
     });
   }
 
@@ -131,15 +165,22 @@ export async function createChannelForNode(
     }
 
     const pipeline = new IngestPipeline(
-      db, router, audit,
+      db,
+      router,
+      audit,
       createLimiter(`wa_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
     );
 
     const { WhatsAppChannel } = await import('./channels/whatsapp.js');
     return new WhatsAppChannel({
-      accessToken, phoneNumberId: config.channels.whatsapp.phoneNumberId ?? '',
+      accessToken,
+      phoneNumberId: config.channels.whatsapp.phoneNumberId ?? '',
       webhookPort: config.channels.whatsapp.webhookPort ?? 9090,
-      verifyToken, appSecret, audit, pipeline, onInbound,
+      verifyToken,
+      appSecret,
+      audit,
+      pipeline,
+      onInbound,
     });
   }
 
@@ -153,15 +194,28 @@ export async function createChannelForNode(
     }
 
     const pipeline = new IngestPipeline(
-      db, router, audit,
-      createLimiter(`email_ingest_${node.id}`, SECURITY_LIMITS.ingestion.maxEventsPerHour, 3_600_000),
+      db,
+      router,
+      audit,
+      createLimiter(
+        `email_ingest_${node.id}`,
+        SECURITY_LIMITS.ingestion.maxEventsPerHour,
+        3_600_000,
+      ),
     );
 
     return new EmailChannel({
-      imapHost: emailConfig.imapHost, imapPort: emailConfig.imapPort,
-      smtpHost: emailConfig.smtpHost ?? emailConfig.imapHost, smtpPort: emailConfig.smtpPort,
-      username: emailConfig.username, password, tls: emailConfig.tls,
-      nodeId: node.id, audit, pipeline, onInbound,
+      imapHost: emailConfig.imapHost,
+      imapPort: emailConfig.imapPort,
+      smtpHost: emailConfig.smtpHost ?? emailConfig.imapHost,
+      smtpPort: emailConfig.smtpPort,
+      username: emailConfig.username,
+      password,
+      tls: emailConfig.tls,
+      nodeId: node.id,
+      audit,
+      pipeline,
+      onInbound,
     });
   }
 

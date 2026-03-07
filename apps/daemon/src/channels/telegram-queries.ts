@@ -14,10 +14,7 @@ export function countRows(db: BetterSqlite3.Database, sql: string): number {
   return row?.c ?? 0;
 }
 
-export async function handleStatus(
-  ctx: Context,
-  db: BetterSqlite3.Database,
-): Promise<void> {
+export async function handleStatus(ctx: Context, db: BetterSqlite3.Database): Promise<void> {
   const lastRow = db.prepare('SELECT MAX(timestamp) AS ts FROM events').get() as
     | { ts: string | null }
     | undefined;
@@ -73,10 +70,7 @@ export async function handleUpcoming(
   await ctx.reply(lines.join('\n'));
 }
 
-export async function handleInsights(
-  ctx: Context,
-  db: BetterSqlite3.Database,
-): Promise<void> {
+export async function handleInsights(ctx: Context, db: BetterSqlite3.Database): Promise<void> {
   const rows: unknown[] = db
     .prepare(
       "SELECT content, created_at FROM observations WHERE type = 'insight' ORDER BY created_at DESC LIMIT 5",

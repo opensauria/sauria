@@ -1,10 +1,6 @@
 import { nanoid } from 'nanoid';
 import type BetterSqlite3 from 'better-sqlite3';
-import type {
-  CanvasGraph,
-  InboundMessage,
-  AgentNode,
-} from './types.js';
+import type { CanvasGraph, InboundMessage, AgentNode } from './types.js';
 import type { ChannelRegistry } from '../channels/registry.js';
 import type { LLMRoutingBrain } from './llm-router.js';
 import type { AgentMemory } from './agent-memory.js';
@@ -42,8 +38,7 @@ export function buildHelperDeps(state: OrchestratorState): HelperDeps {
     graph: state.graph,
     agentMemory: state.agentMemory,
     ownerIdentity: state.ownerIdentity,
-    findNode: (nodeId: string) =>
-      state.graph.nodes.find((n) => n.id === nodeId) ?? null,
+    findNode: (nodeId: string) => state.graph.nodes.find((n) => n.id === nodeId) ?? null,
   };
 }
 
@@ -80,7 +75,10 @@ export function buildActionContext(
         actionType,
         timestamp: new Date().toISOString(),
       };
-      state.onActivity?.(IPC_EVENTS.ACTIVITY_MESSAGE, payload as unknown as Record<string, unknown>);
+      state.onActivity?.(
+        IPC_EVENTS.ACTIVITY_MESSAGE,
+        payload as unknown as Record<string, unknown>,
+      );
     },
     emitEdge(from: string, to: string, actionType: string, preview: string): void {
       state.onActivity?.(IPC_EVENTS.ACTIVITY_EDGE, { from, to, actionType, preview });
@@ -106,7 +104,9 @@ export function buildOwnerCommandContext(
   const helperDeps = buildHelperDeps(state);
   return {
     getGraph: () => state.graph,
-    setGraph: (g: CanvasGraph) => { state.graph = g; },
+    setGraph: (g: CanvasGraph) => {
+      state.graph = g;
+    },
     registry: state.registry,
     kpiTracker: state.kpiTracker,
     ownerIdentity: state.ownerIdentity,

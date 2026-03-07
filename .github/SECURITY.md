@@ -2,9 +2,9 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-|---------|--------------------|
-| 1.x     | Yes                |
+| Version | Supported |
+| ------- | --------- |
+| 1.x     | Yes       |
 
 ## Reporting a Vulnerability
 
@@ -22,6 +22,7 @@ responsibly:
 ## Scope
 
 The following are in scope:
+
 - Vault encryption and key derivation
 - Channel authentication and token handling
 - Input sanitization and injection prevention

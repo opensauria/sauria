@@ -55,7 +55,8 @@ const catalog: Translations = {
   'canvas.agentPersona': 'Личность агента',
   'canvas.commStyle': 'Стиль общения (все агенты)',
   'canvas.agentPersonaPlaceholder': 'Опишите роль, личность и поведение этого агента...',
-  'canvas.commStylePlaceholder': 'Определите, как должны отвечать все агенты...\n\nПример:\n- Только текст, без markdown\n- Кратко и по делу\n- Без эмодзи',
+  'canvas.commStylePlaceholder':
+    'Определите, как должны отвечать все агенты...\n\nПример:\n- Только текст, без markdown\n- Кратко и по делу\n- Без эмодзи',
   'canvas.standingOrders': 'Постоянные указания для этого агента...',
   'canvas.useTemplate': 'Использовать шаблон',
   'canvas.responseLanguage': 'Язык ответов',
@@ -167,8 +168,10 @@ const catalog: Translations = {
   'brain.statConversations': 'бесед',
   'brain.statFacts': 'фактов',
   'brain.connectError': 'Не удалось подключиться к Sauria',
-  'brain.extractionError': 'Извлечение сущностей не удалось {0} раз — проверьте настройки ИИ-провайдера',
-  'brain.noExtractHint': 'События записаны, но сущности не извлечены — проверьте подключение ИИ-провайдера',
+  'brain.extractionError':
+    'Извлечение сущностей не удалось {0} раз — проверьте настройки ИИ-провайдера',
+  'brain.noExtractHint':
+    'События записаны, но сущности не извлечены — проверьте подключение ИИ-провайдера',
   'brain.colName': 'Имя',
   'brain.colType': 'Тип',
   'brain.colImportance': 'Важность',

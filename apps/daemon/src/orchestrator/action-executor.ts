@@ -1,11 +1,5 @@
 import type BetterSqlite3 from 'better-sqlite3';
-import type {
-  AgentNode,
-  CanvasGraph,
-  InboundMessage,
-  RoutingAction,
-  Workspace,
-} from './types.js';
+import type { AgentNode, CanvasGraph, InboundMessage, RoutingAction, Workspace } from './types.js';
 import type { ChannelRegistry } from '../channels/registry.js';
 import type { LLMRoutingBrain } from './llm-router.js';
 import type { AgentMemory } from './agent-memory.js';

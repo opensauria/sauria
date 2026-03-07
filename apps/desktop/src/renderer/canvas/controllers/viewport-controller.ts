@@ -18,8 +18,12 @@ export class ViewportController implements ReactiveController {
     host.addController(this);
   }
 
-  hostConnected(): void { /* noop */ }
-  hostDisconnected(): void { this.isPanning = false; }
+  hostConnected(): void {
+    /* noop */
+  }
+  hostDisconnected(): void {
+    this.isPanning = false;
+  }
 
   loadFrom(x: number, y: number, zoom: number): void {
     this.x = x;

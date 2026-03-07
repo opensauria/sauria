@@ -8,18 +8,8 @@ import type { TranscriptionService } from './transcription.js';
 import type { InboundMessage } from '../orchestrator/types.js';
 import { ChannelGuards, formatAlert, type Channel } from './base.js';
 import { getLogger } from '../utils/logger.js';
-import {
-  handleTextMessage,
-  handleVoice,
-  handleAsk,
-  handleTeach,
-} from './telegram-handlers.js';
-import {
-  handleStatus,
-  handleEntity,
-  handleUpcoming,
-  handleInsights,
-} from './telegram-queries.js';
+import { handleTextMessage, handleVoice, handleAsk, handleTeach } from './telegram-handlers.js';
+import { handleStatus, handleEntity, handleUpcoming, handleInsights } from './telegram-queries.js';
 
 export interface TelegramDeps {
   readonly token: string;

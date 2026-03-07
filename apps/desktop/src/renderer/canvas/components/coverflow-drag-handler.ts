@@ -44,8 +44,12 @@ export class CoverflowDragHandler {
     this.ghost = document.createElement('div');
     this.ghost.className = 'coverflow-ghost';
     this.ghost.innerHTML =
-      '<div class="cf-icon">' + (PLATFORM_ICONS[this.dragPlatform] ?? '') + '</div>' +
-      '<div class="cf-name">' + escapeHtml(capitalize(this.dragPlatform)) + '</div>';
+      '<div class="cf-icon">' +
+      (PLATFORM_ICONS[this.dragPlatform] ?? '') +
+      '</div>' +
+      '<div class="cf-name">' +
+      escapeHtml(capitalize(this.dragPlatform)) +
+      '</div>';
     this.ghost.style.left = e.clientX - 48 + 'px';
     this.ghost.style.top = e.clientY - 64 + 'px';
     document.body.appendChild(this.ghost);

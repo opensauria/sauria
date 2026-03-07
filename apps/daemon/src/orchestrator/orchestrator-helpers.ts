@@ -1,11 +1,5 @@
 import type { AgentMemory } from './agent-memory.js';
-import type {
-  AgentNode,
-  CanvasGraph,
-  InboundMessage,
-  OwnerIdentity,
-  Platform,
-} from './types.js';
+import type { AgentNode, CanvasGraph, InboundMessage, OwnerIdentity, Platform } from './types.js';
 
 export interface HelperDeps {
   readonly graph: CanvasGraph;
@@ -20,11 +14,9 @@ export function recordReplyInMemory(
   content: string,
 ): void {
   if (!deps.agentMemory) return;
-  const conversationId = deps.agentMemory.getOrCreateConversation(
-    source.platform,
-    source.groupId,
-    [source.sourceNodeId],
-  );
+  const conversationId = deps.agentMemory.getOrCreateConversation(source.platform, source.groupId, [
+    source.sourceNodeId,
+  ]);
   deps.agentMemory.recordMessage({
     conversationId,
     sourceNodeId: source.sourceNodeId,

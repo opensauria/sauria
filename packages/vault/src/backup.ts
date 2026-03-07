@@ -44,9 +44,7 @@ export async function vaultExport(passphrase: string): Promise<Buffer> {
 
   const vaultDir = paths.vault;
   const entries = await readdir(vaultDir);
-  const encFiles = entries.filter(
-    (f) => f.endsWith('.enc') && !SKIP_FILES.has(f),
-  );
+  const encFiles = entries.filter((f) => f.endsWith('.enc') && !SKIP_FILES.has(f));
 
   if (encFiles.length === 0) {
     throw new Error('No secrets found in vault to export');
@@ -92,10 +90,7 @@ export async function vaultExport(passphrase: string): Promise<Buffer> {
  * Decrypts with the user passphrase, re-encrypts each secret
  * with the current machine's vault password.
  */
-export async function vaultImport(
-  archive: Buffer,
-  passphrase: string,
-): Promise<number> {
+export async function vaultImport(archive: Buffer, passphrase: string): Promise<number> {
   if (!passphrase || passphrase.length === 0) {
     throw new Error('Passphrase must not be empty');
   }

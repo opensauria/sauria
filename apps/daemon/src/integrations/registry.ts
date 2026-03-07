@@ -9,10 +9,7 @@ import type {
 } from '@sauria/types';
 import type { McpClientManager } from '../mcp/client.js';
 import type { AuditLogger } from '../security/audit.js';
-import {
-  connectIntegrationInstance,
-  disconnectIntegrationInstance,
-} from './registry-connect.js';
+import { connectIntegrationInstance, disconnectIntegrationInstance } from './registry-connect.js';
 import { getLogger } from '../utils/logger.js';
 
 function resolveMcpWorkdir(instanceId: string): string {
@@ -150,16 +147,28 @@ export class IntegrationRegistry {
     // Remote MCP path — connect via HTTP/SSE with OAuth token
     if (definition.mcpRemote && accessToken) {
       return connectIntegrationInstance(
-        instanceId, integrationId, label, credentials,
-        definition, this.mcpClients, this.audit, this.instances,
+        instanceId,
+        integrationId,
+        label,
+        credentials,
+        definition,
+        this.mcpClients,
+        this.audit,
+        this.instances,
         { remote: true, workdir: resolveMcpWorkdir(instanceId) },
       );
     }
 
     // Local MCP path — spawn via npx
     return connectIntegrationInstance(
-      instanceId, integrationId, label, credentials,
-      definition, this.mcpClients, this.audit, this.instances,
+      instanceId,
+      integrationId,
+      label,
+      credentials,
+      definition,
+      this.mcpClients,
+      this.audit,
+      this.instances,
       { remote: false, workdir: resolveMcpWorkdir(instanceId) },
     );
   }
@@ -190,9 +199,7 @@ export class IntegrationRegistry {
   }
 
   async disconnectInstance(instanceId: string): Promise<void> {
-    return disconnectIntegrationInstance(
-      instanceId, this.mcpClients, this.audit, this.instances,
-    );
+    return disconnectIntegrationInstance(instanceId, this.mcpClients, this.audit, this.instances);
   }
 
   getToolsForInstances(instanceIds: readonly string[]): IntegrationTool[] {

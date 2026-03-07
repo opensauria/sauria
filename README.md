@@ -75,8 +75,8 @@ sauria insights           # AI-generated observations
 sauria doctor             # Health checks
 ```
 
-| Command                     | Description                       |
-| --------------------------- | --------------------------------- |
+| Command                   | Description                       |
+| ------------------------- | --------------------------------- |
 | `sauria onboard`          | Interactive setup wizard          |
 | `sauria daemon`           | Start background daemon           |
 | `sauria ask <question>`   | Natural language query            |
@@ -99,8 +99,8 @@ sauria doctor             # Health checks
 
 When running as an MCP server, Sauria exposes 7 tools to connected agents:
 
-| Tool                       | Description                                             |
-| -------------------------- | ------------------------------------------------------- |
+| Tool                     | Description                                             |
+| ------------------------ | ------------------------------------------------------- |
 | `sauria_query`           | Natural language question answered from knowledge graph |
 | `sauria_get_entity`      | Entity details + relations + timeline                   |
 | `sauria_search`          | Hybrid semantic + keyword search                        |

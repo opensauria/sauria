@@ -115,11 +115,7 @@ function render() {
   const query = searchEl.value.toLowerCase();
   filtered = commands.filter(function (c) {
     const label = t(c.labelKey).toLowerCase();
-    return (
-      label.includes(query) ||
-      c.hint.toLowerCase().includes(query) ||
-      c.id.includes(query)
-    );
+    return label.includes(query) || c.hint.toLowerCase().includes(query) || c.id.includes(query);
   });
   if (selectedIndex >= filtered.length) selectedIndex = Math.max(0, filtered.length - 1);
   if (filtered.length === 0) {
@@ -130,7 +126,9 @@ function render() {
   listEl.style.display = 'block';
   emptyEl.style.display = 'none';
   const header = devMode
-    ? '<div class="section-header"><span>' + t('palette.developer') + '</span><span class="section-line"></span></div>'
+    ? '<div class="section-header"><span>' +
+      t('palette.developer') +
+      '</span><span class="section-line"></span></div>'
     : '';
   listEl.innerHTML =
     header +
@@ -222,7 +220,9 @@ function renderBotCard(bot: TelegramBot) {
     '<div class="bot-actions">' +
     '<button class="bot-action-btn danger tg-disconnect-btn" data-node-id="' +
     nodeId +
-    '" title="' + t('palette.disconnect') + '">' +
+    '" title="' +
+    t('palette.disconnect') +
+    '">' +
     trashSvg +
     '</button>' +
     '</div>' +
@@ -494,12 +494,9 @@ function refreshProviderStatus() {
     if (status.connected && status.provider) {
       const method = status.authMethod === 'oauth' ? 'subscription' : 'API key';
       setupCmd.hint =
-        '<span class="status-dot connected"></span>' +
-        status.provider + ' (' + method + ')';
+        '<span class="status-dot connected"></span>' + status.provider + ' (' + method + ')';
     } else {
-      setupCmd.hint =
-        '<span class="status-dot disconnected"></span>' +
-        t('palette.noProvider');
+      setupCmd.hint = '<span class="status-dot disconnected"></span>' + t('palette.noProvider');
     }
     if (!devMode) render();
   });
@@ -531,17 +528,21 @@ const checkSvg =
 
 function renderLanguageList() {
   const current = getLocale();
-  langList.innerHTML = UI_LANGUAGES
-    .map(function (l) {
-      const cls = 'lang-option' + (l.code === current ? ' active' : '');
-      return (
-        '<div class="' + cls + '" data-code="' + l.code + '">' +
-        checkSvg +
-        '<span>' + l.label + '</span>' +
-        '</div>'
-      );
-    })
-    .join('');
+  langList.innerHTML = UI_LANGUAGES.map(function (l) {
+    const cls = 'lang-option' + (l.code === current ? ' active' : '');
+    return (
+      '<div class="' +
+      cls +
+      '" data-code="' +
+      l.code +
+      '">' +
+      checkSvg +
+      '<span>' +
+      l.label +
+      '</span>' +
+      '</div>'
+    );
+  }).join('');
 }
 
 function showLanguagePanel() {
@@ -564,9 +565,13 @@ async function selectLanguage(code: string) {
 }
 
 function updateLangHint() {
-  const langCmd = mainCommands.find(function (c) { return c.id === 'language'; });
+  const langCmd = mainCommands.find(function (c) {
+    return c.id === 'language';
+  });
   if (!langCmd) return;
-  const active = UI_LANGUAGES.find(function (l) { return l.code === getLocale(); });
+  const active = UI_LANGUAGES.find(function (l) {
+    return l.code === getLocale();
+  });
   langCmd.hint = active ? active.label : '';
 }
 
@@ -606,7 +611,9 @@ async function checkForUpdate() {
     const banner = document.createElement('div');
     banner.className = 'update-banner';
     banner.innerHTML =
-      '<span>Update ' + update.version + ' available</span>' +
+      '<span>Update ' +
+      update.version +
+      ' available</span>' +
       '<button class="update-btn">Install & Restart</button>';
     document.body.appendChild(banner);
 

@@ -88,9 +88,7 @@ export class DiscordChannel implements Channel {
   private async resolveGuildTextChannels(guildId: string): Promise<string[]> {
     const { audit } = this.deps;
     try {
-      const response = await this.discordFetch<DiscordApiChannel[]>(
-        `/guilds/${guildId}/channels`,
-      );
+      const response = await this.discordFetch<DiscordApiChannel[]>(`/guilds/${guildId}/channels`);
       return response.filter((c) => c.type === 0).map((c) => c.id);
     } catch (error) {
       audit.logAction(

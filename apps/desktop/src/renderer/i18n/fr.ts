@@ -55,8 +55,10 @@ const catalog: Translations = {
   'canvas.instructions': 'Instructions',
   'canvas.agentPersona': "Personnalité de l'agent",
   'canvas.commStyle': 'Style de communication (tous les agents)',
-  'canvas.agentPersonaPlaceholder': "Décrivez le rôle, la personnalité et le comportement de cet agent...",
-  'canvas.commStylePlaceholder': "Définissez comment tous les agents doivent répondre...\n\nExemple :\n- Texte brut uniquement, pas de markdown\n- Concis et direct\n- Pas d'emojis",
+  'canvas.agentPersonaPlaceholder':
+    'Décrivez le rôle, la personnalité et le comportement de cet agent...',
+  'canvas.commStylePlaceholder':
+    "Définissez comment tous les agents doivent répondre...\n\nExemple :\n- Texte brut uniquement, pas de markdown\n- Concis et direct\n- Pas d'emojis",
   'canvas.standingOrders': 'Directives pour cet agent...',
   'canvas.useTemplate': 'Utiliser un modèle',
   'canvas.responseLanguage': 'Langue de réponse',
@@ -146,7 +148,7 @@ const catalog: Translations = {
   'integ.disconnecting': 'Déconnexion...',
   'integ.oauthDescription': 'Connectez-vous avec votre compte {name}.',
   'integ.connectWith': 'Se connecter avec {name}',
-  'integ.oauthWaiting': 'En attente d\'autorisation...',
+  'integ.oauthWaiting': "En attente d'autorisation...",
   'integ.oauthSuccess': 'Connecté avec succès !',
   'integ.oauthTab': 'OAuth',
   'integ.apiKeyTab': 'Clé API',
@@ -168,7 +170,7 @@ const catalog: Translations = {
   'integ.catMarketing': 'Marketing',
   'integ.catSupport': 'Support',
   'integ.catCMS': 'CMS',
-  'brain.justNow': 'à l\'instant',
+  'brain.justNow': "à l'instant",
   'brain.mAgo': 'min',
   'brain.hAgo': 'h',
   'brain.dAgo': 'j',
@@ -179,8 +181,10 @@ const catalog: Translations = {
   'brain.statConversations': 'conversations',
   'brain.statFacts': 'faits',
   'brain.connectError': 'Impossible de se connecter à Sauria',
-  'brain.extractionError': 'Extraction des entités échouée {0} fois — vérifiez qu\'un fournisseur IA est configuré',
-  'brain.noExtractHint': 'Événements enregistrés mais aucune entité extraite — vérifiez qu\'un fournisseur IA est connecté',
+  'brain.extractionError':
+    "Extraction des entités échouée {0} fois — vérifiez qu'un fournisseur IA est configuré",
+  'brain.noExtractHint':
+    "Événements enregistrés mais aucune entité extraite — vérifiez qu'un fournisseur IA est connecté",
   'brain.colName': 'Nom',
   'brain.colType': 'Type',
   'brain.colImportance': 'Importance',
@@ -226,7 +230,8 @@ const catalog: Translations = {
   'brain.detailRelations': 'Relations',
   'brain.recentEvents': 'Événements récents',
   'brain.messagesSection': 'Messages',
-  'brain.deleteEntityWarn': 'Cela supprimera également toutes les relations et embeddings associés.',
+  'brain.deleteEntityWarn':
+    'Cela supprimera également toutes les relations et embeddings associés.',
   'brain.deleteConvoWarn': 'Cela supprimera également tous les messages de cette conversation.',
   'brain.graphStats': '{0} entités · {1} relations',
   'brain.importance': 'importance',

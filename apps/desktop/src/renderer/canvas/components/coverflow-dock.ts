@@ -61,7 +61,9 @@ export class CoverflowDock extends LightDomElement {
 
       track.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
       track.addEventListener('click', this.handleTrackClick.bind(this));
-      track.addEventListener('mousedown', (e) => { this.dragHandler.handleTrackMouseDown(e); });
+      track.addEventListener('mousedown', (e) => {
+        this.dragHandler.handleTrackMouseDown(e);
+      });
     }
 
     if (track.children.length !== CF_PLATFORMS.length) {
@@ -72,9 +74,15 @@ export class CoverflowDock extends LightDomElement {
         card.dataset.platform = p.id;
         card.dataset.index = String(i);
         card.innerHTML =
-          '<div class="cf-icon">' + (PLATFORM_ICONS[p.id] ?? '') + '</div>' +
-          '<div class="cf-name">' + escapeHtml(p.name) + '</div>' +
-          '<div class="cf-hint">' + escapeHtml(p.hint) + '</div>';
+          '<div class="cf-icon">' +
+          (PLATFORM_ICONS[p.id] ?? '') +
+          '</div>' +
+          '<div class="cf-name">' +
+          escapeHtml(p.name) +
+          '</div>' +
+          '<div class="cf-hint">' +
+          escapeHtml(p.hint) +
+          '</div>';
         track!.appendChild(card);
       });
     }
@@ -99,8 +107,7 @@ export class CoverflowDock extends LightDomElement {
       const opacity = Math.max(0, 1 - absOffset * 0.3);
       const zIndex = Math.max(0, 5 - Math.round(absOffset));
 
-      card.style.transform =
-        `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`;
+      card.style.transform = `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`;
       card.style.opacity = String(opacity);
       card.style.zIndex = String(zIndex);
       card.style.pointerEvents = absOffset > 2.5 ? 'none' : 'auto';
@@ -137,7 +144,9 @@ export class CoverflowDock extends LightDomElement {
     this.scrollAccum += delta;
 
     if (this.scrollTimer) clearTimeout(this.scrollTimer);
-    this.scrollTimer = setTimeout(() => { this.scrollAccum = 0; }, 150);
+    this.scrollTimer = setTimeout(() => {
+      this.scrollAccum = 0;
+    }, 150);
 
     if (Math.abs(this.scrollAccum) >= SCROLL_THRESHOLD) {
       const steps = Math.round(this.scrollAccum / SCROLL_THRESHOLD);

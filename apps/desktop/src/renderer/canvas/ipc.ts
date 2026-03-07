@@ -1,10 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type {
-  CanvasGraph,
-  ConnectResult,
-  IntegrationDef,
-  OwnerProfile,
-} from './types.js';
+import type { CanvasGraph, ConnectResult, IntegrationDef, OwnerProfile } from './types.js';
 
 export function getCanvasGraph(): Promise<CanvasGraph> {
   return invoke<CanvasGraph>('get_canvas_graph');
@@ -21,10 +16,7 @@ export function connectChannel(
   return invoke<ConnectResult>('connect_channel', { platform, credentials });
 }
 
-export function disconnectChannel(
-  platform: string,
-  nodeId: string,
-): Promise<void> {
+export function disconnectChannel(platform: string, nodeId: string): Promise<void> {
   return invoke('disconnect_channel', { platform, nodeId });
 }
 
@@ -41,10 +33,7 @@ export function getAgentKpis(nodeId: string): Promise<{
   return invoke('get_agent_kpis', { nodeId });
 }
 
-export function saveAgentDetail(
-  nodeId: string,
-  patch: Record<string, unknown>,
-): Promise<void> {
+export function saveAgentDetail(nodeId: string, patch: Record<string, unknown>): Promise<void> {
   return invoke('save_agent_detail', { nodeId, patch });
 }
 
@@ -54,17 +43,11 @@ export function listIntegrationCatalog(): Promise<
   return invoke('integrations_list_catalog');
 }
 
-export function assignIntegration(
-  nodeId: string,
-  instanceId: string,
-): Promise<void> {
+export function assignIntegration(nodeId: string, instanceId: string): Promise<void> {
   return invoke('integrations_assign_instance', { nodeId, instanceId });
 }
 
-export function unassignIntegration(
-  nodeId: string,
-  instanceId: string,
-): Promise<void> {
+export function unassignIntegration(nodeId: string, instanceId: string): Promise<void> {
   return invoke('integrations_unassign_instance', { nodeId, instanceId });
 }
 

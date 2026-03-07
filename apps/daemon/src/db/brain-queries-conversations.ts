@@ -108,9 +108,7 @@ export function listConversations(
 
   if (nodeIds && nodeIds.length > 0) {
     for (const nid of nodeIds) {
-      conditions.push(
-        `EXISTS (SELECT 1 FROM JSON_EACH(participant_node_ids) j WHERE j.value = ?)`,
-      );
+      conditions.push(`EXISTS (SELECT 1 FROM JSON_EACH(participant_node_ids) j WHERE j.value = ?)`);
       params.push(nid);
     }
   }

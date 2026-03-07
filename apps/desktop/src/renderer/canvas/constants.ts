@@ -131,66 +131,223 @@ export const CF_PLATFORMS = [
 
 const PLATFORM_FIELDS: Record<string, PlatformField[]> = {
   telegram: [
-    { key: 'userId', label: 'Your User ID', type: 'text', placeholder: '123456789', hint: 'Get from @userinfobot on Telegram' },
-    { key: 'token', label: 'Bot Token', type: 'password', placeholder: '123456:ABC-DEF...', hint: 'Get from @BotFather on Telegram' },
+    {
+      key: 'userId',
+      label: 'Your User ID',
+      type: 'text',
+      placeholder: '123456789',
+      hint: 'Get from @userinfobot on Telegram',
+    },
+    {
+      key: 'token',
+      label: 'Bot Token',
+      type: 'password',
+      placeholder: '123456:ABC-DEF...',
+      hint: 'Get from @BotFather on Telegram',
+    },
   ],
   slack: [
-    { key: 'token', label: 'Bot Token', type: 'password', placeholder: 'xoxb-...', hint: 'From Slack App > OAuth & Permissions' },
-    { key: 'signingSecret', label: 'Signing Secret', type: 'password', placeholder: 'abc123...', hint: 'From Slack App > Basic Information' },
+    {
+      key: 'token',
+      label: 'Bot Token',
+      type: 'password',
+      placeholder: 'xoxb-...',
+      hint: 'From Slack App > OAuth & Permissions',
+    },
+    {
+      key: 'signingSecret',
+      label: 'Signing Secret',
+      type: 'password',
+      placeholder: 'abc123...',
+      hint: 'From Slack App > Basic Information',
+    },
   ],
   whatsapp: [
-    { key: 'phoneNumberId', label: 'Phone Number ID', type: 'text', placeholder: '1234567890', hint: 'From Meta Business > WhatsApp > API Setup' },
-    { key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'EAA...', hint: 'Permanent token from System Users' },
+    {
+      key: 'phoneNumberId',
+      label: 'Phone Number ID',
+      type: 'text',
+      placeholder: '1234567890',
+      hint: 'From Meta Business > WhatsApp > API Setup',
+    },
+    {
+      key: 'accessToken',
+      label: 'Access Token',
+      type: 'password',
+      placeholder: 'EAA...',
+      hint: 'Permanent token from System Users',
+    },
   ],
   discord: [
-    { key: 'token', label: 'Bot Token', type: 'password', placeholder: 'MTIz...', hint: 'From Discord Developer Portal > Bot > Token' },
+    {
+      key: 'token',
+      label: 'Bot Token',
+      type: 'password',
+      placeholder: 'MTIz...',
+      hint: 'From Discord Developer Portal > Bot > Token',
+    },
   ],
   teams: [
-    { key: 'appId', label: 'App ID', type: 'text', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', hint: 'From Azure Bot Service > Configuration' },
-    { key: 'appSecret', label: 'App Secret', type: 'password', placeholder: 'abc123...', hint: 'Client secret from Azure AD app registration' },
-    { key: 'tenantId', label: 'Tenant ID', type: 'text', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', hint: 'Azure AD tenant ID (or "common" for multi-tenant)' },
+    {
+      key: 'appId',
+      label: 'App ID',
+      type: 'text',
+      placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+      hint: 'From Azure Bot Service > Configuration',
+    },
+    {
+      key: 'appSecret',
+      label: 'App Secret',
+      type: 'password',
+      placeholder: 'abc123...',
+      hint: 'Client secret from Azure AD app registration',
+    },
+    {
+      key: 'tenantId',
+      label: 'Tenant ID',
+      type: 'text',
+      placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+      hint: 'Azure AD tenant ID (or "common" for multi-tenant)',
+    },
   ],
   messenger: [
-    { key: 'pageAccessToken', label: 'Page Access Token', type: 'password', placeholder: 'EAA...', hint: 'From Meta Developer Portal > Messenger > Access Tokens' },
-    { key: 'pageId', label: 'Page ID', type: 'text', placeholder: '1234567890', hint: 'Facebook Page ID (Settings > About)' },
+    {
+      key: 'pageAccessToken',
+      label: 'Page Access Token',
+      type: 'password',
+      placeholder: 'EAA...',
+      hint: 'From Meta Developer Portal > Messenger > Access Tokens',
+    },
+    {
+      key: 'pageId',
+      label: 'Page ID',
+      type: 'text',
+      placeholder: '1234567890',
+      hint: 'Facebook Page ID (Settings > About)',
+    },
   ],
   line: [
-    { key: 'channelAccessToken', label: 'Channel Access Token', type: 'password', placeholder: 'abc123...', hint: 'From LINE Developers > Messaging API > Channel Access Token' },
-    { key: 'channelSecret', label: 'Channel Secret', type: 'password', placeholder: 'abc123...', hint: 'From LINE Developers > Basic Settings' },
+    {
+      key: 'channelAccessToken',
+      label: 'Channel Access Token',
+      type: 'password',
+      placeholder: 'abc123...',
+      hint: 'From LINE Developers > Messaging API > Channel Access Token',
+    },
+    {
+      key: 'channelSecret',
+      label: 'Channel Secret',
+      type: 'password',
+      placeholder: 'abc123...',
+      hint: 'From LINE Developers > Basic Settings',
+    },
   ],
   'google-chat': [
-    { key: 'serviceAccountKey', label: 'Service Account Key (JSON)', type: 'password', placeholder: '{"type":"service_account",...}', hint: 'From Google Cloud Console > IAM > Service Accounts > Keys' },
-    { key: 'spaceId', label: 'Space ID', type: 'text', placeholder: 'spaces/AAAAxxx', hint: 'Google Chat space to listen on' },
+    {
+      key: 'serviceAccountKey',
+      label: 'Service Account Key (JSON)',
+      type: 'password',
+      placeholder: '{"type":"service_account",...}',
+      hint: 'From Google Cloud Console > IAM > Service Accounts > Keys',
+    },
+    {
+      key: 'spaceId',
+      label: 'Space ID',
+      type: 'text',
+      placeholder: 'spaces/AAAAxxx',
+      hint: 'Google Chat space to listen on',
+    },
   ],
   twilio: [
-    { key: 'accountSid', label: 'Account SID', type: 'text', placeholder: 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', hint: 'From Twilio Console > Account Info' },
-    { key: 'authToken', label: 'Auth Token', type: 'password', placeholder: 'abc123...', hint: 'From Twilio Console > Account Info' },
-    { key: 'phoneNumber', label: 'Phone Number', type: 'text', placeholder: '+1234567890', hint: 'Twilio phone number (E.164 format)' },
+    {
+      key: 'accountSid',
+      label: 'Account SID',
+      type: 'text',
+      placeholder: 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      hint: 'From Twilio Console > Account Info',
+    },
+    {
+      key: 'authToken',
+      label: 'Auth Token',
+      type: 'password',
+      placeholder: 'abc123...',
+      hint: 'From Twilio Console > Account Info',
+    },
+    {
+      key: 'phoneNumber',
+      label: 'Phone Number',
+      type: 'text',
+      placeholder: '+1234567890',
+      hint: 'Twilio phone number (E.164 format)',
+    },
   ],
   matrix: [
-    { key: 'homeserverUrl', label: 'Homeserver URL', type: 'text', placeholder: 'https://matrix.org', hint: 'Matrix homeserver base URL' },
-    { key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'syt_xxx...', hint: 'From Element > Settings > Help & About > Access Token' },
+    {
+      key: 'homeserverUrl',
+      label: 'Homeserver URL',
+      type: 'text',
+      placeholder: 'https://matrix.org',
+      hint: 'Matrix homeserver base URL',
+    },
+    {
+      key: 'accessToken',
+      label: 'Access Token',
+      type: 'password',
+      placeholder: 'syt_xxx...',
+      hint: 'From Element > Settings > Help & About > Access Token',
+    },
   ],
   gmail: [],
   email: [
     { key: 'imapHost', label: 'IMAP Host', type: 'text', placeholder: 'imap.gmail.com', hint: '' },
     { key: 'imapPort', label: 'IMAP Port', type: 'number', placeholder: '993', hint: '' },
-    { key: 'smtpHost', label: 'SMTP Host', type: 'text', placeholder: 'smtp.gmail.com', hint: 'Leave empty to use IMAP host' },
+    {
+      key: 'smtpHost',
+      label: 'SMTP Host',
+      type: 'text',
+      placeholder: 'smtp.gmail.com',
+      hint: 'Leave empty to use IMAP host',
+    },
     { key: 'smtpPort', label: 'SMTP Port', type: 'number', placeholder: '587', hint: '' },
-    { key: 'username', label: 'Username / Email', type: 'text', placeholder: 'bot@example.com', hint: '' },
-    { key: 'password', label: 'Password', type: 'password', placeholder: 'App password', hint: 'Use an app password for Gmail / Outlook' },
+    {
+      key: 'username',
+      label: 'Username / Email',
+      type: 'text',
+      placeholder: 'bot@example.com',
+      hint: '',
+    },
+    {
+      key: 'password',
+      label: 'Password',
+      type: 'password',
+      placeholder: 'App password',
+      hint: 'Use an app password for Gmail / Outlook',
+    },
   ],
 };
 
 export const ROLES = ['lead', 'specialist', 'observer', 'coordinator', 'assistant'] as const;
 export const AUTONOMY_LEVELS = [
-  { level: 0, label: 'Manual' }, { level: 1, label: 'Supervised' },
-  { level: 2, label: 'Guided' }, { level: 3, label: 'Full' },
+  { level: 0, label: 'Manual' },
+  { level: 1, label: 'Supervised' },
+  { level: 2, label: 'Guided' },
+  { level: 3, label: 'Full' },
 ] as const;
-export const PRESET_COLORS = ['#038B9A', '#27A7E7', '#34d399', '#f59e0b', '#f87171', '#a78bfa'] as const;
+export const PRESET_COLORS = [
+  '#038B9A',
+  '#27A7E7',
+  '#34d399',
+  '#f59e0b',
+  '#f87171',
+  '#a78bfa',
+] as const;
 
-export function getFieldsForPlatform(platform: string): PlatformField[] { return PLATFORM_FIELDS[platform] ?? []; }
+export function getFieldsForPlatform(platform: string): PlatformField[] {
+  return PLATFORM_FIELDS[platform] ?? [];
+}
 
 export const GEAR_SVG = '<img src="/icons/settings.svg" alt="Settings" />';
-export const LOCK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
-export const UNLOCK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
+export const LOCK_SVG =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+export const UNLOCK_SVG =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';

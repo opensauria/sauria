@@ -55,7 +55,8 @@ const catalog: Translations = {
   'canvas.agentPersona': 'Ajan Kişiliği',
   'canvas.commStyle': 'İletişim Tarzı (tüm ajanlar)',
   'canvas.agentPersonaPlaceholder': 'Bu ajanın rolünü, kişiliğini ve davranışını tanımlayın...',
-  'canvas.commStylePlaceholder': 'Tüm ajanların nasıl yanıt vereceğini belirleyin...\n\nÖrnek:\n- Yalnızca düz metin, markdown yok\n- Kısa ve öz\n- Emoji yok',
+  'canvas.commStylePlaceholder':
+    'Tüm ajanların nasıl yanıt vereceğini belirleyin...\n\nÖrnek:\n- Yalnızca düz metin, markdown yok\n- Kısa ve öz\n- Emoji yok',
   'canvas.standingOrders': 'Bu ajan için kalıcı talimatlar...',
   'canvas.useTemplate': 'Şablon Kullan',
   'canvas.responseLanguage': 'Yanıt Dili',
@@ -166,9 +167,11 @@ const catalog: Translations = {
   'brain.statObservations': 'gözlem',
   'brain.statConversations': 'konuşma',
   'brain.statFacts': 'bilgi',
-  'brain.connectError': 'Sauria\'ya bağlanılamadı',
-  'brain.extractionError': 'Varlık çıkarma {0} kez başarısız — AI sağlayıcı yapılandırmasını kontrol edin',
-  'brain.noExtractHint': 'Olaylar kaydedildi ancak varlık çıkarılmadı — AI sağlayıcı bağlantısını kontrol edin',
+  'brain.connectError': "Sauria'ya bağlanılamadı",
+  'brain.extractionError':
+    'Varlık çıkarma {0} kez başarısız — AI sağlayıcı yapılandırmasını kontrol edin',
+  'brain.noExtractHint':
+    'Olaylar kaydedildi ancak varlık çıkarılmadı — AI sağlayıcı bağlantısını kontrol edin',
   'brain.colName': 'Ad',
   'brain.colType': 'Tür',
   'brain.colImportance': 'Önem',

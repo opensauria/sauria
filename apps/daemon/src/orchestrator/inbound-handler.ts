@@ -1,10 +1,4 @@
-import type {
-  CanvasGraph,
-  InboundMessage,
-  RoutingAction,
-  Workspace,
-  AgentNode,
-} from './types.js';
+import type { CanvasGraph, InboundMessage, RoutingAction, Workspace, AgentNode } from './types.js';
 import type { LLMRoutingBrain, RoutingContext } from './llm-router.js';
 import type { AgentMemory } from './agent-memory.js';
 import type { KPITracker } from './kpi-tracker.js';
@@ -26,13 +20,13 @@ interface InboundDeps {
   readonly findNode: (nodeId: string) => AgentNode | null;
   readonly findWorkspace: (nodeId: string) => Workspace | null;
   readonly executeAction: (action: RoutingAction, source: InboundMessage) => Promise<void>;
-  readonly queuePendingApprovals: (node: AgentNode, actions: readonly RoutingAction[]) => Promise<void>;
+  readonly queuePendingApprovals: (
+    node: AgentNode,
+    actions: readonly RoutingAction[],
+  ) => Promise<void>;
 }
 
-export async function handleInbound(
-  message: InboundMessage,
-  deps: InboundDeps,
-): Promise<void> {
+export async function handleInbound(message: InboundMessage, deps: InboundDeps): Promise<void> {
   const logger = getLogger();
   const startTime = Date.now();
   const node = deps.findNode(message.sourceNodeId);
@@ -104,9 +98,7 @@ async function processLlmRouting(
   const logger = getLogger();
   const workspace = deps.findWorkspace(node.id);
   const graph = deps.getGraph();
-  const teamNodes = workspace
-    ? graph.nodes.filter((n) => n.workspaceId === workspace.id)
-    : [];
+  const teamNodes = workspace ? graph.nodes.filter((n) => n.workspaceId === workspace.id) : [];
 
   const context: RoutingContext = {
     message,

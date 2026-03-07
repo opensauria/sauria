@@ -207,14 +207,17 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 #### LLM Prompt: Agent List MUST Include Node IDs
 
 `buildRoutingPrompt()` in `llm-router.ts` lists team agents with their `nodeId`:
+
 ```
 - @karl_bot (specialist) [nodeId: "abc123"] on telegram
 ```
+
 Without node IDs, the LLM cannot construct valid `forward` actions (requires `targetNodeId`), and all forwards get filtered out → agents fall back to `reply` and fabricate responses instead of delegating. **NEVER remove node IDs from the agent list.**
 
 #### LLM Prompt: Delegation and Reply Semantics
 
 Critical prompt instructions in `llm-router.ts`:
+
 - **DELEGATION**: When the owner mentions another agent by name, the current agent MUST `forward` to that agent. Never fabricate what another agent would say.
 - **REPLY vs FORWARD**: `reply` sends response back (to owner for direct messages, to sender agent for forwarded messages). `forward` sends to a DIFFERENT agent. These are NOT interchangeable.
 - **INTERNAL DEBATE**: Forwarded replies go back internally to the sender agent. The owner never sees intermediate debate. Only the agent who received the owner's original message sends the final answer.
@@ -246,9 +249,13 @@ Agent received direct message (forwardDepth = 0) → reply via own channel (norm
 #### Edge Animation: Bidirectional Matching
 
 `animateEdgeTravel()` in `canvas/main.ts` matches edges in BOTH directions:
+
 ```ts
-graph.edges.find(e => (e.from === fromId && e.to === toId) || (e.from === toId && e.to === fromId))
+graph.edges.find(
+  (e) => (e.from === fromId && e.to === toId) || (e.from === toId && e.to === fromId),
+);
 ```
+
 For reverse messages (reply B→A on edge A→B), the dot travels `totalLength→0` along the edge's canonical curve. Edge glow activates for both directions.
 
 ### Voice Transcription
@@ -415,6 +422,7 @@ pnpm -r typecheck                          # Typecheck all packages
 ### Production Deploy (CRITICAL)
 
 Always follow this exact sequence — no shortcuts:
+
 ```bash
 # 1. Kill everything
 pkill -9 -f "sauria"; pkill -9 -f "Sauria"; pkill -9 -f "tauri"; lsof -ti:5173 | xargs kill -9

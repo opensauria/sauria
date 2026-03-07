@@ -39,15 +39,37 @@ export class AgentCardSetup extends LightDomElement {
       <div class="card-setup-header">
         <div class="cf-icon"></div>
         <span class="card-setup-title">Gmail</span>
-        <button class="card-setup-close" data-action="cancel" @click=${() => this.fireAction('cancel')}>&times;</button>
+        <button
+          class="card-setup-close"
+          data-action="cancel"
+          @click=${() => this.fireAction('cancel')}
+        >
+          &times;
+        </button>
       </div>
-      <div class="card-setup-field" style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;margin-bottom:8px;">
+      <div
+        class="card-setup-field"
+        style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;margin-bottom:8px;"
+      >
         Sign in securely with your Google account. No passwords stored.
       </div>
       ${statusHtml}
       <div class="card-setup-actions">
-        <button class="btn-cancel" ?disabled=${this.isConnecting} @click=${() => this.fireAction('cancel')}>Cancel</button>
-        <button class="btn-connect" style="background:#4285F4;" ?disabled=${this.isConnecting} @click=${() => this.fireAction('connect')}>Sign in with Google</button>
+        <button
+          class="btn-cancel"
+          ?disabled=${this.isConnecting}
+          @click=${() => this.fireAction('cancel')}
+        >
+          Cancel
+        </button>
+        <button
+          class="btn-connect"
+          style="background:#4285F4;"
+          ?disabled=${this.isConnecting}
+          @click=${() => this.fireAction('connect')}
+        >
+          Sign in with Google
+        </button>
       </div>
     `;
   }
@@ -60,7 +82,13 @@ export class AgentCardSetup extends LightDomElement {
       <div class="card-setup-header">
         <div class="cf-icon"></div>
         <span class="card-setup-title">${capitalize(node.platform)}</span>
-        <button class="card-setup-close" data-action="cancel" @click=${() => this.fireAction('cancel')}>&times;</button>
+        <button
+          class="card-setup-close"
+          data-action="cancel"
+          @click=${() => this.fireAction('cancel')}
+        >
+          &times;
+        </button>
       </div>
       ${fields.map((f) => {
         const val = (node._formData && node._formData[f.key]) || '';
@@ -81,8 +109,18 @@ export class AgentCardSetup extends LightDomElement {
       })}
       ${statusHtml}
       <div class="card-setup-actions">
-        <button class="btn-cancel" ?disabled=${this.isConnecting} @click=${() => this.fireAction('cancel')}>Cancel</button>
-        <button class="btn-connect" ?disabled=${this.isConnecting} @click=${() => this.fireAction('connect')}>
+        <button
+          class="btn-cancel"
+          ?disabled=${this.isConnecting}
+          @click=${() => this.fireAction('cancel')}
+        >
+          Cancel
+        </button>
+        <button
+          class="btn-connect"
+          ?disabled=${this.isConnecting}
+          @click=${() => this.fireAction('connect')}
+        >
           ${node.status === 'error' ? 'Retry' : 'Connect'}
         </button>
       </div>
@@ -90,15 +128,16 @@ export class AgentCardSetup extends LightDomElement {
   }
 
   private renderEditMode(node: AgentNode) {
-    const displayName =
-      node.meta.firstName || node.label.replace(/^@/, '');
+    const displayName = node.meta.firstName || node.label.replace(/^@/, '');
     const fields = getFieldsForPlatform(node.platform);
 
     return html`
       <div class="card-setup-header">
         <div class="cf-icon"></div>
         <span class="card-setup-title">${displayName}</span>
-        <button class="card-setup-close" @click=${() => this.fireAction('close-edit')}>&times;</button>
+        <button class="card-setup-close" @click=${() => this.fireAction('close-edit')}>
+          &times;
+        </button>
       </div>
       <div class="card-setup-field">
         <label>Role</label>
@@ -114,7 +153,13 @@ export class AgentCardSetup extends LightDomElement {
         (f) => html`
           <div class="card-setup-field">
             <label>${f.label}</label>
-            <input type="password" data-field=${f.key} placeholder=${f.placeholder} value="********" disabled />
+            <input
+              type="password"
+              data-field=${f.key}
+              placeholder=${f.placeholder}
+              value="********"
+              disabled
+            />
           </div>
         `,
       )}
@@ -127,10 +172,14 @@ export class AgentCardSetup extends LightDomElement {
 
   private getStatusHtml(node: AgentNode) {
     if (this.isConnecting) {
-      return html`<div class="card-setup-status info"><span class="card-spinner"></span>Connecting...</div>`;
+      return html`<div class="card-setup-status info">
+        <span class="card-spinner"></span>Connecting...
+      </div>`;
     }
     if (node._statusMsg) {
-      return html`<div class="card-setup-status ${node._statusType || ''}">${node._statusMsg}</div>`;
+      return html`<div class="card-setup-status ${node._statusType || ''}">
+        ${node._statusMsg}
+      </div>`;
     }
     return nothing;
   }

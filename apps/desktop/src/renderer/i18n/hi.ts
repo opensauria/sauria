@@ -55,7 +55,8 @@ const catalog: Translations = {
   'canvas.agentPersona': 'एजेंट व्यक्तित्व',
   'canvas.commStyle': 'संवाद शैली (सभी एजेंट)',
   'canvas.agentPersonaPlaceholder': 'इस एजेंट की भूमिका, व्यक्तित्व और व्यवहार का वर्णन करें...',
-  'canvas.commStylePlaceholder': 'सभी एजेंट कैसे जवाब दें, यह निर्धारित करें...\n\nउदाहरण:\n- केवल सादा पाठ, कोई markdown नहीं\n- संक्षिप्त और सीधा\n- कोई इमोजी नहीं',
+  'canvas.commStylePlaceholder':
+    'सभी एजेंट कैसे जवाब दें, यह निर्धारित करें...\n\nउदाहरण:\n- केवल सादा पाठ, कोई markdown नहीं\n- संक्षिप्त और सीधा\n- कोई इमोजी नहीं',
   'canvas.standingOrders': 'इस एजेंट के लिए स्थायी आदेश...',
   'canvas.useTemplate': 'टेम्पलेट उपयोग करें',
   'canvas.responseLanguage': 'प्रतिक्रिया भाषा',
@@ -168,7 +169,8 @@ const catalog: Translations = {
   'brain.statFacts': 'तथ्य',
   'brain.connectError': 'Sauria से कनेक्ट नहीं हो सका',
   'brain.extractionError': 'इकाई निष्कर्षण {0} बार विफल — AI प्रदाता कॉन्फ़िगरेशन जांचें',
-  'brain.noExtractHint': 'घटनाएँ दर्ज हैं लेकिन इकाइयाँ नहीं निकाली गईं — AI प्रदाता कनेक्शन जांचें',
+  'brain.noExtractHint':
+    'घटनाएँ दर्ज हैं लेकिन इकाइयाँ नहीं निकाली गईं — AI प्रदाता कनेक्शन जांचें',
   'brain.colName': 'नाम',
   'brain.colType': 'प्रकार',
   'brain.colImportance': 'महत्व',

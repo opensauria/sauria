@@ -15,13 +15,13 @@ export class WorkspaceFrame extends LightDomElement {
   private handleLockClick(e: MouseEvent): void {
     e.preventDefault();
     e.stopPropagation();
-    fire(this,'workspace-lock-toggle', { wsId: this.workspace.id });
+    fire(this, 'workspace-lock-toggle', { wsId: this.workspace.id });
   }
 
   private handleGearClick(e: MouseEvent): void {
     e.preventDefault();
     e.stopPropagation();
-    fire(this,'workspace-edit', { wsId: this.workspace.id });
+    fire(this, 'workspace-edit', { wsId: this.workspace.id });
   }
 
   render() {
@@ -31,9 +31,7 @@ export class WorkspaceFrame extends LightDomElement {
 
     /* We render directly into the parent (Light DOM), so set host styles */
     this.className =
-      'workspace-frame' +
-      (this.selected ? ' selected' : '') +
-      (isLocked ? ' locked' : '');
+      'workspace-frame' + (this.selected ? ' selected' : '') + (isLocked ? ' locked' : '');
     this.dataset.workspaceId = ws.id;
     this.style.left = ws.position.x + 'px';
     this.style.top = ws.position.y + 'px';
@@ -47,19 +45,13 @@ export class WorkspaceFrame extends LightDomElement {
       <div class="workspace-header" data-workspace-id=${ws.id}>
         <span class="workspace-name">${ws.name}</span>
         <span class="workspace-count">${this.agentCount}</span>
-        ${ws.purpose
-          ? html`<span class="workspace-purpose">${ws.purpose}</span>`
-          : nothing}
+        ${ws.purpose ? html`<span class="workspace-purpose">${ws.purpose}</span>` : nothing}
         <button
           class="ws-lock ${isLocked ? 'locked' : ''}"
           title=${isLocked ? 'Unlock' : 'Lock'}
           @click=${this.handleLockClick}
         ></button>
-        <button
-          class="ws-gear"
-          title="Edit workspace"
-          @click=${this.handleGearClick}
-        ></button>
+        <button class="ws-gear" title="Edit workspace" @click=${this.handleGearClick}></button>
       </div>
       <div class="workspace-resize workspace-resize-r" data-ws-id=${ws.id} data-dir="r"></div>
       <div class="workspace-resize workspace-resize-b" data-ws-id=${ws.id} data-dir="b"></div>

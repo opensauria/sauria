@@ -29,7 +29,9 @@ export function renderConversation(
     </div>
     <div class="messages">
       ${messages.length === 0
-        ? html`<div class="conv-empty">Messages will appear here when agents communicate on this edge.</div>`
+        ? html`<div class="conv-empty">
+            Messages will appear here when agents communicate on this edge.
+          </div>`
         : messages.map((msg) => renderMessage(msg, msg.from === id1 ? 'from' : 'to', nodes))}
     </div>
     <div class="status ${isProcessing ? '' : 'idle'}">
@@ -59,14 +61,26 @@ export function renderFeed(
       ${renderCloseButton(closeFn)}
     </div>
     <div class="filters">
-      <button class="filter-pill ${!feedFilterNodeId ? 'active' : ''}"
-        @click=${() => { setFilter(null); }}>All</button>
+      <button
+        class="filter-pill ${!feedFilterNodeId ? 'active' : ''}"
+        @click=${() => {
+          setFilter(null);
+        }}
+      >
+        All
+      </button>
       ${[...nodeIds].map((nid) => {
         const node = nodes.find((n) => n.id === nid);
-        const label = node ? (node.meta.firstName || node.label.replace(/^@/, '')) : nid.slice(0, 6);
+        const label = node ? node.meta.firstName || node.label.replace(/^@/, '') : nid.slice(0, 6);
         return html`
-          <button class="filter-pill ${feedFilterNodeId === nid ? 'active' : ''}"
-            @click=${() => { setFilter(nid); }}>${label}</button>
+          <button
+            class="filter-pill ${feedFilterNodeId === nid ? 'active' : ''}"
+            @click=${() => {
+              setFilter(nid);
+            }}
+          >
+            ${label}
+          </button>
         `;
       })}
     </div>
@@ -124,7 +138,9 @@ export function collectAllMessages(
   return all;
 }
 
-export function getConversationNodeIds(conversationBuffer: Map<string, ConvMessage[]>): Set<string> {
+export function getConversationNodeIds(
+  conversationBuffer: Map<string, ConvMessage[]>,
+): Set<string> {
   const ids = new Set<string>();
   for (const [key] of conversationBuffer) {
     const parts = key.split('|');
@@ -138,7 +154,12 @@ function renderCloseButton(closeFn: () => void): TemplateResult {
   return html`
     <button class="close-btn" @click=${closeFn}>
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
-        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path
+          d="M18 6L6 18M6 6l12 12"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+        />
       </svg>
     </button>
   `;

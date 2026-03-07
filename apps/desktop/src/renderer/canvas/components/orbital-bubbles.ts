@@ -89,9 +89,7 @@ export class OrbitalBubbles extends LightDomElement {
     const assigned = node.integrations ?? [];
     if (assigned.length === 0) return;
 
-    const cardEl = this.worldEl.querySelector(
-      `[data-node-id="${node.id}"]`,
-    ) as HTMLElement | null;
+    const cardEl = this.worldEl.querySelector(`[data-node-id="${node.id}"]`) as HTMLElement | null;
     if (!cardEl) return;
 
     const cardRect = {
@@ -118,7 +116,9 @@ export class OrbitalBubbles extends LightDomElement {
       const isRightSide = bubbleData.length <= 4 || i < Math.ceil(bubbleData.length / 2);
       const sideIndex = isRightSide ? i : i - Math.ceil(bubbleData.length / 2);
       const totalOnSide = isRightSide
-        ? (bubbleData.length <= 4 ? bubbleData.length : Math.ceil(bubbleData.length / 2))
+        ? bubbleData.length <= 4
+          ? bubbleData.length
+          : Math.ceil(bubbleData.length / 2)
         : bubbleData.length - Math.ceil(bubbleData.length / 2);
 
       const startY = cardRect.y + (cardRect.h - totalOnSide * ORBITAL_GAP) / 2 + 12;
@@ -136,7 +136,8 @@ export class OrbitalBubbles extends LightDomElement {
 
       if (iconName) {
         bubble.innerHTML =
-          '<img src="/icons/integrations/' + escapeHtml(iconName) +
+          '<img src="/icons/integrations/' +
+          escapeHtml(iconName) +
           '.svg" alt="" onerror="this.style.display=\'none\'" />';
       }
 

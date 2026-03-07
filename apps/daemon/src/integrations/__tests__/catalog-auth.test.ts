@@ -41,9 +41,7 @@ describe('integration catalog structure', () => {
   });
 
   it('every oauth integration has mcpRemote or oauthProxy', () => {
-    const oauthIntegrations = INTEGRATION_CATALOG.filter(
-      (i) => i.authType === 'oauth',
-    );
+    const oauthIntegrations = INTEGRATION_CATALOG.filter((i) => i.authType === 'oauth');
 
     for (const integration of oauthIntegrations) {
       const hasMcpRemote = integration.mcpRemote !== undefined;
@@ -56,12 +54,11 @@ describe('integration catalog structure', () => {
   });
 
   it('every both integration has mcpRemote or oauthProxy, and non-empty credentialKeys', () => {
-    const bothIntegrations = INTEGRATION_CATALOG.filter(
-      (i) => i.authType === 'both',
-    );
+    const bothIntegrations = INTEGRATION_CATALOG.filter((i) => i.authType === 'both');
 
     for (const integration of bothIntegrations) {
-      const hasRemoteOrProxy = integration.mcpRemote !== undefined || integration.oauthProxy !== undefined;
+      const hasRemoteOrProxy =
+        integration.mcpRemote !== undefined || integration.oauthProxy !== undefined;
       expect(
         hasRemoteOrProxy,
         `${integration.id} has authType 'both' but neither mcpRemote nor oauthProxy`,
@@ -115,9 +112,7 @@ describe('integration catalog structure', () => {
 
 describe('oauth-specific validations', () => {
   it('all mcpRemote URLs are valid HTTPS URLs', () => {
-    const withRemote = INTEGRATION_CATALOG.filter(
-      (i) => i.mcpRemote !== undefined,
-    );
+    const withRemote = INTEGRATION_CATALOG.filter((i) => i.mcpRemote !== undefined);
 
     for (const integration of withRemote) {
       const { url } = integration.mcpRemote!;
@@ -127,17 +122,14 @@ describe('oauth-specific validations', () => {
       ).not.toThrow();
 
       const parsed = new URL(url);
-      expect(
-        parsed.protocol,
-        `${integration.id}: mcpRemote url must be HTTPS: ${url}`,
-      ).toBe('https:');
+      expect(parsed.protocol, `${integration.id}: mcpRemote url must be HTTPS: ${url}`).toBe(
+        'https:',
+      );
     }
   });
 
   it('all oauthProxy values are non-empty strings', () => {
-    const withProxy = INTEGRATION_CATALOG.filter(
-      (i) => i.oauthProxy !== undefined,
-    );
+    const withProxy = INTEGRATION_CATALOG.filter((i) => i.oauthProxy !== undefined);
 
     for (const integration of withProxy) {
       expect(
@@ -149,9 +141,7 @@ describe('oauth-specific validations', () => {
 
   it('no integration has both mcpRemote and oauthProxy', () => {
     for (const integration of INTEGRATION_CATALOG) {
-      const hasBoth =
-        integration.mcpRemote !== undefined &&
-        integration.oauthProxy !== undefined;
+      const hasBoth = integration.mcpRemote !== undefined && integration.oauthProxy !== undefined;
       expect(
         hasBoth,
         `${integration.id} has both mcpRemote and oauthProxy (mutually exclusive)`,
@@ -169,10 +159,7 @@ describe('catalog consistency', () => {
 
   it('all IDs are kebab-case', () => {
     for (const integration of INTEGRATION_CATALOG) {
-      expect(
-        KEBAB_CASE_RE.test(integration.id),
-        `${integration.id} is not kebab-case`,
-      ).toBe(true);
+      expect(KEBAB_CASE_RE.test(integration.id), `${integration.id} is not kebab-case`).toBe(true);
     }
   });
 
@@ -187,18 +174,12 @@ describe('catalog consistency', () => {
 
   it('every integration has a non-empty name, description, and icon', () => {
     for (const integration of INTEGRATION_CATALOG) {
-      expect(
-        integration.name.length,
-        `${integration.id}: name is empty`,
-      ).toBeGreaterThan(0);
+      expect(integration.name.length, `${integration.id}: name is empty`).toBeGreaterThan(0);
       expect(
         integration.description.length,
         `${integration.id}: description is empty`,
       ).toBeGreaterThan(0);
-      expect(
-        integration.icon.length,
-        `${integration.id}: icon is empty`,
-      ).toBeGreaterThan(0);
+      expect(integration.icon.length, `${integration.id}: icon is empty`).toBeGreaterThan(0);
     }
   });
 
@@ -286,14 +267,8 @@ describe('known services with oauthProxy', () => {
     it(`${id} has oauthProxy defined`, () => {
       const integration = findById(id);
       expect(integration, `${id} not found in catalog`).toBeDefined();
-      expect(
-        integration!.oauthProxy,
-        `${id} is missing oauthProxy`,
-      ).toBeDefined();
-      expect(
-        typeof integration!.oauthProxy,
-        `${id} oauthProxy is not a string`,
-      ).toBe('string');
+      expect(integration!.oauthProxy, `${id} is missing oauthProxy`).toBeDefined();
+      expect(typeof integration!.oauthProxy, `${id} oauthProxy is not a string`).toBe('string');
     });
   }
 });

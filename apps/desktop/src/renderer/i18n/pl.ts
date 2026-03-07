@@ -55,7 +55,8 @@ const catalog: Translations = {
   'canvas.agentPersona': 'Osobowość agenta',
   'canvas.commStyle': 'Styl komunikacji (wszyscy agenci)',
   'canvas.agentPersonaPlaceholder': 'Opisz rolę, osobowość i zachowanie tego agenta...',
-  'canvas.commStylePlaceholder': 'Określ, jak wszyscy agenci powinni odpowiadać...\n\nPrzykład:\n- Tylko zwykły tekst, bez markdown\n- Zwięźle i bezpośrednio\n- Bez emoji',
+  'canvas.commStylePlaceholder':
+    'Określ, jak wszyscy agenci powinni odpowiadać...\n\nPrzykład:\n- Tylko zwykły tekst, bez markdown\n- Zwięźle i bezpośrednio\n- Bez emoji',
   'canvas.standingOrders': 'Stałe polecenia dla tego agenta...',
   'canvas.useTemplate': 'Użyj szablonu',
   'canvas.responseLanguage': 'Język odpowiedzi',
@@ -167,8 +168,10 @@ const catalog: Translations = {
   'brain.statConversations': 'rozmów',
   'brain.statFacts': 'faktów',
   'brain.connectError': 'Nie można połączyć się z Sauria',
-  'brain.extractionError': 'Ekstrakcja encji nie powiodła się {0} razy — sprawdź konfigurację dostawcy AI',
-  'brain.noExtractHint': 'Zdarzenia zarejestrowane, ale nie wyodrębniono encji — sprawdź połączenie z dostawcą AI',
+  'brain.extractionError':
+    'Ekstrakcja encji nie powiodła się {0} razy — sprawdź konfigurację dostawcy AI',
+  'brain.noExtractHint':
+    'Zdarzenia zarejestrowane, ale nie wyodrębniono encji — sprawdź połączenie z dostawcą AI',
   'brain.colName': 'Nazwa',
   'brain.colType': 'Typ',
   'brain.colImportance': 'Ważność',
@@ -214,7 +217,8 @@ const catalog: Translations = {
   'brain.detailRelations': 'Relacje',
   'brain.recentEvents': 'Ostatnie zdarzenia',
   'brain.messagesSection': 'Wiadomości',
-  'brain.deleteEntityWarn': 'Spowoduje to również usunięcie wszystkich powiązanych relacji i osadzeń.',
+  'brain.deleteEntityWarn':
+    'Spowoduje to również usunięcie wszystkich powiązanych relacji i osadzeń.',
   'brain.deleteConvoWarn': 'Spowoduje to również usunięcie wszystkich wiadomości tej rozmowy.',
   'brain.graphStats': '{0} encji · {1} relacji',
   'brain.importance': 'ważność',

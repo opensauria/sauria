@@ -50,10 +50,19 @@ export function buildRoutingPrompt(
   const knowledgeGraphText = buildKnowledgeGraph(db, message.content);
 
   const promptParts = buildPromptParts({
-    workspace, agentList, otherAgentsList, message, sourceNode,
-    conversationContext, workspaceFactsText, agentFactsText,
-    knowledgeGraphText, peerMessagesText, integrationRegistry,
-    ruleActionsText, globalInstructions,
+    workspace,
+    agentList,
+    otherAgentsList,
+    message,
+    sourceNode,
+    conversationContext,
+    workspaceFactsText,
+    agentFactsText,
+    knowledgeGraphText,
+    peerMessagesText,
+    integrationRegistry,
+    ruleActionsText,
+    globalInstructions,
   });
 
   appendBehaviorToggles(promptParts, sourceNode);

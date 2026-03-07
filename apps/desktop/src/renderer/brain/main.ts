@@ -117,7 +117,9 @@ async function loadStats() {
     updateNavCounts();
   } catch {
     statsBar.innerHTML =
-      '<div class="brain-stat"><span style="color: var(--error)">' + t('brain.connectError') + '</span></div>';
+      '<div class="brain-stat"><span style="color: var(--error)">' +
+      t('brain.connectError') +
+      '</span></div>';
   }
 }
 
@@ -178,7 +180,13 @@ interface ViewConfig {
 
 const viewConfig: Record<string, ViewConfig> = {
   entities: {
-    columns: () => [t('brain.colName'), t('brain.colType'), t('brain.colImportance'), t('brain.colMentions'), t('brain.colLastUpdated')],
+    columns: () => [
+      t('brain.colName'),
+      t('brain.colType'),
+      t('brain.colImportance'),
+      t('brain.colMentions'),
+      t('brain.colLastUpdated'),
+    ],
     filterOptions: () => [
       { value: '', label: t('brain.typeAll') },
       { value: 'person', label: t('brain.typePerson') },
@@ -209,7 +217,13 @@ const viewConfig: Record<string, ViewConfig> = {
     tableName: 'entities',
   },
   relations: {
-    columns: () => [t('brain.colFrom'), t('brain.colType'), t('brain.colTo'), t('brain.colStrength'), t('brain.colUpdated')],
+    columns: () => [
+      t('brain.colFrom'),
+      t('brain.colType'),
+      t('brain.colTo'),
+      t('brain.colStrength'),
+      t('brain.colUpdated'),
+    ],
     filterOptions: () => [],
     hasSearch: true,
     hasFilter: false,
@@ -229,7 +243,12 @@ const viewConfig: Record<string, ViewConfig> = {
     tableName: 'relations',
   },
   events: {
-    columns: () => [t('brain.colSource'), t('brain.colType'), t('brain.colImportance'), t('brain.colTimestamp')],
+    columns: () => [
+      t('brain.colSource'),
+      t('brain.colType'),
+      t('brain.colImportance'),
+      t('brain.colTimestamp'),
+    ],
     filterOptions: () => [],
     hasSearch: true,
     hasFilter: false,
@@ -249,7 +268,12 @@ const viewConfig: Record<string, ViewConfig> = {
     tableName: 'events',
   },
   observations: {
-    columns: () => [t('brain.colContent'), t('brain.colType'), t('brain.colConfidence'), t('brain.colCreated')],
+    columns: () => [
+      t('brain.colContent'),
+      t('brain.colType'),
+      t('brain.colConfidence'),
+      t('brain.colCreated'),
+    ],
     filterOptions: () => [
       { value: '', label: t('brain.obsAll') },
       { value: 'pattern', label: t('brain.obsPattern') },
@@ -295,7 +319,12 @@ const viewConfig: Record<string, ViewConfig> = {
     tableName: 'agent_conversations',
   },
   facts: {
-    columns: () => [t('brain.colFact'), t('brain.colNode'), t('brain.colWorkspace'), t('brain.colCreated')],
+    columns: () => [
+      t('brain.colFact'),
+      t('brain.colNode'),
+      t('brain.colWorkspace'),
+      t('brain.colCreated'),
+    ],
     filterOptions: () => [],
     hasSearch: true,
     hasFilter: false,
@@ -512,8 +541,7 @@ async function showEntityDetail(id: string) {
   `;
 
   if (relations.length > 0) {
-    html +=
-      `<div class="brain-detail-section"><div class="brain-detail-section-title">${t('brain.detailRelations')}</div>`;
+    html += `<div class="brain-detail-section"><div class="brain-detail-section-title">${t('brain.detailRelations')}</div>`;
     for (const r of relations) {
       const isFrom = r.from_entity_id === e.id;
       const otherName = isFrom ? r.to_name || r.to_entity_id : r.from_name || r.from_entity_id;
@@ -528,8 +556,7 @@ async function showEntityDetail(id: string) {
   }
 
   if (events.length > 0) {
-    html +=
-      `<div class="brain-detail-section"><div class="brain-detail-section-title">${t('brain.recentEvents')}</div>`;
+    html += `<div class="brain-detail-section"><div class="brain-detail-section-title">${t('brain.recentEvents')}</div>`;
     for (const ev of events) {
       const parsed = parseJson(ev.parsed_data);
       const text = parsed?.summary || parsed?.title || ev.event_type;
@@ -609,8 +636,7 @@ async function showConversationDetail(conv: Record<string, unknown>) {
   `;
 
   if (result.rows.length > 0) {
-    html +=
-      `<div class="brain-detail-section"><div class="brain-detail-section-title">${t('brain.messagesSection')}</div>`;
+    html += `<div class="brain-detail-section"><div class="brain-detail-section-title">${t('brain.messagesSection')}</div>`;
     for (const m of result.rows) {
       const isCeo = m.sender_is_ceo === 1;
       html += `<div class="brain-message">
@@ -845,7 +871,9 @@ async function loadGraph() {
     graphState.nodeMap = nodeMap;
     graphState.settled = false;
 
-    graphStats.textContent = t('brain.graphStats').replace('{0}', String(graphState.nodes.length)).replace('{1}', String(graphState.edges.length));
+    graphStats.textContent = t('brain.graphStats')
+      .replace('{0}', String(graphState.nodes.length))
+      .replace('{1}', String(graphState.edges.length));
 
     if (graphState.animId) cancelAnimationFrame(graphState.animId);
     graphState.cam = { x: 0, y: 0, zoom: 1 };

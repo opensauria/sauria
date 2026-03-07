@@ -54,8 +54,10 @@ const catalog: Translations = {
   'canvas.instructions': 'Istruzioni',
   'canvas.agentPersona': "Personalità dell'agente",
   'canvas.commStyle': 'Stile di comunicazione (tutti gli agenti)',
-  'canvas.agentPersonaPlaceholder': "Descrivi il ruolo, la personalità e il comportamento di questo agente...",
-  'canvas.commStylePlaceholder': 'Definisci come tutti gli agenti devono rispondere...\n\nEsempio:\n- Solo testo, niente markdown\n- Conciso e diretto\n- Niente emoji',
+  'canvas.agentPersonaPlaceholder':
+    'Descrivi il ruolo, la personalità e il comportamento di questo agente...',
+  'canvas.commStylePlaceholder':
+    'Definisci come tutti gli agenti devono rispondere...\n\nEsempio:\n- Solo testo, niente markdown\n- Conciso e diretto\n- Niente emoji',
   'canvas.standingOrders': 'Direttive per questo agente...',
   'canvas.useTemplate': 'Usa modello',
   'canvas.responseLanguage': 'Lingua di risposta',
@@ -100,7 +102,8 @@ const catalog: Translations = {
   'brain.brainView': 'Cervello',
   'brain.libraryView': 'Biblioteca',
   'brain.noEntities': 'Nessuna entità ancora',
-  'brain.entitiesHint': 'Le entità appariranno qui man mano che Sauria impara dalle tue conversazioni',
+  'brain.entitiesHint':
+    'Le entità appariranno qui man mano che Sauria impara dalle tue conversazioni',
   'brain.noData': 'Nessun dato ancora',
   'brain.dataHint': 'Si riempirà man mano che Sauria impara dalle tue conversazioni',
   'brain.loadMore': 'Carica altri',
@@ -167,8 +170,10 @@ const catalog: Translations = {
   'brain.statConversations': 'conversazioni',
   'brain.statFacts': 'fatti',
   'brain.connectError': 'Impossibile connettersi a Sauria',
-  'brain.extractionError': 'Estrazione entità fallita {0} volta/e — verifica che un provider IA sia configurato',
-  'brain.noExtractHint': 'Eventi registrati ma nessuna entità estratta — verifica che un provider IA sia connesso',
+  'brain.extractionError':
+    'Estrazione entità fallita {0} volta/e — verifica che un provider IA sia configurato',
+  'brain.noExtractHint':
+    'Eventi registrati ma nessuna entità estratta — verifica che un provider IA sia connesso',
   'brain.colName': 'Nome',
   'brain.colType': 'Tipo',
   'brain.colImportance': 'Importanza',

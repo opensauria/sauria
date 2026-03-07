@@ -18,13 +18,13 @@ Note the deployed URL (e.g. `https://sauria-oauth-proxy.<your-account>.workers.d
 
 For each provider you want to support, register an OAuth application:
 
-| Provider | Developer Console | Redirect URI |
-|----------|-------------------|--------------|
-| Google | console.cloud.google.com | `https://<your-worker>/callback/google` |
-| X | developer.x.com | `https://<your-worker>/callback/x` |
-| Reddit | reddit.com/prefs/apps | `https://<your-worker>/callback/reddit` |
-| LinkedIn | linkedin.com/developers | `https://<your-worker>/callback/linkedin` |
-| Zendesk | `<subdomain>.zendesk.com/admin/apps-integrations/apis` | `https://<your-worker>/callback/zendesk` |
+| Provider | Developer Console                                      | Redirect URI                              |
+| -------- | ------------------------------------------------------ | ----------------------------------------- |
+| Google   | console.cloud.google.com                               | `https://<your-worker>/callback/google`   |
+| X        | developer.x.com                                        | `https://<your-worker>/callback/x`        |
+| Reddit   | reddit.com/prefs/apps                                  | `https://<your-worker>/callback/reddit`   |
+| LinkedIn | linkedin.com/developers                                | `https://<your-worker>/callback/linkedin` |
+| Zendesk  | `<subdomain>.zendesk.com/admin/apps-integrations/apis` | `https://<your-worker>/callback/zendesk`  |
 
 ## 3. Configure Worker Secrets
 

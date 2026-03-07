@@ -55,7 +55,8 @@ const catalog: Translations = {
   'canvas.agentPersona': '에이전트 성격',
   'canvas.commStyle': '커뮤니케이션 스타일 (모든 에이전트)',
   'canvas.agentPersonaPlaceholder': '이 에이전트의 역할, 성격 및 행동을 설명하세요...',
-  'canvas.commStylePlaceholder': '모든 에이전트의 응답 방식을 정의하세요...\n\n예시:\n- 일반 텍스트만, 마크다운 없음\n- 간결하고 직접적으로\n- 이모지 없음',
+  'canvas.commStylePlaceholder':
+    '모든 에이전트의 응답 방식을 정의하세요...\n\n예시:\n- 일반 텍스트만, 마크다운 없음\n- 간결하고 직접적으로\n- 이모지 없음',
   'canvas.standingOrders': '이 에이전트에 대한 상시 지시...',
   'canvas.useTemplate': '템플릿 사용',
   'canvas.responseLanguage': '응답 언어',
@@ -168,7 +169,8 @@ const catalog: Translations = {
   'brain.statFacts': '팩트',
   'brain.connectError': 'Sauria에 연결할 수 없습니다',
   'brain.extractionError': '엔티티 추출이 {0}회 실패 — AI 프로바이더 설정을 확인하세요',
-  'brain.noExtractHint': '이벤트는 기록되었지만 엔티티가 추출되지 않음 — AI 프로바이더 연결을 확인하세요',
+  'brain.noExtractHint':
+    '이벤트는 기록되었지만 엔티티가 추출되지 않음 — AI 프로바이더 연결을 확인하세요',
   'brain.colName': '이름',
   'brain.colType': '유형',
   'brain.colImportance': '중요도',
