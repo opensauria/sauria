@@ -9,7 +9,6 @@ import type { TranscriptionService } from './transcription.js';
 import type { InboundMessage } from '../orchestrator/types.js';
 import { sanitizeChannelInput } from '../security/sanitize.js';
 import { secureFetch } from '../security/url-allowlist.js';
-import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
 import { reasonAbout } from '../ai/reason.js';
 import { searchByKeyword } from '../db/search.js';
 import { getUpcomingDeadlines } from '../db/temporal.js';
@@ -20,7 +19,7 @@ import {
   searchEntities,
 } from '../db/world-model.js';
 import { scrubPII } from '../security/pii-scrubber.js';
-import { formatAlert, type Channel } from './base.js';
+import { ChannelGuards, formatAlert, type Channel } from './base.js';
 import { getLogger } from '../utils/logger.js';
 
 const TELEGRAM_FILE_API = 'https://api.telegram.org/file/bot';
@@ -49,12 +48,7 @@ export class TelegramChannel implements Channel {
   readonly name = 'telegram';
   private readonly bot: Bot;
   private readonly allowedUsers: ReadonlySet<number>;
-  private readonly limiter = createLimiter(
-    'telegram',
-    SECURITY_LIMITS.channels.maxInboundMessagesPerMinute,
-    60_000,
-  );
-  private silenceUntil = 0;
+  private readonly guards = new ChannelGuards('telegram');
 
   constructor(private readonly deps: TelegramDeps) {
     this.bot = new Bot(deps.token);
@@ -73,7 +67,7 @@ export class TelegramChannel implements Channel {
         });
         return;
       }
-      if (!this.limiter.tryConsume()) {
+      if (!this.guards.tryConsume()) {
         await ctx.reply('Rate limit reached. Please wait a moment.');
         return;
       }
@@ -115,7 +109,7 @@ export class TelegramChannel implements Channel {
     });
     this.bot.command('silence', async (ctx) => {
       const hours = parseInt(ctx.match || '2', 10) || 2;
-      this.silenceUntil = Date.now() + hours * 3_600_000;
+      this.guards.silence(hours);
       await ctx.reply(`Alerts silenced for ${String(hours)} hour(s).`);
     });
 
@@ -363,7 +357,7 @@ export class TelegramChannel implements Channel {
   }
 
   async sendAlert(alert: ProactiveAlert): Promise<void> {
-    if (Date.now() < this.silenceUntil) return;
+    if (this.guards.isSilenced()) return;
     const text = formatAlert(alert);
     for (const userId of this.allowedUsers) {
       await this.bot.api.sendMessage(userId, text);

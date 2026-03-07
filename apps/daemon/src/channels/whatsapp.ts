@@ -5,9 +5,8 @@ import type { AuditLogger } from '../security/audit.js';
 import type { IngestPipeline } from '../ingestion/pipeline.js';
 import type { InboundMessage } from '../orchestrator/types.js';
 import { sanitizeChannelInput } from '../security/sanitize.js';
-import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
 import { scrubPII } from '../security/pii-scrubber.js';
-import { formatAlert, type Channel } from './base.js';
+import { ChannelGuards, formatAlert, type Channel } from './base.js';
 
 const GRAPH_API_BASE = 'https://graph.facebook.com/v18.0/';
 const FETCH_TIMEOUT_MS = 10_000;
@@ -59,13 +58,8 @@ function isWhatsAppPayload(value: unknown): value is WhatsAppWebhookPayload {
 
 export class WhatsAppChannel implements Channel {
   readonly name = 'whatsapp';
-  private readonly limiter = createLimiter(
-    'whatsapp',
-    SECURITY_LIMITS.channels.maxInboundMessagesPerMinute,
-    60_000,
-  );
+  private readonly guards = new ChannelGuards('whatsapp');
   private server: Server | null = null;
-  private silenceUntil = 0;
 
   constructor(private readonly deps: WhatsAppDeps) {}
 
@@ -110,7 +104,7 @@ export class WhatsAppChannel implements Channel {
   }
 
   async sendAlert(alert: ProactiveAlert): Promise<void> {
-    if (Date.now() < this.silenceUntil) return;
+    if (this.guards.isSilenced()) return;
     const text = formatAlert(alert);
     await this.sendTextMessage(this.deps.phoneNumberId, text);
   }
@@ -246,7 +240,7 @@ export class WhatsAppChannel implements Channel {
         for (const msg of messages) {
           if (msg.type !== 'text' || !msg.text?.body) continue;
 
-          if (!this.limiter.tryConsume()) {
+          if (!this.guards.tryConsume()) {
             audit.logAction('whatsapp:rate_limited', { from: msg.from });
             continue;
           }

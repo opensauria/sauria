@@ -26,15 +26,7 @@ fn write_config(paths: &Paths, config: &Value) {
     );
 }
 
-pub fn read_profiles_pub(paths: &Paths) -> Value {
-    read_profiles(paths)
-}
-
-pub fn write_profiles_pub(paths: &Paths, profiles: &Value) {
-    write_profiles(paths, profiles)
-}
-
-fn read_profiles(paths: &Paths) -> Value {
+pub fn read_profiles(paths: &Paths) -> Value {
     if !paths.bot_profiles.exists() {
         return Value::Object(Default::default());
     }
@@ -44,18 +36,11 @@ fn read_profiles(paths: &Paths) -> Value {
         .unwrap_or(Value::Object(Default::default()))
 }
 
-fn write_profiles(paths: &Paths, profiles: &Value) {
+pub fn write_profiles(paths: &Paths, profiles: &Value) {
     let _ = fs::write(
         &paths.bot_profiles,
         serde_json::to_string_pretty(profiles).unwrap_or_default(),
     );
-}
-
-fn chrono_now_iso() -> String {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default();
-    format!("{}Z", now.as_secs())
 }
 
 fn build_http_client() -> Result<reqwest::Client, String> {
@@ -173,11 +158,11 @@ pub async fn connect_channel(
 
 // ─── Generic API Connector ───────────────────────────────────────────
 
-type ValidateFn = fn(
-    &Value,
-    &reqwest::Client,
+type ValidateFn = for<'a> fn(
+    &'a Value,
+    &'a reqwest::Client,
 ) -> std::pin::Pin<
-    Box<dyn std::future::Future<Output = Result<ConnectionResult, Value>> + Send + '_>,
+    Box<dyn std::future::Future<Output = Result<ConnectionResult, Value>> + Send + 'a>,
 >;
 
 async fn connect_generic_api(
@@ -269,7 +254,10 @@ async fn connect_telegram(
             "firstName": first_name,
             "userId": user_id,
             "photo": photo_url,
-            "connectedAt": chrono_now_iso(),
+            "connectedAt": format!("{}Z", std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs()),
         })),
     };
 
@@ -552,6 +540,27 @@ async fn connect_discord(
     Ok(build_success_response(&result))
 }
 
+// ─── Credential Extraction Helper ────────────────────────────────────
+
+fn extract_required_creds(creds: &Value, keys: &[&str], error_msg: &str) -> Result<Vec<String>, Value> {
+    let values: Vec<String> = keys
+        .iter()
+        .map(|k| {
+            creds
+                .get(*k)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string()
+        })
+        .collect();
+
+    if values.iter().any(|v| v.is_empty()) {
+        return Err(serde_json::json!({"success": false, "error": error_msg}));
+    }
+
+    Ok(values)
+}
+
 // ─── Generic Platform Validators ─────────────────────────────────────
 
 fn validate_teams<'a>(
@@ -560,20 +569,12 @@ fn validate_teams<'a>(
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<ConnectionResult, Value>> + Send + 'a>>
 {
     Box::pin(async move {
-        let app_id = creds.get("appId").and_then(|v| v.as_str()).unwrap_or("");
-        let app_secret = creds
-            .get("appSecret")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let vals = extract_required_creds(creds, &["appId", "appSecret"], "App ID and App Secret required")?;
+        let (app_id, app_secret) = (vals[0].as_str(), vals[1].as_str());
         let tenant_id = creds
             .get("tenantId")
             .and_then(|v| v.as_str())
             .unwrap_or("common");
-        if app_id.is_empty() || app_secret.is_empty() {
-            return Err(
-                serde_json::json!({"success": false, "error": "App ID and App Secret required"}),
-            );
-        }
 
         let token_url =
             format!("https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token");
@@ -621,14 +622,8 @@ fn validate_messenger<'a>(
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<ConnectionResult, Value>> + Send + 'a>>
 {
     Box::pin(async move {
-        let page_token = creds
-            .get("pageAccessToken")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let page_id = creds.get("pageId").and_then(|v| v.as_str()).unwrap_or("");
-        if page_token.is_empty() || page_id.is_empty() {
-            return Err(serde_json::json!({"success": false, "error": "Page Access Token and Page ID required"}));
-        }
+        let vals = extract_required_creds(creds, &["pageAccessToken", "pageId"], "Page Access Token and Page ID required")?;
+        let (page_token, page_id) = (vals[0].as_str(), vals[1].as_str());
 
         let body: Value = client
             .get(format!(
@@ -676,17 +671,8 @@ fn validate_line<'a>(
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<ConnectionResult, Value>> + Send + 'a>>
 {
     Box::pin(async move {
-        let channel_token = creds
-            .get("channelAccessToken")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let channel_secret = creds
-            .get("channelSecret")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        if channel_token.is_empty() || channel_secret.is_empty() {
-            return Err(serde_json::json!({"success": false, "error": "Channel Access Token and Channel Secret required"}));
-        }
+        let vals = extract_required_creds(creds, &["channelAccessToken", "channelSecret"], "Channel Access Token and Channel Secret required")?;
+        let (channel_token, channel_secret) = (vals[0].as_str(), vals[1].as_str());
 
         let res = client
             .get("https://api.line.me/v2/bot/info")
@@ -741,14 +727,9 @@ fn validate_google_chat<'a>(
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<ConnectionResult, Value>> + Send + 'a>>
 {
     Box::pin(async move {
-        let sa_key = creds
-            .get("serviceAccountKey")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let vals = extract_required_creds(creds, &["serviceAccountKey"], "Service Account Key (JSON) required")?;
+        let sa_key = vals[0].as_str();
         let space_id = creds.get("spaceId").and_then(|v| v.as_str()).unwrap_or("");
-        if sa_key.is_empty() {
-            return Err(serde_json::json!({"success": false, "error": "Service Account Key (JSON) required"}));
-        }
 
         let key_json: Value = serde_json::from_str(sa_key)
             .map_err(|_| serde_json::json!({"success": false, "error": "Invalid JSON in service account key"}))?;
@@ -786,21 +767,8 @@ fn validate_twilio<'a>(
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<ConnectionResult, Value>> + Send + 'a>>
 {
     Box::pin(async move {
-        let account_sid = creds
-            .get("accountSid")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let auth_token = creds
-            .get("authToken")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let phone_number = creds
-            .get("phoneNumber")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        if account_sid.is_empty() || auth_token.is_empty() || phone_number.is_empty() {
-            return Err(serde_json::json!({"success": false, "error": "Account SID, Auth Token, and Phone Number required"}));
-        }
+        let vals = extract_required_creds(creds, &["accountSid", "authToken", "phoneNumber"], "Account SID, Auth Token, and Phone Number required")?;
+        let (account_sid, auth_token, phone_number) = (vals[0].as_str(), vals[1].as_str(), vals[2].as_str());
 
         let res = client
             .get(format!(
@@ -852,17 +820,8 @@ fn validate_matrix<'a>(
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<ConnectionResult, Value>> + Send + 'a>>
 {
     Box::pin(async move {
-        let homeserver = creds
-            .get("homeserverUrl")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let access_token = creds
-            .get("accessToken")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        if homeserver.is_empty() || access_token.is_empty() {
-            return Err(serde_json::json!({"success": false, "error": "Homeserver URL and Access Token required"}));
-        }
+        let vals = extract_required_creds(creds, &["homeserverUrl", "accessToken"], "Homeserver URL and Access Token required")?;
+        let (homeserver, access_token) = (vals[0].as_str(), vals[1].as_str());
 
         let hs = homeserver.trim_end_matches('/');
         let res = client

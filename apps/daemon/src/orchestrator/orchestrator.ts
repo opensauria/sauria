@@ -1,4 +1,4 @@
-import { persistCanvasGraph } from '../graph-loader.js';
+import { persistCanvasGraph } from '../graph-persistence.js';
 import type BetterSqlite3 from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 import type {
