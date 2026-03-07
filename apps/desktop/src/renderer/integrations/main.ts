@@ -128,9 +128,7 @@ function renderTabs(): void {
     presentCategories.add(item.definition.category);
   }
 
-  const tabs = CATEGORY_ORDER.filter(
-    (cat) => cat.id === 'all' || presentCategories.has(cat.id),
-  );
+  const tabs = CATEGORY_ORDER.filter((cat) => cat.id === 'all' || presentCategories.has(cat.id));
 
   categoryTabs.innerHTML = tabs
     .map(
@@ -447,7 +445,9 @@ function renderOAuthConnectForm(item: IntegrationStatus): void {
     </div>
   `;
 
-  document.getElementById('oauth-connect-btn')?.addEventListener('click', () => handleOAuthConnect(item));
+  document
+    .getElementById('oauth-connect-btn')
+    ?.addEventListener('click', () => handleOAuthConnect(item));
 }
 
 function renderBothConnectForm(item: IntegrationStatus): void {
@@ -509,7 +509,9 @@ function renderBothConnectForm(item: IntegrationStatus): void {
     });
   });
 
-  document.getElementById('oauth-connect-btn')?.addEventListener('click', () => handleOAuthConnect(item));
+  document
+    .getElementById('oauth-connect-btn')
+    ?.addEventListener('click', () => handleOAuthConnect(item));
   document.getElementById('config-connect')?.addEventListener('click', () => handleConnect(item));
 }
 
@@ -729,31 +731,36 @@ async function invokeWithRetry<T>(cmd: string, args?: Record<string, unknown>): 
 }
 
 // Listen for OAuth completion from deep link callback
-void listen<{ accountLabel?: string; integrationId?: string }>('integration-oauth-complete', async (event) => {
-  // Capture account label from the event payload
-  const payload = event.payload;
-  if (payload?.accountLabel && payload?.integrationId) {
-    accountLabels[payload.integrationId] = payload.accountLabel;
-  }
-  await refreshCatalog();
-  await refreshAccountLabels();
-  const statusEl = document.getElementById('oauth-status');
-  if (statusEl) {
-    statusEl.textContent = t('integ.oauthSuccess');
-    statusEl.className = 'form-status visible success';
-  }
-  setTimeout(() => {
-    if (openPanelId) {
-      const updated = catalog.find((c) => c.id === openPanelId);
-      if (updated?.connected) renderConnectedPanel(updated);
+void listen<{ accountLabel?: string; integrationId?: string }>(
+  'integration-oauth-complete',
+  async (event) => {
+    // Capture account label from the event payload
+    const payload = event.payload;
+    if (payload?.accountLabel && payload?.integrationId) {
+      accountLabels[payload.integrationId] = payload.accountLabel;
     }
-  }, 800);
-});
+    await refreshCatalog();
+    await refreshAccountLabels();
+    const statusEl = document.getElementById('oauth-status');
+    if (statusEl) {
+      statusEl.textContent = t('integ.oauthSuccess');
+      statusEl.className = 'form-status visible success';
+    }
+    setTimeout(() => {
+      if (openPanelId) {
+        const updated = catalog.find((c) => c.id === openPanelId);
+        if (updated?.connected) renderConnectedPanel(updated);
+      }
+    }, 800);
+  },
+);
 
 // Load catalogs and account labels in parallel
 Promise.all([
   invokeWithRetry<IntegrationStatus[]>('integrations_list_catalog').catch(() => []),
-  invokeWithRetry<TelegramStatus>('get_telegram_status').catch(() => ({ bots: [] as TelegramBot[] })),
+  invokeWithRetry<TelegramStatus>('get_telegram_status').catch(() => ({
+    bots: [] as TelegramBot[],
+  })),
   invokeWithRetry<Record<string, string>>('get_integration_accounts').catch(() => ({})),
 ]).then(([mcpCatalog, tgStatus, labels]) => {
   catalog = mcpCatalog;

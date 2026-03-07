@@ -28,7 +28,9 @@ export interface OrchestratorBundle {
 
 export async function connectMcpSources(
   config: SauriaConfig,
-  mcpClients: { connect: (opts: { name: string; command: string; args: string[] }) => Promise<void> },
+  mcpClients: {
+    connect: (opts: { name: string; command: string; args: string[] }) => Promise<void>;
+  },
 ): Promise<void> {
   const logger = getLogger();
   const serverEntries = Object.entries(config.mcp.servers);
@@ -118,9 +120,17 @@ export async function setupOrchestrator(
 
   const ownerIdentity = buildOwnerIdentity(deps.config);
   const orchestrator = new AgentOrchestrator({
-    registry, graph, ownerIdentity, brain,
-    db: deps.db, agentMemory, kpiTracker, checkpointManager,
-    canvasPath: paths.canvas, onActivity, integrationRegistry,
+    registry,
+    graph,
+    ownerIdentity,
+    brain,
+    db: deps.db,
+    agentMemory,
+    kpiTracker,
+    checkpointManager,
+    canvasPath: paths.canvas,
+    onActivity,
+    integrationRegistry,
   });
 
   const queue = new MessageQueue((msg: InboundMessage) => orchestrator.handleInbound(msg), {

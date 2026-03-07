@@ -55,7 +55,8 @@ const catalog: Translations = {
   'canvas.agentPersona': '代理人格',
   'canvas.commStyle': '沟通风格（所有代理）',
   'canvas.agentPersonaPlaceholder': '描述此代理的角色、个性和行为...',
-  'canvas.commStylePlaceholder': '定义所有代理的回复方式...\n\n示例：\n- 仅纯文本，无 markdown\n- 简洁直接\n- 无表情符号',
+  'canvas.commStylePlaceholder':
+    '定义所有代理的回复方式...\n\n示例：\n- 仅纯文本，无 markdown\n- 简洁直接\n- 无表情符号',
   'canvas.standingOrders': '此代理的常设指令...',
   'canvas.useTemplate': '使用模板',
   'canvas.responseLanguage': '回复语言',

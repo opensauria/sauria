@@ -1,10 +1,4 @@
-import {
-  readFileSync,
-  writeFileSync,
-  existsSync,
-  watch,
-  type FSWatcher,
-} from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, watch, type FSWatcher } from 'node:fs';
 import type BetterSqlite3 from 'better-sqlite3';
 import type { AuditLogger } from './security/audit.js';
 import type { ModelRouter } from './ai/router.js';
@@ -35,7 +29,10 @@ export function setupCanvasWatcher(deps: CanvasWatcherDeps): FSWatcher | null {
   const logger = getLogger();
   let canvasDebounce: ReturnType<typeof setTimeout> | null = null;
   const channelDeps = {
-    db: deps.db, router: deps.router, audit: deps.audit, config: deps.config,
+    db: deps.db,
+    router: deps.router,
+    audit: deps.audit,
+    config: deps.config,
     globalInstructions: deps.globalInstructions,
   };
 
@@ -74,14 +71,16 @@ export function setupCanvasWatcher(deps: CanvasWatcherDeps): FSWatcher | null {
           void (async () => {
             try {
               const channel = await createChannelForNode(node, {
-                ...channelDeps, onInbound,
+                ...channelDeps,
+                onInbound,
                 globalInstructions: newGraph.globalInstructions,
               });
               if (channel) {
                 registry.register(node.id, channel);
                 await channel.start();
                 logger.info('Channel added on canvas change', {
-                  nodeId: node.id, platform: node.platform,
+                  nodeId: node.id,
+                  platform: node.platform,
                 });
               }
             } catch (error) {

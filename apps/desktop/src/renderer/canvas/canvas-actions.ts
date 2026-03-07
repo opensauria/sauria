@@ -14,11 +14,7 @@ export interface CanvasContext {
   querySelector(sel: string): Element | null;
 }
 
-export function handleCardAction(
-  ctx: CanvasContext,
-  action: string,
-  nodeId: string,
-): void {
+export function handleCardAction(ctx: CanvasContext, action: string, nodeId: string): void {
   const node = ctx.graphSync.graph.nodes.find((n) => n.id === nodeId);
   if (!node) return;
 
@@ -48,10 +44,7 @@ export function handleCardAction(
   }
 }
 
-export async function connectNode(
-  ctx: CanvasContext,
-  node: AgentNode,
-): Promise<void> {
+export async function connectNode(ctx: CanvasContext, node: AgentNode): Promise<void> {
   node.status = 'connecting';
   node._statusMsg = '';
   ctx.requestUpdate();
@@ -139,12 +132,8 @@ export function handleWorkspaceCreate(
   viewportRect: DOMRect | null,
 ): void {
   ws.position = {
-    x: viewportRect
-      ? (viewportRect.width / 2 - ctx.viewport.x) / ctx.viewport.zoom - 200
-      : 100,
-    y: viewportRect
-      ? (viewportRect.height / 2 - ctx.viewport.y) / ctx.viewport.zoom - 150
-      : 100,
+    x: viewportRect ? (viewportRect.width / 2 - ctx.viewport.x) / ctx.viewport.zoom - 200 : 100,
+    y: viewportRect ? (viewportRect.height / 2 - ctx.viewport.y) / ctx.viewport.zoom - 150 : 100,
   };
   ws.size = { width: 400, height: 300 };
   ctx.graphSync.graph.workspaces.push(ws);
@@ -172,10 +161,7 @@ export function handleWorkspaceUpdate(
   ctx.requestUpdate();
 }
 
-export function handleWsLockToggle(
-  ctx: CanvasContext,
-  wsId: string,
-): void {
+export function handleWsLockToggle(ctx: CanvasContext, wsId: string): void {
   const ws = ctx.graphSync.graph.workspaces.find((w) => w.id === wsId);
   if (!ws) return;
 

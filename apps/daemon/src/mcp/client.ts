@@ -31,7 +31,9 @@ export class McpClientManager {
   private readonly healthMonitor: McpHealthMonitor;
 
   constructor(private readonly audit: AuditLogger) {
-    this.healthMonitor = new McpHealthMonitor(this.clients, this.audit, (config) => this.reconnect(config));
+    this.healthMonitor = new McpHealthMonitor(this.clients, this.audit, (config) =>
+      this.reconnect(config),
+    );
   }
 
   async connect(config: McpServerConfig): Promise<void> {

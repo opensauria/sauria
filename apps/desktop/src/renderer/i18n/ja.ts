@@ -55,7 +55,8 @@ const catalog: Translations = {
   'canvas.agentPersona': 'エージェントの人格',
   'canvas.commStyle': 'コミュニケーションスタイル（全エージェント）',
   'canvas.agentPersonaPlaceholder': 'このエージェントの役割、性格、行動を記述してください...',
-  'canvas.commStylePlaceholder': '全エージェントの応答方法を定義...\n\n例：\n- プレーンテキストのみ、マークダウン不可\n- 簡潔で直接的に\n- 絵文字なし',
+  'canvas.commStylePlaceholder':
+    '全エージェントの応答方法を定義...\n\n例：\n- プレーンテキストのみ、マークダウン不可\n- 簡潔で直接的に\n- 絵文字なし',
   'canvas.standingOrders': 'このエージェントへの常設指示...',
   'canvas.useTemplate': 'テンプレートを使用',
   'canvas.responseLanguage': '応答言語',
@@ -168,7 +169,8 @@ const catalog: Translations = {
   'brain.statFacts': 'ファクト',
   'brain.connectError': 'Sauriaに接続できません',
   'brain.extractionError': 'エンティティ抽出が{0}回失敗 — AIプロバイダーの設定を確認',
-  'brain.noExtractHint': 'イベントは記録されましたがエンティティが抽出されていません — AIプロバイダーの接続を確認',
+  'brain.noExtractHint':
+    'イベントは記録されましたがエンティティが抽出されていません — AIプロバイダーの接続を確認',
   'brain.colName': '名前',
   'brain.colType': 'タイプ',
   'brain.colImportance': '重要度',

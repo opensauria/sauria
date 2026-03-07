@@ -73,11 +73,7 @@ export async function processInboundMessage(
       senderId: message.user ?? 'unknown',
     });
   } catch (error) {
-    audit.logAction(
-      'slack:ingest_error',
-      { channelId, error: String(error) },
-      { success: false },
-    );
+    audit.logAction('slack:ingest_error', { channelId, error: String(error) }, { success: false });
   }
 
   audit.logAction('slack:message_received', {

@@ -63,12 +63,8 @@ export function computeEdgeGeometry(
   toNode: AgentNode,
   worldEl: HTMLElement,
 ): EdgeGeometry | null {
-  const fromCard = worldEl.querySelector(
-    `[data-node-id="${fromNode.id}"]`,
-  ) as HTMLElement | null;
-  const toCard = worldEl.querySelector(
-    `[data-node-id="${toNode.id}"]`,
-  ) as HTMLElement | null;
+  const fromCard = worldEl.querySelector(`[data-node-id="${fromNode.id}"]`) as HTMLElement | null;
+  const toCard = worldEl.querySelector(`[data-node-id="${toNode.id}"]`) as HTMLElement | null;
   const fromW = fromCard ? fromCard.offsetWidth : CARD_FALLBACK_W;
   const fromH = fromCard ? fromCard.offsetHeight : CARD_FALLBACK_H;
   const toW = toCard ? toCard.offsetWidth : CARD_FALLBACK_W;

@@ -3,7 +3,10 @@ import type { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdi
 import type { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
-export type McpTransport = StdioClientTransport | StreamableHTTPClientTransport | SSEClientTransport;
+export type McpTransport =
+  | StdioClientTransport
+  | StreamableHTTPClientTransport
+  | SSEClientTransport;
 
 export interface McpServerConfig {
   readonly name: string;

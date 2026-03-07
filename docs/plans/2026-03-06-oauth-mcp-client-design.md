@@ -15,6 +15,7 @@
 ### Task 1: Extend IntegrationDefinition type for remote MCP
 
 **Files:**
+
 - Modify: `packages/types/src/integrations.ts`
 
 **Step 1: Add remote MCP fields to types**
@@ -22,9 +23,9 @@
 ```typescript
 // Add to McpServerTemplate — optional remote server config
 export interface McpRemoteServer {
-  readonly url: string;           // e.g. "https://mcp.notion.com/mcp"
+  readonly url: string; // e.g. "https://mcp.notion.com/mcp"
   readonly authorizationUrl?: string; // Override if different from MCP discovery
-  readonly tokenUrl?: string;     // Override if different from MCP discovery
+  readonly tokenUrl?: string; // Override if different from MCP discovery
 }
 
 // Update IntegrationDefinition
@@ -58,6 +59,7 @@ git commit -m "feat: add McpRemoteServer type for remote MCP OAuth connections"
 ### Task 2: Update integration catalog with remote MCP URLs
 
 **Files:**
+
 - Modify: `apps/daemon/src/integrations/catalog.ts`
 
 **Step 1: Add `mcpRemote` to all 27 services with remote MCP servers**
@@ -85,36 +87,36 @@ For each service that has a remote MCP, add the `mcpRemote` field. Examples:
 
 Full list of `mcpRemote` entries to add:
 
-| id | url |
-|----|-----|
-| notion | `https://mcp.notion.com/mcp` |
-| stripe | `https://mcp.stripe.com` |
-| hubspot | `https://mcp.hubspot.com` |
-| clickup | `https://mcp.clickup.com/mcp` |
-| sentry | `https://mcp.sentry.dev/mcp` |
-| cloudflare | `https://observability.mcp.cloudflare.com/mcp` |
-| salesforce | `https://mcp.salesforce.com` |
-| github | `https://api.githubcopilot.com/mcp/` |
-| jira | `https://mcp.atlassian.com/v1/mcp` |
-| confluence | `https://mcp.atlassian.com/v1/mcp` |
-| bitbucket | `https://mcp.atlassian.com/v1/mcp` |
-| slack-tools | `https://mcp.slack.com/mcp` |
-| figma | `https://mcp.figma.com/mcp` |
-| supabase | `https://mcp.supabase.com/mcp` |
-| vercel | `https://mcp.vercel.com` |
-| linear | `https://mcp.linear.app/mcp` |
-| monday | `https://mcp.monday.com/mcp` |
-| asana | `https://mcp.asana.com/v2/mcp` |
-| todoist | `https://ai.todoist.net/mcp` |
-| miro | `https://mcp.miro.com/` |
-| canva | `https://mcp.canva.com/mcp` |
-| azure | `https://mcp.azure.com/` |
-| paypal | `https://mcp.paypal.com/sse` |
-| zapier | `https://mcp.zapier.com` |
-| datadog | `https://mcp.datadoghq.com/api/unstable/mcp-server/mcp` |
-| pagerduty | `https://mcp.pagerduty.com/mcp` |
-| netlify | `https://netlify-mcp.netlify.app/mcp` |
-| contentful | `https://mcp.contentful.com/mcp` |
+| id          | url                                                     |
+| ----------- | ------------------------------------------------------- |
+| notion      | `https://mcp.notion.com/mcp`                            |
+| stripe      | `https://mcp.stripe.com`                                |
+| hubspot     | `https://mcp.hubspot.com`                               |
+| clickup     | `https://mcp.clickup.com/mcp`                           |
+| sentry      | `https://mcp.sentry.dev/mcp`                            |
+| cloudflare  | `https://observability.mcp.cloudflare.com/mcp`          |
+| salesforce  | `https://mcp.salesforce.com`                            |
+| github      | `https://api.githubcopilot.com/mcp/`                    |
+| jira        | `https://mcp.atlassian.com/v1/mcp`                      |
+| confluence  | `https://mcp.atlassian.com/v1/mcp`                      |
+| bitbucket   | `https://mcp.atlassian.com/v1/mcp`                      |
+| slack-tools | `https://mcp.slack.com/mcp`                             |
+| figma       | `https://mcp.figma.com/mcp`                             |
+| supabase    | `https://mcp.supabase.com/mcp`                          |
+| vercel      | `https://mcp.vercel.com`                                |
+| linear      | `https://mcp.linear.app/mcp`                            |
+| monday      | `https://mcp.monday.com/mcp`                            |
+| asana       | `https://mcp.asana.com/v2/mcp`                          |
+| todoist     | `https://ai.todoist.net/mcp`                            |
+| miro        | `https://mcp.miro.com/`                                 |
+| canva       | `https://mcp.canva.com/mcp`                             |
+| azure       | `https://mcp.azure.com/`                                |
+| paypal      | `https://mcp.paypal.com/sse`                            |
+| zapier      | `https://mcp.zapier.com`                                |
+| datadog     | `https://mcp.datadoghq.com/api/unstable/mcp-server/mcp` |
+| pagerduty   | `https://mcp.pagerduty.com/mcp`                         |
+| netlify     | `https://netlify-mcp.netlify.app/mcp`                   |
+| contentful  | `https://mcp.contentful.com/mcp`                        |
 
 Also set `authType: 'oauth'` and `credentialKeys: []` for all 27 remote MCP services (the OAuth flow produces the token, user fills nothing).
 
@@ -137,6 +139,7 @@ git commit -m "feat: add remote MCP URLs for 27 OAuth-enabled integrations"
 ### Task 3: Add SSE/Streamable HTTP MCP client transport
 
 **Files:**
+
 - Create: `apps/daemon/src/mcp/remote-client.ts`
 - Modify: `apps/daemon/src/mcp/client.ts`
 
@@ -167,19 +170,15 @@ export async function connectRemoteMcp(
 
   // Try Streamable HTTP first (MCP 2025-03-26+), fall back to SSE
   try {
-    const transport = new StreamableHTTPClientTransport(
-      new URL(config.url),
-      { requestInit: { headers } },
-    );
+    const transport = new StreamableHTTPClientTransport(new URL(config.url), {
+      requestInit: { headers },
+    });
     const client = new Client({ name: 'sauria', version: '1.0.0' });
     await client.connect(transport);
     logger.info(`Connected to remote MCP: ${config.name} via Streamable HTTP`);
     return { client, transport };
   } catch {
-    const transport = new SSEClientTransport(
-      new URL(config.url),
-      { requestInit: { headers } },
-    );
+    const transport = new SSEClientTransport(new URL(config.url), { requestInit: { headers } });
     const client = new Client({ name: 'sauria', version: '1.0.0' });
     await client.connect(transport);
     logger.info(`Connected to remote MCP: ${config.name} via SSE`);
@@ -209,6 +208,7 @@ git commit -m "feat: add remote MCP client with Streamable HTTP and SSE transpor
 ### Task 4: Update IntegrationRegistry to support remote MCP connections
 
 **Files:**
+
 - Modify: `apps/daemon/src/integrations/registry.ts`
 
 **Step 1: Add remote connection path**
@@ -270,6 +270,7 @@ git commit -m "feat: support remote MCP connections in integration registry"
 ### Task 5: Add deep link protocol to Tauri
 
 **Files:**
+
 - Modify: `apps/desktop/src-tauri/tauri.conf.json`
 - Modify: `apps/desktop/src-tauri/Cargo.toml`
 - Modify: `apps/desktop/src-tauri/src/main.rs`
@@ -326,6 +327,7 @@ git commit -m "feat: add sauria:// deep link protocol for OAuth callbacks"
 ### Task 6: Build generic OAuth 2.1 + PKCE flow for integrations
 
 **Files:**
+
 - Create: `apps/desktop/src-tauri/src/cmd_oauth_integrations.rs`
 - Modify: `apps/desktop/src-tauri/src/main.rs`
 
@@ -511,6 +513,7 @@ async fn discover_token_url(mcp_url: &str) -> Result<String, String> {
 **Step 2: Register commands in main.rs**
 
 Add to `invoke_handler`:
+
 ```rust
 cmd_oauth_integrations::start_integration_oauth,
 cmd_oauth_integrations::complete_integration_oauth,
@@ -533,6 +536,7 @@ git commit -m "feat: generic OAuth 2.1 + PKCE flow for MCP integrations"
 ### Task 7: Add token refresh daemon-side
 
 **Files:**
+
 - Create: `apps/daemon/src/integrations/token-refresh.ts`
 - Modify: `apps/daemon/src/daemon-lifecycle.ts`
 
@@ -579,7 +583,7 @@ export class TokenRefreshService {
           client_id: 'sauria-desktop',
         }),
       });
-      const body = await resp.json() as Record<string, unknown>;
+      const body = (await resp.json()) as Record<string, unknown>;
       const newCredential = {
         kind: 'oauth',
         accessToken: body.access_token as string,
@@ -626,21 +630,25 @@ git commit -m "feat: automatic OAuth token refresh for remote MCP integrations"
 ### Task 8: Update integrations UI for OAuth connect
 
 **Files:**
+
 - Modify: `apps/desktop/src/renderer/integrations/main.ts`
 
 **Step 1: Change the connect flow for OAuth integrations**
 
 When `definition.authType === 'oauth'` AND `definition.mcpRemote` exists:
+
 - Show a single "Connect with {provider}" button (no credential form)
 - On click, call `start_integration_oauth` with the remote MCP URL
 - Show a "Waiting for authorization..." spinner
 
 When `definition.authType === 'token'` or `'api_key'`:
+
 - Keep existing credential form (unchanged)
 
 **Step 2: Handle OAuth callback**
 
 Listen for `integration-oauth-complete` Tauri event (emitted by deep link handler):
+
 - Refresh catalog
 - Show success message with tool count
 
@@ -663,6 +671,7 @@ git commit -m "feat: one-click OAuth connect for remote MCP integrations"
 ### Task 9: Create the Worker for services without remote MCP
 
 **Files:**
+
 - Create: `workers/oauth-proxy/src/index.ts`
 - Create: `workers/oauth-proxy/src/providers.ts`
 - Create: `workers/oauth-proxy/wrangler.toml`
@@ -695,7 +704,8 @@ export const PROVIDERS: Record<string, ProviderConfig> = {
   google: {
     authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    defaultScopes: 'https://mail.google.com/ https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive',
+    defaultScopes:
+      'https://mail.google.com/ https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive',
     pkce: true,
   },
   x: {
@@ -811,7 +821,7 @@ async function handleCallback(url: URL, env: Env): Promise<Response> {
     }),
   });
 
-  const tokens = await tokenResp.json() as Record<string, unknown>;
+  const tokens = (await tokenResp.json()) as Record<string, unknown>;
 
   // Redirect to Sauria deep link with tokens
   // Note: tokens are sent via deep link — acceptable because:
@@ -820,7 +830,8 @@ async function handleCallback(url: URL, env: Env): Promise<Response> {
   const deepLink = `sauria://oauth/callback?state=${state}&access_token=${encodeURIComponent(tokens.access_token as string)}&refresh_token=${encodeURIComponent((tokens.refresh_token as string) || '')}&expires_in=${tokens.expires_in || 3600}`;
 
   // Return HTML that redirects via JS (some browsers block direct deep link redirects)
-  return new Response(`
+  return new Response(
+    `
     <!DOCTYPE html>
     <html>
     <head><title>Sauria - Authorization Complete</title></head>
@@ -830,7 +841,9 @@ async function handleCallback(url: URL, env: Env): Promise<Response> {
       <noscript><a href="${deepLink}">Click here to return to Sauria</a></noscript>
     </body>
     </html>
-  `, { headers: { 'Content-Type': 'text/html' } });
+  `,
+    { headers: { 'Content-Type': 'text/html' } },
+  );
 }
 ```
 
@@ -846,6 +859,7 @@ git commit -m "feat: Cloudflare Worker OAuth proxy for services without remote M
 ### Task 10: Add Worker proxy config to Sauria
 
 **Files:**
+
 - Modify: `packages/config/src/schema.ts` (or equivalent config schema)
 - Modify: `apps/daemon/src/integrations/catalog.ts`
 
@@ -885,9 +899,11 @@ git commit -m "feat: configure Worker proxy URL for non-remote OAuth integration
 ### Task 11: Write self-hosting docs
 
 **Files:**
+
 - Create: `docs/self-hosting-oauth.md`
 
 Document:
+
 1. How to fork and deploy the Worker (`wrangler deploy`)
 2. How to register OAuth apps with each provider
 3. How to configure `SAURIA_AUTH_URL` in Sauria
@@ -918,13 +934,13 @@ git commit -m "docs: add self-hosting guide for OAuth proxy Worker"
 
 When deploying the Worker, register OAuth apps at these URLs:
 
-| Provider | Developer Portal | What to Register |
-|----------|-----------------|-----------------|
-| **Google** | console.cloud.google.com/apis/credentials | OAuth 2.0 Client ID (Web app), enable Gmail/Calendar/Drive APIs |
-| **X/Twitter** | developer.x.com | User Authentication Settings, OAuth 2.0 with PKCE |
-| **Reddit** | reddit.com/prefs/apps | Web app, redirect to Worker callback |
-| **LinkedIn** | linkedin.com/developers/apps | OAuth 2.0 Settings, request Products |
-| **Zendesk** | Admin Center > Apps > OAuth Clients | OAuth client per subdomain |
+| Provider      | Developer Portal                          | What to Register                                                |
+| ------------- | ----------------------------------------- | --------------------------------------------------------------- |
+| **Google**    | console.cloud.google.com/apis/credentials | OAuth 2.0 Client ID (Web app), enable Gmail/Calendar/Drive APIs |
+| **X/Twitter** | developer.x.com                           | User Authentication Settings, OAuth 2.0 with PKCE               |
+| **Reddit**    | reddit.com/prefs/apps                     | Web app, redirect to Worker callback                            |
+| **LinkedIn**  | linkedin.com/developers/apps              | OAuth 2.0 Settings, request Products                            |
+| **Zendesk**   | Admin Center > Apps > OAuth Clients       | OAuth client per subdomain                                      |
 
 For remote MCP services (27 services), NO registration needed — the provider handles everything.
 
@@ -932,13 +948,13 @@ For remote MCP services (27 services), NO registration needed — the provider h
 
 ## Summary
 
-| Phase | What | Services Covered |
-|-------|------|-----------------|
-| 1-2 | Types + Remote MCP client | 27 services (Notion, Stripe, GitHub, Slack...) |
-| 3 | OAuth 2.1 + PKCE desktop flow | All OAuth services |
-| 4 | Desktop UI one-click connect | All OAuth services |
-| 5 | Worker proxy | 5 services (Google, X, Reddit, LinkedIn, Zendesk) |
-| 6 | Self-hosting docs | — |
-| 7 | Full verification | All |
+| Phase | What                          | Services Covered                                  |
+| ----- | ----------------------------- | ------------------------------------------------- |
+| 1-2   | Types + Remote MCP client     | 27 services (Notion, Stripe, GitHub, Slack...)    |
+| 3     | OAuth 2.1 + PKCE desktop flow | All OAuth services                                |
+| 4     | Desktop UI one-click connect  | All OAuth services                                |
+| 5     | Worker proxy                  | 5 services (Google, X, Reddit, LinkedIn, Zendesk) |
+| 6     | Self-hosting docs             | —                                                 |
+| 7     | Full verification             | All                                               |
 
 **Total: 32 zero-friction OAuth integrations, 3 token paste (Discord, Basecamp, Evernote), rest API key/local.**

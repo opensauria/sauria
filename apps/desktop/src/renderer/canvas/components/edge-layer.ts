@@ -39,7 +39,7 @@ export class EdgeLayer extends LightDomElement {
     if (this.edgeHideTimeout) clearTimeout(this.edgeHideTimeout);
     this.hoveredEdgeId = hit.dataset.edgeId ?? null;
     if (this.hoveredEdgeId) {
-      fire(this,'edge-hover', { edgeId: this.hoveredEdgeId });
+      fire(this, 'edge-hover', { edgeId: this.hoveredEdgeId });
     }
   };
 
@@ -48,7 +48,7 @@ export class EdgeLayer extends LightDomElement {
     if (!hit) return;
     this.edgeHideTimeout = setTimeout(() => {
       this.hoveredEdgeId = null;
-      fire(this,'edge-hover-leave');
+      fire(this, 'edge-hover-leave');
     }, 300);
   };
 
@@ -59,7 +59,7 @@ export class EdgeLayer extends LightDomElement {
     if (!edgeId) return;
     const edge = this.edges.find((ed) => ed.id === edgeId);
     if (!edge) return;
-    fire(this,'edge-click', { fromId: edge.from, toId: edge.to });
+    fire(this, 'edge-click', { fromId: edge.from, toId: edge.to });
   };
 
   render() {
@@ -97,8 +97,7 @@ export class EdgeLayer extends LightDomElement {
 
       const gid = 'eg-' + edge.id;
       const fid = 'ef-' + edge.id;
-      const gradientAttrs =
-        `" gradientUnits="userSpaceOnUse" x1="${geo.x1}" y1="${geo.y1}" x2="${geo.x2}" y2="${geo.y2}">`;
+      const gradientAttrs = `" gradientUnits="userSpaceOnUse" x1="${geo.x1}" y1="${geo.y1}" x2="${geo.x2}" y2="${geo.y2}">`;
 
       defs +=
         `<linearGradient id="${gid}${gradientAttrs}` +

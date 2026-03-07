@@ -55,7 +55,8 @@ const catalog: Translations = {
   'canvas.agentPersona': 'Agentpersonlighet',
   'canvas.commStyle': 'Kommunikationsstil (alla agenter)',
   'canvas.agentPersonaPlaceholder': 'Beskriv denna agents roll, personlighet och beteende...',
-  'canvas.commStylePlaceholder': 'Definiera hur alla agenter ska svara...\n\nExempel:\n- Bara ren text, ingen markdown\n- Kortfattat och direkt\n- Inga emojis',
+  'canvas.commStylePlaceholder':
+    'Definiera hur alla agenter ska svara...\n\nExempel:\n- Bara ren text, ingen markdown\n- Kortfattat och direkt\n- Inga emojis',
   'canvas.standingOrders': 'Stående order för denna agent...',
   'canvas.useTemplate': 'Använd mall',
   'canvas.responseLanguage': 'Svarsspråk',
@@ -167,8 +168,10 @@ const catalog: Translations = {
   'brain.statConversations': 'konversationer',
   'brain.statFacts': 'fakta',
   'brain.connectError': 'Kunde inte ansluta till Sauria',
-  'brain.extractionError': 'Entitetsextraktion misslyckades {0} gånger — kontrollera att en AI-leverantör är konfigurerad',
-  'brain.noExtractHint': 'Händelser registrerade men inga entiteter extraherade — kontrollera att en AI-leverantör är ansluten',
+  'brain.extractionError':
+    'Entitetsextraktion misslyckades {0} gånger — kontrollera att en AI-leverantör är konfigurerad',
+  'brain.noExtractHint':
+    'Händelser registrerade men inga entiteter extraherade — kontrollera att en AI-leverantör är ansluten',
   'brain.colName': 'Namn',
   'brain.colType': 'Typ',
   'brain.colImportance': 'Viktighet',

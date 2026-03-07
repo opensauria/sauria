@@ -15,10 +15,7 @@ import {
   createInsightsHandler,
   createContextHandler,
 } from './server-tools.js';
-import {
-  createAddEventHandler,
-  createRememberHandler,
-} from './server-tools-write.js';
+import { createAddEventHandler, createRememberHandler } from './server-tools-write.js';
 
 interface McpServerDeps {
   readonly db: BetterSqlite3.Database;

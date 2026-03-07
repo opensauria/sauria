@@ -31,7 +31,9 @@ export class ActivityController implements ReactiveController {
     host.addController(this);
   }
 
-  hostConnected(): void { /* noop — start() called explicitly */ }
+  hostConnected(): void {
+    /* noop — start() called explicitly */
+  }
 
   hostDisconnected(): void {
     for (const fn of this.unlisteners) fn();
@@ -48,11 +50,7 @@ export class ActivityController implements ReactiveController {
         actionType: string;
         preview: string;
       }>('activity:edge', (e) => {
-        this.cb.onEdgeActivity(
-          e.payload.from,
-          e.payload.to,
-          e.payload.preview,
-        );
+        this.cb.onEdgeActivity(e.payload.from, e.payload.to, e.payload.preview);
       }),
       await listen<{ nodeId: string; state: string }>('activity:node', (e) => {
         this.setNodeActivityState(e.payload.nodeId, e.payload.state);
@@ -98,19 +96,12 @@ export class ActivityController implements ReactiveController {
     const all: ConvMessage[] = [];
     for (const [, msgs] of this.conversationBuffer) {
       for (const msg of msgs) {
-        if (
-          !filterNodeId ||
-          msg.from === filterNodeId ||
-          msg.to === filterNodeId
-        ) {
+        if (!filterNodeId || msg.from === filterNodeId || msg.to === filterNodeId) {
           all.push(msg);
         }
       }
     }
-    all.sort(
-      (a, b) =>
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-    );
+    all.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     return all;
   }
 

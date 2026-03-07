@@ -103,7 +103,10 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     try {
       const cred = JSON.parse(stored) as { expiresAt?: number };
       if (cred.expiresAt) {
-        const base = def.mcpRemote.url.replace(/\/mcp$/, '').replace(/\/sse$/, '').replace(/\/$/, '');
+        const base = def.mcpRemote.url
+          .replace(/\/mcp$/, '')
+          .replace(/\/sse$/, '')
+          .replace(/\/$/, '');
         const tokenUrl = `${base}/.well-known/oauth-authorization-server`;
         tokenRefreshService.scheduleRefresh(def.id, tokenUrl, cred.expiresAt);
       }
@@ -150,7 +153,10 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   logger.info('Proactive engine disabled (owner-driven mode)');
 
   const mcpServer = await startMcpServer({
-    db, router, audit, checkpointManager,
+    db,
+    router,
+    audit,
+    checkpointManager,
     orchestrator: orchestrator ?? undefined,
   });
   logger.info('MCP server started on stdio');
@@ -160,7 +166,13 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   }, 1_800_000);
 
   const canvasWatcher = setupCanvasWatcher({
-    orchestrator, registry, queue, db, router, audit, config,
+    orchestrator,
+    registry,
+    queue,
+    db,
+    router,
+    audit,
+    config,
     globalInstructions: graph.globalInstructions,
   });
 
@@ -173,9 +185,22 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   });
 
   return {
-    db, config, audit, router, mcpClients, engine, mcpServer, refreshInterval,
-    ipcServer, integrationRegistry, tokenRefreshService, registry, orchestrator, queue,
-    canvasWatcher, ownerCommandWatcher,
+    db,
+    config,
+    audit,
+    router,
+    mcpClients,
+    engine,
+    mcpServer,
+    refreshInterval,
+    ipcServer,
+    integrationRegistry,
+    tokenRefreshService,
+    registry,
+    orchestrator,
+    queue,
+    canvasWatcher,
+    ownerCommandWatcher,
   };
 }
 

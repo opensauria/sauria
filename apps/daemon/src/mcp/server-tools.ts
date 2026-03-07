@@ -22,7 +22,9 @@ interface ToolDeps {
   readonly auditToolCall: (toolName: ToolName, params: unknown) => void;
 }
 
-type ToolHandler = (raw: Record<string, unknown>) => Promise<{ content: { type: 'text'; text: string }[] }>;
+type ToolHandler = (
+  raw: Record<string, unknown>,
+) => Promise<{ content: { type: 'text'; text: string }[] }>;
 
 export function createQueryHandler(deps: ToolDeps): ToolHandler {
   const { db, router, guardRateLimit, auditToolCall } = deps;
@@ -161,4 +163,3 @@ export function createContextHandler(deps: ToolDeps): ToolHandler {
     return textResult(sections.join('\n'));
   };
 }
-

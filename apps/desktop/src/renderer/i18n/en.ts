@@ -56,7 +56,8 @@ const catalog: Translations = {
   'canvas.agentPersona': 'Agent Persona',
   'canvas.commStyle': 'Communication Style (all agents)',
   'canvas.agentPersonaPlaceholder': "Describe this agent's role, personality, and behavior...",
-  'canvas.commStylePlaceholder': 'Define how all agents should respond...\n\nExample:\n- Plain text only, no markdown\n- Concise and direct\n- No emojis',
+  'canvas.commStylePlaceholder':
+    'Define how all agents should respond...\n\nExample:\n- Plain text only, no markdown\n- Concise and direct\n- No emojis',
   'canvas.standingOrders': 'Standing orders for this agent...',
   'canvas.useTemplate': 'Use Template',
   'canvas.responseLanguage': 'Response Language',
@@ -179,8 +180,10 @@ const catalog: Translations = {
   'brain.statConversations': 'conversations',
   'brain.statFacts': 'facts',
   'brain.connectError': 'Could not connect to Sauria',
-  'brain.extractionError': 'Entity extraction failed {0} time(s) — check that an AI provider is configured',
-  'brain.noExtractHint': 'Events recorded but no entities extracted — verify an AI provider is connected',
+  'brain.extractionError':
+    'Entity extraction failed {0} time(s) — check that an AI provider is configured',
+  'brain.noExtractHint':
+    'Events recorded but no entities extracted — verify an AI provider is connected',
   'brain.colName': 'Name',
   'brain.colType': 'Type',
   'brain.colImportance': 'Importance',

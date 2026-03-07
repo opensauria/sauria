@@ -1,7 +1,4 @@
-import type {
-  InboundMessage,
-  RoutingAction,
-} from './types.js';
+import type { InboundMessage, RoutingAction } from './types.js';
 import {
   contentPreview,
   buildForwardContext,
@@ -28,9 +25,7 @@ function createSyntheticMessage(
     content,
     contentType: 'text',
     timestamp: new Date().toISOString(),
-    forwardDepth: incrementDepth
-      ? (source.forwardDepth ?? 0) + 1
-      : (source.forwardDepth ?? 0),
+    forwardDepth: incrementDepth ? (source.forwardDepth ?? 0) + 1 : (source.forwardDepth ?? 0),
     replyToNodeId: source.replyToNodeId ?? source.sourceNodeId,
   };
 }
@@ -41,7 +36,10 @@ export async function handleForward(
   ctx: ActionContext,
 ): Promise<void> {
   const contextPrefix = buildForwardContext(
-    ctx.helperDeps, source.sourceNodeId, source.platform, source.groupId,
+    ctx.helperDeps,
+    source.sourceNodeId,
+    source.platform,
+    source.groupId,
   );
   const enrichedContent = contextPrefix ? `${contextPrefix}\n${action.content}` : action.content;
   const syntheticFwd = createSyntheticMessage(action.targetNodeId, source, enrichedContent, true);
@@ -57,10 +55,18 @@ export async function handleNotify(
   ctx: ActionContext,
 ): Promise<void> {
   const contextPrefix = buildForwardContext(
-    ctx.helperDeps, source.sourceNodeId, source.platform, source.groupId,
+    ctx.helperDeps,
+    source.sourceNodeId,
+    source.platform,
+    source.groupId,
   );
   const enrichedSummary = contextPrefix ? `${contextPrefix}\n${action.summary}` : action.summary;
-  const syntheticNotify = createSyntheticMessage(action.targetNodeId, source, enrichedSummary, true);
+  const syntheticNotify = createSyntheticMessage(
+    action.targetNodeId,
+    source,
+    enrichedSummary,
+    true,
+  );
 
   ctx.emitEdge(source.sourceNodeId, action.targetNodeId, 'notify', contentPreview(action.summary));
   ctx.emitMessage(source.sourceNodeId, action.targetNodeId, action.summary, 'notify');
@@ -106,8 +112,7 @@ export async function handleReply(
   ctx: ActionContext,
 ): Promise<void> {
   const replyTargetId = source.replyToNodeId ?? source.sourceNodeId;
-  const isForwardedReply =
-    (source.forwardDepth ?? 0) > 0 && replyTargetId !== source.sourceNodeId;
+  const isForwardedReply = (source.forwardDepth ?? 0) > 0 && replyTargetId !== source.sourceNodeId;
 
   recordReplyInMemory(ctx.helperDeps, source, action.content);
 

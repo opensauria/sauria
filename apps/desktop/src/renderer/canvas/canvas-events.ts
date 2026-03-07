@@ -65,14 +65,28 @@ export function handleKeydown(host: CanvasEventHost, e: KeyboardEvent): void {
     if (host.wsDialogOpen) host.wsDialogOpen = false;
     else if (host.detailNode) host.detailNode = null;
     else if (host.detailWorkspaceId) host.detailWorkspaceId = null;
-    else { host.selectedNodeId = null; host.selectedWorkspaceId = null; }
+    else {
+      host.selectedNodeId = null;
+      host.selectedWorkspaceId = null;
+    }
     e.preventDefault();
     return;
   }
-  if (isMod && (e.key === '=' || e.key === '+')) { e.preventDefault(); host.viewport.setZoom(host.viewport.zoom + 0.25); }
-  else if (isMod && e.key === '-') { e.preventDefault(); host.viewport.setZoom(host.viewport.zoom - 0.25); }
-  else if (isMod && e.key === '0') { e.preventDefault(); host.viewport.x = 0; host.viewport.y = 0; host.viewport.setZoom(1); }
-  else if (isMod && e.key === 'l') { e.preventDefault(); host.dockCollapsed = !host.dockCollapsed; }
+  if (isMod && (e.key === '=' || e.key === '+')) {
+    e.preventDefault();
+    host.viewport.setZoom(host.viewport.zoom + 0.25);
+  } else if (isMod && e.key === '-') {
+    e.preventDefault();
+    host.viewport.setZoom(host.viewport.zoom - 0.25);
+  } else if (isMod && e.key === '0') {
+    e.preventDefault();
+    host.viewport.x = 0;
+    host.viewport.y = 0;
+    host.viewport.setZoom(1);
+  } else if (isMod && e.key === 'l') {
+    e.preventDefault();
+    host.dockCollapsed = !host.dockCollapsed;
+  }
   if ((e.key === 'Delete' || e.key === 'Backspace') && host.selectedNodeId && !isInputFocused()) {
     e.preventDefault();
     removeNode(host, host.selectedNodeId);
@@ -88,21 +102,29 @@ function isInputFocused(): boolean {
 export function handleCardHover(host: CanvasEventHost, nodeId: string): void {
   const node = host.graphSync.graph.nodes.find((n) => n.id === nodeId);
   if (!node) return;
-  const orb = host.querySelector('orbital-bubbles') as HTMLElement & { show: (n: AgentNode) => void } | null;
+  const orb = host.querySelector('orbital-bubbles') as
+    | (HTMLElement & { show: (n: AgentNode) => void })
+    | null;
   orb?.show(node);
 }
 
 export function handleCardHoverLeave(host: CanvasEventHost): void {
-  const orb = host.querySelector('orbital-bubbles') as HTMLElement & { scheduleHide: () => void } | null;
+  const orb = host.querySelector('orbital-bubbles') as
+    | (HTMLElement & { scheduleHide: () => void })
+    | null;
   orb?.scheduleHide();
 }
 
 export function openConversation(host: CanvasEventHost, fromId: string, toId: string): void {
-  const panel = host.querySelector('conversation-panel') as HTMLElement & { openEdgeConversation: (f: string, t: string) => void } | null;
+  const panel = host.querySelector('conversation-panel') as
+    | (HTMLElement & { openEdgeConversation: (f: string, t: string) => void })
+    | null;
   panel?.openEdgeConversation(fromId, toId);
 }
 
 export function toggleFeed(host: CanvasEventHost): void {
-  const panel = host.querySelector('conversation-panel') as HTMLElement & { openFeed: () => void } | null;
+  const panel = host.querySelector('conversation-panel') as
+    | (HTMLElement & { openFeed: () => void })
+    | null;
   panel?.openFeed();
 }

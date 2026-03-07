@@ -150,4 +150,3 @@ export function listRelations(
 
   return { rows, total };
 }
-

@@ -41,8 +41,7 @@ export const spacing = {
 } as const;
 
 export const typography = {
-  fontFamily:
-    "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
   fontFamilyMono: "'Geist Mono', monospace",
   sizeBase: '14px',
   sizeSmall: '12px',

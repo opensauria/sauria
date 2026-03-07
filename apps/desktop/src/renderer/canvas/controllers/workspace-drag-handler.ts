@@ -110,9 +110,7 @@ export class WorkspaceDragHandler {
       if (!node) continue;
       node.position.x = snap.startX + dx;
       node.position.y = snap.startY + dy;
-      const card = world.querySelector(
-        `[data-node-id="${snap.id}"]`,
-      ) as HTMLElement | null;
+      const card = world.querySelector(`[data-node-id="${snap.id}"]`) as HTMLElement | null;
       if (card) {
         card.style.left = node.position.x + 'px';
         card.style.top = node.position.y + 'px';

@@ -1,12 +1,7 @@
 import type BetterSqlite3 from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 import type { AuditLogger } from '../security/audit.js';
-import {
-  getEntityByName,
-  recordEvent,
-  upsertEntity,
-  upsertRelation,
-} from '../db/world-model.js';
+import { getEntityByName, recordEvent, upsertEntity, upsertRelation } from '../db/world-model.js';
 import { resolveEntity } from '../ingestion/resolver.js';
 import { validateToolInput } from './tools.js';
 import type { ToolName } from './tools.js';
@@ -19,7 +14,9 @@ interface ToolDeps {
   readonly auditToolCall: (toolName: ToolName, params: unknown) => void;
 }
 
-type ToolHandler = (raw: Record<string, unknown>) => Promise<{ content: { type: 'text'; text: string }[] }>;
+type ToolHandler = (
+  raw: Record<string, unknown>,
+) => Promise<{ content: { type: 'text'; text: string }[] }>;
 
 export function createAddEventHandler(deps: ToolDeps): ToolHandler {
   const { db, guardRateLimit, auditToolCall } = deps;

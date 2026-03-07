@@ -161,8 +161,13 @@
       }
 
       @keyframes pulse-dot {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.4; }
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
       }
 
       /* ── Result panel ───────────────── */
@@ -645,10 +650,18 @@
             />
           </svg>
         </div>
-        <input type="text" id="search" data-i18n-placeholder="palette.searchPlaceholder" placeholder="Search commands..." autofocus />
+        <input
+          type="text"
+          id="search"
+          data-i18n-placeholder="palette.searchPlaceholder"
+          placeholder="Search commands..."
+          autofocus
+        />
       </div>
       <div class="command-list" id="command-list"></div>
-      <div class="empty-state" id="empty-state" data-i18n="palette.noResults">No matching commands</div>
+      <div class="empty-state" id="empty-state" data-i18n="palette.noResults">
+        No matching commands
+      </div>
       <div class="result-panel" id="result-panel"></div>
 
       <!-- Telegram panel -->
@@ -682,17 +695,30 @@
               inputmode="numeric"
               autocomplete="off"
             />
-            <div class="field-hint" data-i18n="palette.userIdHint">Get from @userinfobot on Telegram</div>
+            <div class="field-hint" data-i18n="palette.userIdHint">
+              Get from @userinfobot on Telegram
+            </div>
           </div>
           <div class="form-field">
             <label data-i18n="palette.botToken">Bot Token</label>
             <input type="password" id="tg-token" placeholder="123456:ABC-DEF..." />
-            <div class="field-hint" data-i18n="palette.botTokenHint">Get from @BotFather on Telegram</div>
+            <div class="field-hint" data-i18n="palette.botTokenHint">
+              Get from @BotFather on Telegram
+            </div>
           </div>
           <div class="form-status" id="tg-status"></div>
           <div class="form-actions">
-            <button class="form-btn form-btn-cancel" id="tg-cancel" data-i18n="palette.cancel">Cancel</button>
-            <button class="form-btn form-btn-primary" id="tg-submit" disabled data-i18n="palette.connect">Connect</button>
+            <button class="form-btn form-btn-cancel" id="tg-cancel" data-i18n="palette.cancel">
+              Cancel
+            </button>
+            <button
+              class="form-btn form-btn-primary"
+              id="tg-submit"
+              disabled
+              data-i18n="palette.connect"
+            >
+              Connect
+            </button>
           </div>
         </div>
       </div>
@@ -704,8 +730,12 @@
       </div>
 
       <div class="footer">
-        <span style="display: flex; align-items: center; gap: 4px; flex: 1;">
-          <img src="/icons/sauria-logo-40.png" alt="" style="width: 12px; height: 12px; border-radius: 2px;" />
+        <span style="display: flex; align-items: center; gap: 4px; flex: 1">
+          <img
+            src="/icons/sauria-logo-40.png"
+            alt=""
+            style="width: 12px; height: 12px; border-radius: 2px"
+          />
           <span class="brand-label">Sauria</span>
         </span>
         <button class="settings-btn" id="settings-btn" title="Developer settings">

@@ -110,15 +110,12 @@ export class AgentCard extends LightDomElement {
 
   private renderConnectedCard(node: AgentNode) {
     this.className =
-      'agent-card' +
-      (this.selected ? ' selected' : '') +
-      (this.active ? ' node-active' : '');
+      'agent-card' + (this.selected ? ' selected' : '') + (this.active ? ' node-active' : '');
 
     const photoHtml = node.photo
       ? `<img src="${escapeHtml(node.photo)}" alt="" />`
       : PLATFORM_ICONS[node.platform] || '';
-    const displayName =
-      node.meta.firstName || node.label.replace(/^@/, '');
+    const displayName = node.meta.firstName || node.label.replace(/^@/, '');
     const botInfo = getBotInfo(node);
 
     this.updateComplete.then(() => {
@@ -142,9 +139,7 @@ export class AgentCard extends LightDomElement {
       <button class="card-gear" data-action="gear" title="Settings"></button>
       <div class="agent-avatar"></div>
       <div class="agent-name">${displayName}</div>
-      ${botInfo
-        ? html`<div class="agent-bot-info">${botInfo}</div>`
-        : nothing}
+      ${botInfo ? html`<div class="agent-bot-info">${botInfo}</div>` : nothing}
       <span class="platform-badge ${node.platform}">${node.platform}</span>
       <div class="port port-input" data-node-id=${node.id} data-port="input"></div>
       <div class="port port-output" data-node-id=${node.id} data-port="output"></div>
@@ -159,9 +154,7 @@ export class AgentCard extends LightDomElement {
     this.className =
       'agent-card' +
       (isError ? ' error-state' : '') +
-      (node.status === 'setup' || node.status === 'connecting' || isEditing
-        ? ' setup'
-        : '') +
+      (node.status === 'setup' || node.status === 'connecting' || isEditing ? ' setup' : '') +
       (this.selected ? ' selected' : '');
 
     return html`
@@ -177,11 +170,9 @@ export class AgentCard extends LightDomElement {
     if (this.node?._animateIn) {
       this.classList.add('card-enter');
       delete this.node._animateIn;
-      this.addEventListener(
-        'animationend',
-        () => this.classList.remove('card-enter'),
-        { once: true },
-      );
+      this.addEventListener('animationend', () => this.classList.remove('card-enter'), {
+        once: true,
+      });
     }
   }
 }

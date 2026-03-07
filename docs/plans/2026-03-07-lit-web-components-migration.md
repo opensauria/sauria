@@ -57,12 +57,14 @@ apps/desktop/src/renderer/
 ### Task 1: Install Lit and configure TypeScript
 
 **Files:**
+
 - Modify: `apps/desktop/package.json`
 - Modify: `apps/desktop/tsconfig.json`
 
 **Step 1: Install Lit dependencies**
 
 Run:
+
 ```bash
 cd apps/desktop && pnpm add lit @lit/context @lit/task
 ```
@@ -70,6 +72,7 @@ cd apps/desktop && pnpm add lit @lit/context @lit/task
 **Step 2: Enable decorators in tsconfig.json**
 
 Add to `compilerOptions`:
+
 ```json
 "experimentalDecorators": true,
 "useDefineForClassFields": false
@@ -91,6 +94,7 @@ chore: add lit dependencies and enable decorators
 ### Task 2: Create shared types, constants, and IPC wrappers
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/types.ts`
 - Create: `apps/desktop/src/renderer/canvas/constants.ts`
 - Create: `apps/desktop/src/renderer/canvas/ipc.ts`
@@ -144,6 +148,7 @@ Extract: `platformIcons`, `RESPONSE_LANGUAGES`, `CEO_TEMPLATE`, `BOT_TEMPLATE`, 
 **Step 3: Extract ipc.ts**
 
 Typed wrappers around `invoke()`:
+
 ```ts
 import { invoke } from '@tauri-apps/api/core';
 import type { CanvasGraph, OwnerProfile, ConnectResult } from './types.js';
@@ -156,7 +161,10 @@ export function saveCanvasGraph(graph: CanvasGraph): Promise<void> {
   return invoke('save_canvas_graph', { graph });
 }
 
-export function connectChannel(platform: string, credentials: Record<string, string>): Promise<ConnectResult> {
+export function connectChannel(
+  platform: string,
+  credentials: Record<string, string>,
+): Promise<ConnectResult> {
   return invoke<ConnectResult>('connect_channel', { platform, credentials });
 }
 
@@ -187,6 +195,7 @@ refactor: extract canvas types, constants, and IPC wrappers
 ### Task 3: Create graph-sync controller and viewport controller
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/controllers/graph-sync-controller.ts`
 - Create: `apps/desktop/src/renderer/canvas/controllers/viewport-controller.ts`
 
@@ -201,7 +210,13 @@ import { getCanvasGraph, saveCanvasGraph, getOwnerProfile } from '../ipc.js';
 
 export class GraphSyncController implements ReactiveController {
   host: ReactiveControllerHost;
-  graph: CanvasGraph = { nodes: [], edges: [], workspaces: [], globalInstructions: '', viewport: { x: 0, y: 0, zoom: 1 } };
+  graph: CanvasGraph = {
+    nodes: [],
+    edges: [],
+    workspaces: [],
+    globalInstructions: '',
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(host: ReactiveControllerHost) {
@@ -209,13 +224,19 @@ export class GraphSyncController implements ReactiveController {
     host.addController(this);
   }
 
-  hostConnected(): void { /* noop — init() is called explicitly */ }
+  hostConnected(): void {
+    /* noop — init() is called explicitly */
+  }
   hostDisconnected(): void {
     if (this.saveTimer) clearTimeout(this.saveTimer);
   }
 
   async init(): Promise<void> {
-    try { this.graph = await getCanvasGraph(); } catch { /* fallback empty */ }
+    try {
+      this.graph = await getCanvasGraph();
+    } catch {
+      /* fallback empty */
+    }
     // ... owner node setup (same logic as current init())
     this.host.requestUpdate();
   }
@@ -237,10 +258,14 @@ Manages: vpX, vpY, vpZoom, CSS zoom transform, pan start/stop.
 
 ```ts
 export class ViewportController implements ReactiveController {
-  x = 0; y = 0; zoom = 1;
+  x = 0;
+  y = 0;
+  zoom = 1;
   private isPanning = false;
-  private panStartX = 0; private panStartY = 0;
-  private panStartVpX = 0; private panStartVpY = 0;
+  private panStartX = 0;
+  private panStartY = 0;
+  private panStartVpX = 0;
+  private panStartVpY = 0;
 
   applyTransform(world: HTMLElement): void {
     (world.style as Record<string, string>).zoom = String(this.zoom);
@@ -252,9 +277,15 @@ export class ViewportController implements ReactiveController {
     this.host.requestUpdate();
   }
 
-  startPan(e: MouseEvent): void { /* ... */ }
-  updatePan(e: MouseEvent): void { /* ... */ }
-  stopPan(): void { /* ... */ }
+  startPan(e: MouseEvent): void {
+    /* ... */
+  }
+  updatePan(e: MouseEvent): void {
+    /* ... */
+  }
+  stopPan(): void {
+    /* ... */
+  }
 
   screenToWorld(sx: number, sy: number): { x: number; y: number } {
     return { x: (sx - this.x) / this.zoom, y: (sy - this.y) / this.zoom };
@@ -277,6 +308,7 @@ feat: add graph-sync and viewport reactive controllers
 ### Task 4: Create drag controller and activity controller
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/controllers/drag-controller.ts`
 - Create: `apps/desktop/src/renderer/canvas/controllers/activity-controller.ts`
 
@@ -305,9 +337,15 @@ export class ActivityController implements ReactiveController {
 
   async hostConnected(): Promise<void> {
     this.unlisteners.push(
-      await listen('activity:edge', (e) => { /* animateEdgeTravel dispatch */ }),
-      await listen('activity:node', (e) => { /* setNodeActivityState */ }),
-      await listen('activity:message', (e) => { /* buffer + feed */ }),
+      await listen('activity:edge', (e) => {
+        /* animateEdgeTravel dispatch */
+      }),
+      await listen('activity:node', (e) => {
+        /* setNodeActivityState */
+      }),
+      await listen('activity:message', (e) => {
+        /* buffer + feed */
+      }),
     );
   }
 
@@ -331,6 +369,7 @@ feat: add drag and activity reactive controllers
 ### Task 5: Create simple leaf components
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/components/empty-state.ts`
 - Create: `apps/desktop/src/renderer/canvas/components/canvas-toolbar.ts`
 - Create: `apps/desktop/src/renderer/canvas/components/confirm-dialog.ts`
@@ -339,6 +378,7 @@ feat: add drag and activity reactive controllers
 **Step 1: Implement `<canvas-empty-state>`**
 
 Simple component — shows/hides based on `nodeCount` property:
+
 ```ts
 @customElement('canvas-empty-state')
 export class CanvasEmptyState extends LitElement {
@@ -376,6 +416,7 @@ feat: add leaf canvas components (empty-state, toolbar, dialog, legend)
 ### Task 6: Create workspace components
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/components/workspace-frame.ts`
 - Create: `apps/desktop/src/renderer/canvas/components/workspace-dialog.ts`
 - Create: `apps/desktop/src/renderer/canvas/components/workspace-detail-panel.ts`
@@ -409,6 +450,7 @@ feat: add workspace components (frame, dialog, detail panel)
 ### Task 7: Create agent card components
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/components/agent-card.ts`
 - Create: `apps/desktop/src/renderer/canvas/components/agent-card-setup.ts`
 
@@ -417,6 +459,7 @@ feat: add workspace components (frame, dialog, detail panel)
 Properties: `node` (AgentNode), `selected` (boolean), `active` (boolean).
 Events: `card-select`, `card-drag-start`, `card-gear`, `edge-drag-start`.
 Renders 3 variants based on `node.platform` and `node.status`:
+
 - **Owner card**: avatar with initials/photo, "YOU" badge, output port only
 - **Connected card**: avatar with status dot, platform badge, bot info, input+output ports
 - **Error state**: delegates to `<agent-card-setup>` with error message
@@ -443,6 +486,7 @@ feat: add agent card components (portrait + setup form)
 ### Task 8: Create edge layer (Light DOM SVG)
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/components/edge-layer.ts`
 - Create: `apps/desktop/src/renderer/canvas/components/edge-activity.ts`
 
@@ -476,6 +520,7 @@ feat: add SVG edge layer and activity animation components
 ### Task 9: Create coverflow dock with spring physics
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/components/coverflow-dock.ts`
 
 **Step 1: Implement `<coverflow-dock>`**
@@ -486,6 +531,7 @@ Events: `platform-select` (dispatches when card clicked/Enter pressed).
 Internal state: `cfActiveIndex`, `cfCurrentIndex` (float), `cfVelocity`, `cfAnimating`.
 
 Spring physics (rAF loop):
+
 ```ts
 private tick(): void {
   const STIFFNESS = 0.06;
@@ -506,6 +552,7 @@ private tick(): void {
 ```
 
 3D transforms per card:
+
 ```ts
 const translateX = offset * 100;
 const translateZ = 60 - absOffset * 120;
@@ -529,6 +576,7 @@ feat: add coverflow dock component with spring physics
 ### Task 10: Create detail panels and conversation panel
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/components/agent-detail-panel.ts`
 - Create: `apps/desktop/src/renderer/canvas/components/conversation-panel.ts`
 
@@ -537,6 +585,7 @@ feat: add coverflow dock component with spring physics
 Properties: `node` (AgentNode | null).
 Events: `close`, `node-update` (with patch).
 Renders: right slide-in panel with:
+
 - Identity section (avatar + name + platform)
 - Role pills (lead, specialist, observer, coordinator, assistant)
 - Autonomy segmented control (manual → full) with animated highlight
@@ -570,6 +619,7 @@ feat: add agent detail panel and conversation panel components
 ### Task 11: Create orbital bubbles component
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/components/orbital-bubbles.ts`
 
 **Step 1: Implement `<orbital-bubbles>`**
@@ -592,6 +642,7 @@ feat: add orbital integration bubbles component
 ### Task 12: Create root `<sauria-canvas>` element
 
 **Files:**
+
 - Create: `apps/desktop/src/renderer/canvas/sauria-canvas.ts`
 
 **Step 1: Implement root element**
@@ -621,52 +672,69 @@ export class SauriaCanvas extends LitElement {
         <img src="/icons/chevron-left.svg" alt="" />
       </button>
 
-      <div class="canvas-viewport"
+      <div
+        class="canvas-viewport"
         @mousedown=${this.handleViewportMouseDown}
         @mousemove=${this.handleMouseMove}
         @mouseup=${this.handleMouseUp}
-        @wheel=${this.handleWheel}>
+        @wheel=${this.handleWheel}
+      >
         <div class="canvas-world" id="world">
           <edge-layer .edges=${graph.edges} .nodes=${graph.nodes}></edge-layer>
           <edge-activity></edge-activity>
-          ${graph.workspaces.map(ws => html`
-            <workspace-frame .workspace=${ws}
-              ?selected=${ws.id === this.selectedWorkspaceId}
-              .agentCount=${graph.nodes.filter(n => n.workspaceId === ws.id).length}
-              @workspace-select=${this.handleWorkspaceSelect}>
-            </workspace-frame>
-          `)}
-          ${graph.nodes.map(node => this.renderNode(node))}
+          ${graph.workspaces.map(
+            (ws) => html`
+              <workspace-frame
+                .workspace=${ws}
+                ?selected=${ws.id === this.selectedWorkspaceId}
+                .agentCount=${graph.nodes.filter((n) => n.workspaceId === ws.id).length}
+                @workspace-select=${this.handleWorkspaceSelect}
+              >
+              </workspace-frame>
+            `,
+          )}
+          ${graph.nodes.map((node) => this.renderNode(node))}
         </div>
       </div>
 
       <canvas-empty-state .nodeCount=${graph.nodes.length}></canvas-empty-state>
-      <canvas-toolbar .zoom=${zoom}
+      <canvas-toolbar
+        .zoom=${zoom}
         @zoom-in=${() => this.viewport.setZoom(zoom + 0.1)}
         @zoom-out=${() => this.viewport.setZoom(zoom - 0.1)}
-        @zoom-reset=${() => this.viewport.setZoom(1)}>
+        @zoom-reset=${() => this.viewport.setZoom(1)}
+      >
       </canvas-toolbar>
 
-      <agent-detail-panel .node=${this.detailNode}
+      <agent-detail-panel
+        .node=${this.detailNode}
         @close=${this.closeAgentDetail}
-        @node-update=${this.handleNodeUpdate}>
+        @node-update=${this.handleNodeUpdate}
+      >
       </agent-detail-panel>
 
-      <workspace-detail-panel .workspace=${this.detailWorkspace}
+      <workspace-detail-panel
+        .workspace=${this.detailWorkspace}
         @close=${this.closeWorkspaceDetail}
-        @workspace-update=${this.handleWorkspaceUpdate}>
+        @workspace-update=${this.handleWorkspaceUpdate}
+      >
       </workspace-detail-panel>
 
       <conversation-panel .open=${this.convOpen}></conversation-panel>
-      <workspace-dialog .open=${this.wsDialogOpen}
+      <workspace-dialog
+        .open=${this.wsDialogOpen}
         @workspace-create=${this.handleWorkspaceCreate}
-        @cancel=${() => this.wsDialogOpen = false}>
+        @cancel=${() => (this.wsDialogOpen = false)}
+      >
       </workspace-dialog>
-      <confirm-dialog .open=${this.confirmOpen} .message=${this.confirmMessage}
-        @confirm=${this.handleConfirm} @cancel=${() => this.confirmOpen = false}>
+      <confirm-dialog
+        .open=${this.confirmOpen}
+        .message=${this.confirmMessage}
+        @confirm=${this.handleConfirm}
+        @cancel=${() => (this.confirmOpen = false)}
+      >
       </confirm-dialog>
-      <coverflow-dock .visible=${this.dockVisible}
-        @platform-select=${this.handlePlatformSelect}>
+      <coverflow-dock .visible=${this.dockVisible} @platform-select=${this.handlePlatformSelect}>
       </coverflow-dock>
       <canvas-legend .visible=${this.legendVisible}></canvas-legend>
       <button class="dock-toggle" @click=${this.toggleDock}>
@@ -676,10 +744,18 @@ export class SauriaCanvas extends LitElement {
   }
 
   // Event handlers delegate to controllers
-  private handleViewportMouseDown(e: MouseEvent) { /* viewport pan or node drag or ws drag */ }
-  private handleMouseMove(e: MouseEvent) { this.drag.handleMouseMove(e); }
-  private handleMouseUp(e: MouseEvent) { this.drag.handleMouseUp(e); }
-  private handleWheel(e: WheelEvent) { /* zoom around cursor */ }
+  private handleViewportMouseDown(e: MouseEvent) {
+    /* viewport pan or node drag or ws drag */
+  }
+  private handleMouseMove(e: MouseEvent) {
+    this.drag.handleMouseMove(e);
+  }
+  private handleMouseUp(e: MouseEvent) {
+    this.drag.handleMouseUp(e);
+  }
+  private handleWheel(e: WheelEvent) {
+    /* zoom around cursor */
+  }
 }
 ```
 
@@ -696,11 +772,13 @@ feat: add root sauria-canvas element composing all components
 ### Task 13: Wire root element into index.html
 
 **Files:**
+
 - Modify: `apps/desktop/src/renderer/canvas/index.html`
 
 **Step 1: Replace index.html body**
 
 Replace the entire body content with:
+
 ```html
 <body>
   <sauria-canvas></sauria-canvas>
@@ -745,6 +823,7 @@ feat: mount sauria-canvas in index.html
 ### Task 14: Delete old main.ts and migrate CSS
 
 **Files:**
+
 - Delete: `apps/desktop/src/renderer/canvas/main.ts`
 - Modify: `apps/desktop/src/renderer/canvas/canvas.css` (trim unused global styles)
 
@@ -755,6 +834,7 @@ After verifying the Lit version works identically, remove the old file.
 **Step 2: Audit canvas.css**
 
 Move component-specific styles into their respective Shadow DOM `static styles`. Keep only:
+
 - `.canvas-viewport` (global container)
 - `.canvas-world` (transform target)
 - Dot grid background
@@ -763,18 +843,22 @@ Move component-specific styles into their respective Shadow DOM `static styles`.
 **Step 3: Full production build**
 
 Run:
+
 ```bash
 pnpm -r build
 cd apps/desktop && pnpm run build
 ```
+
 Expected: Build succeeds, `.app` bundle works
 
 **Step 4: Verify line counts**
 
 Run:
+
 ```bash
 find apps/desktop/src/renderer/canvas -name '*.ts' -exec wc -l {} + | sort -n
 ```
+
 Expected: Every file under 200 lines
 
 **Step 5: Commit**
@@ -801,6 +885,7 @@ open /Applications/Sauria.app
 **Step 2: Verify all functionality**
 
 Same checklist as Task 13 Step 3, plus:
+
 - [ ] Spring physics animation on dock is smooth
 - [ ] Edge activity dots travel correctly (800ms, cubic ease-out)
 - [ ] Bidirectional edge animation works (B→A on edge A→B)

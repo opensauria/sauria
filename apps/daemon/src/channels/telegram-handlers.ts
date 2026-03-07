@@ -27,11 +27,7 @@ export async function ingestText(
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    audit.logAction(
-      'telegram:ingest_error',
-      { source, error: String(error) },
-      { success: false },
-    );
+    audit.logAction('telegram:ingest_error', { source, error: String(error) }, { success: false });
   }
 }
 

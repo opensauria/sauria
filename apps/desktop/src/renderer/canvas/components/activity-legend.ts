@@ -29,7 +29,9 @@ export class CanvasLegend extends LitElement {
       opacity: 0;
       transform: translateY(-8px);
       pointer-events: none;
-      transition: opacity 0.3s ease, transform 0.3s ease;
+      transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
     }
     .legend.visible {
       opacity: 1;

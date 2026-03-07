@@ -26,16 +26,17 @@ export class McpHealthMonitor {
         results.push({ name, status: 'healthy' });
       } catch (pingError: unknown) {
         const pingMessage = pingError instanceof Error ? pingError.message : String(pingError);
-        logger.warn(`MCP health check failed for ${name}, attempting reconnect`, { error: pingMessage });
+        logger.warn(`MCP health check failed for ${name}, attempting reconnect`, {
+          error: pingMessage,
+        });
 
         try {
           await this.reconnect(entry.config);
           results.push({ name, status: 'reconnected' });
           logger.info(`MCP server ${name} reconnected successfully`);
         } catch (reconnectError: unknown) {
-          const reconnectMessage = reconnectError instanceof Error
-            ? reconnectError.message
-            : String(reconnectError);
+          const reconnectMessage =
+            reconnectError instanceof Error ? reconnectError.message : String(reconnectError);
           results.push({ name, status: 'failed', error: reconnectMessage });
           logger.error(`MCP server ${name} reconnect failed`, { error: reconnectMessage });
         }

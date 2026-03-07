@@ -66,7 +66,7 @@ export class GraphSyncController implements ReactiveController {
 
     const existing = this.graph.nodes.find((n) => n.platform === 'owner');
     if (!existing) {
-      const cx = (window.innerWidth / 2) / (this.graph.viewport.zoom || 1) - 60;
+      const cx = window.innerWidth / 2 / (this.graph.viewport.zoom || 1) - 60;
       this.graph.nodes.unshift({
         id: 'owner',
         platform: 'owner',

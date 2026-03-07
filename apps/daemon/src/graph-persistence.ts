@@ -1,4 +1,11 @@
-import { writeFileSync, renameSync, readdirSync, unlinkSync, existsSync, readFileSync } from 'node:fs';
+import {
+  writeFileSync,
+  renameSync,
+  readdirSync,
+  unlinkSync,
+  existsSync,
+  readFileSync,
+} from 'node:fs';
 import { writeFile, rename } from 'node:fs/promises';
 import { dirname, basename, join } from 'node:path';
 import type { CanvasGraph } from './orchestrator/types.js';

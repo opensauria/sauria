@@ -64,17 +64,11 @@ export function handleVerification(
   res.writeHead(403).end();
 }
 
-export function verifySignature(
-  req: IncomingMessage,
-  rawBody: string,
-  appSecret: string,
-): boolean {
+export function verifySignature(req: IncomingMessage, rawBody: string, appSecret: string): boolean {
   const signatureHeader = req.headers['x-hub-signature-256'];
   if (typeof signatureHeader !== 'string') return false;
 
-  const expectedSignature = createHmac('sha256', appSecret)
-    .update(rawBody)
-    .digest('hex');
+  const expectedSignature = createHmac('sha256', appSecret).update(rawBody).digest('hex');
 
   const expected = `sha256=${expectedSignature}`;
 
@@ -159,11 +153,7 @@ async function ingestText(
       timestamp: new Date().toISOString(),
     });
   } catch (error: unknown) {
-    audit.logAction(
-      'whatsapp:ingest_error',
-      { source, error: String(error) },
-      { success: false },
-    );
+    audit.logAction('whatsapp:ingest_error', { source, error: String(error) }, { success: false });
   }
 }
 

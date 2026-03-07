@@ -54,8 +54,10 @@ const catalog: Translations = {
   'canvas.instructions': 'Anweisungen',
   'canvas.agentPersona': 'Agenten-Persönlichkeit',
   'canvas.commStyle': 'Kommunikationsstil (alle Agenten)',
-  'canvas.agentPersonaPlaceholder': 'Beschreibe Rolle, Persönlichkeit und Verhalten dieses Agenten...',
-  'canvas.commStylePlaceholder': 'Lege fest, wie alle Agenten antworten sollen...\n\nBeispiel:\n- Nur Klartext, kein Markdown\n- Prägnant und direkt\n- Keine Emojis',
+  'canvas.agentPersonaPlaceholder':
+    'Beschreibe Rolle, Persönlichkeit und Verhalten dieses Agenten...',
+  'canvas.commStylePlaceholder':
+    'Lege fest, wie alle Agenten antworten sollen...\n\nBeispiel:\n- Nur Klartext, kein Markdown\n- Prägnant und direkt\n- Keine Emojis',
   'canvas.standingOrders': 'Dauerhafte Anweisungen für diesen Agenten...',
   'canvas.useTemplate': 'Vorlage verwenden',
   'canvas.responseLanguage': 'Antwortsprache',
@@ -167,8 +169,10 @@ const catalog: Translations = {
   'brain.statConversations': 'Gespräche',
   'brain.statFacts': 'Fakten',
   'brain.connectError': 'Verbindung zu Sauria fehlgeschlagen',
-  'brain.extractionError': 'Entitätsextraktion {0} Mal fehlgeschlagen — prüfe ob ein KI-Anbieter konfiguriert ist',
-  'brain.noExtractHint': 'Ereignisse aufgezeichnet aber keine Entitäten extrahiert — prüfe ob ein KI-Anbieter verbunden ist',
+  'brain.extractionError':
+    'Entitätsextraktion {0} Mal fehlgeschlagen — prüfe ob ein KI-Anbieter konfiguriert ist',
+  'brain.noExtractHint':
+    'Ereignisse aufgezeichnet aber keine Entitäten extrahiert — prüfe ob ein KI-Anbieter verbunden ist',
   'brain.colName': 'Name',
   'brain.colType': 'Typ',
   'brain.colImportance': 'Wichtigkeit',

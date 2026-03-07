@@ -55,7 +55,8 @@ const catalog: Translations = {
   'canvas.agentPersona': 'شخصية الوكيل',
   'canvas.commStyle': 'أسلوب التواصل (جميع الوكلاء)',
   'canvas.agentPersonaPlaceholder': 'صف دور هذا الوكيل وشخصيته وسلوكه...',
-  'canvas.commStylePlaceholder': 'حدّد كيف يجب أن يستجيب جميع الوكلاء...\n\nمثال:\n- نص عادي فقط، بدون markdown\n- موجز ومباشر\n- بدون رموز تعبيرية',
+  'canvas.commStylePlaceholder':
+    'حدّد كيف يجب أن يستجيب جميع الوكلاء...\n\nمثال:\n- نص عادي فقط، بدون markdown\n- موجز ومباشر\n- بدون رموز تعبيرية',
   'canvas.standingOrders': 'تعليمات دائمة لهذا الوكيل...',
   'canvas.useTemplate': 'استخدام قالب',
   'canvas.responseLanguage': 'لغة الرد',
@@ -168,7 +169,8 @@ const catalog: Translations = {
   'brain.statFacts': 'حقائق',
   'brain.connectError': 'تعذر الاتصال بـ Sauria',
   'brain.extractionError': 'فشل استخراج الكيانات {0} مرة — تحقق من إعداد مزود الذكاء الاصطناعي',
-  'brain.noExtractHint': 'تم تسجيل الأحداث لكن لم يتم استخراج كيانات — تحقق من اتصال مزود الذكاء الاصطناعي',
+  'brain.noExtractHint':
+    'تم تسجيل الأحداث لكن لم يتم استخراج كيانات — تحقق من اتصال مزود الذكاء الاصطناعي',
   'brain.colName': 'الاسم',
   'brain.colType': 'النوع',
   'brain.colImportance': 'الأهمية',

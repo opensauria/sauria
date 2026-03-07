@@ -97,9 +97,7 @@ export class NodeDragHandler {
     node.position.x = this.dragStartNodeX + (e.clientX - this.dragStartX) / zoom;
     node.position.y = this.dragStartNodeY + (e.clientY - this.dragStartY) / zoom;
 
-    const card = world.querySelector(
-      `[data-node-id="${this.dragNodeId}"]`,
-    ) as HTMLElement | null;
+    const card = world.querySelector(`[data-node-id="${this.dragNodeId}"]`) as HTMLElement | null;
     if (card) {
       card.style.left = node.position.x + 'px';
       card.style.top = node.position.y + 'px';
@@ -113,9 +111,7 @@ export class NodeDragHandler {
     const cardCx = node.position.x + 60;
     const cardCy = node.position.y + 75;
     world.querySelectorAll('.workspace-frame').forEach((frame) => {
-      const ws = graph.workspaces.find(
-        (w) => w.id === (frame as HTMLElement).dataset.workspaceId,
-      );
+      const ws = graph.workspaces.find((w) => w.id === (frame as HTMLElement).dataset.workspaceId);
       if (!ws) return;
       frame.classList.toggle('drop-target', isInsideWorkspace(cardCx, cardCy, ws));
     });
@@ -153,9 +149,7 @@ export class NodeDragHandler {
       .querySelectorAll('.workspace-frame.drop-target')
       .forEach((f) => f.classList.remove('drop-target'));
 
-    const card = world.querySelector(
-      `[data-node-id="${this.dragNodeId}"]`,
-    ) as HTMLElement | null;
+    const card = world.querySelector(`[data-node-id="${this.dragNodeId}"]`) as HTMLElement | null;
     if (card) card.classList.remove('dragging');
 
     this.isDragging = false;
@@ -177,9 +171,9 @@ export class NodeDragHandler {
 
     if (port && port.dataset.nodeId !== this.edgeFromId && this.edgeFromId) {
       const toId = port.dataset.nodeId!;
-      const hasEdge = this.cb.getGraph().edges.some(
-        (edge) => edge.from === this.edgeFromId && edge.to === toId,
-      );
+      const hasEdge = this.cb
+        .getGraph()
+        .edges.some((edge) => edge.from === this.edgeFromId && edge.to === toId);
       if (!hasEdge) this.cb.onEdgeCreated(this.edgeFromId, toId);
     }
     this.edgeFromId = null;

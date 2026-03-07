@@ -29,19 +29,39 @@ export class DragController implements ReactiveController {
     host.addController(this);
   }
 
-  hostConnected(): void { /* noop */ }
-  hostDisconnected(): void { /* noop */ }
+  hostConnected(): void {
+    /* noop */
+  }
+  hostDisconnected(): void {
+    /* noop */
+  }
 
   /* ── Delegated state (read by host) ── */
 
-  get isDragging(): boolean { return this.nodeHandler.isDragging; }
-  get dragNodeId(): string | null { return this.nodeHandler.dragNodeId; }
-  get isEdgeDragging(): boolean { return this.nodeHandler.isEdgeDragging; }
-  get edgeFromId(): string | null { return this.nodeHandler.edgeFromId; }
-  get isWsDragging(): boolean { return this.wsHandler.isWsDragging; }
-  get wsDragId(): string | null { return this.wsHandler.wsDragId; }
-  get isWsResizing(): boolean { return this.wsHandler.isWsResizing; }
-  get wsResizeId(): string | null { return this.wsHandler.wsResizeId; }
+  get isDragging(): boolean {
+    return this.nodeHandler.isDragging;
+  }
+  get dragNodeId(): string | null {
+    return this.nodeHandler.dragNodeId;
+  }
+  get isEdgeDragging(): boolean {
+    return this.nodeHandler.isEdgeDragging;
+  }
+  get edgeFromId(): string | null {
+    return this.nodeHandler.edgeFromId;
+  }
+  get isWsDragging(): boolean {
+    return this.wsHandler.isWsDragging;
+  }
+  get wsDragId(): string | null {
+    return this.wsHandler.wsDragId;
+  }
+  get isWsResizing(): boolean {
+    return this.wsHandler.isWsResizing;
+  }
+  get wsResizeId(): string | null {
+    return this.wsHandler.wsResizeId;
+  }
 
   /* ── Start operations ── */
 

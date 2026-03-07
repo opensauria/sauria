@@ -280,7 +280,9 @@ describe('WhatsAppChannel', () => {
       vi.stubGlobal('fetch', mockFetch);
 
       // Silence via guards
-      const guards = (channel as unknown as Record<string, unknown>)['guards'] as { silence(h: number): void };
+      const guards = (channel as unknown as Record<string, unknown>)['guards'] as {
+        silence(h: number): void;
+      };
       guards.silence(1);
 
       await channel.sendAlert({

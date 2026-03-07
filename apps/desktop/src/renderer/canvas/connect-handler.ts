@@ -11,7 +11,9 @@ export async function handleConnect(node: AgentNode): Promise<ConnectResult> {
   let credentials: Record<string, unknown> = {};
 
   if (platform === 'telegram') {
-    const rawId = String(formData.userId || '').trim().replace(/\D/g, '');
+    const rawId = String(formData.userId || '')
+      .trim()
+      .replace(/\D/g, '');
     const parsedId = parseInt(rawId, 10);
     if (!rawId || isNaN(parsedId) || parsedId <= 0) {
       return { success: false, error: 'User ID must be a positive number' };

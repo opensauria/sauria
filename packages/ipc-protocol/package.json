@@ -4,7 +4,11 @@
   "private": true,
   "author": "Teo Bouancheau <t.bouancheau@gmail.com>",
   "license": "BUSL-1.1",
-  "repository": { "type": "git", "url": "https://github.com/teobouancheau/sauria.git", "directory": "packages/ipc-protocol" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/teobouancheau/sauria.git",
+    "directory": "packages/ipc-protocol"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -14,7 +18,9 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc --noEmit"
