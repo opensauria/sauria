@@ -28,6 +28,7 @@
     "global-shortcut:allow-unregister",
     "shell:default",
     "shell:allow-open",
-    "opener:default"
+    "opener:default",
+    "deep-link:default"
   ]
 }

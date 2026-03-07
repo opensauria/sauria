@@ -183,6 +183,7 @@ export const SauriaConfigSchema = z
         }),
       )
       .default({}),
+    authProxyUrl: z.string().url().default('https://auth.sauria.dev'),
   })
   .strict();
 

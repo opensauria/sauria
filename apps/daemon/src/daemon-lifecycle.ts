@@ -25,6 +25,7 @@ import type { MessageQueue } from './orchestrator/message-queue.js';
 import { CheckpointManager } from './orchestrator/checkpoint.js';
 import { IntegrationRegistry } from './integrations/registry.js';
 import { INTEGRATION_CATALOG } from './integrations/catalog.js';
+import { TokenRefreshService } from './integrations/token-refresh.js';
 import { acquirePidLock, releasePidLock } from './pid-lock.js';
 import { loadCanvasGraph } from './graph-loader.js';
 import {
@@ -34,6 +35,7 @@ import {
 } from './orchestrator-setup.js';
 import { registerIntegrationHandlers } from './integration-ipc.js';
 import { setupCanvasWatcher, setupOwnerCommandWatcher } from './daemon-watchers.js';
+import { vaultGet } from './security/vault-key.js';
 
 export interface DaemonContext {
   readonly db: BetterSqlite3.Database;
@@ -49,6 +51,7 @@ export interface DaemonContext {
   readonly queue: MessageQueue | null;
   readonly ipcServer: DaemonIpcServer;
   readonly integrationRegistry: IntegrationRegistry;
+  readonly tokenRefreshService: TokenRefreshService;
   readonly canvasWatcher: FSWatcher | null;
   readonly ownerCommandWatcher: FSWatcher | null;
 }
@@ -85,8 +88,30 @@ export async function startDaemonContext(): Promise<DaemonContext> {
 
   mcpClients.startHealthMonitor();
 
+  const canvasGraph = loadCanvasGraph();
   const integrationRegistry = new IntegrationRegistry(mcpClients, audit, INTEGRATION_CATALOG);
-  await autoConnectIntegrations(integrationRegistry, config);
+  await autoConnectIntegrations(integrationRegistry, config, canvasGraph);
+
+  // Token refresh service for OAuth integrations
+  const tokenRefreshService = new TokenRefreshService(integrationRegistry, logger);
+
+  // Schedule refreshes for any existing OAuth credentials
+  for (const def of INTEGRATION_CATALOG) {
+    if (!def.mcpRemote) continue;
+    const vaultKey = `integration_oauth_${def.id}`;
+    const stored = await vaultGet(vaultKey);
+    if (!stored) continue;
+    try {
+      const cred = JSON.parse(stored) as { expiresAt?: number };
+      if (cred.expiresAt) {
+        const base = def.mcpRemote.url.replace(/\/mcp$/, '').replace(/\/sse$/, '').replace(/\/$/, '');
+        const tokenUrl = `${base}/.well-known/oauth-authorization-server`;
+        tokenRefreshService.scheduleRefresh(def.id, tokenUrl, cred.expiresAt);
+      }
+    } catch {
+      // Ignore malformed credentials
+    }
+  }
 
   const ipcServer = await startIpcServer(paths.socket, db, Date.now());
 
@@ -150,7 +175,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
 
   return {
     db, config, audit, router, mcpClients, engine, mcpServer, refreshInterval,
-    ipcServer, integrationRegistry, registry, orchestrator, queue,
+    ipcServer, integrationRegistry, tokenRefreshService, registry, orchestrator, queue,
     canvasWatcher, ownerCommandWatcher,
   };
 }
@@ -183,6 +208,9 @@ export async function stopDaemonContext(ctx: DaemonContext): Promise<void> {
 
   ctx.engine.stop();
   logger.info('Proactive engine stopped');
+
+  ctx.tokenRefreshService.stop();
+  logger.info('Token refresh service stopped');
 
   await ctx.integrationRegistry.disconnectAll();
   ctx.mcpClients.stopHealthMonitor();

@@ -82,6 +82,7 @@ export interface AgentNode {
   readonly role: AgentRole;
   readonly autonomy: AutonomyLevel;
   readonly instructions: string;
+  readonly description?: string;
   readonly behavior?: AgentBehavior;
   readonly integrations?: readonly string[];
 }

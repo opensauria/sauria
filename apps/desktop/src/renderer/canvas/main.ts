@@ -25,6 +25,7 @@ interface AgentNode {
   role?: string;
   autonomy?: number | string;
   instructions?: string;
+  description?: string;
   behavior?: {
     proactive?: boolean;
     ownerResponse?: boolean;
@@ -1014,6 +1015,12 @@ function renderNodes() {
         '</span>' +
         '<button class="card-setup-close" data-action="close-edit">&times;</button>' +
         '</div>' +
+        '<div class="card-setup-field">' +
+        '<label>Role</label>' +
+        '<input type="text" data-field="description" placeholder="e.g. Customer support, Research..." value="' +
+        escapeHtml(node.description || '') +
+        '" />' +
+        '</div>' +
         fieldsHtml +
         '<div class="card-setup-actions">' +
         '<button class="btn-cancel" data-action="disconnect">Disconnect</button>' +
@@ -1024,7 +1031,7 @@ function renderNodes() {
       card.className = 'agent-card owner-card' + (node.id === selectedNodeId ? ' selected' : '');
 
       var ownerAvatarInner = node.photo
-        ? '<img src="' + node.photo + '" alt="" />'
+        ? '<img src="' + escapeHtml(node.photo) + '" alt="" />'
         : '<span class="avatar-initials">' + getInitials(node.label) + '</span>';
 
       card.innerHTML =
@@ -1045,10 +1052,9 @@ function renderNodes() {
       /* Connected portrait card */
       card.className = 'agent-card' + (node.id === selectedNodeId ? ' selected' : '');
       var photoHtml = node.photo
-        ? '<img src="' + node.photo + '" alt="" />'
+        ? '<img src="' + escapeHtml(node.photo) + '" alt="" />'
         : platformIcons[node.platform] || '';
       var displayName = node.meta.firstName || node.label.replace(/^@/, '');
-      var handle = node.label.startsWith('@') ? node.label : '';
       var botInfo = getBotInfo(node);
 
       card.innerHTML =
@@ -1064,7 +1070,6 @@ function renderNodes() {
         '<div class="agent-name">' +
         escapeHtml(displayName) +
         '</div>' +
-        (handle ? '<div class="agent-handle">' + escapeHtml(handle) + '</div>' : '') +
         (botInfo ? '<div class="agent-bot-info">' + escapeHtml(botInfo) + '</div>' : '') +
         '<span class="platform-badge ' +
         node.platform +
@@ -1513,7 +1518,7 @@ function convKey(a: string, b: string): string {
 function buildParticipant(node: AgentNode | undefined): string {
   if (!node) return '<span class="conv-participant-name">Unknown</span>';
   var photoHtml = node.photo
-    ? '<div class="conv-participant-avatar"><img src="' + node.photo + '" alt="" /></div>'
+    ? '<div class="conv-participant-avatar"><img src="' + escapeHtml(node.photo) + '" alt="" /></div>'
     : '<div class="conv-participant-avatar">' + (platformIcons[node.platform] || '') + '</div>';
   return (
     '<div class="conv-participant">' +
@@ -2845,9 +2850,14 @@ world.addEventListener('click', function (e) {
   }
 
   if (action === 'close-edit') {
+    // Save description from form input
+    if (node._formData?.description !== undefined) {
+      node.description = node._formData.description;
+    }
     flipCard(card, function () {
       node!._editing = false;
       renderNodes();
+      saveGraph();
     });
     e.stopPropagation();
     return;
@@ -3259,23 +3269,14 @@ function capitalize(s: string): string {
 }
 
 function getBotInfo(node: AgentNode): string {
-  var { meta, platform } = node;
-  if (platform === 'telegram') {
-    return meta.botId ? 'Bot \u00B7 ID ' + meta.botId : 'Bot';
-  }
-  if (platform === 'slack') {
-    return meta.teamId ? 'Team ' + meta.teamId : meta.botUserId ? 'Bot ' + meta.botUserId : '';
-  }
-  if (platform === 'discord') {
-    return meta.botId ? 'Bot \u00B7 ID ' + meta.botId : 'Bot';
-  }
+  if (node.description) return node.description;
+  var { platform } = node;
   if (platform === 'email') {
-    return meta.username && meta.imapHost ? meta.username + '@' + meta.imapHost : meta.username || '';
+    return node.meta.username && node.meta.imapHost
+      ? node.meta.username + '@' + node.meta.imapHost
+      : node.meta.username || '';
   }
-  if (platform === 'whatsapp') {
-    return meta.phoneNumberId ? 'Phone ' + meta.phoneNumberId : '';
-  }
-  return '';
+  return capitalize(platform);
 }
 
 /* ═══════════════════════════════════════════════
@@ -3324,14 +3325,15 @@ function openAgentDetail(nodeId: string) {
   panelTitle.textContent = isOwner ? t('canvas.ownerSettings') : t('canvas.agentDetails');
   var photoHtml = isOwner
     ? node.photo
-      ? '<img src="' + node.photo + '" alt="" />'
+      ? '<img src="' + escapeHtml(node.photo) + '" alt="" />'
       : '<span class="avatar-initials" style="font-size:12px;">' +
         getInitials(node.label) +
         '</span>'
     : node.photo
-      ? '<img src="' + node.photo + '" alt="" />'
+      ? '<img src="' + escapeHtml(node.photo) + '" alt="" />'
       : platformIcons[node.platform] || '';
   var displayName = isOwner ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
+  var handle = !isOwner && node.label.startsWith('@') ? node.label : '';
   var platformLabel = isOwner ? t('canvas.youOwner') : capitalize(node.platform);
   var avatarClass = isOwner ? 'detail-avatar owner-avatar' : 'detail-avatar';
   identityEl.innerHTML =
@@ -3344,6 +3346,7 @@ function openAgentDetail(nodeId: string) {
     '<div class="detail-agent-name">' +
     escapeHtml(displayName) +
     '</div>' +
+    (handle ? '<div class="detail-agent-handle">' + escapeHtml(handle) + '</div>' : '') +
     '<div class="detail-agent-platform">' +
     escapeHtml(platformLabel) +
     '</div>' +
@@ -3354,8 +3357,10 @@ function openAgentDetail(nodeId: string) {
   var sectionAutonomy = document.getElementById('section-autonomy') as HTMLDivElement;
   var sectionBehavior = document.getElementById('section-behavior') as HTMLDivElement;
   var sectionLanguage = document.getElementById('section-language') as HTMLDivElement;
+  var sectionDescription = document.getElementById('section-description') as HTMLDivElement;
   sectionRole.style.display = isOwner ? 'none' : '';
   sectionAutonomy.style.display = isOwner ? 'none' : '';
+  sectionDescription.style.display = isOwner ? 'none' : '';
   sectionBehavior.style.display = isOwner ? 'none' : '';
   sectionLanguage.style.display = isOwner ? '' : 'none';
   if (isOwner) {
@@ -3374,6 +3379,10 @@ function openAgentDetail(nodeId: string) {
     seg.classList.toggle('active', parseInt((seg as HTMLElement).dataset.level!, 10) === autonomy);
   });
   moveAutonomyHighlight(autonomy, false);
+
+  /* Description */
+  var descriptionInput = document.getElementById('agent-description') as HTMLInputElement;
+  descriptionInput.value = node.description || '';
 
   /* Instructions -- dynamic label based on node type */
   var instructionsLabel = document.getElementById('instructions-label') as HTMLSpanElement;
@@ -3420,14 +3429,14 @@ function loadAgentKpis(nodeId: string, container: HTMLDivElement) {
         costUsd: number;
       };
       var items = [
-        { value: String(kpis.messagesHandled), label: 'Messages' },
-        { value: String(kpis.tasksCompleted), label: 'Tasks' },
+        { value: String(kpis.messagesHandled), label: t('canvas.kpiMessages') },
+        { value: String(kpis.tasksCompleted), label: t('canvas.kpiTasks') },
         {
           value:
             kpis.avgResponseTimeMs > 0 ? (kpis.avgResponseTimeMs / 1000).toFixed(1) + 's' : '--',
-          label: 'Avg Response',
+          label: t('canvas.kpiAvgResponse'),
         },
-        { value: kpis.costUsd > 0 ? '$' + kpis.costUsd.toFixed(2) : '--', label: 'Cost' },
+        { value: kpis.costUsd > 0 ? '$' + kpis.costUsd.toFixed(2) : '--', label: t('canvas.kpiCost') },
       ];
       container.innerHTML = items
         .map(function (item) {
@@ -3447,7 +3456,7 @@ function loadAgentKpis(nodeId: string, container: HTMLDivElement) {
     .catch(function () {
       container.innerHTML =
         '<div class="kpi-item" style="grid-column: span 2; text-align: center">' +
-        '<span class="kpi-label">No data yet</span></div>';
+        '<span class="kpi-label">' + t('canvas.kpiNoData') + '</span></div>';
     });
 }
 
@@ -3509,6 +3518,21 @@ document.querySelectorAll('#autonomy-segmented .autonomy-seg').forEach(function 
     saveGraphFromPanel();
   });
 });
+
+/* Description input */
+(document.getElementById('agent-description') as HTMLInputElement).addEventListener(
+  'input',
+  function () {
+    if (!detailNodeId) return;
+    var node = graph.nodes.find(function (n) {
+      return n.id === detailNodeId;
+    });
+    if (!node) return;
+    node.description = (this as HTMLInputElement).value || undefined;
+    renderNodes();
+    saveGraphFromPanel();
+  },
+);
 
 /* Instructions textarea */
 (document.getElementById('agent-instructions') as HTMLTextAreaElement).addEventListener(
@@ -4144,7 +4168,7 @@ function populateIntegrationSection(nodeId: string) {
     chip.innerHTML =
       iconHtml +
       '<span>' +
-      escapeHtml(inst.label) +
+      escapeHtml(def ? def.name : inst.label) +
       '</span>' +
       '<button class="integration-chip-remove" data-instance-id="' +
       escapeHtml(inst.id) +
@@ -4200,7 +4224,8 @@ function populateIntegrationSection(nodeId: string) {
     function renderDropdownItems(filter: string) {
       listContainer.innerHTML = '';
       var filtered = unassigned.filter(function (inst) {
-        return !filter || inst.label.toLowerCase().includes(filter.toLowerCase());
+        var displayLabel = catalogMap.get(inst.integrationId)?.name ?? inst.label;
+        return !filter || displayLabel.toLowerCase().includes(filter.toLowerCase());
       });
       if (filtered.length === 0) {
         listContainer.innerHTML =
@@ -4219,7 +4244,7 @@ function populateIntegrationSection(nodeId: string) {
           var item = document.createElement('div');
           item.className = 'integration-dropdown-item';
           item.dataset.instanceId = ui.id;
-          item.innerHTML = uicon + '<span>' + escapeHtml(ui.label) + '</span>';
+          item.innerHTML = uicon + '<span>' + escapeHtml(udef ? udef.name : ui.label) + '</span>';
           listContainer.appendChild(item);
         }
       }

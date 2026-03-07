@@ -3,9 +3,12 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import type { AuditLogger } from '../security/audit.js';
 import { SECURITY_LIMITS } from '../security/rate-limiter.js';
 import { McpHealthMonitor } from './health.js';
+import { connectRemoteMcp, type RemoteMcpConfig } from './remote-client.js';
+import { getLogger } from '../utils/logger.js';
 import type { ConnectedClient, HealthCheckResult, McpServerConfig } from './types.js';
 
 export type { ConnectedClient, HealthCheckResult, McpServerConfig } from './types.js';
+export type { RemoteMcpConfig } from './remote-client.js';
 
 interface ToolInfo {
   readonly name: string;
@@ -46,6 +49,7 @@ export class McpClientManager {
       command: config.command,
       args: [...config.args],
       env: config.env ? { ...config.env } : undefined,
+      cwd: config.cwd,
     });
 
     const client = new Client({ name: 'sauria', version: '0.1.0' }, { capabilities: {} });
@@ -54,6 +58,28 @@ export class McpClientManager {
 
     this.clients.set(config.name, { name: config.name, client, transport, config });
     this.audit.logAction('mcp:client_connect', { server: config.name });
+  }
+
+  async connectRemote(config: RemoteMcpConfig): Promise<void> {
+    if (this.clients.has(config.name)) {
+      throw new Error(`Server "${config.name}" is already connected.`);
+    }
+
+    if (this.clients.size >= SECURITY_LIMITS.mcp.maxConcurrentClients) {
+      throw new Error(
+        `Maximum concurrent MCP clients (${SECURITY_LIMITS.mcp.maxConcurrentClients}) reached.`,
+      );
+    }
+
+    const logger = getLogger();
+    const { client, transport } = await connectRemoteMcp(config, logger);
+    this.clients.set(config.name, {
+      name: config.name,
+      client,
+      transport,
+      config: { name: config.name, command: '', args: [] },
+    });
+    this.audit.logAction('mcp:client_connect', { server: config.name, remote: true });
   }
 
   async disconnect(name: string): Promise<void> {
