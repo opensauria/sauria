@@ -5,15 +5,14 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::time::{timeout, Duration};
 
+use crate::daemon_ipc;
 use crate::paths::Paths;
 
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
 type PendingMap = std::collections::HashMap<u64, oneshot::Sender<Result<Value, String>>>;
-
 type TxHandle = std::sync::Arc<Mutex<Option<mpsc::Sender<(u64, String)>>>>;
 
 pub struct DaemonClient {
@@ -39,6 +38,16 @@ impl DaemonClient {
         }
     }
 
+    #[cfg(unix)]
+    pub(crate) fn socket_path(&self) -> &str {
+        &self.socket_path
+    }
+
+    #[cfg(windows)]
+    pub(crate) fn ipc_port_path(&self) -> &str {
+        &self.ipc_port_path
+    }
+
     pub fn set_app_handle(&self, handle: AppHandle) {
         *self.event_handle.blocking_lock() = Some(handle);
     }
@@ -49,7 +58,7 @@ impl DaemonClient {
             return Ok(());
         }
 
-        let (reader, writer) = connect_ipc(self).await?;
+        let (reader, writer) = daemon_ipc::connect(self).await?;
         let (send_tx, mut send_rx) = mpsc::channel::<(u64, String)>(64);
         let pending_for_reader = self.pending.clone();
         let tx_for_reader = self.tx.clone();
@@ -74,7 +83,6 @@ impl DaemonClient {
                     continue;
                 }
                 if let Ok(msg) = serde_json::from_str::<Value>(&line) {
-                    // Push events from daemon (no id, has event field)
                     if let Some(event_name) = msg.get("event").and_then(|v| v.as_str()) {
                         if let Some(ref handle) = event_handle {
                             let data = msg.get("data").cloned().unwrap_or(Value::Null);
@@ -86,14 +94,8 @@ impl DaemonClient {
                         let mut pending = pending_for_reader.lock().await;
                         if let Some(sender) = pending.remove(&id) {
                             if let Some(err) = msg.get("error") {
-                                let code = err
-                                    .get("code")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("UNKNOWN");
-                                let message = err
-                                    .get("message")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("Unknown error");
+                                let code = err.get("code").and_then(|v| v.as_str()).unwrap_or("UNKNOWN");
+                                let message = err.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown error");
                                 let _ = sender.send(Err(format!("{code}: {message}")));
                             } else {
                                 let result = msg.get("result").cloned().unwrap_or(Value::Null);
@@ -103,9 +105,7 @@ impl DaemonClient {
                     }
                 }
             }
-            // Connection closed — clear tx so ensure_connected() reconnects
             *tx_for_reader.lock().await = None;
-            // Reject all pending requests
             let mut pending = pending_for_reader.lock().await;
             for (_, sender) in pending.drain() {
                 let _ = sender.send(Err("Daemon connection closed".to_string()));
@@ -138,7 +138,6 @@ impl DaemonClient {
             let mut tx_guard = self.tx.lock().await;
             if let Some(tx) = tx_guard.as_ref() {
                 if tx.send((id, line)).await.is_err() {
-                    // Writer task is dead — clear tx so next request reconnects
                     *tx_guard = None;
                     let mut pending = self.pending.lock().await;
                     pending.remove(&id);
@@ -161,59 +160,4 @@ impl DaemonClient {
             }
         }
     }
-
-}
-
-// ─── Platform-specific IPC connection ────────────────────────────────────────
-
-#[cfg(unix)]
-async fn connect_ipc(
-    client: &DaemonClient,
-) -> Result<
-    (
-        tokio::io::ReadHalf<tokio::net::UnixStream>,
-        tokio::io::WriteHalf<tokio::net::UnixStream>,
-    ),
-    String,
-> {
-    use tokio::io::split;
-    use tokio::net::UnixStream;
-
-    let stream = timeout(CONNECT_TIMEOUT, UnixStream::connect(&client.socket_path))
-        .await
-        .map_err(|_| "Daemon connect timeout".to_string())?
-        .map_err(|e| format!("Daemon connection failed: {e}"))?;
-
-    Ok(split(stream))
-}
-
-#[cfg(windows)]
-async fn connect_ipc(
-    client: &DaemonClient,
-) -> Result<
-    (
-        tokio::io::ReadHalf<tokio::net::TcpStream>,
-        tokio::io::WriteHalf<tokio::net::TcpStream>,
-    ),
-    String,
-> {
-    use tokio::io::split;
-    use tokio::net::TcpStream;
-
-    let port_str = std::fs::read_to_string(&client.ipc_port_path)
-        .map_err(|e| format!("Failed to read daemon port file: {e}"))?;
-    let port: u16 = port_str
-        .trim()
-        .parse()
-        .map_err(|e| format!("Invalid daemon port: {e}"))?;
-
-    let stream = timeout(
-        CONNECT_TIMEOUT,
-        TcpStream::connect(("127.0.0.1", port)),
-    )
-    .await
-    .map_err(|_| "Daemon connect timeout".to_string())?
-    .map_err(|e| format!("Daemon connection failed: {e}"))?;
-
-    Ok(split(stream))
 }
