@@ -441,6 +441,54 @@ open /Applications/Sauria.app
 
 **NEVER manually copy files into `/Applications/Sauria.app/Contents/Resources/`** — always rebuild the full `.app`.
 
+### Pre-Push Checklist (CRITICAL — run before every push)
+
+```bash
+pnpm run format:check                     # Prettier must pass (includes pnpm-lock.yaml)
+pnpm -r typecheck                          # TypeScript strict mode, zero errors
+pnpm -F @sauria/daemon test               # All tests green
+pnpm -F @sauria/daemon build              # Daemon build must exit 0
+```
+
+If `pnpm-lock.yaml` changes (dependency add/update/remove), ALWAYS run `npx prettier --write pnpm-lock.yaml` before committing. CI will reject unformatted lockfiles.
+
+### CI Security Scan Exclusions
+
+The CI and release workflows run a banned-pattern scan. Legitimate uses of `createServer`, `.listen(`, `child_process` etc. must be excluded. Both `ci.yml` and `release.yml` MUST have identical exclusion lists:
+
+```
+--exclude=*banned-patterns* --exclude=*whatsapp*
+--exclude=*transcription* --exclude=*vault-key*
+--exclude=*resolve* --exclude=*machine-id*
+--exclude=*daemon-ipc*
+```
+
+When adding a new file that legitimately uses a banned pattern, add it to BOTH `ci.yml` AND `release.yml` exclusion lists. Never update one without the other.
+
+### Release Process
+
+Releases use CalVer (`vYYYY.M.D`). The process is fully automated:
+
+1. Trigger "Release PR" workflow manually in GitHub Actions
+2. Review and merge the release PR
+3. `release-tag.yml` auto-creates the tag on merge
+4. Tag triggers `release.yml`: verify → publish npm (requires approval) → GitHub Release + SBOM
+
+- Release PRs branch from `release/v*` — if a stale branch exists from a failed attempt, delete it before retrying
+- The `production` environment requires manual approval from `@teobouancheau`
+- npm publish uses provenance attestation (`--provenance`)
+
+### GitHub Repository Settings
+
+- **Repo**: `opensauria/sauria` (public, AGPL-3.0-or-later)
+- **Rulesets**: main (PR + CODEOWNERS review), develop (no force push), tags v* (no delete/force push)
+- **Admin bypass**: `@teobouancheau` can bypass rulesets (solo maintainer)
+- **Merge**: squash merge only, auto-delete branches
+- **Actions**: read-only default permissions, selected actions only (GitHub-owned + verified + 3 trusted)
+- **Environment `production`**: required reviewer `@teobouancheau`, deployment restricted to `v*` tags
+- **Secrets**: `NPM_TOKEN` at org level (`opensauria`)
+- **CODEOWNERS**: `* @teobouancheau`
+
 ### Dev Workflow
 
 When changing shared packages (`packages/*`): rebuild with `pnpm -r build` (Turbo handles deps)
