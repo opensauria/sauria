@@ -29,3 +29,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag "${{ steps.tag.outputs.tag }}"
           git push origin "${{ steps.tag.outputs.tag }}"
+
+      - name: Trigger release workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run release.yml --field tag=${{ steps.tag.outputs.tag }}
