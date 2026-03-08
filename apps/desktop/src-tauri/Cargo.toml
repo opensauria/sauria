@@ -1,6 +1,6 @@
 [package]
 name = "sauria-desktop"
-version = "2026.3.8.1"
+version = "2026.3.8.2"
 edition = "2021"
 authors = ["Teo Bouancheau <116342837+teobouancheau@users.noreply.github.com>"]
 license = "AGPL-3.0-or-later"

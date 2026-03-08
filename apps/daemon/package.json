@@ -1,6 +1,6 @@
 {
   "name": "@sauria/cli",
-  "version": "2026.3.8.1",
+  "version": "2026.3.8.2",
   "description": "Sauria — your AI workforce.",
   "type": "module",
   "bin": {
