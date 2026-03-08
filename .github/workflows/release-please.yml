@@ -22,13 +22,14 @@ jobs:
           YEAR=$(date -u +%Y)
           MONTH=$(date -u +%-m)
           DAY=$(date -u +%-d)
-          BASE="v${YEAR}.${MONTH}.${DAY}"
-          TAG="${BASE}"
-          SUFFIX=1
+          MDD=$(( MONTH * 100 + DAY ))
+          BASE="v${YEAR}.${MDD}"
+          PATCH=0
           CURRENT=$(cat .release-version 2>/dev/null || echo "")
+          TAG="${BASE}.${PATCH}"
           while git tag -l "${TAG}" | grep -q . || [ "${TAG}" = "${CURRENT}" ]; do
-            TAG="${BASE}.${SUFFIX}"
-            SUFFIX=$((SUFFIX + 1))
+            PATCH=$((PATCH + 1))
+            TAG="${BASE}.${PATCH}"
           done
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
