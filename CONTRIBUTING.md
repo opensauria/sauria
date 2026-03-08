@@ -5,7 +5,7 @@ Sauria is created and maintained by [Teo Bouancheau](https://github.com/teobouan
 ## Getting Started
 
 ```bash
-git clone https://github.com/teobouancheau/sauria.git
+git clone https://github.com/opensauria/sauria.git
 cd sauria
 pnpm install
 pnpm -r build
