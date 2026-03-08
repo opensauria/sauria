@@ -25,7 +25,8 @@ jobs:
           BASE="v${YEAR}.${MONTH}.${DAY}"
           TAG="${BASE}"
           SUFFIX=1
-          while git tag -l "${TAG}" | grep -q .; do
+          CURRENT=$(cat .release-version 2>/dev/null || echo "")
+          while git tag -l "${TAG}" | grep -q . || [ "${TAG}" = "${CURRENT}" ]; do
             TAG="${BASE}.${SUFFIX}"
             SUFFIX=$((SUFFIX + 1))
           done
