@@ -1,8 +1,8 @@
-// Re-export from canonical @opensauria/vault package.
+// Re-export from canonical @sauria/vault package.
 export {
   PathTraversalError,
   safePath,
   safeReadFile,
   safeWriteFile,
   safeMkdir,
-} from '@opensauria/vault';
+} from '@sauria/vault';

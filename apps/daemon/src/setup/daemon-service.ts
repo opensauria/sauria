@@ -3,14 +3,14 @@ import { join } from 'node:path';
 import { homedir, platform } from 'node:os';
 import { paths } from '../config/paths.js';
 
-const LABEL = 'ai.opensauria.daemon';
+const LABEL = 'ai.sauria.daemon';
 
-function opensauriaBinPath(): string {
-  return process.argv[1] ?? 'opensauria';
+function sauriaBinPath(): string {
+  return process.argv[1] ?? 'sauria';
 }
 
 function generateLaunchdPlist(): string {
-  const bin = opensauriaBinPath();
+  const bin = sauriaBinPath();
   const logDir = paths.logs;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -41,9 +41,9 @@ function generateLaunchdPlist(): string {
 }
 
 function generateSystemdUnit(): string {
-  const bin = opensauriaBinPath();
+  const bin = sauriaBinPath();
   return `[Unit]
-Description=OpenSauria Daemon
+Description=Sauria Daemon
 After=network.target
 
 [Service]
@@ -85,12 +85,12 @@ export function generateDaemonService(): DaemonServiceResult | null {
     if (!existsSync(systemdDir)) {
       mkdirSync(systemdDir, { recursive: true });
     }
-    const unitPath = join(systemdDir, 'opensauria.service');
+    const unitPath = join(systemdDir, 'sauria.service');
     writeFileSync(unitPath, generateSystemdUnit(), 'utf-8');
     return {
       platform: 'Linux',
       servicePath: unitPath,
-      activationCommand: 'systemctl --user enable --now opensauria',
+      activationCommand: 'systemctl --user enable --now sauria',
     };
   }
 
@@ -100,12 +100,12 @@ export function generateDaemonService(): DaemonServiceResult | null {
     if (!existsSync(taskDir)) {
       mkdirSync(taskDir, { recursive: true });
     }
-    const bin = opensauriaBinPath();
-    const xmlPath = join(taskDir, 'opensauria-task.xml');
+    const bin = sauriaBinPath();
+    const xmlPath = join(taskDir, 'sauria-task.xml');
     const xml = `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
-    <Description>OpenSauria Daemon</Description>
+    <Description>Sauria Daemon</Description>
   </RegistrationInfo>
   <Triggers>
     <LogonTrigger><Enabled>true</Enabled></LogonTrigger>
@@ -127,7 +127,7 @@ export function generateDaemonService(): DaemonServiceResult | null {
     return {
       platform: 'Windows',
       servicePath: xmlPath,
-      activationCommand: `schtasks /create /tn "OpenSauria" /xml "${xmlPath}"`,
+      activationCommand: `schtasks /create /tn "Sauria" /xml "${xmlPath}"`,
     };
   }
 

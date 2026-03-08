@@ -2,10 +2,14 @@ import type { ProactiveAlert } from '../engine/proactive.js';
 import type { AuditLogger } from '../security/audit.js';
 import type { IngestPipeline } from '../ingestion/pipeline.js';
 import type { InboundMessage } from '../orchestrator/types.js';
-import { sanitizeChannelInput, InputTooLongError } from '../security/sanitize.js';
-import { scrubPII } from '../security/pii-scrubber.js';
-import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
-import { formatAlert, type Channel } from './base.js';
+import { ChannelGuards, PollController, formatAlert, type Channel } from './base.js';
+import {
+  processInboundEmail,
+  extractTextFromSource,
+  type ParsedEmail,
+  type ImapFlowClient,
+  type NodemailerTransport,
+} from './email-handlers.js';
 
 const POLL_INTERVAL_MS = 30_000;
 const SMTP_TIMEOUT_MS = 15_000;
@@ -24,24 +28,10 @@ export interface EmailDeps {
   readonly onInbound?: (message: InboundMessage) => void;
 }
 
-interface ParsedEmail {
-  readonly uid: number;
-  readonly from: string;
-  readonly subject: string;
-  readonly text: string;
-  readonly date: string;
-}
-
 export class EmailChannel implements Channel {
   readonly name = 'email';
-  private readonly limiter = createLimiter(
-    'email',
-    SECURITY_LIMITS.channels.maxInboundMessagesPerMinute,
-    60_000,
-  );
-  private pollTimer: ReturnType<typeof setTimeout> | null = null;
-  private stopped = false;
-  private silenceUntil = 0;
+  private readonly guards = new ChannelGuards('email');
+  private readonly poller = new PollController(POLL_INTERVAL_MS);
   private lastSeenUid = 0;
   private imapClient: ImapFlowClient | null = null;
   private smtpTransport: NodemailerTransport | null = null;
@@ -65,7 +55,6 @@ export class EmailChannel implements Channel {
       await this.imapClient.connect();
       await this.imapClient.mailboxOpen('INBOX');
 
-      // Get latest UID to only process new messages
       const status = await this.imapClient.status('INBOX', { uidNext: true });
       this.lastSeenUid = (status.uidNext ?? 1) - 1;
     } catch (error) {
@@ -85,18 +74,12 @@ export class EmailChannel implements Channel {
       audit.logAction('email:smtp_connect_error', { error: String(error) }, { success: false });
     }
 
-    this.stopped = false;
-    this.schedulePoll();
+    this.poller.start(() => this.pollInbox());
   }
 
   async stop(): Promise<void> {
     this.deps.audit.logAction('email:stop', {});
-    this.stopped = true;
-
-    if (this.pollTimer) {
-      clearTimeout(this.pollTimer);
-      this.pollTimer = null;
-    }
+    this.poller.stop();
 
     if (this.imapClient) {
       try {
@@ -114,31 +97,23 @@ export class EmailChannel implements Channel {
   }
 
   async sendAlert(alert: ProactiveAlert): Promise<void> {
-    if (Date.now() < this.silenceUntil) return;
+    if (this.guards.isSilenced()) return;
     const text = formatAlert(alert);
-    await this.sendEmail(this.deps.username, `[OpenSauria Alert] ${alert.title}`, text);
+    await this.sendEmail(this.deps.username, `[Sauria Alert] ${alert.title}`, text);
   }
 
   async sendMessage(content: string, groupId: string | null): Promise<void> {
     const recipient = groupId ?? this.deps.username;
-    await this.sendEmail(recipient, '[OpenSauria]', content);
+    await this.sendEmail(recipient, '[Sauria]', content);
   }
 
   async sendToGroup(groupId: string, content: string): Promise<void> {
-    await this.sendEmail(groupId, '[OpenSauria]', content);
+    await this.sendEmail(groupId, '[Sauria]', content);
   }
 
-  /** Exposed for testing — triggers one poll cycle. */
+  /** Exposed for testing -- triggers one poll cycle. */
   async pollOnce(): Promise<void> {
     await this.pollInbox();
-  }
-
-  private schedulePoll(): void {
-    if (this.stopped) return;
-    this.pollTimer = setTimeout(async () => {
-      await this.pollInbox();
-      this.schedulePoll();
-    }, POLL_INTERVAL_MS);
   }
 
   private async pollInbox(): Promise<void> {
@@ -161,23 +136,13 @@ export class EmailChannel implements Channel {
           const from = msg.envelope?.from?.[0]?.address ?? 'unknown';
           const subject = msg.envelope?.subject ?? '';
           const date = msg.envelope?.date?.toISOString() ?? new Date().toISOString();
-
-          // Extract text from raw source
-          let text = '';
-          if (msg.source) {
-            const raw = msg.source.toString();
-            // Simple text extraction — get content after headers
-            const bodyStart = raw.indexOf('\r\n\r\n');
-            if (bodyStart !== -1) {
-              text = raw.slice(bodyStart + 4, bodyStart + 4 + 2000);
-            }
-          }
+          const text = extractTextFromSource(msg.source);
 
           messages.push({ uid: msg.uid, from, subject, text: text || subject, date });
         }
 
         for (const email of messages) {
-          await this.processInboundEmail(email);
+          await processInboundEmail(email, this.deps, this.guards);
           if (email.uid > this.lastSeenUid) {
             this.lastSeenUid = email.uid;
           }
@@ -190,67 +155,6 @@ export class EmailChannel implements Channel {
     }
   }
 
-  private async processInboundEmail(email: ParsedEmail): Promise<void> {
-    const { audit, pipeline, onInbound, nodeId } = this.deps;
-
-    if (!email.text.trim()) return;
-
-    if (!this.limiter.tryConsume()) {
-      audit.logAction('email:rate_limited', { from: email.from });
-      return;
-    }
-
-    let sanitizedText: string;
-    try {
-      sanitizedText = sanitizeChannelInput(email.text);
-    } catch (error) {
-      audit.logAction(
-        'email:sanitize_error',
-        { from: email.from, error: String(error) },
-        { success: false },
-      );
-      return;
-    }
-
-    let sanitizedSubject: string;
-    try {
-      sanitizedSubject = sanitizeChannelInput(email.subject);
-    } catch (error: unknown) {
-      sanitizedSubject = error instanceof InputTooLongError ? email.subject.slice(0, 200) : '';
-    }
-
-    try {
-      await pipeline.ingestEvent('email:message', {
-        content: sanitizedText,
-        timestamp: email.date,
-        from: email.from,
-        subject: sanitizedSubject,
-      });
-    } catch (error) {
-      audit.logAction('email:ingest_error', { error: String(error) }, { success: false });
-    }
-
-    audit.logAction('email:message_received', {
-      from: scrubPII(email.from),
-      subject: scrubPII(sanitizedSubject),
-      textLength: sanitizedText.length,
-    });
-
-    if (onInbound) {
-      const inbound: InboundMessage = {
-        sourceNodeId: nodeId ?? 'email-default',
-        platform: 'email',
-        senderId: email.from,
-        senderIsOwner: false,
-        groupId: null,
-        content: `[${sanitizedSubject}] ${sanitizedText}`,
-        contentType: 'text',
-        timestamp: email.date,
-      };
-      onInbound(inbound);
-    }
-  }
-
   private async sendEmail(to: string, subject: string, text: string): Promise<void> {
     const { audit, username } = this.deps;
 
@@ -260,43 +164,10 @@ export class EmailChannel implements Channel {
     }
 
     try {
-      await this.smtpTransport.sendMail({
-        from: username,
-        to,
-        subject,
-        text,
-      });
-
+      await this.smtpTransport.sendMail({ from: username, to, subject, text });
       audit.logAction('email:message_sent', { to, subject });
     } catch (error) {
       audit.logAction('email:send_error', { to, error: String(error) }, { success: false });
     }
   }
-}
-
-// ─── External library types (minimal) ──────────────────────────────
-
-interface ImapFlowClient {
-  connect(): Promise<void>;
-  logout(): Promise<void>;
-  mailboxOpen(path: string): Promise<unknown>;
-  status(path: string, query: { uidNext: boolean }): Promise<{ uidNext?: number }>;
-  getMailboxLock(path: string): Promise<{ release(): void }>;
-  fetch(
-    range: string,
-    options: { uid?: boolean; envelope?: boolean; source?: boolean },
-  ): AsyncIterable<{
-    uid: number;
-    envelope?: {
-      from?: Array<{ address?: string }>;
-      subject?: string;
-      date?: Date;
-    };
-    source?: Buffer;
-  }>;
-}
-
-interface NodemailerTransport {
-  sendMail(options: { from: string; to: string; subject: string; text: string }): Promise<unknown>;
-  close(): void;
 }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "OpenSauria",
-  "identifier": "ai.opensauria.desktop",
+  "productName": "Sauria",
+  "identifier": "ai.sauria.desktop",
   "build": {
     "beforeDevCommand": "pnpm run dev:vite",
     "beforeBuildCommand": "pnpm run native-deps && pnpm run build:vite",
@@ -18,11 +18,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png"
-    ],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png"],
     "resources": {
       "../../daemon/dist/": "daemon",
       "../native-deps/": "node_modules"
@@ -33,7 +29,8 @@
     "windows": {
       "wix": {
         "language": "en-US"
-      }
+      },
+      "nsis": {}
     },
     "linux": {
       "deb": {
@@ -45,8 +42,17 @@
     }
   },
   "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["sauria"]
+      }
+    },
     "shell": {
       "open": true
+    },
+    "updater": {
+      "endpoints": ["https://github.com/teobouancheau/sauria/releases/latest/download/latest.json"],
+      "pubkey": ""
     }
   }
 }

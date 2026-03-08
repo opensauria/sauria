@@ -3,18 +3,28 @@ use serde_json::Value;
 use std::fs;
 use std::io::Write;
 
+use crate::cmd_canvas_helpers;
 use crate::daemon_manager;
 use crate::paths::Paths;
 
 #[tauri::command]
 pub fn get_canvas_graph(paths: tauri::State<'_, Paths>) -> Value {
     if !paths.canvas.exists() {
-        return empty_graph();
+        return cmd_canvas_helpers::empty_graph();
     }
-    fs::read_to_string(&paths.canvas)
+    let mut canvas = fs::read_to_string(&paths.canvas)
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_else(empty_graph)
+        .unwrap_or_else(cmd_canvas_helpers::empty_graph);
+
+    if cmd_canvas_helpers::migrate_node_ids(&mut canvas, &paths) {
+        let _ = fs::write(
+            &paths.canvas,
+            serde_json::to_string_pretty(&canvas).unwrap_or_default(),
+        );
+    }
+
+    canvas
 }
 
 #[tauri::command]
@@ -25,13 +35,13 @@ pub fn save_canvas_graph(graph: Value, paths: tauri::State<'_, Paths>) -> Result
 
 #[derive(Serialize)]
 pub struct ParseResult {
-    parsed: bool,
+    pub(crate) parsed: bool,
     #[serde(rename = "type")]
-    cmd_type: String,
-    target: Option<String>,
-    message: String,
+    pub(crate) cmd_type: String,
+    pub(crate) target: Option<String>,
+    pub(crate) message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    owner_command: Option<Value>,
+    pub(crate) owner_command: Option<Value>,
 }
 
 #[tauri::command]
@@ -47,21 +57,18 @@ pub fn execute_owner_command(command: String, paths: tauri::State<'_, Paths>) ->
         };
     }
 
-    // Append raw command to owner-commands.jsonl and let daemon parse it
     if daemon_manager::is_daemon_running_by_pid(&paths) {
         if let Ok(mut file) = fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(&paths.owner_commands)
         {
-            // Write raw command as JSON line for daemon to parse
             let cmd_json = serde_json::json!({"raw": trimmed});
             let _ = writeln!(file, "{}", cmd_json);
         }
     }
 
-    // Simple parsing for UI feedback (the daemon does full Zod parsing)
-    if let Some(captures) = parse_simple_command(trimmed) {
+    if let Some(captures) = cmd_canvas_helpers::parse_simple_command(trimmed) {
         return captures;
     }
 
@@ -72,43 +79,6 @@ pub fn execute_owner_command(command: String, paths: tauri::State<'_, Paths>) ->
         message: trimmed.to_string(),
         owner_command: None,
     }
-}
-
-fn parse_simple_command(input: &str) -> Option<ParseResult> {
-    // @agent instruction
-    if input.starts_with('@') {
-        let rest = &input[1..];
-        let (agent, msg) = rest.split_once(char::is_whitespace).unwrap_or((rest, ""));
-        return Some(ParseResult {
-            parsed: true,
-            cmd_type: "instruct".to_string(),
-            target: Some(agent.to_string()),
-            message: msg.to_string(),
-            owner_command: Some(serde_json::json!({
-                "type": "instruct",
-                "agentId": agent,
-                "instruction": msg,
-            })),
-        });
-    }
-
-    // #workspace message -> broadcast
-    if input.starts_with('#') {
-        let rest = &input[1..];
-        let (ws, msg) = rest.split_once(char::is_whitespace).unwrap_or((rest, ""));
-        return Some(ParseResult {
-            parsed: true,
-            cmd_type: "broadcast".to_string(),
-            target: Some(ws.to_string()),
-            message: msg.to_string(),
-            owner_command: Some(serde_json::json!({
-                "type": "broadcast",
-                "message": msg,
-            })),
-        });
-    }
-
-    None
 }
 
 #[derive(Serialize)]
@@ -173,8 +143,8 @@ pub struct OwnerProfile {
 
 #[tauri::command]
 pub fn get_owner_profile() -> OwnerProfile {
-    let full_name = resolve_owner_name();
-    let photo = resolve_owner_photo();
+    let full_name = cmd_canvas_helpers::resolve_owner_name();
+    let photo = cmd_canvas_helpers::resolve_owner_photo();
 
     let custom_instructions = dirs::home_dir()
         .map(|h| h.join(".claude/CLAUDE.md"))
@@ -187,70 +157,4 @@ pub fn get_owner_profile() -> OwnerProfile {
         photo,
         custom_instructions,
     }
-}
-
-fn resolve_owner_name() -> String {
-    whoami::realname()
-}
-
-fn resolve_owner_photo() -> Option<String> {
-    #[cfg(target_os = "macos")]
-    {
-        let username = whoami::username();
-        if let Ok(output) = std::process::Command::new("/usr/bin/dscl")
-            .args([".", "-read", &format!("/Users/{username}"), "JPEGPhoto"])
-            .output()
-        {
-            let raw = String::from_utf8_lossy(&output.stdout);
-            let hex: String = raw
-                .lines()
-                .skip(1)
-                .collect::<Vec<_>>()
-                .join("")
-                .chars()
-                .filter(|c| !c.is_whitespace())
-                .collect();
-            if !hex.is_empty() {
-                if let Ok(bytes) = hex::decode(&hex) {
-                    return Some(format!(
-                        "data:image/jpeg;base64,{}",
-                        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes)
-                    ));
-                }
-            }
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        let face_path = dirs::home_dir().map(|h| h.join(".face"));
-        if let Some(path) = face_path.filter(|p| p.exists()) {
-            if let Ok(bytes) = fs::read(&path) {
-                if !bytes.is_empty() {
-                    let mime = if bytes.starts_with(&[0x89, 0x50]) {
-                        "image/png"
-                    } else {
-                        "image/jpeg"
-                    };
-                    return Some(format!(
-                        "data:{mime};base64,{}",
-                        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes)
-                    ));
-                }
-            }
-        }
-    }
-
-    None
-}
-
-fn empty_graph() -> Value {
-    serde_json::json!({
-        "version": 2,
-        "globalInstructions": "",
-        "workspaces": [],
-        "nodes": [],
-        "edges": [],
-        "viewport": {"x": 0, "y": 0, "zoom": 1}
-    })
 }

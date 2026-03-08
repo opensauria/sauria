@@ -1,0 +1,33 @@
+Sauria — Your AI Workforce
+===========================
+
+Copyright (c) 2025-2026 Teo Bouancheau. All rights reserved.
+
+Original Author:    Teo Bouancheau
+Project Inception:  February 16, 2026
+Repository:         https://github.com/teobouancheau/sauria
+
+This software is licensed under the GNU Affero General Public License v3.0.
+See the LICENSE file for the full license text.
+
+Trademarks
+----------
+"Sauria" and the Sauria logo are trademarks of Teo Bouancheau. Use of these
+trademarks without written permission is prohibited, except as required to
+comply with the attribution obligations of the license.
+
+Provenance
+----------
+This project has been continuously developed by Teo Bouancheau since its
+inception. The full commit history in the canonical repository serves as
+the authoritative record of authorship.
+
+Third-Party Licenses
+--------------------
+This project includes dependencies distributed under their own licenses.
+See the individual package directories for details. The use of third-party
+software does not alter the licensing terms of Sauria itself.
+
+Contact
+-------
+For security issues: see .github/SECURITY.md

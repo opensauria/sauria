@@ -65,6 +65,40 @@ export function sanitizeEntityName(name: string): string {
   return noXss.trim().slice(0, 200);
 }
 
+const TOOL_NAME_REGEX = /^[a-zA-Z0-9_\-/.]+$/;
+const MAX_TOOL_NAME_LENGTH = 128;
+const MAX_TOOL_DESCRIPTION_LENGTH = 500;
+
+export function sanitizeToolMetadata(
+  name: string,
+  description?: string,
+): { readonly name: string; readonly description: string } {
+  // Validate tool name — only allow safe characters
+  let safeName = stripControlChars(name).slice(0, MAX_TOOL_NAME_LENGTH);
+  if (!TOOL_NAME_REGEX.test(safeName)) {
+    safeName = safeName.replace(/[^a-zA-Z0-9_\-/.]/g, '_');
+  }
+
+  // Sanitize description — strip injection tokens and XSS
+  let safeDesc = description ?? '';
+  safeDesc = stripControlChars(safeDesc);
+  safeDesc = stripInjectionTokens(safeDesc);
+  safeDesc = safeDesc.replace(XSS_VECTOR_REGEX, '');
+  safeDesc = safeDesc.slice(0, MAX_TOOL_DESCRIPTION_LENGTH).trim();
+
+  return { name: safeName, description: safeDesc || 'no description' };
+}
+
+/**
+ * Strip prompt injection tokens from text destined for LLM prompts.
+ * Use this for any external/user-supplied data injected into system or user messages.
+ */
+export function stripPromptInjection(input: string, maxLength = 2000): string {
+  let result = stripControlChars(input);
+  result = stripInjectionTokens(result);
+  return result.slice(0, maxLength);
+}
+
 export function deepSanitizeStrings(obj: unknown): unknown {
   if (typeof obj === 'string') {
     return sanitizeEntityName(obj);

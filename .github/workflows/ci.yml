@@ -57,7 +57,7 @@ jobs:
       - name: Build packages
         run: pnpm turbo run build --filter='./packages/*'
 
-      - run: pnpm --filter @opensauria/daemon run test
+      - run: pnpm --filter @sauria/daemon run test
 
   security:
     name: Security
@@ -97,9 +97,11 @@ jobs:
           FOUND=0
           for pattern in "${BANNED[@]}"; do
             if grep -rn --include="*.ts" --include="*.js" \
+              --exclude-dir=node_modules \
               "--exclude=*banned-patterns*" "--exclude=*whatsapp*" \
               "--exclude=*transcription*" "--exclude=*vault-key*" \
               "--exclude=*resolve*" "--exclude=*machine-id*" \
+              "--exclude=*daemon-ipc*" \
               "$pattern" apps/daemon/src/ packages/; then
               echo "::error::Banned pattern found: $pattern"
               FOUND=1

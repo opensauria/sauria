@@ -1,8 +1,19 @@
 {
-  "name": "opensauria-desktop",
+  "name": "sauria-desktop",
   "version": "1.0.0",
-  "description": "OpenSauria — Personal AI Operating System",
+  "description": "Sauria — your AI workforce.",
   "private": true,
+  "author": {
+    "name": "Teo Bouancheau",
+    "email": "116342837+teobouancheau@users.noreply.github.com",
+    "url": "https://github.com/teobouancheau"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/teobouancheau/sauria.git",
+    "directory": "apps/desktop"
+  },
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "icons": "node scripts/copy-icons.js",
     "dev": "pnpm run icons && tauri dev",
@@ -13,16 +24,22 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@opensauria/design-tokens": "workspace:*",
+    "@lit/context": "^1.1.6",
+    "@lit/task": "^1.0.3",
+    "@sauria/design-tokens": "workspace:*",
     "@tauri-apps/api": "2.5.0",
     "@tauri-apps/plugin-global-shortcut": "2.2.0",
-    "@tauri-apps/plugin-shell": "2.2.0",
-    "@tauri-apps/plugin-opener": "2.2.0"
+    "@tauri-apps/plugin-opener": "2.2.0",
+    "@tauri-apps/plugin-shell": "2.2.1",
+    "@tauri-apps/plugin-updater": "2.5.0",
+    "lit": "^3.3.2"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.5.0",
+    "@types/three": "^0.183.1",
     "lucide-static": "0.574.0",
     "simple-icons": "16.9.0",
+    "three": "^0.183.2",
     "typescript": "5.9.3",
     "vite": "^7.3.1"
   }

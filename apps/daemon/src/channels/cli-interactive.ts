@@ -20,7 +20,7 @@ export async function startInteractiveMode(deps: InteractiveDeps): Promise<void>
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: 'opensauria>',
+    prompt: 'sauria>',
   });
 
   rl.prompt();

@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { secureFetch } from '../security/url-allowlist.js';
 import { vaultGet, vaultStore } from '../security/vault-key.js';
+import { getLogger } from '../utils/logger.js';
 import type { OAuthCredential, OAuthTokenResponse } from './types.js';
 
 const ANTHROPIC_OAUTH = {
@@ -125,6 +126,9 @@ async function loadOAuthFromVault(providerName: string): Promise<OAuthCredential
 
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
+const MAX_REFRESH_RETRIES = 3;
+const INITIAL_RETRY_DELAY_MS = 1000;
+
 export async function getValidOAuthToken(providerName: string): Promise<string | null> {
   const stored = await loadOAuthFromVault(providerName);
   if (!stored) return null;
@@ -133,15 +137,37 @@ export async function getValidOAuthToken(providerName: string): Promise<string |
     return stored.accessToken;
   }
 
-  const refreshed = await refreshOAuthToken(stored.refreshToken);
-  await storeOAuthTokens(providerName, refreshed);
-  return refreshed.access_token;
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < MAX_REFRESH_RETRIES; attempt++) {
+    try {
+      const refreshed = await refreshOAuthToken(stored.refreshToken);
+      await storeOAuthTokens(providerName, refreshed);
+      return refreshed.access_token;
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < MAX_REFRESH_RETRIES - 1) {
+        const delay = INITIAL_RETRY_DELAY_MS * 2 ** attempt;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  const logger = getLogger();
+  logger.error(`OAuth token refresh failed after ${String(MAX_REFRESH_RETRIES)} attempts`, {
+    provider: providerName,
+    error: lastError?.message ?? 'unknown',
+  });
+  throw lastError ?? new Error('OAuth token refresh failed');
 }
 
-export async function refreshOAuthTokenIfNeeded(providerName: string): Promise<void> {
+export async function refreshOAuthTokenIfNeeded(
+  providerName: string,
+  onRefreshFailure?: (provider: string, error: string) => void,
+): Promise<void> {
   try {
     await getValidOAuthToken(providerName);
-  } catch {
-    // Refresh failure is non-fatal for daemon; token will be re-fetched on next request
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    onRefreshFailure?.(providerName, errorMsg);
   }
 }

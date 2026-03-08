@@ -4,10 +4,7 @@ export type {
   AgentRole,
   AutonomyLevel,
   Platform,
-  ProactiveBehavior,
-  OwnerResponseBehavior,
-  PeerBehavior,
-  GroupBehavior,
+  AgentBehavior,
   WorkspaceGroup,
   Checkpoint,
   WorkspaceModels,
@@ -26,8 +23,8 @@ export type {
   KPI,
   AgentPerformance,
   OwnerCommand,
-} from '@opensauria/types';
+} from '@sauria/types';
 
-export { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '@opensauria/types';
+export { createEmptyGraph } from '@sauria/types';
 
-export { OwnerCommandSchema } from '@opensauria/ipc-protocol';
+export { OwnerCommandSchema } from '@sauria/ipc-protocol';

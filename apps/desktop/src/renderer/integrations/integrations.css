@@ -17,7 +17,7 @@
 }
 
 .integrations-title {
-  font-size: 16px;
+  font-size: var(--font-size-heading);
   font-weight: 600;
   white-space: nowrap;
   -webkit-app-region: no-drag;
@@ -32,7 +32,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0 var(--spacing-sm);
-  height: 40px;
+  height: 32px;
   width: 240px;
   -webkit-app-region: no-drag;
 }
@@ -217,7 +217,7 @@
 }
 
 .config-panel-title {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 600;
 }
 
@@ -301,6 +301,86 @@
   padding: var(--spacing-sm);
   background: color-mix(in srgb, var(--error) 8%, transparent);
   border-radius: var(--radius-sm);
+}
+
+.oauth-connect-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.oauth-description {
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.oauth-connect-section .btn svg {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* ── Auth toggle (both mode) ──────────────────── */
+
+.auth-toggle {
+  display: flex;
+  gap: 0;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  margin-bottom: 12px;
+}
+
+.auth-toggle-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-small);
+  font-weight: 500;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.auth-toggle-btn:hover {
+  color: var(--text);
+}
+
+.auth-toggle-btn.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+/* ── Connected Account ───────────────────────── */
+
+.connected-account {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: color-mix(in srgb, var(--success) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 20%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+.connected-account-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+
+.connected-account-label {
+  font-size: var(--font-size-label);
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .config-tools {

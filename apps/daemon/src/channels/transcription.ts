@@ -6,9 +6,10 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
-const VENV_PYTHON = process.platform === 'win32'
-  ? join(homedir(), '.opensauria', 'venv', 'Scripts', 'python.exe')
-  : join(homedir(), '.opensauria', 'venv', 'bin', 'python3');
+const VENV_PYTHON =
+  process.platform === 'win32'
+    ? join(homedir(), '.sauria', 'venv', 'Scripts', 'python.exe')
+    : join(homedir(), '.sauria', 'venv', 'bin', 'python3');
 const AUTO_MODELS: Record<string, string> = {
   darwin: 'mlx-community/whisper-large-v3-turbo',
   linux: 'large-v3-turbo',
@@ -33,7 +34,7 @@ export class TranscriptionService {
       throw new Error(`Audio exceeds ${String(MAX_AUDIO_BYTES)} byte limit`);
     }
 
-    const tmpPath = join(tmpdir(), `opensauria-${randomUUID()}.ogg`);
+    const tmpPath = join(tmpdir(), `sauria-${randomUUID()}.ogg`);
     try {
       await writeFile(tmpPath, oggBuffer);
       return await this.runWhisper(tmpPath);

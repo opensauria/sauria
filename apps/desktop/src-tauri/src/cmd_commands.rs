@@ -41,14 +41,14 @@ pub async fn execute_command(
             windows::send_command_result(&app, "Loading audit log...");
             match run_cli(&["audit", "10"]) {
                 Ok(stdout) => windows::send_command_result(&app, &stdout),
-                Err(_) => windows::send_command_result(&app, "CLI not available. Is opensauria installed?"),
+                Err(_) => windows::send_command_result(&app, "CLI not available. Is sauria installed?"),
             }
         }
         "doctor" => {
             windows::send_command_result(&app, "Running health check...");
             match run_cli(&["doctor"]) {
                 Ok(stdout) => windows::send_command_result(&app, &stdout),
-                Err(_) => windows::send_command_result(&app, "CLI not available. Is opensauria installed?"),
+                Err(_) => windows::send_command_result(&app, "CLI not available. Is sauria installed?"),
             }
         }
         "telegram" => {
@@ -68,7 +68,7 @@ pub async fn execute_command(
         }
         "docs" => {
             windows::hide_palette(&app)?;
-            let _ = open::that("https://opensauria.ai/docs");
+            let _ = open::that("https://sauria.dev/docs");
         }
         "quit" => {
             app.exit(0);
@@ -80,7 +80,7 @@ pub async fn execute_command(
 }
 
 fn run_cli(args: &[&str]) -> Result<String, String> {
-    let output = Command::new("opensauria")
+    let output = Command::new("sauria")
         .args(args)
         .output()
         .map_err(|e| e.to_string())?;

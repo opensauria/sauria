@@ -1,4 +1,4 @@
-// Re-export from canonical @opensauria/vault package.
+// Re-export from canonical @sauria/vault package.
 export {
   generateMasterKey,
   deriveWrappingKey,
@@ -7,4 +7,4 @@ export {
   storeSecret,
   getSecret,
   deleteSecret,
-} from '@opensauria/vault';
+} from '@sauria/vault';

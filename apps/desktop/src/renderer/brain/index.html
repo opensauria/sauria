@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>OpenSauria &mdash; Brain</title>
+    <title>Sauria &mdash; Brain</title>
     <link rel="stylesheet" href="../shared.css" />
     <link rel="stylesheet" href="./brain.css" />
   </head>
@@ -17,44 +17,44 @@
         <div class="brain-sidebar-section">
           <div class="brain-nav-item" data-view="graph">
             <img class="icon-mono" src="/icons/share-2.svg" alt="" />
-            Graph
+            <span data-i18n="brain.graph">Graph</span>
           </div>
         </div>
 
         <div class="brain-sidebar-section">
-          <div class="brain-sidebar-section-label">Knowledge</div>
+          <div class="brain-sidebar-section-label" data-i18n="brain.knowledge">Knowledge</div>
           <div class="brain-nav-item active" data-view="entities">
             <img class="icon-mono" src="/icons/user.svg" alt="" />
-            Entities
+            <span data-i18n="brain.entities">Entities</span>
             <span class="brain-nav-count" id="nav-count-entities">0</span>
           </div>
           <div class="brain-nav-item" data-view="relations">
             <img class="icon-mono" src="/icons/link.svg" alt="" />
-            Relations
+            <span data-i18n="brain.relations">Relations</span>
             <span class="brain-nav-count" id="nav-count-relations">0</span>
           </div>
           <div class="brain-nav-item" data-view="events">
             <img class="icon-mono" src="/icons/calendar.svg" alt="" />
-            Events
+            <span data-i18n="brain.events">Events</span>
             <span class="brain-nav-count" id="nav-count-events">0</span>
           </div>
           <div class="brain-nav-item" data-view="observations">
             <img class="icon-mono" src="/icons/lightbulb.svg" alt="" />
-            Observations
+            <span data-i18n="brain.observations">Observations</span>
             <span class="brain-nav-count" id="nav-count-observations">0</span>
           </div>
         </div>
 
         <div class="brain-sidebar-section">
-          <div class="brain-sidebar-section-label">Activity</div>
+          <div class="brain-sidebar-section-label" data-i18n="brain.activity">Activity</div>
           <div class="brain-nav-item" data-view="conversations">
             <img class="icon-mono" src="/icons/message-square.svg" alt="" />
-            Conversations
+            <span data-i18n="brain.conversations">Conversations</span>
             <span class="brain-nav-count" id="nav-count-conversations">0</span>
           </div>
           <div class="brain-nav-item" data-view="facts">
             <img class="icon-mono" src="/icons/brain.svg" alt="" />
-            Agent Memory
+            <span data-i18n="brain.agentMemory">Agent Memory</span>
             <span class="brain-nav-count" id="nav-count-facts">0</span>
           </div>
         </div>
@@ -66,10 +66,15 @@
         <div class="brain-toolbar">
           <div class="brain-search">
             <img src="/icons/search.svg" alt="" />
-            <input type="text" id="search-input" placeholder="Search..." />
+            <input
+              type="text"
+              id="search-input"
+              placeholder="Search..."
+              data-i18n-placeholder="brain.search"
+            />
           </div>
           <select class="brain-filter" id="filter-select" style="display: none">
-            <option value="">All types</option>
+            <option value="" data-i18n="brain.allTypes">All types</option>
           </select>
         </div>
 
@@ -81,17 +86,21 @@
           <!-- View toggle (segmented control, top center) -->
           <div class="brain-view-toggle" id="view-toggle">
             <div class="brain-view-highlight" id="view-highlight"></div>
-            <button class="brain-view-seg active" data-mode="brain">Brain</button>
-            <button class="brain-view-seg" data-mode="library">Library</button>
+            <button class="brain-view-seg active" data-mode="brain" data-i18n="brain.brainView">
+              Brain
+            </button>
+            <button class="brain-view-seg" data-mode="library" data-i18n="brain.libraryView">
+              Library
+            </button>
           </div>
 
           <!-- Brain view (existing canvas) -->
           <canvas id="graph-canvas"></canvas>
           <div class="brain-graph-empty" id="graph-empty" style="display: none">
             <img class="icon-mono" src="/icons/share-2.svg" alt="" />
-            <div>No entities yet</div>
-            <div style="font-size: 12px">
-              Entities will appear here as OpenSauria learns from your conversations
+            <div data-i18n="brain.noEntities">No entities yet</div>
+            <div style="font-size: var(--font-size-small)" data-i18n="brain.entitiesHint">
+              Entities will appear here as Sauria learns from your conversations
             </div>
           </div>
 
@@ -100,14 +109,19 @@
             <div class="brain-library-track" id="library-track" style="perspective: 1200px"></div>
             <div class="brain-library-empty" id="library-empty" style="display: none">
               <img class="icon-mono" src="/icons/database.svg" alt="" />
-              <div>No entities yet</div>
-              <div style="font-size: 12px">
-                Entities will appear here as OpenSauria learns from your conversations
+              <div data-i18n="brain.noEntities">No entities yet</div>
+              <div style="font-size: var(--font-size-small)" data-i18n="brain.entitiesHint">
+                Entities will appear here as Sauria learns from your conversations
               </div>
             </div>
             <div class="brain-library-search" id="library-search">
               <img class="icon-mono" src="/icons/search.svg" alt="" />
-              <input type="text" id="library-search-input" placeholder="Search entities..." />
+              <input
+                type="text"
+                id="library-search-input"
+                placeholder="Search entities..."
+                data-i18n-placeholder="brain.searchEntities"
+              />
             </div>
           </div>
 
@@ -128,13 +142,13 @@
           </table>
           <div class="brain-empty" id="empty-state" style="display: none">
             <img src="/icons/database.svg" alt="" />
-            <div>No data yet</div>
-            <div style="font-size: 12px">
-              This will fill up as OpenSauria learns from your conversations
+            <div data-i18n="brain.noData">No data yet</div>
+            <div style="font-size: var(--font-size-small)" data-i18n="brain.dataHint">
+              This will fill up as Sauria learns from your conversations
             </div>
           </div>
           <div class="brain-load-more" id="load-more" style="display: none">
-            <button id="load-more-btn">Load more</button>
+            <button id="load-more-btn" data-i18n="brain.loadMore">Load more</button>
           </div>
         </div>
       </main>
@@ -149,7 +163,7 @@
         </div>
         <div class="brain-detail-body" id="detail-body"></div>
         <div class="brain-detail-actions" id="detail-actions">
-          <button class="btn btn-danger" id="detail-delete">Delete</button>
+          <button class="btn btn-danger" id="detail-delete" data-i18n="brain.delete">Delete</button>
         </div>
       </aside>
     </div>
@@ -157,12 +171,16 @@
     <!-- Delete Confirmation Dialog -->
     <div class="brain-dialog-overlay" id="delete-dialog">
       <div class="brain-dialog">
-        <div class="brain-dialog-title">Confirm Delete</div>
+        <div class="brain-dialog-title" data-i18n="brain.confirmDelete">Confirm Delete</div>
         <div class="brain-dialog-text" id="delete-dialog-text"></div>
         <div class="brain-dialog-warning" id="delete-dialog-warning"></div>
         <div class="brain-dialog-actions">
-          <button class="btn btn-secondary" id="delete-cancel">Cancel</button>
-          <button class="btn btn-danger" id="delete-confirm">Delete</button>
+          <button class="btn btn-secondary" id="delete-cancel" data-i18n="common.cancel">
+            Cancel
+          </button>
+          <button class="btn btn-danger" id="delete-confirm" data-i18n="common.delete">
+            Delete
+          </button>
         </div>
       </div>
     </div>

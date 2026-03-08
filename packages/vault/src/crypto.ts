@@ -7,7 +7,7 @@
 import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { chmod, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { paths } from '@opensauria/config';
+import { paths } from '@sauria/config';
 import { safePath, safeReadFile, safeWriteFile } from './fs-sandbox.js';
 import { deriveVaultPassword } from './derive-password.js';
 

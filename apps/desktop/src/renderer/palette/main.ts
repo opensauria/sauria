@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { t, getLocale, setLocale, applyTranslations, initLocale, UI_LANGUAGES } from '../i18n.js';
 
 interface StatusResult {
   connected: boolean;
@@ -27,7 +28,7 @@ interface ConnectResult {
 
 interface Command {
   id: string;
-  label: string;
+  labelKey: string;
   hint: string;
 }
 
@@ -50,21 +51,24 @@ const icons: Record<string, string> = {
     '<svg viewBox="0 0 24 24" fill="none"><path d="M12 5a3 3 0 10-5.997.125A4 4 0 003 9a4 4 0 001.4 3.04A3.5 3.5 0 005 15a3.5 3.5 0 002.84 3.44A3 3 0 0011 21h1a3 3 0 003.16-2.56A3.5 3.5 0 0019 15a3.5 3.5 0 00-.6-2.96A4 4 0 0021 9a4 4 0 00-2.99-3.87A3 3 0 0012 5z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 5v16" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-linecap="round"/><path d="M9.5 8a5.5 5.5 0 00-4.13 4M14.5 8a5.5 5.5 0 014.13 4" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-linecap="round"/></svg>',
   integrations:
     '<svg viewBox="0 0 24 24" fill="none"><path d="M12 22c5.523 0 10-4.477 10-10h-4a6 6 0 01-6 6v4z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2C6.477 2 2 6.477 2 12h4a6 6 0 016-6V2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="7" r="2" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/><circle cx="7" cy="17" r="2" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/></svg>',
+  language:
+    '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M2 12h20" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/></svg>',
 };
 
 const mainCommands: Command[] = [
-  { id: 'canvas', label: 'Agent Canvas', hint: '' },
-  { id: 'brain', label: 'Brain', hint: 'knowledge graph' },
-  { id: 'integrations', label: 'Integrations', hint: 'tools & channels' },
-  { id: 'setup', label: 'AI Provider', hint: 'config' },
-  { id: 'quit', label: 'Quit', hint: '' },
+  { id: 'canvas', labelKey: 'palette.squad', hint: '' },
+  { id: 'brain', labelKey: 'palette.brain', hint: '' },
+  { id: 'integrations', labelKey: 'palette.integrations', hint: '' },
+  { id: 'language', labelKey: 'palette.language', hint: '' },
+  { id: 'setup', labelKey: 'palette.aiProvider', hint: '' },
+  { id: 'quit', labelKey: 'palette.quit', hint: '' },
 ];
 
 const devCommands: Command[] = [
-  { id: 'status', label: 'Daemon Status', hint: '' },
-  { id: 'doctor', label: 'Health Check', hint: '' },
-  { id: 'audit', label: 'Audit Log', hint: '' },
-  { id: 'docs', label: 'Documentation', hint: '' },
+  { id: 'status', labelKey: 'palette.daemonStatus', hint: '' },
+  { id: 'doctor', labelKey: 'palette.healthCheck', hint: '' },
+  { id: 'audit', labelKey: 'palette.auditLog', hint: '' },
+  { id: 'docs', labelKey: 'palette.documentation', hint: '' },
 ];
 
 let commands = mainCommands;
@@ -77,7 +81,6 @@ const searchEl = document.getElementById('search') as HTMLInputElement;
 const listEl = document.getElementById('command-list')!;
 const emptyEl = document.getElementById('empty-state')!;
 const resultEl = document.getElementById('result-panel')!;
-const mascotEl = document.getElementById('mascot')!;
 const backBtn = document.getElementById('back-btn')!;
 const tgForm = document.getElementById('telegram-form')!;
 const tgBotList = document.getElementById('tg-bot-list')!;
@@ -89,6 +92,8 @@ const tgSubmit = document.getElementById('tg-submit') as HTMLButtonElement;
 const tgCancel = document.getElementById('tg-cancel')!;
 const tgStatus = document.getElementById('tg-status')!;
 const settingsBtn = document.getElementById('settings-btn')!;
+const langPanel = document.getElementById('language-panel')!;
+const langList = document.getElementById('language-list')!;
 
 function toggleDevMode() {
   devMode = !devMode;
@@ -96,7 +101,12 @@ function toggleDevMode() {
   selectedIndex = 0;
   searchEl.value = '';
   settingsBtn.classList.toggle('active', devMode);
-  searchEl.placeholder = devMode ? 'Developer tools...' : 'Search commands...';
+  searchEl.placeholder = devMode ? t('palette.devTools') : t('palette.searchPlaceholder');
+  if (devMode) {
+    backBtn.classList.remove('hidden');
+  } else {
+    backBtn.classList.add('hidden');
+  }
   render();
   searchEl.focus();
 }
@@ -104,11 +114,8 @@ function toggleDevMode() {
 function render() {
   const query = searchEl.value.toLowerCase();
   filtered = commands.filter(function (c) {
-    return (
-      c.label.toLowerCase().includes(query) ||
-      c.hint.toLowerCase().includes(query) ||
-      c.id.includes(query)
-    );
+    const label = t(c.labelKey).toLowerCase();
+    return label.includes(query) || c.hint.toLowerCase().includes(query) || c.id.includes(query);
   });
   if (selectedIndex >= filtered.length) selectedIndex = Math.max(0, filtered.length - 1);
   if (filtered.length === 0) {
@@ -119,7 +126,9 @@ function render() {
   listEl.style.display = 'block';
   emptyEl.style.display = 'none';
   const header = devMode
-    ? '<div class="section-header"><span>Developer</span><span class="section-line"></span></div>'
+    ? '<div class="section-header"><span>' +
+      t('palette.developer') +
+      '</span><span class="section-line"></span></div>'
     : '';
   listEl.innerHTML =
     header +
@@ -136,7 +145,7 @@ function render() {
           icons[c.id] +
           '</div>' +
           '<div class="label">' +
-          c.label +
+          t(c.labelKey) +
           '</div>' +
           (c.hint ? '<div class="hint">' + c.hint + '</div>' : '') +
           '</div>'
@@ -147,21 +156,20 @@ function render() {
 
 function enterSubView() {
   inSubView = true;
-  mascotEl.style.display = 'none';
   backBtn.classList.remove('hidden');
 }
 
 function exitSubView() {
   inSubView = false;
-  mascotEl.style.display = '';
   backBtn.classList.add('hidden');
   tgForm.className = 'telegram-form';
   resultEl.className = 'result-panel';
+  langPanel.className = 'language-panel';
   if (devMode) {
     devMode = false;
     commands = mainCommands;
     settingsBtn.classList.remove('active');
-    searchEl.placeholder = 'Search commands...';
+    searchEl.placeholder = t('palette.searchPlaceholder');
   }
   render();
   searchEl.focus();
@@ -170,6 +178,10 @@ function exitSubView() {
 function executeSelected() {
   if (filtered.length === 0) return;
   const cmd = filtered[selectedIndex];
+  if (cmd.id === 'language') {
+    showLanguagePanel();
+    return;
+  }
   invoke('execute_command', { id: cmd.id });
 }
 
@@ -184,7 +196,7 @@ function renderBotCard(bot: TelegramBot) {
   const name = bot.label || (bot.profile ? '@' + bot.profile.username : 'Telegram Bot');
   const isOnline = bot.connected;
   const dotClass = isOnline ? 'bot-status-dot' : 'bot-status-dot offline';
-  const statusText = isOnline ? 'Online' : 'Offline';
+  const statusText = isOnline ? t('palette.online') : t('palette.offline');
   const nodeId = bot.nodeId || '';
 
   return (
@@ -208,7 +220,9 @@ function renderBotCard(bot: TelegramBot) {
     '<div class="bot-actions">' +
     '<button class="bot-action-btn danger tg-disconnect-btn" data-node-id="' +
     nodeId +
-    '" title="Disconnect">' +
+    '" title="' +
+    t('palette.disconnect') +
+    '">' +
     trashSvg +
     '</button>' +
     '</div>' +
@@ -297,14 +311,14 @@ tgSubmit.addEventListener('mousedown', async function (e) {
   const rawId = tgUserId.value.trim().replace(/\D/g, '');
   const parsedId = parseInt(rawId, 10);
   if (!rawId || isNaN(parsedId) || parsedId <= 0) {
-    tgStatus.textContent = 'User ID must be a number (get it from @userinfobot)';
+    tgStatus.textContent = t('palette.userIdError');
     tgStatus.className = 'form-status visible error';
     tgUserId.focus();
     return;
   }
 
   tgSubmit.disabled = true;
-  tgStatus.textContent = 'Connecting...';
+  tgStatus.textContent = t('palette.connecting');
   tgStatus.className = 'form-status visible';
   try {
     const result = await invoke<ConnectResult>('connect_channel', {
@@ -315,18 +329,18 @@ tgSubmit.addEventListener('mousedown', async function (e) {
       },
     });
     if (result.success) {
-      tgStatus.textContent = 'Connected to @' + result.botUsername;
+      tgStatus.textContent = t('palette.connectedTo') + ' @' + result.botUsername;
       tgStatus.className = 'form-status visible success';
       setTimeout(function () {
         showTelegramForm();
       }, 1000);
     } else {
-      tgStatus.textContent = result.error || 'Connection failed';
+      tgStatus.textContent = result.error || t('palette.connectionFailed');
       tgStatus.className = 'form-status visible error';
       tgSubmit.disabled = false;
     }
   } catch {
-    tgStatus.textContent = 'Connection failed';
+    tgStatus.textContent = t('palette.connectionFailed');
     tgStatus.className = 'form-status visible error';
     tgSubmit.disabled = false;
   }
@@ -350,7 +364,14 @@ backBtn.addEventListener('mousedown', function (e) {
 
 settingsBtn.addEventListener('mousedown', function (e) {
   e.preventDefault();
-  if (inSubView) exitSubView();
+  if (inSubView) {
+    exitSubView();
+    return;
+  }
+  if (devMode) {
+    exitSubView();
+    return;
+  }
   toggleDevMode();
 });
 
@@ -361,13 +382,14 @@ searchEl.addEventListener('input', function () {
     devMode = false;
     commands = mainCommands;
     settingsBtn.classList.remove('active');
-    searchEl.placeholder = 'Search commands...';
+    searchEl.placeholder = t('palette.searchPlaceholder');
   }
   render();
 });
 
 document.addEventListener('keydown', function (e) {
   if (tgForm.classList.contains('visible')) return;
+  if (langPanel.classList.contains('visible')) return;
   if (e.key === 'ArrowDown') {
     e.preventDefault();
     if (filtered.length > 0) {
@@ -392,7 +414,7 @@ document.addEventListener('keydown', function (e) {
       commands = mainCommands;
       selectedIndex = 0;
       settingsBtn.classList.remove('active');
-      searchEl.placeholder = 'Search commands...';
+      searchEl.placeholder = t('palette.searchPlaceholder');
       render();
     } else if (searchEl.value !== '') {
       searchEl.value = '';
@@ -453,9 +475,10 @@ listen('palette-reset', function () {
   devMode = false;
   commands = mainCommands;
   settingsBtn.classList.remove('active');
-  searchEl.placeholder = 'Search commands...';
+  searchEl.placeholder = t('palette.searchPlaceholder');
   resultEl.className = 'result-panel';
   tgForm.className = 'telegram-form';
+  langPanel.className = 'language-panel';
   render();
   searchEl.focus();
 });
@@ -464,16 +487,18 @@ render();
 
 function refreshProviderStatus() {
   invoke<StatusResult>('get_status').then(function (status) {
-    const dot = document.querySelector('#provider-status .pulse-dot')!;
-    const label = document.getElementById('provider-label')!;
+    const setupCmd = mainCommands.find(function (c) {
+      return c.id === 'setup';
+    });
+    if (!setupCmd) return;
     if (status.connected && status.provider) {
-      dot.className = 'pulse-dot';
       const method = status.authMethod === 'oauth' ? 'subscription' : 'API key';
-      label.textContent = status.provider + ' (' + method + ')';
+      setupCmd.hint =
+        '<span class="status-dot connected"></span>' + status.provider + ' (' + method + ')';
     } else {
-      dot.className = 'pulse-dot offline';
-      label.textContent = 'No provider';
+      setupCmd.hint = '<span class="status-dot disconnected"></span>' + t('palette.noProvider');
     }
+    if (!devMode) render();
   });
 }
 
@@ -493,3 +518,115 @@ invoke<TelegramStatus>('get_telegram_status').then(function (status) {
     if (!devMode) render();
   }
 });
+
+/* ═══════════════════════════════════════════════
+   Language Panel — Interface Language (i18n)
+   ═══════════════════════════════════════════════ */
+
+const checkSvg =
+  '<svg class="lang-check" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function renderLanguageList() {
+  const current = getLocale();
+  langList.innerHTML = UI_LANGUAGES.map(function (l) {
+    const cls = 'lang-option' + (l.code === current ? ' active' : '');
+    return (
+      '<div class="' +
+      cls +
+      '" data-code="' +
+      l.code +
+      '">' +
+      checkSvg +
+      '<span>' +
+      l.label +
+      '</span>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+function showLanguagePanel() {
+  listEl.style.display = 'none';
+  emptyEl.style.display = 'none';
+  resultEl.className = 'result-panel';
+  tgForm.className = 'telegram-form';
+  langPanel.className = 'language-panel visible';
+  enterSubView();
+
+  renderLanguageList();
+  updateLangHint();
+}
+
+async function selectLanguage(code: string) {
+  await setLocale(code);
+  applyTranslations();
+  renderLanguageList();
+  updateLangHint();
+}
+
+function updateLangHint() {
+  const langCmd = mainCommands.find(function (c) {
+    return c.id === 'language';
+  });
+  if (!langCmd) return;
+  const active = UI_LANGUAGES.find(function (l) {
+    return l.code === getLocale();
+  });
+  langCmd.hint = active ? active.label : '';
+}
+
+langList.addEventListener('mousedown', function (e) {
+  const option = (e.target as HTMLElement).closest('.lang-option') as HTMLElement | null;
+  if (!option) return;
+  e.preventDefault();
+  const code = option.dataset.code;
+  if (code) selectLanguage(code);
+});
+
+langPanel.addEventListener('keydown', function (e) {
+  e.stopPropagation();
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    exitSubView();
+  }
+});
+
+/* Set hint on startup */
+initLocale().then(() => {
+  updateLangHint();
+  applyTranslations();
+  render();
+});
+
+/* ═══════════════════════════════════════════════
+   Auto-Update Check
+   ═══════════════════════════════════════════════ */
+
+async function checkForUpdate() {
+  try {
+    const { check } = await import('@tauri-apps/plugin-updater');
+    const update = await check();
+    if (!update) return;
+
+    const banner = document.createElement('div');
+    banner.className = 'update-banner';
+    banner.innerHTML =
+      '<span>Update ' +
+      update.version +
+      ' available</span>' +
+      '<button class="update-btn">Install & Restart</button>';
+    document.body.appendChild(banner);
+
+    requestAnimationFrame(() => banner.classList.add('visible'));
+
+    banner.querySelector('.update-btn')!.addEventListener('click', async () => {
+      banner.querySelector('.update-btn')!.textContent = 'Updating...';
+      (banner.querySelector('.update-btn') as HTMLButtonElement).disabled = true;
+      await update.downloadAndInstall();
+    });
+  } catch {
+    // Updater not configured or network error — silently ignore
+  }
+}
+
+checkForUpdate();

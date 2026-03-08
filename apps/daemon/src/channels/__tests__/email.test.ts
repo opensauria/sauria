@@ -222,7 +222,7 @@ describe('EmailChannel', () => {
 
     expect(mockSendMail).toHaveBeenCalledWith(
       expect.objectContaining({
-        subject: expect.stringContaining('[OpenSauria Alert]'),
+        subject: expect.stringContaining('[Sauria Alert]'),
       }),
     );
 

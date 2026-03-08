@@ -1,17 +1,18 @@
-# Contributing to OpenSauria
+# Contributing to Sauria
 
-OpenSauria is created and maintained by [Teo Bouancheau](https://github.com/teobouancheau). Contributions are welcome and appreciated.
+Sauria is created and maintained by [Teo Bouancheau](https://github.com/teobouancheau). Contributions are welcome and appreciated.
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/teobouancheau/opensauria.git
-cd opensauria
-npm install
-npm run typecheck
+git clone https://github.com/teobouancheau/sauria.git
+cd sauria
+pnpm install
+pnpm -r build
+pnpm -r typecheck
 ```
 
-Node.js >= 22 is required. Check `.nvmrc` for the pinned version.
+Node.js 24+ and pnpm 9+ are required. Check `.nvmrc` for the pinned version.
 
 ## Development Workflow
 
@@ -22,9 +23,9 @@ Node.js >= 22 is required. Check `.nvmrc` for the pinned version.
 2. Write your changes following the conventions below.
 3. Run all checks before submitting:
    ```bash
-   npm run typecheck
-   npm run format:check
-   npm run test
+   pnpm -r typecheck
+   pnpm -r test
+   npx prettier --check .
    ```
 4. Open a pull request against `develop`. Never push directly to `main`.
 
@@ -48,7 +49,7 @@ Node.js >= 22 is required. Check `.nvmrc` for the pinned version.
 
 ### Formatting
 
-Prettier is configured. Run `npm run format` before committing. CI enforces `prettier --check`.
+Prettier is configured. Run `npx prettier --write .` before committing. CI enforces `prettier --check`.
 
 ### Commits
 
@@ -64,9 +65,9 @@ One logical change per commit. Imperative mood, max 72 characters.
 
 ## Security Rules
 
-OpenSauria is security-first. These rules are non-negotiable:
+Sauria is security-first. These rules are non-negotiable:
 
-- **No `child_process`, `eval`, `Function()`, `vm.run`** in `src/`.
+- **No `eval`, `Function()`, `vm.run`** in `src/`.
 - **No `createServer` or `.listen(`** in `src/`. Zero open ports.
 - **No secrets in code.** API keys and tokens go through the encrypted vault only.
 - **Parameterized queries only.** Never concatenate strings into SQL.
@@ -79,17 +80,25 @@ CI runs a banned-pattern scanner on every PR. If it flags your code, the PR cann
 ## Architecture Overview
 
 ```
-src/
-  auth/       # OAuth, credential resolution, onboarding wizard
-  ai/         # LLM providers, routing, extraction, anti-injection
-  config/     # Schema, loader, paths, defaults
-  db/         # SQLite connection, schema, world model, search
-  engine/     # Proactive reasoning (deadlines, patterns, insights)
-  channels/   # Telegram bot, CLI interactive mode
-  ingestion/  # Data pipeline, dedup, normalization, entity resolution
-  mcp/        # MCP server (expose) and client (consume)
-  security/   # Vault, crypto, audit, rate limiter, PII scrubber, sandbox
-  utils/      # Logger, budget tracking, version
+apps/
+  daemon/src/
+    ai/         # LLM providers, routing, extraction, anti-injection
+    auth/       # OAuth, credential resolution, onboarding
+    channels/   # Telegram, Slack, WhatsApp, Discord, Email
+    config/     # Schema, loader, paths, defaults
+    db/         # SQLite connection, schema, world model, search
+    engine/     # Proactive reasoning (deadlines, patterns, insights)
+    ingestion/  # Data pipeline, dedup, normalization, entity resolution
+    mcp/        # MCP server (expose) and client (consume)
+    orchestrator/ # Multi-agent orchestration, LLM routing, autonomy
+    security/   # Vault, crypto, audit, rate limiter, PII scrubber
+  desktop/      # Tauri v2 desktop app (canvas, palette, setup wizard)
+packages/
+  types/        # Shared TypeScript types (zero deps)
+  config/       # Configuration schema and paths
+  vault/        # Vault encryption primitives
+  ipc-protocol/ # IPC method definitions
+  design-tokens/ # Design system tokens
 ```
 
 ## Testing
@@ -99,16 +108,16 @@ src/
 - No flaky tests. Fix or delete.
 
 ```bash
-npm run test          # single run
-npm run test:watch    # watch mode
+pnpm -r test             # single run
+pnpm -F @sauria/daemon test  # daemon only
 ```
 
 ## Reporting Vulnerabilities
 
-**Do not open a public issue.** See [SECURITY.md](SECURITY.md) for responsible disclosure instructions.
+**Do not open a public issue.** See [SECURITY.md](.github/SECURITY.md) for responsible disclosure instructions.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+By contributing, you agree that your contributions will be licensed under the [AGPL-3.0 License](LICENSE).
 
-OpenSauria is created by Teo Bouancheau. All contributors are credited in release notes.
+Sauria is created by Teo Bouancheau. All contributors are credited in release notes.

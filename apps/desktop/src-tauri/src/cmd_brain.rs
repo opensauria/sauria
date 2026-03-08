@@ -1,17 +1,11 @@
-use serde::Deserialize;
 use serde_json::Value;
 use std::sync::Arc;
 
+use crate::cmd_brain_types::{
+    GetConversationOpts, ListConversationsOpts, ListEntitiesOpts, ListEventsOpts, ListFactsOpts,
+    ListObservationsOpts, ListRelationsOpts, UpdateEntityFields,
+};
 use crate::daemon_client::DaemonClient;
-
-#[derive(Deserialize)]
-pub struct ListEntitiesOpts {
-    #[serde(rename = "type")]
-    entity_type: Option<String>,
-    search: Option<String>,
-    offset: Option<u64>,
-    limit: Option<u64>,
-}
 
 #[tauri::command]
 pub async fn brain_list_entities(
@@ -35,14 +29,6 @@ pub async fn brain_get_entity(
     client.request("brain:get-entity", serde_json::json!({"id": id})).await
 }
 
-#[derive(Deserialize)]
-pub struct ListRelationsOpts {
-    #[serde(rename = "type")]
-    rel_type: Option<String>,
-    offset: Option<u64>,
-    limit: Option<u64>,
-}
-
 #[tauri::command]
 pub async fn brain_list_relations(
     opts: ListRelationsOpts,
@@ -54,15 +40,6 @@ pub async fn brain_list_relations(
         "limit": opts.limit,
     });
     client.request("brain:list-relations", params).await
-}
-
-#[derive(Deserialize)]
-pub struct ListObservationsOpts {
-    #[serde(rename = "type")]
-    obs_type: Option<String>,
-    search: Option<String>,
-    offset: Option<u64>,
-    limit: Option<u64>,
 }
 
 #[tauri::command]
@@ -79,13 +56,6 @@ pub async fn brain_list_observations(
     client.request("brain:list-observations", params).await
 }
 
-#[derive(Deserialize)]
-pub struct ListEventsOpts {
-    source: Option<String>,
-    offset: Option<u64>,
-    limit: Option<u64>,
-}
-
 #[tauri::command]
 pub async fn brain_list_events(
     opts: ListEventsOpts,
@@ -99,13 +69,6 @@ pub async fn brain_list_events(
     client.request("brain:list-events", params).await
 }
 
-#[derive(Deserialize)]
-pub struct ListConversationsOpts {
-    platform: Option<String>,
-    offset: Option<u64>,
-    limit: Option<u64>,
-}
-
 #[tauri::command]
 pub async fn brain_list_conversations(
     opts: ListConversationsOpts,
@@ -113,16 +76,11 @@ pub async fn brain_list_conversations(
 ) -> Result<Value, String> {
     let params = serde_json::json!({
         "platform": opts.platform,
+        "nodeIds": opts.node_ids,
         "offset": opts.offset,
         "limit": opts.limit,
     });
     client.request("brain:list-conversations", params).await
-}
-
-#[derive(Deserialize)]
-pub struct GetConversationOpts {
-    offset: Option<u64>,
-    limit: Option<u64>,
 }
 
 #[tauri::command]
@@ -137,15 +95,6 @@ pub async fn brain_get_conversation(
         "limit": opts.limit,
     });
     client.request("brain:get-conversation", params).await
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ListFactsOpts {
-    node_id: Option<String>,
-    workspace_id: Option<String>,
-    offset: Option<u64>,
-    limit: Option<u64>,
 }
 
 #[tauri::command]
@@ -176,14 +125,6 @@ pub async fn brain_delete(
     client: tauri::State<'_, Arc<DaemonClient>>,
 ) -> Result<Value, String> {
     client.request("brain:delete", serde_json::json!({"table": table, "id": id})).await
-}
-
-#[derive(Deserialize)]
-pub struct UpdateEntityFields {
-    name: Option<String>,
-    summary: Option<String>,
-    #[serde(rename = "type")]
-    entity_type: Option<String>,
 }
 
 #[tauri::command]

@@ -1,23 +1,14 @@
-import type { OpenSauriaConfig, ModelConfig } from '../config/schema.js';
+import type { SauriaConfig, ModelConfig } from '../config/schema.js';
 import { CircuitBreaker } from '../orchestrator/circuit-breaker.js';
 import { createLimiter, SECURITY_LIMITS } from '../security/rate-limiter.js';
 import type { RateLimiter } from '../security/rate-limiter.js';
 import type { ChatMessage, ChatOptions, LLMProvider, StreamChunk } from './providers/base.js';
 import type { ExtractionResult } from './anti-injection.js';
 import { EXTRACTION_SYSTEM_PROMPT, parseAIResponse } from './anti-injection.js';
-import { AnthropicProvider } from './providers/anthropic.js';
-import { OpenAIProvider } from './providers/openai.js';
-import { GoogleProvider } from './providers/google.js';
-import { OllamaProvider } from './providers/ollama.js';
+import { createProvider, collectStream, PROVIDER_BASE_URLS } from './router-helpers.js';
+
 export type CostCallback = (model: string, costUsd: number) => void;
 export type ApiKeyGetter = (providerName: string) => string | Promise<string>;
-
-const PROVIDER_BASE_URLS: Readonly<Record<string, string>> = {
-  openrouter: 'https://openrouter.ai/api/v1',
-  together: 'https://api.together.xyz/v1',
-  groq: 'https://api.groq.com/openai/v1',
-  mistral: 'https://api.mistral.ai/v1',
-};
 
 export class ModelRouter {
   private readonly providers = new Map<string, LLMProvider>();
@@ -27,7 +18,7 @@ export class ModelRouter {
   private onCost: CostCallback | undefined;
 
   constructor(
-    private readonly config: OpenSauriaConfig,
+    private readonly config: SauriaConfig,
     private readonly getApiKey: ApiKeyGetter,
   ) {
     this.extractionLimiter = createLimiter(
@@ -119,9 +110,7 @@ export class ModelRouter {
   getProvider(providerName: string, apiKey: string, baseUrl?: string): LLMProvider {
     const cacheKey = `${providerName}:${baseUrl ?? 'default'}`;
     const cached = this.providers.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
     const provider = createProvider(providerName, apiKey, baseUrl);
     this.providers.set(cacheKey, provider);
@@ -159,9 +148,7 @@ export class ModelRouter {
     const cacheKey = `${providerName}:${baseUrl ?? 'default'}`;
 
     const cached = this.providers.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
     const apiKey =
       providerName === 'ollama' || providerName === 'local'
@@ -176,39 +163,8 @@ export class ModelRouter {
   }
 
   private reportCost(model: string, responseLength: number): void {
-    if (!this.onCost) {
-      return;
-    }
+    if (!this.onCost) return;
     const estimatedCost = responseLength * 0.000001;
     this.onCost(model, estimatedCost);
   }
-}
-
-function createProvider(providerName: string, apiKey: string, baseUrl?: string): LLMProvider {
-  switch (providerName) {
-    case 'anthropic':
-      return new AnthropicProvider(apiKey);
-    case 'openai':
-      return new OpenAIProvider(apiKey, baseUrl);
-    case 'google':
-      return new GoogleProvider(apiKey);
-    case 'ollama':
-    case 'local':
-      return new OllamaProvider(baseUrl);
-    case 'openrouter':
-    case 'together':
-    case 'groq':
-    case 'mistral':
-      return new OpenAIProvider(apiKey, baseUrl);
-    default:
-      throw new Error(`Unknown provider: ${providerName}`);
-  }
-}
-
-async function collectStream(stream: AsyncGenerator<StreamChunk>): Promise<string> {
-  let result = '';
-  for await (const chunk of stream) {
-    result += chunk.text;
-  }
-  return result;
 }

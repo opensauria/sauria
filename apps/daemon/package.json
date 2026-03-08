@@ -1,10 +1,10 @@
 {
-  "name": "@opensauria/daemon",
+  "name": "@sauria/daemon",
   "version": "1.0.0",
-  "description": "OpenSauria daemon — security-first persistent cognitive kernel.",
+  "description": "Sauria daemon — your AI workforce.",
   "type": "module",
   "bin": {
-    "opensauria": "./dist/index.mjs"
+    "sauria": "./dist/index.mjs"
   },
   "engines": {
     "node": ">=24"
@@ -12,6 +12,7 @@
   "files": [
     "dist",
     "LICENSE",
+    "NOTICE",
     "README.md"
   ],
   "scripts": {
@@ -26,10 +27,10 @@
     "@anthropic-ai/sdk": "0.76.0",
     "@clack/prompts": "1.0.1",
     "@modelcontextprotocol/sdk": "1.26.0",
-    "@opensauria/config": "workspace:*",
-    "@opensauria/ipc-protocol": "workspace:*",
-    "@opensauria/types": "workspace:*",
-    "@opensauria/vault": "workspace:*",
+    "@sauria/config": "workspace:*",
+    "@sauria/ipc-protocol": "workspace:*",
+    "@sauria/types": "workspace:*",
+    "@sauria/vault": "workspace:*",
     "better-sqlite3": "12.6.2",
     "commander": "14.0.3",
     "grammy": "1.40.0",
@@ -49,5 +50,19 @@
     "typescript": "5.9.3",
     "vitest": "4.0.18"
   },
-  "license": "MIT"
+  "author": {
+    "name": "Teo Bouancheau",
+    "email": "116342837+teobouancheau@users.noreply.github.com",
+    "url": "https://github.com/teobouancheau"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/teobouancheau/sauria.git",
+    "directory": "apps/daemon"
+  },
+  "homepage": "https://github.com/teobouancheau/sauria",
+  "bugs": {
+    "url": "https://github.com/teobouancheau/sauria/issues"
+  },
+  "license": "AGPL-3.0-or-later"
 }

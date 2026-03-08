@@ -2,10 +2,7 @@ export type {
   AgentRole,
   AutonomyLevel,
   Platform,
-  ProactiveBehavior,
-  OwnerResponseBehavior,
-  PeerBehavior,
-  GroupBehavior,
+  AgentBehavior,
   WorkspaceGroup,
   Checkpoint,
   WorkspaceModels,
@@ -19,7 +16,10 @@ export type {
   CanvasGraph,
 } from './canvas.js';
 
-export { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from './canvas.js';
+export { createEmptyGraph } from './canvas.js';
+
+export { SUPPORTED_LANGUAGES } from './languages.js';
+export type { LanguageCode } from './languages.js';
 
 export type {
   OwnerIdentity,
@@ -56,6 +56,7 @@ export type {
   CategoryMeta,
   McpServerTemplate,
   IntegrationDefinition,
+  IntegrationInstance,
   IntegrationStatus,
   IntegrationTool,
 } from './integrations.js';

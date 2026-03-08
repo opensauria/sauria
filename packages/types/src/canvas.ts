@@ -1,10 +1,8 @@
 /**
  * Canonical Canvas Graph types — shared between daemon and desktop.
- *
- * Reconciled from:
- * - daemon: src/orchestrator/types.ts (readonly, groupBehavior, strict status)
- * - desktop: desktop/src/main.ts L1189-1244 (optional fields, 'setup' status)
  */
+
+import type { IntegrationInstance } from './integrations.js';
 
 // ─── Agent Roles & Autonomy ────────────────────────────────────────
 
@@ -14,31 +12,12 @@ export type AutonomyLevel = 'full' | 'supervised' | 'approval' | 'manual';
 
 export type Platform = 'telegram' | 'slack' | 'whatsapp' | 'discord' | 'email' | 'owner';
 
-// ─── Group Behavior ────────────────────────────────────────────────
+// ─── Agent Behavior ────────────────────────────────────────────────
 
-export interface ProactiveBehavior {
-  readonly reportStatus: 'daily' | 'on_change' | 'never';
-  readonly shareInsights: boolean;
-  readonly askForHelp: boolean;
-  readonly announceTaskCompletion: boolean;
-}
-
-export interface OwnerResponseBehavior {
-  readonly acknowledgeOrders: boolean;
-  readonly askClarification: boolean;
-  readonly reportProgress: boolean;
-}
-
-export interface PeerBehavior {
-  readonly canRequestHelp: boolean;
-  readonly canDelegateTasks: boolean;
-  readonly shareContext: boolean;
-}
-
-export interface GroupBehavior {
-  readonly proactive: ProactiveBehavior;
-  readonly ownerResponse: OwnerResponseBehavior;
-  readonly peer: PeerBehavior;
+export interface AgentBehavior {
+  readonly proactive?: boolean;
+  readonly ownerResponse?: boolean;
+  readonly peer?: boolean;
 }
 
 // ─── Workspace ─────────────────────────────────────────────────────
@@ -79,6 +58,7 @@ export interface Workspace {
   readonly size: { readonly width: number; readonly height: number };
   readonly checkpoints: readonly Checkpoint[];
   readonly groups: readonly WorkspaceGroup[];
+  readonly locked?: boolean;
 }
 
 // ─── Agent Node ────────────────────────────────────────────────────
@@ -87,7 +67,7 @@ export interface Workspace {
  * Canonical agent node in the canvas graph.
  *
  * - `status: 'setup'` added for desktop (node created but not yet connected)
- * - `groupBehavior` optional (desktop may not provide it, daemon applies defaults)
+ * - `behavior` toggles are persisted by the canvas UI and consumed by the routing prompt
  */
 export interface AgentNode {
   readonly id: string;
@@ -102,7 +82,9 @@ export interface AgentNode {
   readonly role: AgentRole;
   readonly autonomy: AutonomyLevel;
   readonly instructions: string;
-  readonly groupBehavior?: GroupBehavior;
+  readonly description?: string;
+  readonly behavior?: AgentBehavior;
+  readonly integrations?: readonly string[];
 }
 
 // ─── Edge ──────────────────────────────────────────────────────────
@@ -130,32 +112,15 @@ export interface Edge {
 export interface CanvasGraph {
   readonly version: 2;
   readonly globalInstructions: string;
+  readonly language?: string;
   readonly workspaces: readonly Workspace[];
   readonly nodes: readonly AgentNode[];
   readonly edges: readonly Edge[];
+  readonly instances?: readonly IntegrationInstance[];
   readonly viewport: { readonly x: number; readonly y: number; readonly zoom: number };
 }
 
 // ─── Default Factories ─────────────────────────────────────────────
-
-export const DEFAULT_GROUP_BEHAVIOR: GroupBehavior = {
-  proactive: {
-    reportStatus: 'on_change',
-    shareInsights: true,
-    askForHelp: true,
-    announceTaskCompletion: true,
-  },
-  ownerResponse: {
-    acknowledgeOrders: true,
-    askClarification: true,
-    reportProgress: true,
-  },
-  peer: {
-    canRequestHelp: true,
-    canDelegateTasks: false,
-    shareContext: true,
-  },
-};
 
 export function createEmptyGraph(): CanvasGraph {
   return {
@@ -164,6 +129,7 @@ export function createEmptyGraph(): CanvasGraph {
     workspaces: [],
     nodes: [],
     edges: [],
+    instances: [],
     viewport: { x: 0, y: 0, zoom: 1 },
   };
 }

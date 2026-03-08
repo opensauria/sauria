@@ -2,21 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>OpenSauria &mdash; Integrations</title>
+    <title>Sauria &mdash; Integrations</title>
     <link rel="stylesheet" href="../shared.css" />
     <link rel="stylesheet" href="./integrations.css" />
   </head>
   <body>
     <header class="integrations-header" data-tauri-drag-region>
-      <button class="palette-back" id="palette-back" title="Back">
+      <button class="palette-back" id="palette-back" data-i18n-title="common.back" title="Back">
         <img src="/icons/chevron-left.svg" alt="" />
       </button>
-      <h1 class="integrations-title">Integrations</h1>
+      <h1 class="integrations-title" data-i18n="integ.title">Integrations</h1>
       <div class="integrations-search">
         <img src="/icons/search.svg" alt="" />
         <input
           type="text"
           id="search-input"
+          data-i18n-placeholder="integ.search"
           placeholder="Search integrations..."
           autocomplete="off"
         />
@@ -33,8 +34,13 @@
 
     <aside class="config-panel" id="config-panel">
       <div class="config-panel-header">
-        <h2 class="config-panel-title" id="config-title">Configure</h2>
-        <button class="config-panel-close" id="config-close" title="Close">
+        <h2 class="config-panel-title" id="config-title" data-i18n="integ.configure">Configure</h2>
+        <button
+          class="config-panel-close"
+          id="config-close"
+          data-i18n-title="integ.close"
+          title="Close"
+        >
           <img src="/icons/x.svg" alt="" />
         </button>
       </div>

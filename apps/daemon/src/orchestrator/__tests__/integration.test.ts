@@ -7,7 +7,7 @@ import { CheckpointManager } from '../checkpoint.js';
 import { ChannelRegistry } from '../../channels/registry.js';
 import type { Channel } from '../../channels/base.js';
 import type { CanvasGraph, OwnerIdentity, InboundMessage, OwnerCommand } from '../types.js';
-import { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '../types.js';
+import { createEmptyGraph } from '../types.js';
 import { applySchema } from '../../db/schema.js';
 
 function mockChannel(name: string): Channel {
@@ -52,7 +52,6 @@ function makeGraph(): CanvasGraph {
         role: 'assistant',
         autonomy: 'supervised',
         instructions: '',
-        groupBehavior: DEFAULT_GROUP_BEHAVIOR,
       },
       {
         id: 'n2',
@@ -67,7 +66,6 @@ function makeGraph(): CanvasGraph {
         role: 'specialist',
         autonomy: 'full',
         instructions: '',
-        groupBehavior: DEFAULT_GROUP_BEHAVIOR,
       },
     ],
     edges: [
@@ -287,7 +285,7 @@ describe('Orchestrator Integration', () => {
     );
   });
 
-  it('agent with channel replies directly to owner on forwarded message', async () => {
+  it('agent with channel routes forwarded reply internally (not to owner)', async () => {
     const onActivity = vi.fn();
     const replyOrchestrator = new AgentOrchestrator({
       registry,
@@ -300,7 +298,7 @@ describe('Orchestrator Integration', () => {
       onActivity,
     });
 
-    // n2 has a registered channel (ch2) — should reply directly to owner
+    // n2 has a registered channel (ch2) but forwarded replies always go internal
     const forwardedSource: InboundMessage = {
       sourceNodeId: 'n2',
       platform: 'telegram',
@@ -319,12 +317,12 @@ describe('Orchestrator Integration', () => {
       forwardedSource,
     );
 
-    // n2 has its own channel — reply goes directly to owner via n2's channel
-    expect(ch2.sendMessage).toHaveBeenCalledWith('Here is my direct response', null);
-    // Edge activity from n2 to n2 (self-reply to owner)
+    // Forwarded replies always route internally — owner should NOT get the message
+    expect(ch2.sendMessage).not.toHaveBeenCalled();
+    // Edge activity from n2 to n1 (internal reply back to forwarding agent)
     expect(onActivity).toHaveBeenCalledWith(
       'activity:edge',
-      expect.objectContaining({ from: 'n2', to: 'n2', actionType: 'reply' }),
+      expect.objectContaining({ from: 'n2', to: 'n1', actionType: 'reply' }),
     );
   });
 

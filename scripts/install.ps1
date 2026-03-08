@@ -1,11 +1,11 @@
 #Requires -Version 5.1
 $ErrorActionPreference = "Stop"
 
-# OpenSauria - zero-friction installer for Windows
-# Usage: irm https://opensauria.ai/install.ps1 | iex
+# Sauria - zero-friction installer for Windows
+# Usage: irm https://sauria.dev/install.ps1 | iex
 
 $RequiredNodeMajor = 22
-$TaskName = "OpenSauria"
+$TaskName = "Sauria"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName Microsoft.VisualBasic
@@ -16,7 +16,7 @@ $nodePath = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodePath) {
     [System.Windows.Forms.MessageBox]::Show(
         "Node.js >= $RequiredNodeMajor is required.`n`nDownload it from nodejs.org",
-        "OpenSauria Setup",
+        "Sauria Setup",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Warning
     )
@@ -29,7 +29,7 @@ $major = [int]($nodeVersion -replace "v", "" -split "\.")[0]
 if ($major -lt $RequiredNodeMajor) {
     [System.Windows.Forms.MessageBox]::Show(
         "Node.js >= $RequiredNodeMajor required.`nFound: $nodeVersion`n`nPlease upgrade.",
-        "OpenSauria Setup",
+        "Sauria Setup",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Warning
     )
@@ -38,15 +38,15 @@ if ($major -lt $RequiredNodeMajor) {
 
 # --- 2. Install package ---
 
-& npm install -g opensauria@latest --silent 2>$null
+& npm install -g sauria@latest --silent 2>$null
 if ($LASTEXITCODE -ne 0) {
-    & npm install -g opensauria --silent
+    & npm install -g sauria --silent
 }
 
 # --- 3. Choose provider (native dialog) ---
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "OpenSauria Setup"
+$form.Text = "Sauria Setup"
 $form.Size = New-Object System.Drawing.Size(400, 280)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
@@ -92,12 +92,12 @@ if ($Provider -ne "ollama") {
 
     $ApiKey = [Microsoft.VisualBasic.Interaction]::InputBox(
         "Paste your $Provider API key:",
-        "OpenSauria Setup",
+        "Sauria Setup",
         ""
     )
 
     if ([string]::IsNullOrEmpty($ApiKey)) {
-        [System.Windows.Forms.MessageBox]::Show("No API key provided. Setup cancelled.", "OpenSauria")
+        [System.Windows.Forms.MessageBox]::Show("No API key provided. Setup cancelled.", "Sauria")
         exit 0
     }
 }
@@ -107,11 +107,11 @@ if ($Provider -ne "ollama") {
 $setupArgs = "setup --provider $Provider"
 if ($ApiKey) { $setupArgs += " --api-key $ApiKey" }
 
-$setupResult = & opensauria $setupArgs.Split(" ") 2>&1
+$setupResult = & sauria $setupArgs.Split(" ") 2>&1
 if ($LASTEXITCODE -ne 0) {
     [System.Windows.Forms.MessageBox]::Show(
-        "Setup failed. Run 'opensauria onboard' manually.",
-        "OpenSauria",
+        "Setup failed. Run 'sauria onboard' manually.",
+        "Sauria",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Error
     )
@@ -120,7 +120,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # --- 6. Start daemon ---
 
-$taskXml = Join-Path $env:USERPROFILE ".opensauria" "service" "opensauria-task.xml"
+$taskXml = Join-Path $env:USERPROFILE ".sauria" "service" "sauria-task.xml"
 if (Test-Path $taskXml) {
     try { schtasks /delete /tn $TaskName /f 2>$null } catch { }
     schtasks /create /tn $TaskName /xml $taskXml 2>$null
@@ -129,8 +129,8 @@ if (Test-Path $taskXml) {
 # --- 7. Done ---
 
 [System.Windows.Forms.MessageBox]::Show(
-    "OpenSauria is ready!`n`nYour AI clients have been configured automatically.`nRestart Claude Desktop or Cursor to get started.`n`nhttps://opensauria.ai",
-    "OpenSauria",
+    "Sauria is ready!`n`nYour AI clients have been configured automatically.`nRestart Claude Desktop or Cursor to get started.`n`nhttps://sauria.dev",
+    "Sauria",
     [System.Windows.Forms.MessageBoxButtons]::OK,
     [System.Windows.Forms.MessageBoxIcon]::Information
 )

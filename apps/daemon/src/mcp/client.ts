@@ -2,19 +2,13 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import type { AuditLogger } from '../security/audit.js';
 import { SECURITY_LIMITS } from '../security/rate-limiter.js';
+import { McpHealthMonitor } from './health.js';
+import { connectRemoteMcp, type RemoteMcpConfig } from './remote-client.js';
+import { getLogger } from '../utils/logger.js';
+import type { ConnectedClient, HealthCheckResult, McpServerConfig } from './types.js';
 
-interface McpServerConfig {
-  readonly name: string;
-  readonly command: string;
-  readonly args: readonly string[];
-  readonly env?: Readonly<Record<string, string>>;
-}
-
-interface ConnectedClient {
-  readonly name: string;
-  readonly client: Client;
-  readonly transport: StdioClientTransport;
-}
+export type { ConnectedClient, HealthCheckResult, McpServerConfig } from './types.js';
+export type { RemoteMcpConfig } from './remote-client.js';
 
 interface ToolInfo {
   readonly name: string;
@@ -34,8 +28,13 @@ function isTextContent(value: unknown): value is TextContent {
 
 export class McpClientManager {
   private readonly clients = new Map<string, ConnectedClient>();
+  private readonly healthMonitor: McpHealthMonitor;
 
-  constructor(private readonly audit: AuditLogger) {}
+  constructor(private readonly audit: AuditLogger) {
+    this.healthMonitor = new McpHealthMonitor(this.clients, this.audit, (config) =>
+      this.reconnect(config),
+    );
+  }
 
   async connect(config: McpServerConfig): Promise<void> {
     if (this.clients.has(config.name)) {
@@ -52,14 +51,37 @@ export class McpClientManager {
       command: config.command,
       args: [...config.args],
       env: config.env ? { ...config.env } : undefined,
+      cwd: config.cwd,
     });
 
-    const client = new Client({ name: 'opensauria', version: '0.1.0' }, { capabilities: {} });
+    const client = new Client({ name: 'sauria', version: '0.1.0' }, { capabilities: {} });
 
     await client.connect(transport);
 
-    this.clients.set(config.name, { name: config.name, client, transport });
+    this.clients.set(config.name, { name: config.name, client, transport, config });
     this.audit.logAction('mcp:client_connect', { server: config.name });
+  }
+
+  async connectRemote(config: RemoteMcpConfig): Promise<void> {
+    if (this.clients.has(config.name)) {
+      throw new Error(`Server "${config.name}" is already connected.`);
+    }
+
+    if (this.clients.size >= SECURITY_LIMITS.mcp.maxConcurrentClients) {
+      throw new Error(
+        `Maximum concurrent MCP clients (${SECURITY_LIMITS.mcp.maxConcurrentClients}) reached.`,
+      );
+    }
+
+    const logger = getLogger();
+    const { client, transport } = await connectRemoteMcp(config, logger);
+    this.clients.set(config.name, {
+      name: config.name,
+      client,
+      transport,
+      config: { name: config.name, command: '', args: [] },
+    });
+    this.audit.logAction('mcp:client_connect', { server: config.name, remote: true });
   }
 
   async disconnect(name: string): Promise<void> {
@@ -140,6 +162,23 @@ export class McpClientManager {
       name: tool.name,
       description: tool.description,
     }));
+  }
+
+  async healthCheck(): Promise<HealthCheckResult[]> {
+    return this.healthMonitor.healthCheck();
+  }
+
+  startHealthMonitor(intervalMs?: number): void {
+    this.healthMonitor.start(intervalMs);
+  }
+
+  stopHealthMonitor(): void {
+    this.healthMonitor.stop();
+  }
+
+  private async reconnect(config: McpServerConfig): Promise<void> {
+    this.clients.delete(config.name);
+    await this.connect(config);
   }
 
   getConnectedServers(): string[] {

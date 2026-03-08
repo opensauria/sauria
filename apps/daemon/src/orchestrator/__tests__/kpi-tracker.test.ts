@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { KPITracker } from '../kpi-tracker.js';
 import type { CanvasGraph } from '../types.js';
-import { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '../types.js';
+import { createEmptyGraph } from '../types.js';
 
 function createGraphWithNodes(workspaceId: string, nodeIds: string[]): CanvasGraph {
   const base = createEmptyGraph();
@@ -35,7 +35,6 @@ function createGraphWithNodes(workspaceId: string, nodeIds: string[]): CanvasGra
       role: 'specialist' as const,
       autonomy: 'full' as const,
       instructions: '',
-      groupBehavior: DEFAULT_GROUP_BEHAVIOR,
     })),
   };
 }
@@ -217,7 +216,6 @@ describe('KPITracker', () => {
             role: 'specialist',
             autonomy: 'full',
             instructions: '',
-            groupBehavior: DEFAULT_GROUP_BEHAVIOR,
           },
           {
             id: 'n2',
@@ -232,7 +230,6 @@ describe('KPITracker', () => {
             role: 'specialist',
             autonomy: 'full',
             instructions: '',
-            groupBehavior: DEFAULT_GROUP_BEHAVIOR,
           },
         ],
       };

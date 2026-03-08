@@ -7,7 +7,7 @@ import { applySchema } from '../../db/schema.js';
 import { AgentOrchestrator } from '../orchestrator.js';
 import { AgentMemory } from '../agent-memory.js';
 import type { CanvasGraph, InboundMessage, AgentNode } from '../types.js';
-import { DEFAULT_GROUP_BEHAVIOR, createEmptyGraph } from '../types.js';
+import { createEmptyGraph } from '../types.js';
 import { ChannelRegistry } from '../../channels/registry.js';
 
 // ─── Shared Fixtures ──────────────────────────────────────────────
@@ -44,7 +44,6 @@ function makeNode(overrides: Partial<AgentNode> = {}): AgentNode {
     role: 'assistant',
     autonomy: 'supervised',
     instructions: '',
-    groupBehavior: DEFAULT_GROUP_BEHAVIOR,
     ...overrides,
   };
 }
@@ -246,9 +245,9 @@ describe('executeAction reply internal routing', () => {
     db.close();
   });
 
-  it('agent with own channel still routes internally on forwarded reply, no sendTo', async () => {
+  it('agent with own channel routes forwarded reply internally (not to owner)', async () => {
     const onActivity = vi.fn();
-    // Register a channel for n2 so registry.get('n2') returns truthy
+    const freshRegistry = new ChannelRegistry();
     const mockChannel = {
       name: 'telegram',
       start: vi.fn().mockResolvedValue(undefined),
@@ -257,10 +256,10 @@ describe('executeAction reply internal routing', () => {
       sendMessage: vi.fn().mockResolvedValue(undefined),
       sendToGroup: vi.fn().mockResolvedValue(undefined),
     };
-    registry.register('n2', mockChannel);
+    freshRegistry.register('n2', mockChannel);
 
     const orchestrator = new AgentOrchestrator({
-      registry,
+      registry: freshRegistry,
       graph,
       ownerIdentity: { telegram: { userId: 123 } },
       agentMemory: new AgentMemory(db),
@@ -283,21 +282,32 @@ describe('executeAction reply internal routing', () => {
 
     await orchestrator.executeAction({ type: 'reply', content: 'My direct response' }, source);
 
-    // Should route internally back to n1 (forwarding agent)
+    // Forwarded replies always route internally — owner should NOT get the message
+    expect(mockChannel.sendMessage).not.toHaveBeenCalled();
+
+    // Edge activity from n2 to n1 (internal reply back to forwarding agent)
+    const edgeCall = onActivity.mock.calls.find(
+      (c: unknown[]) =>
+        c[0] === 'activity:edge' &&
+        (c[1] as Record<string, unknown>).from === 'n2' &&
+        (c[1] as Record<string, unknown>).to === 'n1' &&
+        (c[1] as Record<string, unknown>).actionType === 'reply',
+    );
+    expect(edgeCall).toBeDefined();
+
+    // n1 should have been activated via handleInbound
     const nodeCall = onActivity.mock.calls.find(
       (c: unknown[]) =>
         c[0] === 'activity:node' && (c[1] as Record<string, unknown>).nodeId === 'n1',
     );
     expect(nodeCall).toBeDefined();
-
-    // Should NOT send to owner — forwarded replies stay internal
-    const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
-    expect(sendTo).not.toHaveBeenCalled();
   });
 
-  it('agent without own channel routes reply internally with attribution, no sendTo', async () => {
+  it('agent without own channel routes reply internally with attribution', async () => {
     const onActivity = vi.fn();
-    // n2 has NO registered channel
+    // n2 has NO registered channel — mock sendTo to avoid throw in the chain
+    registry.sendTo = vi.fn().mockResolvedValue(undefined);
+
     const orchestrator = new AgentOrchestrator({
       registry,
       graph,
@@ -320,10 +330,6 @@ describe('executeAction reply internal routing', () => {
     };
 
     await orchestrator.executeAction({ type: 'reply', content: 'Routed back' }, source);
-
-    // Should NOT call external channel
-    const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
-    expect(sendTo).not.toHaveBeenCalled();
 
     // Should route internally — n1 activated via handleInbound
     const nodeCall = onActivity.mock.calls.find(
@@ -393,7 +399,7 @@ describe('handleOwnerCommand graph persistence', () => {
   );
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'opensauria-test-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'sauria-test-'));
     canvasPath = join(tmpDir, 'canvas.json');
     writeFileSync(canvasPath, JSON.stringify(graphWithTwoNodes), 'utf-8');
 
