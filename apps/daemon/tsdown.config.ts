@@ -9,4 +9,5 @@ export default defineConfig({
   },
   noExternal: [/.*/],
   external: ['better-sqlite3'],
+  inlineOnly: false,
 });
