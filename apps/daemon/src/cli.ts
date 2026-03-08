@@ -64,7 +64,7 @@ function withContext(fn: (ctx: AppContext) => Promise<void> | void): () => Promi
 
 program
   .name('sauria')
-  .description('Security-first persistent cognitive kernel')
+  .description('Your AI workforce')
   .version(getVersion())
   .hook('preAction', async (thisCommand) => {
     const commandName = thisCommand.args[0] ?? thisCommand.name();

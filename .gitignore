@@ -30,3 +30,6 @@ packages/design-tokens/generated/
 
 # Worktrees
 .worktrees/
+
+# Claude Code (personal tooling)
+.claude/

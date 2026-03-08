@@ -1,7 +1,7 @@
 {
   "name": "@sauria/daemon",
   "version": "1.0.0",
-  "description": "Sauria daemon — security-first persistent cognitive kernel.",
+  "description": "Sauria daemon — your AI workforce.",
   "type": "module",
   "bin": {
     "sauria": "./dist/index.mjs"
@@ -52,7 +52,7 @@
   },
   "author": {
     "name": "Teo Bouancheau",
-    "email": "t.bouancheau@gmail.com",
+    "email": "116342837+teobouancheau@users.noreply.github.com",
     "url": "https://github.com/teobouancheau"
   },
   "repository": {
@@ -64,5 +64,5 @@
   "bugs": {
     "url": "https://github.com/teobouancheau/sauria/issues"
   },
-  "license": "BUSL-1.1"
+  "license": "AGPL-3.0-or-later"
 }

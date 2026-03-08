@@ -1,31 +1,26 @@
-Sauria — Security-First Personal AI Operating System
-=====================================================
+Sauria — Your AI Workforce
+===========================
 
-Copyright (c) 2026 Teo Bouancheau. All rights reserved.
+Copyright (c) 2025-2026 Teo Bouancheau. All rights reserved.
 
-Original Author:    Teo Bouancheau <t.bouancheau@gmail.com>
+Original Author:    Teo Bouancheau
 Project Inception:  February 16, 2026
-Original Repo:      https://github.com/teobouancheau/sauria
+Repository:         https://github.com/teobouancheau/sauria
 
-This software is the original work of Teo Bouancheau. The canonical source
-code repository is hosted at the URL above. Any fork, mirror, or derivative
-that does not reference this original repository is unauthorized and may
-violate the terms of the Business Source License 1.1 under which this
-software is distributed.
+This software is licensed under the GNU Affero General Public License v3.0.
+See the LICENSE file for the full license text.
 
 Trademarks
 ----------
-"Sauria" and the Sauria logo are trademarks of
-Teo Bouancheau. Use of these trademarks without written permission is
-prohibited, except as required to comply with the attribution obligations
-of the license.
+"Sauria" and the Sauria logo are trademarks of Teo Bouancheau. Use of these
+trademarks without written permission is prohibited, except as required to
+comply with the attribution obligations of the license.
 
 Provenance
 ----------
 This project has been continuously developed by Teo Bouancheau since its
 inception. The full commit history in the canonical repository serves as
-the authoritative record of authorship. Any claim of original authorship
-by a third party is fraudulent.
+the authoritative record of authorship.
 
 Third-Party Licenses
 --------------------
@@ -35,5 +30,4 @@ software does not alter the licensing terms of Sauria itself.
 
 Contact
 -------
-For commercial licensing inquiries: t.bouancheau@gmail.com
 For security issues: see .github/SECURITY.md

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# OpenSauria — zero-friction installer
-# Usage: curl -fsSL https://opensauria.ai/install.sh | bash
+# Sauria — zero-friction installer
+# Usage: curl -fsSL https://sauria.dev/install.sh | bash
 #
 # What happens:
 #   1. Installs the package silently
@@ -12,7 +12,7 @@ set -euo pipefail
 #   User never touches a terminal.
 
 REQUIRED_NODE_MAJOR=22
-LABEL="ai.opensauria.daemon"
+LABEL="ai.sauria.daemon"
 
 # ─── OS Detection ────────────────────────────────────────────────────────
 OS="$(uname -s)"
@@ -97,24 +97,24 @@ open_url() {
 # ─── 1. Check Node.js ───────────────────────────────────────────────────
 
 if ! command -v node &>/dev/null; then
-  dialog_alert "OpenSauria" "Node.js >= ${REQUIRED_NODE_MAJOR} is required.\n\nDownload it from nodejs.org"
+  dialog_alert "Sauria" "Node.js >= ${REQUIRED_NODE_MAJOR} is required.\n\nDownload it from nodejs.org"
   open_url "https://nodejs.org"
   exit 1
 fi
 
 NODE_MAJOR="$(node --version | sed 's/v//' | cut -d. -f1)"
 if [ "${NODE_MAJOR}" -lt "${REQUIRED_NODE_MAJOR}" ]; then
-  dialog_alert "OpenSauria" "Node.js >= ${REQUIRED_NODE_MAJOR} required.\nFound: $(node --version)\n\nPlease upgrade."
+  dialog_alert "Sauria" "Node.js >= ${REQUIRED_NODE_MAJOR} required.\nFound: $(node --version)\n\nPlease upgrade."
   exit 1
 fi
 
 # ─── 2. Install package ─────────────────────────────────────────────────
 
-npm install -g opensauria@latest --silent 2>/dev/null || npm install -g opensauria --silent
+npm install -g sauria@latest --silent 2>/dev/null || npm install -g sauria --silent
 
 # ─── 3. Choose provider (native dialog) ─────────────────────────────────
 
-PROVIDER=$(dialog_list "OpenSauria Setup" "Choose your AI provider:" \
+PROVIDER=$(dialog_list "Sauria Setup" "Choose your AI provider:" \
   "Anthropic (recommended)" \
   "OpenAI" \
   "Google" \
@@ -145,10 +145,10 @@ if [ "${PROVIDER}" != "ollama" ]; then
   # Open the API key page so user can copy their key
   open_url "${KEY_URL}"
 
-  API_KEY=$(dialog_password "OpenSauria Setup" "Paste your ${PROVIDER} API key:")
+  API_KEY=$(dialog_password "Sauria Setup" "Paste your ${PROVIDER} API key:")
 
   if [ -z "${API_KEY}" ]; then
-    dialog_alert "OpenSauria" "No API key provided. Setup cancelled."
+    dialog_alert "Sauria" "No API key provided. Setup cancelled."
     exit 0
   fi
 fi
@@ -158,8 +158,8 @@ fi
 SETUP_ARGS="--provider ${PROVIDER}"
 [ -n "${API_KEY}" ] && SETUP_ARGS="${SETUP_ARGS} --api-key ${API_KEY}"
 
-if ! opensauria setup ${SETUP_ARGS} 2>/dev/null; then
-  dialog_alert "OpenSauria" "Setup failed. Please try again or run:\nopensauria onboard"
+if ! sauria setup ${SETUP_ARGS} 2>/dev/null; then
+  dialog_alert "Sauria" "Setup failed. Please try again or run:\nsauria onboard"
   exit 1
 fi
 
@@ -172,15 +172,15 @@ if [ "${OS}" = "Darwin" ]; then
     launchctl load -w "${PLIST}" 2>/dev/null || true
   fi
 elif [ "${OS}" = "Linux" ]; then
-  UNIT="${HOME}/.config/systemd/user/opensauria.service"
+  UNIT="${HOME}/.config/systemd/user/sauria.service"
   if [ -f "${UNIT}" ]; then
     systemctl --user daemon-reload 2>/dev/null || true
-    systemctl --user enable --now opensauria 2>/dev/null || true
+    systemctl --user enable --now sauria 2>/dev/null || true
   fi
 fi
 
 # ─── 7. Done ─────────────────────────────────────────────────────────────
 
-dialog_notify "OpenSauria" "Installation complete. Restart your AI client."
+dialog_notify "Sauria" "Installation complete. Restart your AI client."
 
-dialog_alert "OpenSauria" "Setup complete!\n\nOpenSauria is now connected to your AI clients.\nRestart Claude Desktop or Cursor to get started.\n\nhttps://opensauria.ai"
+dialog_alert "Sauria" "Setup complete!\n\nSauria is now connected to your AI clients.\nRestart Claude Desktop or Cursor to get started.\n\nhttps://sauria.dev"

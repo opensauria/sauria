@@ -2,12 +2,12 @@
   "name": "sauria-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Sauria monorepo — security-first personal AI operating system.",
+  "description": "Sauria — your AI workforce.",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
   "author": {
     "name": "Teo Bouancheau",
-    "email": "t.bouancheau@gmail.com",
+    "email": "116342837+teobouancheau@users.noreply.github.com",
     "url": "https://github.com/teobouancheau"
   },
   "repository": {
@@ -38,7 +38,7 @@
     "turbo": "2.5.4",
     "typescript": "5.9.3"
   },
-  "license": "BUSL-1.1",
+  "license": "AGPL-3.0-or-later",
   "pnpm": {
     "overrides": {
       "hono": ">=4.12.2",

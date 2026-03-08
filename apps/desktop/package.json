@@ -1,11 +1,11 @@
 {
   "name": "sauria-desktop",
   "version": "1.0.0",
-  "description": "Sauria — Personal AI Operating System",
+  "description": "Sauria — your AI workforce.",
   "private": true,
   "author": {
     "name": "Teo Bouancheau",
-    "email": "t.bouancheau@gmail.com",
+    "email": "116342837+teobouancheau@users.noreply.github.com",
     "url": "https://github.com/teobouancheau"
   },
   "repository": {
@@ -13,7 +13,7 @@
     "url": "https://github.com/teobouancheau/sauria.git",
     "directory": "apps/desktop"
   },
-  "license": "BUSL-1.1",
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "icons": "node scripts/copy-icons.js",
     "dev": "pnpm run icons && tauri dev",

@@ -68,7 +68,7 @@ pub async fn execute_command(
         }
         "docs" => {
             windows::hide_palette(&app)?;
-            let _ = open::that("https://sauria.ai/docs");
+            let _ = open::that("https://sauria.dev/docs");
         }
         "quit" => {
             app.exit(0);

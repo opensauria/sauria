@@ -2,7 +2,7 @@
 
 Your AI knows nothing about you. Sauria fixes that.
 
-It's a personal AI operating system that runs locally, connects to your data sources, builds a knowledge graph of your world, and shares it with any AI agent through MCP. It also lets you deploy a team of AI agents across messaging platforms that collaborate like a real company — receiving orders, delegating tasks, and exchanging information.
+It's your AI workforce. A local daemon that connects to your data sources, builds an encrypted knowledge graph, and shares it with any AI agent through MCP. Deploy a team of AI agents across messaging platforms that collaborate like a real company — receiving orders, delegating tasks, and exchanging information.
 
 ## What It Does
 
@@ -38,10 +38,10 @@ Messages dispatched to the right agents across platforms
 
 ```bash
 # macOS / Linux
-curl -fsSL https://sauria.ai/install.sh | bash
+curl -fsSL https://sauria.dev/install.sh | bash
 
 # Windows (PowerShell)
-irm https://sauria.ai/install.ps1 | iex
+irm https://sauria.dev/install.ps1 | iex
 
 # npm (manual)
 npm install -g sauria && sauria onboard
@@ -140,4 +140,4 @@ Config lives at `~/.sauria/config.json5`:
 
 ## License
 
-MIT
+AGPL-3.0 — see [LICENSE](LICENSE).
