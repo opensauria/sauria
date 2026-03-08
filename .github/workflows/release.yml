@@ -1,33 +1,47 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag (e.g. v2026.3.8)'
-        required: true
+  pull_request:
+    types: [closed]
+    branches: [main]
 
 permissions:
   contents: write
   id-token: write
   attestations: write
 
-env:
-  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
-
 jobs:
+  release:
+    name: Create tag
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v')
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract tag from branch name
+        id: tag
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          TAG="${BRANCH#release/}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.tag.outputs.tag }}"
+          git push origin "${{ steps.tag.outputs.tag }}"
+
   verify:
     name: Verify
     runs-on: ubuntu-latest
+    needs: release
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.RELEASE_TAG }}
 
       - uses: pnpm/action-setup@v4
 
@@ -83,7 +97,7 @@ jobs:
   publish:
     name: Publish to npm
     runs-on: ubuntu-latest
-    needs: verify
+    needs: [release, verify]
     environment: production
     permissions:
       contents: read
@@ -91,8 +105,6 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.RELEASE_TAG }}
 
       - uses: pnpm/action-setup@v4
 
@@ -127,14 +139,14 @@ jobs:
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
         with:
-          name: sbom-${{ env.RELEASE_TAG }}
+          name: sbom-${{ needs.release.outputs.tag }}
           path: sbom.spdx.json
           retention-days: 90
 
   github-release:
     name: GitHub Release
     runs-on: ubuntu-latest
-    needs: publish
+    needs: [release, publish]
     permissions:
       contents: write
     steps:
@@ -145,7 +157,7 @@ jobs:
       - name: Download SBOM
         uses: actions/download-artifact@v4
         with:
-          name: sbom-${{ env.RELEASE_TAG }}
+          name: sbom-${{ needs.release.outputs.tag }}
 
       - name: Generate changelog
         id: changelog
@@ -163,7 +175,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ needs.release.outputs.tag }}
           generate_release_notes: true
           make_latest: true
           files: sbom.spdx.json
@@ -174,10 +186,10 @@ jobs:
 
             ---
 
-            Published to npm: [`@sauria/cli@${{ env.RELEASE_TAG }}`](https://www.npmjs.com/package/@sauria/cli)
+            Published to npm: [`@sauria/cli@${{ needs.release.outputs.tag }}`](https://www.npmjs.com/package/@sauria/cli)
 
             ```bash
-            npm install -g @sauria/cli@${{ env.RELEASE_TAG }}
+            npm install -g @sauria/cli@${{ needs.release.outputs.tag }}
             ```
 
             ### Verification
