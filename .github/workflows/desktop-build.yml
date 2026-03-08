@@ -33,7 +33,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build --filter='./packages/*'
-      - run: pnpm --filter sauria run build
+      - run: pnpm --filter @sauria/cli run build
 
       - name: Verify tag matches package.json version
         run: |
@@ -101,7 +101,7 @@ jobs:
         run: pnpm turbo run build --filter='./packages/*'
 
       - name: Build daemon
-        run: pnpm --filter sauria run build
+        run: pnpm --filter @sauria/cli run build
 
       - name: Build desktop
         working-directory: apps/desktop

@@ -42,7 +42,7 @@ jobs:
         run: pnpm turbo run build --filter='./packages/*'
 
       - name: Typecheck
-        run: pnpm turbo run typecheck --filter='./packages/*' --filter=sauria
+        run: pnpm turbo run typecheck --filter='./packages/*' --filter=@sauria/cli
 
       - name: Format check
         run: pnpm run format:check
@@ -75,10 +75,10 @@ jobs:
           if [ "$FOUND" -eq 1 ]; then exit 1; fi
 
       - name: Test
-        run: pnpm --filter sauria run test
+        run: pnpm --filter @sauria/cli run test
 
       - name: Build daemon
-        run: pnpm turbo run build --filter='./packages/*' --filter=sauria
+        run: pnpm turbo run build --filter='./packages/*' --filter=@sauria/cli
 
   publish:
     name: Publish to npm
@@ -103,7 +103,7 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run build --filter='./packages/*' --filter=sauria
+      - run: pnpm turbo run build --filter='./packages/*' --filter=@sauria/cli
 
       - name: Publish with provenance
         working-directory: apps/daemon
@@ -173,10 +173,10 @@ jobs:
 
             ---
 
-            Published to npm: [`sauria@${{ env.RELEASE_TAG }}`](https://www.npmjs.com/package/sauria)
+            Published to npm: [`@sauria/cli@${{ env.RELEASE_TAG }}`](https://www.npmjs.com/package/@sauria/cli)
 
             ```bash
-            npm install -g sauria@${{ env.RELEASE_TAG }}
+            npm install -g @sauria/cli@${{ env.RELEASE_TAG }}
             ```
 
             ### Verification
