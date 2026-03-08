@@ -69,8 +69,10 @@ jobs:
             sed -i "s/^version = \"[^\"]*\"/version = \"${VERSION}\"/" apps/desktop/src-tauri/Cargo.toml
           fi
 
+          # Always create a diff by writing the release tag to a tracking file
+          echo "${TAG}" > .release-version
           git add -A
-          git commit -m "chore: release ${TAG}" || echo "No changes to commit"
+          git commit -m "chore: release ${TAG}"
           git push origin "${BRANCH}"
 
           gh pr create \
@@ -86,6 +88,6 @@ jobs:
 
           ---
 
-          Merging this PR and tagging \`${TAG}\` will trigger the publish workflow.
+          Merging this PR will automatically create the \`${TAG}\` tag and trigger the publish workflow.
           PREOF
           )"
