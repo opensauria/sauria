@@ -51,7 +51,7 @@
       "open": true
     },
     "updater": {
-      "endpoints": ["https://github.com/teobouancheau/sauria/releases/latest/download/latest.json"],
+      "endpoints": ["https://github.com/opensauria/sauria/releases/latest/download/latest.json"],
       "pubkey": ""
     }
   }

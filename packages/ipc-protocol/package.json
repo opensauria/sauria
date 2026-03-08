@@ -6,7 +6,7 @@
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "https://github.com/teobouancheau/sauria.git",
+    "url": "https://github.com/opensauria/sauria.git",
     "directory": "packages/ipc-protocol"
   },
   "type": "module",
