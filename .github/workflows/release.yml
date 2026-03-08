@@ -105,6 +105,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build --filter='./packages/*' --filter=@sauria/cli
 
+      - name: Copy README for npm
+        run: cp README.md apps/daemon/README.md
+
       - name: Publish with provenance
         working-directory: apps/daemon
         run: pnpm publish --provenance --access public --no-git-checks

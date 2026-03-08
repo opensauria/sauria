@@ -36,7 +36,7 @@ Sauria is your AI workforce. Specialized agents that own their roles — sales, 
 curl -fsSL https://sauria.dev/install | sh
 
 # npm
-npm install -g sauria
+npm install -g @sauria/cli
 
 # Docker
 docker run -d sauria/sauria
