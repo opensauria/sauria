@@ -1,18 +1,91 @@
-name: Release Please
+name: Release PR
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  release-please:
+  create-release-pr:
     name: Create Release PR
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Compute CalVer tag
+        id: version
+        run: |
+          YEAR=$(date -u +%Y)
+          MONTH=$(date -u +%-m)
+          DAY=$(date -u +%-d)
+          BASE="v${YEAR}.${MONTH}.${DAY}"
+          TAG="${BASE}"
+          SUFFIX=1
+          while git tag -l "${TAG}" | grep -q .; do
+            TAG="${BASE}.${SUFFIX}"
+            SUFFIX=$((SUFFIX + 1))
+          done
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | head -1)
+          if [ -z "$PREV_TAG" ]; then
+            LOG=$(git log --oneline --no-decorate)
+          else
+            LOG=$(git log --oneline --no-decorate "${PREV_TAG}..HEAD")
+          fi
+          echo "log<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$LOG" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create release branch and PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          CHANGELOG: ${{ steps.changelog.outputs.log }}
+        run: |
+          BRANCH="release/${TAG}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${BRANCH}"
+
+          # Update version in package.json files
+          for f in package.json apps/daemon/package.json apps/desktop/package.json; do
+            if [ -f "$f" ]; then
+              sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"${VERSION}\"/" "$f"
+            fi
+          done
+
+          # Update Cargo.toml
+          if [ -f apps/desktop/src-tauri/Cargo.toml ]; then
+            sed -i "s/^version = \"[^\"]*\"/version = \"${VERSION}\"/" apps/desktop/src-tauri/Cargo.toml
+          fi
+
+          git add -A
+          git commit -m "chore: release ${TAG}" || echo "No changes to commit"
+          git push origin "${BRANCH}"
+
+          gh pr create \
+            --base main \
+            --head "${BRANCH}" \
+            --title "chore: release ${TAG}" \
+            --body "$(cat <<PREOF
+          ## Release ${TAG}
+
+          ### Changes since last release
+
+          ${CHANGELOG}
+
+          ---
+
+          Merging this PR and tagging \`${TAG}\` will trigger the publish workflow.
+          PREOF
+          )"
