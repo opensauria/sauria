@@ -12,7 +12,7 @@ permissions:
 jobs:
   release:
     name: Create tag
-    if: startsWith(github.event.head_commit.message, 'chore: release v')
+    if: "startsWith(github.event.head_commit.message, 'chore: release v')"
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
