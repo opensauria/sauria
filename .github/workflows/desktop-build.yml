@@ -1,5 +1,4 @@
-# Unified release workflow — replaces the old desktop-build.yml and release.yml
-name: Release
+name: Desktop Build
 
 on:
   push:
