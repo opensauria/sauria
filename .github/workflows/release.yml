@@ -4,11 +4,19 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v2026.3.8)'
+        required: true
 
 permissions:
   contents: write
   id-token: write
   attestations: write
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   verify:
@@ -18,6 +26,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - uses: pnpm/action-setup@v4
 
@@ -32,7 +42,7 @@ jobs:
         run: pnpm turbo run build --filter='./packages/*'
 
       - name: Typecheck
-        run: pnpm turbo run typecheck
+        run: pnpm turbo run typecheck --filter='./packages/*' --filter=@sauria/daemon
 
       - name: Format check
         run: pnpm run format:check
@@ -67,8 +77,8 @@ jobs:
       - name: Test
         run: pnpm --filter @sauria/daemon run test
 
-      - name: Build
-        run: pnpm turbo run build
+      - name: Build daemon
+        run: pnpm turbo run build --filter='./packages/*' --filter=@sauria/daemon
 
   publish:
     name: Publish to npm
@@ -81,6 +91,8 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - uses: pnpm/action-setup@v4
 
@@ -91,7 +103,7 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run build
+      - run: pnpm turbo run build --filter='./packages/*' --filter=@sauria/daemon
 
       - name: Publish with provenance
         working-directory: apps/daemon
@@ -114,7 +126,7 @@ jobs:
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
         with:
-          name: sbom-${{ github.ref_name }}
+          name: sbom-${{ env.RELEASE_TAG }}
           path: sbom.spdx.json
           retention-days: 90
 
@@ -132,7 +144,7 @@ jobs:
       - name: Download SBOM
         uses: actions/download-artifact@v4
         with:
-          name: sbom-${{ github.ref_name }}
+          name: sbom-${{ env.RELEASE_TAG }}
 
       - name: Generate changelog
         id: changelog
@@ -150,6 +162,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           generate_release_notes: true
           make_latest: true
           files: sbom.spdx.json
@@ -160,10 +173,10 @@ jobs:
 
             ---
 
-            Published to npm: [`@sauria/daemon@${{ github.ref_name }}`](https://www.npmjs.com/package/@sauria/daemon)
+            Published to npm: [`@sauria/daemon@${{ env.RELEASE_TAG }}`](https://www.npmjs.com/package/@sauria/daemon)
 
             ```bash
-            npm install -g @sauria/daemon@${{ github.ref_name }}
+            npm install -g @sauria/daemon@${{ env.RELEASE_TAG }}
             ```
 
             ### Verification
