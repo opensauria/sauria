@@ -1,5 +1,5 @@
 {
-  "name": "@sauria/daemon",
+  "name": "sauria",
   "version": "2026.3.8",
   "description": "Sauria daemon — your AI workforce.",
   "type": "module",
