@@ -105,11 +105,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build --filter='./packages/*' --filter=@sauria/daemon
 
-      - name: Publish with provenance
+      - name: Publish with trusted publishing
         working-directory: apps/daemon
-        run: pnpm publish --provenance --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
 
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
