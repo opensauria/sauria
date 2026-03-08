@@ -1,7 +1,7 @@
 {
   "name": "@sauria/cli",
   "version": "2026.3.8",
-  "description": "Sauria daemon — your AI workforce.",
+  "description": "Sauria — your AI workforce.",
   "type": "module",
   "bin": {
     "sauria": "./dist/index.mjs"
