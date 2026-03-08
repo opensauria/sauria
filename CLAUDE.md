@@ -481,7 +481,7 @@ Releases use CalVer (`vYYYY.M.D`). The process is fully automated:
 ### GitHub Repository Settings
 
 - **Repo**: `opensauria/sauria` (public, AGPL-3.0-or-later)
-- **Rulesets**: main (PR + CODEOWNERS review), develop (no force push), tags v\* (no delete/force push)
+- **Rulesets**: main (PR + CODEOWNERS review), develop (no force push), tags v* (no delete/force push)
 - **Admin bypass**: `@teobouancheau` can bypass rulesets (solo maintainer)
 - **Merge**: squash merge only, auto-delete branches
 - **Actions**: read-only default permissions, selected actions only (GitHub-owned + verified + 3 trusted)
