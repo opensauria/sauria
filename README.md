@@ -1,67 +1,50 @@
-# Sauria
+<p align="center">
+  <img src="assets/brand/social-preview.png" alt="Sauria" width="100%" />
+</p>
 
-Your AI knows nothing about you. Sauria fixes that.
+<p align="center">
+  <strong>The Solo AI Agency</strong><br/>
+  Deploy autonomous AI agents that collaborate like a real team across every platform, with shared memory and 60+ integrations.
+</p>
 
-It's your AI workforce. A local daemon that connects to your data sources, builds an encrypted knowledge graph, and shares it with any AI agent through MCP. Deploy a team of AI agents across messaging platforms that collaborate like a real company — receiving orders, delegating tasks, and exchanging information.
+<p align="center">
+  <a href="https://github.com/opensauria/sauria/releases"><strong>Download</strong></a> &nbsp;&middot;&nbsp;
+  <a href="https://sauria.dev">Website</a> &nbsp;&middot;&nbsp;
+  <a href="https://github.com/opensauria/sauria#install">Install</a> &nbsp;&middot;&nbsp;
+  <a href="https://github.com/opensauria/sauria/blob/main/LICENSE">License</a>
+</p>
 
-## What It Does
+---
 
-**1. A knowledge layer for AI.** It connects to your email, calendar, and tools via MCP, extracts entities and relationships, and builds an encrypted knowledge graph. It continuously scans for deadlines, decaying relationships, and patterns. Any MCP-compatible AI client (Claude Desktop, Cursor, Windsurf) plugs in and instantly knows your context.
+Run a 100-person company. Alone.
 
-```
-User: "Follow up with Marc"
+Sauria is your AI workforce. Specialized agents that own their roles — sales, support, marketing, ops — collaborating autonomously 24/7. They share a unified knowledge graph, coordinate across platforms, and operate on your machine. No cloud dependency. Your data, your agents, your rules.
 
-Agent calls sauria_get_entity("Marc") ->
-  Marc Dupont, CTO at ClientX, last email 12 days ago,
-  works_on: "API Migration" (stalled), usually responds in 2-3 days
+## Features
 
-Agent drafts a perfect, contextual follow-up.
-```
-
-**2. A multi-agent orchestrator.** The desktop app provides a visual canvas where you place AI agents, draw connections between them, and define routing rules. Messages flow through a queue with owner priority, get routed by deterministic rules or LLM intelligence, and are filtered by autonomy levels before execution.
-
-```
-You send a message to your Telegram research bot
-    |
-    v
-MessageQueue (owner priority) -> AgentOrchestrator
-    |
-    ├── Edge rule: "always forward to Slack analyst bot"
-    ├── LLM routing: "this needs the marketing team"
-    └── Autonomy filter: "agent needs approval for cross-team actions"
-    |
-    v
-Messages dispatched to the right agents across platforms
-```
+- **AI Workforce** — Deploy specialized AI agents that collaborate like a real team. Each agent owns its role, 24/7.
+- **Multi-Agent Orchestration** — Visual canvas to wire agents together. Define handoffs, routing rules, and escalation paths.
+- **Multiplatform Bots** — Your agents live where your customers are. Slack, Discord, WhatsApp, email, SMS. One agent, every channel.
+- **Shared Knowledge Graph** — Every agent shares a unified memory. Your sales agent knows what support promised, and vice versa.
+- **MCP-Native** — Built on the Model Context Protocol. Plug into Claude, Cursor, Windsurf, or any MCP client. Open standard, zero lock-in.
+- **Runs Locally** — Your entire agency runs on your machine. Encrypted at rest. No cloud dependency.
 
 ## Install
 
 ```bash
 # macOS / Linux
-curl -fsSL https://sauria.dev/install.sh | bash
+curl -fsSL https://sauria.dev/install | sh
 
-# Windows (PowerShell)
-irm https://sauria.dev/install.ps1 | iex
-
-# npm (manual)
-npm install -g sauria && sauria onboard
+# npm
+npm install -g sauria
 
 # Docker
-docker run -d --name sauria -v sauria-data:/data ghcr.io/sauria/sauria
+docker run -d sauria/sauria
 ```
 
-Requires Node.js 24+.
+Requires Node.js 24+. The installer runs the setup wizard, stores credentials in an encrypted vault, and starts the background daemon.
 
-The installer runs the setup wizard, stores credentials in an encrypted vault, configures your AI clients as MCP consumers, and starts the background daemon.
-
-## Desktop App
-
-The desktop app provides:
-
-- **Squad** — Infinite viewport where you place and connect AI agents visually. Drag agents from the dock, draw edges to define communication routes, create workspace frames to group teams.
-- **Command Palette** — Quick access to all commands via `Cmd+Shift+O`.
-- **Setup Wizard** — Guided configuration for API keys, providers, and MCP client registration.
-- **Tray Icon** — Daemon status, quick actions, always running in background.
+macOS &middot; Linux &middot; Windows &middot; Docker
 
 ## CLI
 
@@ -95,6 +78,13 @@ sauria doctor             # Health checks
 | `sauria purge`            | Secure delete all data            |
 | `sauria config`           | Show current config               |
 
+## Desktop App
+
+- **Squad** — Infinite viewport where you place and connect AI agents visually. Drag agents from the dock, draw edges to define communication routes, create workspace frames to group teams.
+- **Command Palette** — Quick access to all commands via `Cmd+Shift+O`.
+- **Setup Wizard** — Guided configuration for API keys, providers, and MCP client registration.
+- **Tray Icon** — Daemon status, quick actions, always running in background.
+
 ## MCP Tools
 
 When running as an MCP server, Sauria exposes 7 tools to connected agents:
@@ -110,6 +100,12 @@ When running as an MCP server, Sauria exposes 7 tools to connected agents:
 | `sauria_add_event`       | Feed an event into the knowledge graph                  |
 
 All inputs validated. Rate limited. Audit logged.
+
+## Integrations
+
+60+ integrations. Your AI workforce operates across your entire stack.
+
+Gmail &middot; Slack &middot; Discord &middot; WhatsApp &middot; Telegram &middot; Notion &middot; Google Calendar &middot; Google Drive &middot; Obsidian &middot; Airtable &middot; GitHub &middot; GitLab &middot; Docker &middot; Supabase &middot; Vercel &middot; Linear &middot; Jira &middot; Asana &middot; Trello &middot; PostgreSQL &middot; MongoDB &middot; Redis &middot; Sentry &middot; Datadog &middot; Grafana &middot; Stripe &middot; Shopify &middot; HubSpot &middot; Figma &middot; Zapier &middot; n8n &middot; Zendesk &middot; and more.
 
 ## Configuration
 
