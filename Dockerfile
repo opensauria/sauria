@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY apps/daemon/ ./apps/daemon/
 RUN pnpm turbo run build --filter='./packages/*'
-RUN pnpm --filter @sauria/daemon run build
+RUN pnpm --filter sauria run build
 
 # Remove devDependencies for production
 RUN pnpm prune --prod

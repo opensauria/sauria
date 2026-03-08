@@ -57,7 +57,7 @@ jobs:
       - name: Build packages
         run: pnpm turbo run build --filter='./packages/*'
 
-      - run: pnpm --filter @sauria/daemon run test
+      - run: pnpm --filter sauria run test
 
   security:
     name: Security

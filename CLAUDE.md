@@ -200,7 +200,7 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - **Peer Messages in Routing**: `buildRoutingPrompt()` includes recent messages from other nodes in the same workspace (~100 tokens). Total additional overhead: ~350-400 tokens per routing decision (negligible vs base ~2000-4000).
 - **Graph Persistence**: owner commands (`promote`, `reassign`, `fire`, `pause`) persist mutations to `canvas.json` via `persistGraph()`.
 - **Inter-agent isolation**: `forward`, `notify`, `send_to_all`, `group_message` route via `handleInbound()` (internal). Only owner-agent communication uses `registry.sendTo()` (external channels).
-- Design doc: `docs/plans/2026-02-19-multi-agent-collaboration-design.md`
+- Design details documented in the Agent Collaboration section above
 
 ### Routing Logic (CRITICAL — read before touching orchestrator or llm-router)
 
@@ -412,10 +412,10 @@ Desktop `shared.css` imports via `@import '@sauria/design-tokens/tokens.css'`.
 
 ```
 pnpm -r build                              # Build shared packages + daemon (Turborepo, may cache desktop)
-pnpm -F @sauria/daemon build           # Rebuild daemon only
+pnpm -F sauria build           # Rebuild daemon only
 cd apps/desktop && pnpm run build          # Full production build (Vite + Rust + .app bundle) — ALWAYS use this for production
 pnpm -F sauria-desktop dev             # Start desktop in dev mode (Vite HMR)
-pnpm -F @sauria/daemon test            # Run daemon tests
+pnpm -F sauria test            # Run daemon tests
 pnpm -r typecheck                          # Typecheck all packages
 ```
 
@@ -446,8 +446,8 @@ open /Applications/Sauria.app
 ```bash
 pnpm run format:check                     # Prettier must pass (includes pnpm-lock.yaml)
 pnpm -r typecheck                          # TypeScript strict mode, zero errors
-pnpm -F @sauria/daemon test               # All tests green
-pnpm -F @sauria/daemon build              # Daemon build must exit 0
+pnpm -F sauria test               # All tests green
+pnpm -F sauria build              # Daemon build must exit 0
 ```
 
 If `pnpm-lock.yaml` changes (dependency add/update/remove), ALWAYS run `npx prettier --write pnpm-lock.yaml` before committing. CI will reject unformatted lockfiles.
@@ -492,6 +492,6 @@ Releases use CalVer (`vYYYY.M.D`). The process is fully automated:
 ### Dev Workflow
 
 When changing shared packages (`packages/*`): rebuild with `pnpm -r build` (Turbo handles deps)
-When changing daemon code (`apps/daemon/src/`): `pnpm -F @sauria/daemon build`
+When changing daemon code (`apps/daemon/src/`): `pnpm -F sauria build`
 When changing desktop main (`apps/desktop/src-tauri/src/`): Rust recompiles on `tauri dev`
 When changing renderer files (`apps/desktop/src/renderer/`): Vite hot-reloads in dev mode
