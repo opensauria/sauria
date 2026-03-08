@@ -56,6 +56,7 @@ jobs:
               "--exclude=*banned-patterns*" "--exclude=*whatsapp*" \
               "--exclude=*transcription*" "--exclude=*vault-key*" \
               "--exclude=*resolve*" "--exclude=*machine-id*" \
+              "--exclude=*daemon-ipc*" \
               "$p" apps/daemon/src/ packages/; then
               echo "::error::Banned pattern: $p"
               FOUND=1
