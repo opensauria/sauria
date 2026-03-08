@@ -24,9 +24,9 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "build:daemon": "turbo run build --filter=sauria",
+    "build:daemon": "turbo run build --filter=@sauria/cli",
     "build:desktop": "turbo run build --filter=sauria-desktop",
-    "dev:daemon": "pnpm --filter sauria run dev",
+    "dev:daemon": "pnpm --filter @sauria/cli run dev",
     "dev:desktop": "pnpm --filter sauria-desktop run dev",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",

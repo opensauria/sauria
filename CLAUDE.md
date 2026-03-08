@@ -412,10 +412,10 @@ Desktop `shared.css` imports via `@import '@sauria/design-tokens/tokens.css'`.
 
 ```
 pnpm -r build                              # Build shared packages + daemon (Turborepo, may cache desktop)
-pnpm -F sauria build           # Rebuild daemon only
+pnpm -F @sauria/cli build           # Rebuild daemon only
 cd apps/desktop && pnpm run build          # Full production build (Vite + Rust + .app bundle) — ALWAYS use this for production
 pnpm -F sauria-desktop dev             # Start desktop in dev mode (Vite HMR)
-pnpm -F sauria test            # Run daemon tests
+pnpm -F @sauria/cli test            # Run daemon tests
 pnpm -r typecheck                          # Typecheck all packages
 ```
 
@@ -446,8 +446,8 @@ open /Applications/Sauria.app
 ```bash
 pnpm run format:check                     # Prettier must pass (includes pnpm-lock.yaml)
 pnpm -r typecheck                          # TypeScript strict mode, zero errors
-pnpm -F sauria test               # All tests green
-pnpm -F sauria build              # Daemon build must exit 0
+pnpm -F @sauria/cli test               # All tests green
+pnpm -F @sauria/cli build              # Daemon build must exit 0
 ```
 
 If `pnpm-lock.yaml` changes (dependency add/update/remove), ALWAYS run `npx prettier --write pnpm-lock.yaml` before committing. CI will reject unformatted lockfiles.
@@ -492,6 +492,6 @@ Releases use CalVer (`vYYYY.M.D`). The process is fully automated:
 ### Dev Workflow
 
 When changing shared packages (`packages/*`): rebuild with `pnpm -r build` (Turbo handles deps)
-When changing daemon code (`apps/daemon/src/`): `pnpm -F sauria build`
+When changing daemon code (`apps/daemon/src/`): `pnpm -F @sauria/cli build`
 When changing desktop main (`apps/desktop/src-tauri/src/`): Rust recompiles on `tauri dev`
 When changing renderer files (`apps/desktop/src/renderer/`): Vite hot-reloads in dev mode

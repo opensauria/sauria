@@ -109,7 +109,7 @@ packages/
 
 ```bash
 pnpm -r test             # single run
-pnpm -F sauria test  # daemon only
+pnpm -F @sauria/cli test  # daemon only
 ```
 
 ## Reporting Vulnerabilities
