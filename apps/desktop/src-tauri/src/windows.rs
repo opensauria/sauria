@@ -3,7 +3,7 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use crate::windows_nav;
 
 pub(crate) const PALETTE_WIDTH: f64 = 680.0;
-pub(crate) const PALETTE_HEIGHT: f64 = 360.0;
+pub(crate) const PALETTE_HEIGHT: f64 = 400.0;
 pub(crate) const TOP_OFFSET: f64 = 200.0;
 
 pub(crate) struct PageSize {

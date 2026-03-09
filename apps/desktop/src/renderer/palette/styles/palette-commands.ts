@@ -17,8 +17,8 @@ export const paletteCommandStyles = css`
     flex-shrink: 0;
     cursor: pointer;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: var(--surface);
+    border: none;
+    background: none;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -26,7 +26,7 @@ export const paletteCommandStyles = css`
   }
 
   .search-icon:hover {
-    background: var(--border);
+    background: color-mix(in srgb, var(--text) 8%, transparent);
   }
 
   .search-icon svg {

@@ -228,7 +228,7 @@ export class SauriaPalette extends LightDomElement {
             <img
               src="/icons/sauria-logo-40.png"
               alt=""
-              style="width:20px;height:20px;border-radius:4px"
+              style="width:28px;height:28px;border-radius:4px"
             />
             <span class="brand-label">Sauria</span>
           </span>
