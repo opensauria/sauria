@@ -16,7 +16,7 @@
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "scripts": {
-    "icons": "node scripts/copy-icons.js",
+    "icons": "node scripts/copy-icons.cjs",
     "dev": "pnpm run icons && tauri dev",
     "build": "pnpm run icons && tauri build",
     "dev:vite": "vite",
