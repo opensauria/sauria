@@ -24,22 +24,12 @@ pub(crate) fn is_fixed_page(page: &str) -> bool {
     page == "setup"
 }
 
-pub(crate) fn resolve_page_url(
-    win: &tauri::WebviewWindow,
-    page: &str,
-    query: &str,
-) -> Result<url::Url, String> {
-    let current = win.url().map_err(|e| e.to_string())?;
-    let path = format!("/src/renderer/{page}/index.html{query}");
-    current.join(&path).map_err(|e| e.to_string())
-}
-
 pub fn create_palette_window(app: &AppHandle) -> Result<(), String> {
     if app.get_webview_window("palette").is_some() {
         return Ok(());
     }
 
-    let url = WebviewUrl::App("src/renderer/palette/index.html".into());
+    let url = WebviewUrl::App("src/renderer/index.html".into());
     let builder = WebviewWindowBuilder::new(app, "palette", url)
         .title("Sauria")
         .inner_size(PALETTE_WIDTH, PALETTE_HEIGHT)
