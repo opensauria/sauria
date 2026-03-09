@@ -7,7 +7,6 @@ export const canvasPanelStyles = css`
     top: 0;
     right: 0;
     bottom: 0;
-    width: 360px;
     max-width: 100%;
     background: var(--bg-solid);
     border-left: 1px solid var(--border);
@@ -81,6 +80,7 @@ export const canvasPanelStyles = css`
     font-size: var(--font-size-base);
     font-family: inherit;
     outline: none;
+    transition: border-color var(--transition-fast);
   }
   workspace-detail-panel textarea {
     resize: vertical;
@@ -138,14 +138,15 @@ export const canvasPanelStyles = css`
     font-size: var(--font-size-small);
     outline: none;
   }
-  .ws-stepper {
+  /* Shared stepper */
+  .stepper {
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
   }
-  .ws-stepper-btn {
-    width: var(--spacing-xl);
-    height: var(--spacing-xl);
+  .stepper-btn {
+    width: var(--spacing-2xl);
+    height: var(--spacing-2xl);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -154,10 +155,57 @@ export const canvasPanelStyles = css`
     border-radius: var(--radius-sm);
     cursor: pointer;
     color: var(--text-secondary);
+    flex-shrink: 0;
+    transition:
+      background var(--transition-fast),
+      border-color var(--transition-fast),
+      color var(--transition-fast);
   }
-  .ws-stepper-input {
+  .stepper-btn:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-active);
+    color: var(--text);
+  }
+  .stepper-input {
     width: var(--spacing-xxl);
+    height: var(--spacing-2xl);
+    box-sizing: border-box;
     text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--spacing-xs);
+    color: var(--text);
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+    transition: border-color var(--transition-fast);
+    -moz-appearance: textfield;
+  }
+  .stepper-input::-webkit-inner-spin-button,
+  .stepper-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .stepper-input:focus {
+    border-color: var(--accent);
+  }
+
+  /* Panel resize handle */
+  .panel-resize-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--spacing-xs);
+    cursor: col-resize;
+    z-index: 1;
+    transition: background var(--transition-fast);
+  }
+  .panel-resize-handle:hover,
+  .panel-resize-handle.dragging {
+    background: var(--accent);
   }
 
   /* Conversation panel */
@@ -166,7 +214,6 @@ export const canvasPanelStyles = css`
     top: 0;
     right: 0;
     bottom: 0;
-    width: 340px;
     max-width: 100%;
     background: var(--bg-solid);
     border-left: 1px solid var(--border);
@@ -238,9 +285,11 @@ export const canvasPanelStyles = css`
     flex-direction: column;
   }
   .conv-feed-title-text {
-    font-size: var(--font-size-base);
-    font-weight: 500;
-    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: var(--font-size-small);
+    font-weight: 600;
+    color: var(--text-secondary);
   }
   .conv-feed-count {
     font-size: var(--font-size-micro);
@@ -336,6 +385,28 @@ export const canvasPanelStyles = css`
     border-radius: var(--spacing-xs);
     background: var(--surface-hover);
     color: var(--text-dim);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .conv-badge-forward {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
+  }
+  .conv-badge-reply {
+    background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
+    color: var(--text-secondary);
+  }
+  .conv-badge-conclude {
+    background: color-mix(in srgb, var(--success) 15%, transparent);
+    color: var(--success);
+  }
+  .conv-badge-notify {
+    background: color-mix(in srgb, var(--warning) 15%, transparent);
+    color: var(--warning);
+  }
+  .conv-badge-assign {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
   }
   .conv-msg-time {
     font-size: var(--font-size-micro);
@@ -542,7 +613,7 @@ export const canvasPanelStyles = css`
     flex-direction: column;
     gap: var(--spacing-sm);
     padding: var(--spacing-smd) var(--spacing-md);
-    background: var(--surface);
+    background: var(--bg-solid);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     z-index: var(--z-toast);
@@ -564,6 +635,7 @@ export const canvasPanelStyles = css`
     gap: var(--spacing-sm);
     font-size: var(--font-size-small);
     color: var(--text-secondary);
+    justify-content: flex-start;
   }
   .legend-dot {
     width: var(--spacing-sm);
@@ -571,13 +643,15 @@ export const canvasPanelStyles = css`
     border-radius: 50%;
     background: var(--accent);
     box-shadow: var(--shadow-glow);
+    flex-shrink: 0;
   }
   .legend-ring {
-    width: var(--spacing-smd);
-    height: var(--spacing-smd);
+    width: var(--spacing-sm);
+    height: var(--spacing-sm);
     border-radius: 50%;
     border: 2px solid var(--accent);
     box-shadow: var(--shadow-glow);
+    flex-shrink: 0;
   }
 
   /* Workspace dialog */
@@ -626,10 +700,12 @@ export const canvasPanelStyles = css`
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    padding: var(--spacing-sm) var(--spacing-smd);
+    padding: var(--spacing-smd) var(--spacing-md);
     color: var(--text);
     font-size: var(--font-size-base);
+    font-family: inherit;
     outline: none;
+    transition: border-color var(--transition-fast);
   }
   .ws-dialog textarea {
     resize: vertical;

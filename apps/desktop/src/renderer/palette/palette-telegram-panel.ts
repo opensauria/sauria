@@ -5,11 +5,6 @@ import type { TelegramBot } from '../shared/types.js';
 import { connectChannel, disconnectChannel, getTelegramStatus } from '../shared/ipc.js';
 import { t } from '../i18n.js';
 
-const TG_ICON_SVG =
-  '<svg viewBox="0 0 24 24"><path d="M9.04 15.6l-.39 5.36c.56 0 .8-.24 1.1-.52l2.63-2.5 5.45 3.97c1 .55 1.7.26 1.97-.92l3.57-16.67C23.71 2.7 22.85 2.14 21.9 2.5L1.4 10.17c-1.63.64-1.6 1.56-.28 1.98l5.1 1.58L19.5 5.8c.6-.38 1.15-.17.7.2L9.04 15.6z" fill="#27A7E7"/></svg>';
-const TRASH_SVG =
-  '<svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
 @customElement('palette-telegram-panel')
 export class PaletteTelegramPanel extends LightDomElement {
   @state() private bots: TelegramBot[] = [];
@@ -50,14 +45,7 @@ export class PaletteTelegramPanel extends LightDomElement {
           });
         }}
       >
-        <svg viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 5v14M5 12h14"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-          />
-        </svg>
+        <img class="icon-mono" src="/icons/plus.svg" alt="" />
         <span data-i18n="palette.addBot">${t('palette.addBot')}</span>
       </button>
 
@@ -121,7 +109,9 @@ export class PaletteTelegramPanel extends LightDomElement {
     return html`
       <div class="bot-card" data-node-id="${bot.nodeId ?? ''}">
         <div class="bot-avatar">
-          ${photo ? html`<img src="${photo}" alt="" />` : html`${TG_ICON_SVG}`}
+          ${photo
+            ? html`<img src="${photo}" alt="" />`
+            : html`<img src="/icons/telegram.svg" alt="" />`}
         </div>
         <div class="bot-info">
           <div class="bot-name">${name}</div>
@@ -139,7 +129,7 @@ export class PaletteTelegramPanel extends LightDomElement {
               this.handleDisconnect(bot.nodeId ?? '');
             }}
           >
-            ${TRASH_SVG}
+            <img class="icon-mono" src="/icons/trash-2.svg" alt="" />
           </button>
         </div>
       </div>

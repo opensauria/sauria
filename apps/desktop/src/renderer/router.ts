@@ -1,7 +1,7 @@
 import { listen } from '@tauri-apps/api/event';
 import { adoptGlobalStyles } from './shared/styles/inject.js';
 
-type Route = 'palette' | 'canvas' | 'brain' | 'setup' | 'integrations';
+type Route = 'palette' | 'canvas' | 'brain' | 'setup' | 'integrations' | 'language';
 
 const ROUTE_TAGS: Record<Route, string> = {
   palette: 'sauria-palette',
@@ -9,6 +9,7 @@ const ROUTE_TAGS: Record<Route, string> = {
   brain: 'sauria-brain',
   setup: 'sauria-setup',
   integrations: 'sauria-integrations',
+  language: 'sauria-language',
 };
 
 let currentRoute: Route | null = null;
@@ -39,6 +40,9 @@ async function navigate(route: Route): Promise<void> {
       break;
     case 'integrations':
       await import('./integrations/sauria-integrations.js');
+      break;
+    case 'language':
+      await import('./language/sauria-language.js');
       break;
   }
 

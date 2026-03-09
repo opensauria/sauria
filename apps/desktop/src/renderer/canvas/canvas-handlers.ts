@@ -314,7 +314,18 @@ export function handleCardHoverLeave(host: CanvasEventHost): void {
   orb?.scheduleHide();
 }
 
+export function closeAllSidePanels(host: CanvasEventHost): void {
+  host.detailNode = null;
+  host.detailWorkspaceId = null;
+  const convPanel = host.querySelector('conversation-panel') as
+    | (HTMLElement & { close: () => void })
+    | null;
+  convPanel?.close();
+}
+
 export function openConversation(host: CanvasEventHost, fromId: string, toId: string): void {
+  host.detailNode = null;
+  host.detailWorkspaceId = null;
   const panel = host.querySelector('conversation-panel') as
     | (HTMLElement & { openEdgeConversation: (f: string, t: string) => void })
     | null;
@@ -322,6 +333,8 @@ export function openConversation(host: CanvasEventHost, fromId: string, toId: st
 }
 
 export function toggleFeed(host: CanvasEventHost): void {
+  host.detailNode = null;
+  host.detailWorkspaceId = null;
   const panel = host.querySelector('conversation-panel') as
     | (HTMLElement & { openFeed: () => void })
     | null;

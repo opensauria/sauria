@@ -14,7 +14,7 @@ export class WorkspaceDialog extends LightDomElement {
   @state() private color = '#038B9A';
   @state() private purpose = '';
   @state() private topicsRaw = '';
-  @state() private budget = '';
+  @state() private budgetValue = 0;
 
   private handleOverlayClick(e: MouseEvent): void {
     if (e.target === e.currentTarget) this.fireCancel();
@@ -32,7 +32,7 @@ export class WorkspaceDialog extends LightDomElement {
           .map((s) => s.trim())
           .filter(Boolean)
       : [];
-    const budgetVal = parseFloat(this.budget) || 0;
+    const budgetVal = this.budgetValue;
 
     const detail: Omit<Workspace, 'position' | 'size'> & {
       position?: undefined;
@@ -60,7 +60,7 @@ export class WorkspaceDialog extends LightDomElement {
     this.color = '#038B9A';
     this.purpose = '';
     this.topicsRaw = '';
-    this.budget = '';
+    this.budgetValue = 0;
   }
 
   render() {
@@ -119,16 +119,56 @@ export class WorkspaceDialog extends LightDomElement {
           </div>
           <div class="ws-dialog-field">
             <label>${t('canvas.dailyBudget')}</label>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              .value=${this.budget}
-              @input=${(e: InputEvent) => {
-                this.budget = (e.target as HTMLInputElement).value;
-              }}
-              placeholder="0"
-            />
+            <div class="stepper">
+              <button
+                class="stepper-btn"
+                @click=${() => {
+                  this.budgetValue = Math.max(0, this.budgetValue - 1);
+                }}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+              <input
+                class="stepper-input"
+                type="number"
+                min="0"
+                step="1"
+                .value=${String(this.budgetValue)}
+                @input=${(e: InputEvent) => {
+                  this.budgetValue = Math.max(
+                    0,
+                    parseInt((e.target as HTMLInputElement).value) || 0,
+                  );
+                }}
+              />
+              <button
+                class="stepper-btn"
+                @click=${() => {
+                  this.budgetValue = this.budgetValue + 1;
+                }}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+            </div>
           </div>
           <div class="ws-dialog-actions">
             <button class="ws-dialog-btn ws-dialog-btn-cancel" @click=${this.fireCancel}>

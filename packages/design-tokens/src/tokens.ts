@@ -42,6 +42,7 @@ export const spacing = {
   mld: '20px',
   lg: '24px',
   xl: '32px',
+  '2xl': '40px',
   xxl: '48px',
 } as const;
 

@@ -149,8 +149,9 @@ export const canvasLayoutStyles = css`
     justify-content: center;
     padding: 0;
     opacity: 0;
-    transition: opacity var(--transition-fast);
-    color: var(--text-dim);
+    transition:
+      opacity var(--transition-fast),
+      background var(--transition-fast);
     pointer-events: auto;
   }
 
@@ -160,12 +161,34 @@ export const canvasLayoutStyles = css`
 
   .ws-lock:hover {
     background: var(--surface-hover);
-    color: var(--text-secondary);
+  }
+
+  .ws-lock img {
+    width: var(--spacing-md);
+    height: var(--spacing-md);
+    filter: brightness(0) invert();
+    opacity: var(--opacity-muted);
+    transition:
+      opacity var(--transition-fast),
+      filter var(--transition-fast);
+  }
+
+  .ws-lock:hover img {
+    opacity: 1;
   }
 
   .ws-lock.locked {
     opacity: 1;
-    color: var(--accent);
+  }
+
+  .ws-lock.locked img {
+    filter: brightness(0) saturate(100%) invert(45%) sepia(98%) saturate(2000%) hue-rotate(200deg)
+      brightness(100%);
+    opacity: 1;
+  }
+
+  .ws-lock.locked:hover {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
   }
 
   .workspace-frame.locked .workspace-resize {

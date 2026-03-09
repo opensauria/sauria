@@ -120,6 +120,7 @@ export interface PromptPartsInput {
   readonly integrationRegistry?: IntegrationRegistry | null;
   readonly ruleActionsText: string;
   readonly globalInstructions: string;
+  readonly forwardDepth: number;
 }
 
 export function buildPromptParts(input: PromptPartsInput): string[] {
@@ -177,19 +178,55 @@ export function buildPromptParts(input: PromptPartsInput): string[] {
     'Decide what actions to take. Return ONLY valid JSON:',
     '{"actions": [{"type": "reply", "content": "..."}, ...]}',
     '',
-    'Valid action types: reply, forward, assign, notify, send_to_all, learn, group_message, use_tool',
+    'Valid action types: reply, forward, assign, notify, send_to_all, learn, group_message, use_tool, conclude',
     'For forward/assign/notify: include "targetNodeId"',
     'For assign: include "task" and "priority" (low/normal/high)',
     'For notify: include "summary"',
     'For send_to_all/group_message: include "workspaceId" and "content"',
     'For learn: include "fact" and "topics" (string array)',
     'For use_tool: include "integration" (exact instance ID from the tool list, e.g. "notion:default"), "tool" (exact tool name, e.g. "API-post-search"), "arguments" (JSON object), and "content" (explanation to owner). Use the EXACT values from the tool list — do not combine or modify them.',
+    'For conclude: include "content" (synthesized debate result for the owner). ONLY use this to end an agent-to-agent debate and deliver the final answer to the owner. Do NOT use "reply" to end a debate — use "conclude".',
     '',
-    'COLLABORATION: When you receive a forwarded message from another agent, ALWAYS reply to confirm understanding and provide your response. Your reply is automatically routed back to the sender internally. Like real teamwork — always confirm, never leave colleagues in the dark.',
-    "INTERNAL DEBATE: When you receive a forwarded message from another agent, your reply goes back to that agent internally. The owner does NOT see intermediate debate. Only the agent who received the owner's original message sends the final answer to the owner.",
-    "DELEGATION: When the user asks you to communicate with, ask, or send something to another agent by name, you MUST use the forward action with that agent's targetNodeId. Never answer on behalf of another agent. Never fabricate what another agent would say.",
-    'REPLY vs FORWARD: "reply" sends your response (to owner for direct messages, to sender agent for forwarded messages). "forward" sends to a DIFFERENT agent. Use reply to continue a discussion, forward to involve someone new.',
-    'ATTRIBUTION: When you reply to the owner after receiving a forwarded request from another agent, always mention who asked you and why. Example: "[AgentName] asked me to give my opinion on X. Here is what I think: ..." This gives the owner context about why you are reaching out.',
+    "DELEGATION (CRITICAL — NEVER SKIP): When the user asks you to communicate with, ask, debate with, discuss with, consult, or send something to another agent by name, you MUST use the forward action with that agent's targetNodeId. You MUST actually contact the other agent — do NOT fabricate, imagine, or invent what they would say. If you reply without forwarding first, you are lying to the owner. This is the single most important rule.",
+    'REPLY vs FORWARD vs CONCLUDE: "reply" sends your response to the OWNER when there is NO debate, or back to the debate partner during a debate. "forward" sends to ANOTHER AGENT (internal). "conclude" sends the final debate result to the OWNER — use this ONLY when ending a debate. During agent-to-agent debates, NEVER use "reply" to reach the owner; use "conclude" instead.',
+    '',
+    'AGENT-TO-AGENT DEBATE:',
+    '- When you receive a forwarded message from another agent, you are in an internal debate. The owner does NOT see any of this.',
+    '- To respond to the agent who forwarded to you, use "forward" back to their nodeId with your response. Do NOT use "reply" — that would send your message to the owner instead of the agent.',
+    '- Continue the debate by forwarding back and forth until you reach a conclusion, agreement, or realize you are going in circles.',
+    '- You are autonomous: decide yourself when the discussion is done. If positions are clear and no new arguments remain, stop.',
+    '- If you detect repetition (same points being made), gracefully end the conversation by stating your final position without forwarding further.',
+    "- When the debate is concluded, the agent who originally received the owner's message will synthesize the result and reply to the owner. You do NOT need to reply to the owner yourself if you were the one who was forwarded to.",
+    '',
+    'AFTER A DEBATE (for the initiating agent only):',
+    '- When you started the debate (you forwarded to another agent and received their response), you have two choices:',
+    '  1. Forward back to continue the discussion (if the topic is not resolved yet)',
+    '  2. Use "conclude" (NOT "reply") to send a synthesized summary of the debate conclusion to the owner (only when done)',
+    '- CRITICAL: During a debate, "reply" always goes back to the other agent internally. To send results to the owner, you MUST use "conclude".',
+    '- Never send a raw debate exchange to the owner. Always synthesize and summarize the key outcome.',
+    '',
+    'ATTRIBUTION: When you reply to the owner after a debate or a forwarded request, always mention who you discussed with and what was concluded.',
+    ...buildDebateDepthHints(input.forwardDepth),
+  ];
+}
+
+function buildDebateDepthHints(forwardDepth: number): string[] {
+  if (forwardDepth === 0) return [];
+  if (forwardDepth >= 8) {
+    return [
+      '',
+      `DEBATE STATUS: This conversation has reached ${forwardDepth} exchanges. You MUST wrap up now. State your final position clearly and do NOT forward further. If you are the initiating agent, synthesize the debate outcome and use "conclude" to send it to the owner.`,
+    ];
+  }
+  if (forwardDepth >= 5) {
+    return [
+      '',
+      `DEBATE STATUS: This conversation has been going for ${forwardDepth} exchanges. Start wrapping up — make your final points and move toward a conclusion.`,
+    ];
+  }
+  return [
+    '',
+    `DEBATE STATUS: Exchange ${forwardDepth} of an ongoing agent-to-agent discussion. Continue if the topic needs more exploration.`,
   ];
 }
 

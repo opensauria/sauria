@@ -68,6 +68,7 @@ export const brainLayoutStyles = css`
     display: flex;
     z-index: auto;
     margin: var(--spacing-sm);
+    -webkit-app-region: no-drag;
   }
 
   .brain-nav-item.active .icon-mono {

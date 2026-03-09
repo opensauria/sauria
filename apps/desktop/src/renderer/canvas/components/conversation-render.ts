@@ -4,6 +4,18 @@ import { t } from '../../i18n.js';
 import type { AgentNode, ConvMessage } from '../types.js';
 import { formatTime } from '../helpers.js';
 
+const ACTION_LABELS: Readonly<Record<string, string>> = {
+  reply: 'Reply',
+  forward: 'Forward',
+  notify: 'Notify',
+  conclude: 'Conclusion',
+  assign: 'Task',
+  send_to_all: 'Broadcast',
+  group_message: 'Group',
+  use_tool: 'Tool',
+  learn: 'Learn',
+};
+
 export function renderConversation(
   nodes: AgentNode[],
   conversationBuffer: Map<string, ConvMessage[]>,
@@ -96,7 +108,9 @@ export function renderParticipant(node: AgentNode | undefined): TemplateResult |
   const name = node.meta.firstName || node.label.replace(/^@/, '');
   return html`
     <div class="conv-participant">
-      <div class="conv-participant-avatar"></div>
+      <div class="conv-participant-avatar">
+        ${node.photo ? html`<img src="${node.photo}" alt="" />` : nothing}
+      </div>
       <span>${name}</span>
     </div>
   `;
@@ -114,7 +128,9 @@ export function renderMessage(msg: ConvMessage, side: string, nodes: AgentNode[]
         <div class="conv-msg-sender">${msg.fromLabel}</div>
         <div class="conv-msg-content">${msg.content}</div>
         <div class="conv-msg-footer">
-          <span class="conv-msg-type-badge">${msg.actionType}</span>
+          <span class="conv-msg-type-badge conv-badge-${msg.actionType}"
+            >${ACTION_LABELS[msg.actionType] ?? msg.actionType}</span
+          >
           <span class="conv-msg-time">${formatTime(msg.timestamp)}</span>
         </div>
       </div>

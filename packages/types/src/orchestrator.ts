@@ -52,7 +52,8 @@ export type RoutingAction =
       readonly tool: string;
       readonly arguments: Readonly<Record<string, unknown>>;
       readonly content: string;
-    };
+    }
+  | { readonly type: 'conclude'; readonly content: string };
 
 export interface RoutingDecision {
   readonly actions: readonly RoutingAction[];
