@@ -213,13 +213,6 @@ jobs:
       - name: Build daemon
         run: pnpm --filter @sauria/cli run build
 
-      - name: Sign native binaries for notarization
-        if: matrix.platform == 'darwin'
-        run: |
-          find apps/desktop/native-deps -name "*.node" -exec \
-            codesign --force --sign "${{ secrets.APPLE_SIGNING_IDENTITY }}" \
-            --timestamp --options runtime {} \;
-
       - name: Build desktop
         working-directory: apps/desktop
         env:
