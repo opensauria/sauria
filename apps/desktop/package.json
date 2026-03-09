@@ -20,6 +20,7 @@
     "build": "pnpm run icons && tauri build",
     "dev:vite": "vite",
     "native-deps": "node scripts/copy-native-deps.js",
+    "sign-native-deps": "node scripts/sign-native-deps.js",
     "build:vite": "vite build",
     "typecheck": "tsc --noEmit"
   },

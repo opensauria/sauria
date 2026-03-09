@@ -4,7 +4,7 @@
   "identifier": "ai.sauria.desktop",
   "build": {
     "beforeDevCommand": "pnpm run dev:vite",
-    "beforeBuildCommand": "pnpm run native-deps && pnpm run build:vite",
+    "beforeBuildCommand": "pnpm run native-deps && pnpm run sign-native-deps && pnpm run build:vite",
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173"
   },
