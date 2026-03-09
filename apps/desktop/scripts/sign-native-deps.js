@@ -3,6 +3,8 @@ import { readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+if (process.platform !== 'darwin') process.exit(0);
+
 const identity = process.env.APPLE_SIGNING_IDENTITY;
 if (!identity) process.exit(0);
 
