@@ -28,8 +28,8 @@ export const cardStyles = css`
   }
 
   .card-icon {
-    width: 40px;
-    height: 40px;
+    width: calc(2 * var(--spacing-mld));
+    height: calc(2 * var(--spacing-mld));
     border-radius: var(--radius-sm);
     background: var(--border);
     display: flex;

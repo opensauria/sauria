@@ -1,5 +1,6 @@
 import { html, nothing } from 'lit';
 import type { TemplateResult } from 'lit';
+import { t } from '../../i18n.js';
 import type { AgentNode, ConvMessage } from '../types.js';
 import { formatTime } from '../helpers.js';
 
@@ -19,23 +20,21 @@ export function renderConversation(
   const isProcessing = activeNodeIds.has(id1) || activeNodeIds.has(id2);
 
   return html`
-    <div class="header">
-      <div class="participants">
+    <div class="conv-header">
+      <div class="conv-participants">
         ${renderParticipant(fromNode)}
-        <span class="separator">&middot;</span>
+        <span class="conv-separator">&middot;</span>
         ${renderParticipant(toNode)}
       </div>
       ${renderCloseButton(closeFn)}
     </div>
-    <div class="messages">
+    <div class="conv-messages">
       ${messages.length === 0
-        ? html`<div class="conv-empty">
-            Messages will appear here when agents communicate on this edge.
-          </div>`
+        ? html`<div class="conv-empty">${t('canvas.convEmpty')}</div>`
         : messages.map((msg) => renderMessage(msg, msg.from === id1 ? 'from' : 'to', nodes))}
     </div>
-    <div class="status ${isProcessing ? '' : 'idle'}">
-      ${isProcessing ? 'Processing...' : 'Processing complete'}
+    <div class="conv-status ${isProcessing ? '' : 'idle'}">
+      ${isProcessing ? t('canvas.processing') : t('canvas.processingComplete')}
     </div>
   `;
 }
@@ -51,30 +50,30 @@ export function renderFeed(
   const nodeIds = getConversationNodeIds(conversationBuffer);
 
   return html`
-    <div class="header">
-      <div class="participants">
-        <div class="feed-title">
-          <span class="feed-title-text">Activity Feed</span>
-          <span class="feed-count">${allMessages.length} messages</span>
+    <div class="conv-header">
+      <div class="conv-participants">
+        <div class="conv-feed-title">
+          <span class="conv-feed-title-text">${t('canvas.activityFeed')}</span>
+          <span class="conv-feed-count">${allMessages.length} messages</span>
         </div>
       </div>
       ${renderCloseButton(closeFn)}
     </div>
-    <div class="filters">
+    <div class="conv-filters">
       <button
-        class="filter-pill ${!feedFilterNodeId ? 'active' : ''}"
+        class="conv-filter-pill ${!feedFilterNodeId ? 'active' : ''}"
         @click=${() => {
           setFilter(null);
         }}
       >
-        All
+        ${t('canvas.filterAll')}
       </button>
       ${[...nodeIds].map((nid) => {
         const node = nodes.find((n) => n.id === nid);
         const label = node ? node.meta.firstName || node.label.replace(/^@/, '') : nid.slice(0, 6);
         return html`
           <button
-            class="filter-pill ${feedFilterNodeId === nid ? 'active' : ''}"
+            class="conv-filter-pill ${feedFilterNodeId === nid ? 'active' : ''}"
             @click=${() => {
               setFilter(nid);
             }}
@@ -84,9 +83,9 @@ export function renderFeed(
         `;
       })}
     </div>
-    <div class="messages">
+    <div class="conv-messages">
       ${allMessages.length === 0
-        ? html`<div class="conv-empty">Messages will appear here as agents communicate.</div>`
+        ? html`<div class="conv-empty">${t('canvas.feedEmpty')}</div>`
         : allMessages.map((msg) => renderMessage(msg, 'from', nodes))}
     </div>
   `;
@@ -96,8 +95,8 @@ export function renderParticipant(node: AgentNode | undefined): TemplateResult |
   if (!node) return nothing;
   const name = node.meta.firstName || node.label.replace(/^@/, '');
   return html`
-    <div class="participant">
-      <div class="participant-avatar"></div>
+    <div class="conv-participant">
+      <div class="conv-participant-avatar"></div>
       <span>${name}</span>
     </div>
   `;
@@ -106,16 +105,16 @@ export function renderParticipant(node: AgentNode | undefined): TemplateResult |
 export function renderMessage(msg: ConvMessage, side: string, nodes: AgentNode[]): TemplateResult {
   const node = nodes.find((n) => n.id === msg.from);
   return html`
-    <div class="msg-row ${side}">
-      <div class="msg-avatar">
+    <div class="conv-msg-row ${side}">
+      <div class="conv-msg-avatar">
         ${node?.photo ? html`<img src="${node.photo}" alt="" />` : nothing}
       </div>
-      <div class="msg-bubble">
-        <div class="msg-sender">${msg.fromLabel}</div>
-        <div class="msg-content">${msg.content}</div>
-        <div class="msg-footer">
-          <span class="msg-type-badge">${msg.actionType}</span>
-          <span class="msg-time">${formatTime(msg.timestamp)}</span>
+      <div class="conv-msg-bubble">
+        <div class="conv-msg-sender">${msg.fromLabel}</div>
+        <div class="conv-msg-content">${msg.content}</div>
+        <div class="conv-msg-footer">
+          <span class="conv-msg-type-badge">${msg.actionType}</span>
+          <span class="conv-msg-time">${formatTime(msg.timestamp)}</span>
         </div>
       </div>
     </div>
@@ -152,7 +151,7 @@ export function getConversationNodeIds(
 
 function renderCloseButton(closeFn: () => void): TemplateResult {
   return html`
-    <button class="close-btn" @click=${closeFn}>
+    <button class="conv-close-btn" @click=${closeFn}>
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
         <path
           d="M18 6L6 18M6 6l12 12"

@@ -66,31 +66,38 @@ export const resetStyles = css`
 
   .palette-back {
     position: fixed;
-    top: var(--spacing-smd);
-    left: var(--spacing-smd);
+    top: var(--spacing-md);
+    left: var(--spacing-md);
     width: var(--spacing-xl);
     height: var(--spacing-xl);
     border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface-light);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--bg-solid) 90%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     cursor: pointer;
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: var(--z-toast);
+    z-index: var(--z-toolbar);
     padding: 0;
-    transition: background var(--transition-fast);
+    transition: all var(--transition-normal);
   }
 
   .palette-back:hover {
     background: var(--surface-hover);
+    border-color: var(--border-active);
   }
 
   .palette-back img {
     width: var(--spacing-md);
     height: var(--spacing-md);
-    filter: brightness(0) invert();
-    opacity: var(--opacity-muted);
+    filter: brightness(0) invert(0.4);
+    transition: filter var(--transition-fast);
+  }
+
+  .palette-back:hover img {
+    filter: brightness(0) invert(0.7);
   }
 
   body.in-palette .palette-back {

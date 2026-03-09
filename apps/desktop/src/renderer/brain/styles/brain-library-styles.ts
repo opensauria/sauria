@@ -113,7 +113,7 @@ export const brainLibraryStyles = css`
     padding: var(--spacing-sm) var(--spacing-md);
     width: 320px;
     max-width: calc(100% - var(--spacing-xxl));
-    z-index: 5;
+    z-index: var(--z-dropdown);
     transition: border-color var(--transition-fast);
   }
 

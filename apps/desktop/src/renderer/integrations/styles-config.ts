@@ -32,29 +32,35 @@ export const configStyles = css`
   }
 
   .config-panel-title {
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-small);
     font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .config-panel-close {
-    width: 32px;
-    height: 32px;
-    border: 1px solid var(--border);
+    width: var(--spacing-xl);
+    height: var(--spacing-xl);
+    border: none;
     border-radius: var(--radius-sm);
-    background: var(--surface);
+    background: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--text-dim);
+    transition: all var(--transition-fast);
   }
 
   .config-panel-close:hover {
     background: var(--surface-hover);
+    color: var(--text-secondary);
   }
 
   .config-panel-close img {
-    width: 16px;
-    height: 16px;
+    width: var(--spacing-md);
+    height: var(--spacing-md);
     filter: brightness(0) invert();
   }
 
@@ -78,7 +84,7 @@ export const configStyles = css`
   .config-label {
     font-size: var(--font-size-small);
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-dim);
   }
 
   .config-input {

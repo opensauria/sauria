@@ -78,7 +78,7 @@ export const formStyles = css`
 
   .form-toggle {
     position: relative;
-    width: 40px;
+    width: calc(2 * var(--spacing-mld));
     height: var(--spacing-mld);
     background: var(--border);
     border-radius: var(--radius-pill);

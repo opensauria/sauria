@@ -1,5 +1,6 @@
-import { html, nothing } from 'lit';
+import { html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { LightDomElement } from './light-dom-element.js';
 import { adoptGlobalStyles, adoptStyles } from '../shared/styles/inject.js';
 import { canvasViewStyles } from './styles/index.js';
@@ -9,7 +10,7 @@ import { NodeDragHandler } from './controllers/node-drag-handler.js';
 import { WorkspaceDragHandler } from './controllers/workspace-drag-handler.js';
 import { ActivityController } from './controllers/activity-controller.js';
 import type { AgentNode, IntegrationDef, Workspace } from './types.js';
-import { generateId } from './helpers.js';
+import { computeEdgeGeometry, generateId } from './helpers.js';
 import { listIntegrationCatalog, navigateBack } from './ipc.js';
 import { initLocale } from '../i18n.js';
 import {
@@ -26,6 +27,7 @@ import {
   openConversation,
   toggleFeed,
   removeEdge,
+  requestConfirm,
 } from './canvas-handlers.js';
 import type { EdgeLayer } from './components/edge-layer.js';
 import type { EdgeActivity } from './components/edge-activity.js';
@@ -64,14 +66,17 @@ export class SauriaCanvas extends LightDomElement {
   @state() detailWorkspaceId: string | null = null;
   @state() dockCollapsed = true;
   @state() wsDialogOpen = false;
-  @state() private confirmOpen = false;
-  @state() private confirmMessage = '';
+  @state() confirmOpen = false;
+  @state() confirmMessage = '';
   @state() private legendVisible = true;
   @state() private catalogMap = new Map<string, IntegrationDef>();
   @state() private hoveredEdgeId: string | null = null;
 
-  private confirmCallback: (() => void) | null = null;
+  confirmCallback: (() => void) | null = null;
+  private unlistenOauth?: UnlistenFn;
   private edgeHideTimer: ReturnType<typeof setTimeout> | null = null;
+  private edgeBtnPos = { x: 0, y: 0 };
+  private edgeBtnEdgeId = '';
 
   constructor() {
     super();
@@ -91,19 +96,17 @@ export class SauriaCanvas extends LightDomElement {
       onNodeDropped: (nodeId: string, dragDist: number) => {
         if (dragDist < 5) {
           this.selectedNodeId = nodeId;
-          this.detailNode = this.graphSync.graph.nodes.find((n) => n.id === nodeId) ?? null;
+          const found = this.graphSync.graph.nodes.find((n) => n.id === nodeId);
+          this.detailNode = found ? { ...found } : null;
         }
         this.graphSync.save();
         this.requestUpdate();
       },
       onEdgeCreated: (fromId, toId) => {
-        this.graphSync.graph.edges.push({
-          id: generateId(),
-          from: fromId,
-          to: toId,
-          edgeType: 'default',
-          rules: [],
-        });
+        this.graphSync.graph.edges = [
+          ...this.graphSync.graph.edges,
+          { id: generateId(), from: fromId, to: toId, edgeType: 'default', rules: [] },
+        ];
         this.graphSync.save();
         this.requestUpdate();
       },
@@ -149,11 +152,15 @@ export class SauriaCanvas extends LightDomElement {
           this.catalogMap.set(item.id ?? item.definition.id, item.definition);
       })
       .catch(() => {});
+    listen('integration-oauth-complete', () => this.refreshCatalog()).then(
+      (fn) => (this.unlistenOauth = fn),
+    );
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.edgeHideTimer) clearTimeout(this.edgeHideTimer);
+    this.unlistenOauth?.();
     document.removeEventListener('keydown', this.onKeydown);
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('mouseup', this.onMouseUp);
@@ -186,7 +193,7 @@ export class SauriaCanvas extends LightDomElement {
     if (action === 'gear') {
       const node = this.graphSync.graph.nodes.find((n) => n.id === nodeId);
       if (node) {
-        this.detailNode = node;
+        this.detailNode = { ...node };
         return;
       }
     }
@@ -237,7 +244,6 @@ export class SauriaCanvas extends LightDomElement {
               openConversation(this, e.detail.fromId, e.detail.toId)}
           >
           </edge-activity>
-          ${this.renderEdgeDeleteBtn()}
           ${graph.workspaces.map(
             (ws) => html`
               <workspace-frame
@@ -266,6 +272,7 @@ export class SauriaCanvas extends LightDomElement {
               </agent-card>
             `,
           )}
+          ${this.renderEdgeDeleteBtn()}
           <orbital-bubbles
             .instances=${graph.instances ?? []}
             .catalogMap=${this.catalogMap}
@@ -376,18 +383,37 @@ export class SauriaCanvas extends LightDomElement {
   }
 
   private renderEdgeDeleteBtn() {
-    if (!this.hoveredEdgeId) return nothing;
-    const edgeLayer = this.querySelector('edge-layer') as EdgeLayer | null;
-    const mid = edgeLayer?.getEdgeMidpoint(this.hoveredEdgeId);
-    if (!mid) return nothing;
-    const edgeId = this.hoveredEdgeId;
+    const isHovered = !!this.hoveredEdgeId;
+
+    if (isHovered) {
+      const { graph } = this.graphSync;
+      const edge = graph.edges.find((e) => e.id === this.hoveredEdgeId);
+      if (edge) {
+        const fromNode = graph.nodes.find((n) => n.id === edge.from);
+        const toNode = graph.nodes.find((n) => n.id === edge.to);
+        const worldEl = this.querySelector('.canvas-world') as HTMLElement | null;
+        if (fromNode && toNode && worldEl) {
+          const mid = computeEdgeGeometry(fromNode, toNode, worldEl);
+          if (mid) {
+            this.edgeBtnPos = { x: mid.midX, y: mid.midY };
+            this.edgeBtnEdgeId = this.hoveredEdgeId!;
+          }
+        }
+      }
+    }
+
+    const { x, y } = this.edgeBtnPos;
+    const edgeId = this.edgeBtnEdgeId;
     return html`
       <button
-        class="edge-delete-btn visible"
-        style="left:${mid.x}px;top:${mid.y}px"
+        class="edge-delete-btn ${isHovered ? 'visible' : ''}"
+        style="left:${x}px;top:${y}px"
         @click=${() => {
-          removeEdge(this, edgeId);
-          this.hoveredEdgeId = null;
+          if (!edgeId) return;
+          requestConfirm(this, 'canvas.confirmDisconnectEdge', () => {
+            removeEdge(this, edgeId);
+            this.hoveredEdgeId = null;
+          });
         }}
         @mouseenter=${() => {
           if (this.edgeHideTimer) clearTimeout(this.edgeHideTimer);
@@ -397,9 +423,19 @@ export class SauriaCanvas extends LightDomElement {
           this.scheduleEdgeHide();
         }}
       >
-        <img src="/icons/x.svg" alt="Delete edge" />
+        <img src="/icons/unlink.svg" alt="Disconnect" />
       </button>
     `;
+  }
+
+  private refreshCatalog(): void {
+    listIntegrationCatalog()
+      .then((catalog) => {
+        const updated = new Map<string, IntegrationDef>();
+        for (const item of catalog) updated.set(item.id ?? item.definition.id, item.definition);
+        this.catalogMap = updated;
+      })
+      .catch(() => {});
   }
 
   private scheduleEdgeHide(): void {

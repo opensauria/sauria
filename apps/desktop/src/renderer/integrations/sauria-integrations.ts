@@ -165,8 +165,8 @@ export class SauriaIntegrations extends LightDomElement {
 
       <main class="integrations-grid" @card-click=${this.handleCardClick}>
         ${filtered.length === 0
-          ? html`<div class="integrations-loading" style="padding-top:40px">
-              <span style="color:var(--text-dim);font-size:13px">${t('integ.noResults')}</span>
+          ? html`<div class="integrations-empty">
+              <span class="integrations-empty-text">${t('integ.noResults')}</span>
             </div>`
           : filtered.map((item) => this.renderCardItem(item))}
       </main>

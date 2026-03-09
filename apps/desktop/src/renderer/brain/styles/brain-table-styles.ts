@@ -51,7 +51,7 @@ export const brainTableStyles = css`
     color: var(--text-dim);
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
-    z-index: 1;
+    z-index: var(--z-base);
   }
 
   .brain-table td {

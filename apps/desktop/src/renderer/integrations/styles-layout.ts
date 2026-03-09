@@ -3,6 +3,13 @@ import { css } from 'lit';
 /* Header, category tabs, grid, and card styles */
 
 export const layoutStyles = css`
+  sauria-integrations {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--bg-solid);
+  }
+
   /* ── Header ──────────────────────────────────── */
 
   .integrations-header {
@@ -37,15 +44,15 @@ export const layoutStyles = css`
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 0 var(--spacing-sm);
-    height: 32px;
+    height: var(--spacing-xl);
     width: 240px;
     -webkit-app-region: no-drag;
   }
 
   .integrations-search img {
-    width: 16px;
-    height: 16px;
-    opacity: 0.5;
+    width: var(--spacing-md);
+    height: var(--spacing-md);
+    opacity: var(--opacity-muted);
     filter: brightness(0) invert();
   }
 
@@ -118,7 +125,7 @@ export const layoutStyles = css`
     grid-column: 1 / -1;
     display: flex;
     justify-content: center;
-    padding-top: 80px;
+    padding-top: calc(2 * var(--spacing-xl) + var(--spacing-md));
   }
 
   /* ── Card ────────────────────────────────────── */
@@ -152,8 +159,8 @@ export const layoutStyles = css`
   }
 
   .integration-card-icon {
-    width: 32px;
-    height: 32px;
+    width: var(--spacing-xl);
+    height: var(--spacing-xl);
     flex-shrink: 0;
   }
 
@@ -204,5 +211,17 @@ export const layoutStyles = css`
     .integrations-search {
       width: 160px;
     }
+  }
+
+  .integrations-empty {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    padding-top: calc(2 * var(--spacing-xl) + var(--spacing-md));
+  }
+
+  .integrations-empty-text {
+    color: var(--text-dim);
+    font-size: var(--font-size-base);
   }
 `;

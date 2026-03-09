@@ -1,41 +1,42 @@
 import { css } from 'lit';
 
 export const agentDetailStyles = css`
-  :host {
-    display: block;
-  }
-  .panel {
+  .detail-panel {
     position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
-    width: 340px;
+    width: 360px;
     max-width: 100%;
     background: var(--bg-solid);
     border-left: 1px solid var(--border);
-    z-index: var(--z-modal);
+    z-index: var(--z-panel);
     transform: translateX(100%);
     transition: transform var(--transition-normal);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
   }
-  .panel.open {
+  .detail-panel.open {
     transform: translateX(0);
   }
-  .header {
+
+  /* --- Header --- */
+  .detail-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
     border-bottom: 1px solid var(--border);
   }
-  .title {
-    font-size: var(--font-size-base);
-    font-weight: 500;
-    color: var(--text);
+  .detail-title {
+    font-size: var(--font-size-small);
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
-  .close-btn {
+  .detail-close-btn {
     width: var(--spacing-xl);
     height: var(--spacing-xl);
     display: flex;
@@ -44,40 +45,40 @@ export const agentDetailStyles = css`
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--text-secondary);
+    color: var(--text-dim);
     border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
   }
-  .close-btn:hover {
+  .detail-close-btn:hover {
     background: var(--surface-hover);
-  }
-  .body {
-    padding: var(--spacing-md);
-    flex: 1;
-  }
-  .section {
-    margin-bottom: var(--spacing-md);
-  }
-  .label {
-    display: block;
-    font-size: var(--font-size-small);
     color: var(--text-secondary);
-    margin-bottom: var(--spacing-xs);
   }
-  .identity {
+
+  /* --- Body --- */
+  .detail-body {
+    padding: var(--spacing-lg);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+  }
+
+  /* --- Identity block --- */
+  .detail-identity {
     display: flex;
     align-items: center;
-    gap: var(--spacing-smd);
-    margin-bottom: var(--spacing-md);
+    gap: var(--spacing-md);
   }
   .detail-avatar {
-    width: 40px;
-    height: 40px;
+    width: var(--spacing-xxl);
+    height: var(--spacing-xxl);
     border-radius: 50%;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--surface);
+    flex-shrink: 0;
   }
   .detail-avatar.owner-avatar {
     border: 2px solid var(--accent);
@@ -87,167 +88,205 @@ export const agentDetailStyles = css`
     height: 100%;
     object-fit: cover;
   }
-  .avatar-initials {
-    font-size: var(--font-size-small);
+  .detail-avatar-initials {
+    font-size: var(--font-size-base);
+    font-weight: 600;
     color: var(--text);
   }
   .detail-agent-name {
-    font-size: var(--font-size-base);
-    font-weight: 500;
+    font-size: var(--font-size-heading);
+    font-weight: 600;
     color: var(--text);
+    line-height: 1.2;
   }
   .detail-agent-handle {
     font-size: var(--font-size-small);
     color: var(--text-dim);
+    margin-top: 2px;
   }
   .detail-agent-platform {
     font-size: var(--font-size-small);
     color: var(--text-secondary);
+    margin-top: 2px;
   }
-  .role-pills {
+
+  /* --- Sections --- */
+  .detail-section {
     display: flex;
-    gap: var(--spacing-xs);
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+  .detail-label {
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  /* --- Role pills --- */
+  .detail-role-pills {
+    display: flex;
+    gap: var(--spacing-sm);
     flex-wrap: wrap;
   }
-  .role-pill {
-    padding: var(--spacing-xs) var(--spacing-smd);
+  .detail-role-pill {
+    padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--radius-sm);
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text-secondary);
     font-size: var(--font-size-small);
+    font-weight: 500;
     cursor: pointer;
+    transition: all var(--transition-fast);
   }
-  .role-pill.active {
+  .detail-role-pill:hover {
+    border-color: var(--border-active);
+    color: var(--text);
+  }
+  .detail-role-pill.active {
     background: var(--accent);
     color: var(--text-on-accent);
     border-color: var(--accent);
   }
-  .autonomy-bar {
+
+  /* --- Autonomy bar --- */
+  .detail-autonomy-bar {
     display: flex;
     position: relative;
     background: var(--surface);
     border-radius: var(--radius-sm);
-    overflow: hidden;
+    padding: var(--spacing-xs);
   }
-  .autonomy-seg {
+  .detail-autonomy-seg {
     flex: 1;
     padding: var(--spacing-sm) var(--spacing-xs);
     text-align: center;
     cursor: pointer;
     font-size: var(--font-size-small);
+    font-weight: 500;
     color: var(--text-secondary);
     position: relative;
     z-index: 1;
+    transition: color var(--transition-fast);
+    border-radius: var(--spacing-xs);
   }
-  .autonomy-seg.active {
+  .detail-autonomy-seg:hover:not(.active) {
+    color: var(--text);
+  }
+  .detail-autonomy-seg.active {
     color: var(--text-on-accent);
   }
-  .autonomy-highlight {
+  .detail-autonomy-highlight {
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: var(--spacing-xs);
+    bottom: var(--spacing-xs);
     background: var(--accent);
-    border-radius: var(--radius-sm);
+    border-radius: var(--spacing-xs);
     transition:
       left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
       width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  input,
-  textarea,
-  select {
+
+  /* --- Form inputs --- */
+  agent-detail-panel input,
+  agent-detail-panel textarea,
+  agent-detail-panel select {
     width: 100%;
     box-sizing: border-box;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    padding: var(--spacing-sm) var(--spacing-smd);
+    padding: var(--spacing-smd) var(--spacing-md);
     color: var(--text);
     font-size: var(--font-size-base);
+    font-family: inherit;
     outline: none;
+    transition: border-color var(--transition-fast);
   }
-  textarea {
+  agent-detail-panel textarea {
     resize: vertical;
     min-height: 80px;
+    line-height: 1.5;
   }
-  input:focus,
-  textarea:focus,
-  select:focus {
+  agent-detail-panel input:focus,
+  agent-detail-panel textarea:focus,
+  agent-detail-panel select:focus {
     border-color: var(--accent);
   }
-  select {
-    appearance: auto;
+  agent-detail-panel input::placeholder,
+  agent-detail-panel textarea::placeholder {
+    color: var(--text-dim);
   }
-  .toggle-row {
+  agent-detail-panel select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: var(--spacing-xl);
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--spacing-smd) center;
+    cursor: pointer;
+  }
+  agent-detail-panel select:hover {
+    border-color: var(--border-active);
+  }
+
+  /* --- Toggle rows --- */
+  .detail-toggle-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
   }
-  .toggle-label {
+  .detail-toggle-row + .detail-toggle-row {
+    border-top: 1px solid var(--border);
+  }
+  .detail-toggle-label {
     font-size: var(--font-size-base);
-    color: var(--text-secondary);
+    color: var(--text);
   }
-  .toggle-switch {
-    width: 36px;
-    height: 20px;
-    border-radius: 10px;
-    cursor: pointer;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    position: relative;
-    transition: background var(--transition-fast);
-  }
-  .toggle-switch.active {
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  .toggle-switch::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--text-on-accent);
-    transition: transform var(--transition-fast);
-  }
-  .toggle-switch.active::after {
-    transform: translateX(16px);
-  }
-  .kpi-grid {
+
+  /* --- KPI grid --- */
+  .detail-kpi-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--spacing-sm);
   }
-  .kpi-item {
+  .detail-kpi-item {
     background: var(--surface);
     border-radius: var(--radius-sm);
-    padding: var(--spacing-sm) var(--spacing-smd);
+    padding: var(--spacing-smd) var(--spacing-md);
   }
-  .kpi-value {
+  .detail-kpi-value {
     display: block;
     font-size: var(--font-size-heading);
     font-weight: 600;
     color: var(--text);
+    line-height: 1.2;
   }
-  .kpi-label {
+  .detail-kpi-label {
     display: block;
     font-size: var(--font-size-micro);
-    color: var(--text-secondary);
+    color: var(--text-dim);
+    margin-top: var(--spacing-xs);
   }
-  .template-btn {
+
+  /* --- Template button --- */
+  .detail-template-btn {
+    align-self: flex-start;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    padding: var(--spacing-xs) var(--spacing-smd);
+    padding: var(--spacing-sm) var(--spacing-md);
     color: var(--text-secondary);
     font-size: var(--font-size-small);
+    font-weight: 500;
     cursor: pointer;
-    margin-top: var(--spacing-xs);
+    transition: all var(--transition-fast);
   }
-  .template-btn:hover {
-    background: var(--border);
+  .detail-template-btn:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-active);
   }
 `;

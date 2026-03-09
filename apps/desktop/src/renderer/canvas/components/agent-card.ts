@@ -89,7 +89,7 @@ export class AgentCard extends LightDomElement {
       (this.active ? ' node-active' : '');
 
     const avatarInner = node.photo
-      ? `<img src="${escapeHtml(node.photo)}" alt="" />`
+      ? `<img src="${escapeHtml(node.photo)}" alt="" draggable="false" />`
       : `<span class="avatar-initials">${getInitials(node.label)}</span>`;
 
     this.updateComplete.then(() => {
@@ -113,7 +113,7 @@ export class AgentCard extends LightDomElement {
       'agent-card' + (this.selected ? ' selected' : '') + (this.active ? ' node-active' : '');
 
     const photoHtml = node.photo
-      ? `<img src="${escapeHtml(node.photo)}" alt="" />`
+      ? `<img src="${escapeHtml(node.photo)}" alt="" draggable="false" />`
       : PLATFORM_ICONS[node.platform] || '';
     const displayName = node.meta.firstName || node.label.replace(/^@/, '');
     const botInfo = getBotInfo(node);

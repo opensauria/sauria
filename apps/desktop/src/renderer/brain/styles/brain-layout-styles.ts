@@ -7,6 +7,7 @@ export const brainLayoutStyles = css`
     height: 100vh;
     overflow: hidden;
     position: relative;
+    background: var(--bg-solid);
   }
 
   .brain-sidebar {

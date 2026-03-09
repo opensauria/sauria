@@ -31,8 +31,17 @@ export interface CanvasEventHost {
   detailWorkspaceId: string | null;
   wsDialogOpen: boolean;
   dockCollapsed: boolean;
+  confirmOpen: boolean;
+  confirmMessage: string;
+  confirmCallback: (() => void) | null;
   requestUpdate(): void;
   querySelector(sel: string): Element | null;
+}
+
+export function requestConfirm(host: CanvasEventHost, message: string, callback: () => void): void {
+  host.confirmMessage = message;
+  host.confirmCallback = callback;
+  host.confirmOpen = true;
 }
 
 /* ── Card / node actions ── */
@@ -62,8 +71,10 @@ export function handleCardAction(ctx: CanvasEventHost, action: string, nodeId: s
     return;
   }
   if (action === 'disconnect') {
-    disconnectChannel(node.platform, nodeId);
-    removeNode(ctx, nodeId);
+    requestConfirm(ctx, 'canvas.confirmDisconnectAgent', () => {
+      disconnectChannel(node.platform, nodeId);
+      removeNode(ctx, nodeId);
+    });
   }
 }
 
@@ -108,12 +119,18 @@ export function handleNodeUpdate(
   nodeId: string,
   patch: Record<string, unknown>,
 ): void {
-  const node = ctx.graphSync.graph.nodes.find((n) => n.id === nodeId);
-  if (!node) return;
+  const idx = ctx.graphSync.graph.nodes.findIndex((n) => n.id === nodeId);
+  if (idx === -1) return;
 
+  const node = ctx.graphSync.graph.nodes[idx];
   Object.assign(node, patch);
   if (node.platform === 'owner' && patch.instructions !== undefined) {
     ctx.graphSync.graph.globalInstructions = patch.instructions as string;
+  }
+  const updated = { ...node };
+  ctx.graphSync.graph.nodes[idx] = updated;
+  if (ctx.detailNode?.id === nodeId) {
+    ctx.detailNode = updated;
   }
   ctx.graphSync.save();
   ctx.requestUpdate();
@@ -176,9 +193,10 @@ export function handleWorkspaceUpdate(
   value: string,
   wsId: string,
 ): void {
-  const ws = ctx.graphSync.graph.workspaces.find((w) => w.id === wsId);
-  if (!ws) return;
+  const idx = ctx.graphSync.graph.workspaces.findIndex((w) => w.id === wsId);
+  if (idx === -1) return;
 
+  const ws = ctx.graphSync.graph.workspaces[idx];
   if (field === 'name') ws.name = value;
   else if (field === 'color') ws.color = value;
   else if (field === 'purpose') ws.purpose = value;
@@ -186,15 +204,17 @@ export function handleWorkspaceUpdate(
   else if (field === 'addTopic') (ws.topics ??= []).push(value);
   else if (field === 'removeTopic') ws.topics?.splice(parseInt(value, 10), 1);
 
+  ctx.graphSync.graph.workspaces[idx] = { ...ws };
   ctx.graphSync.save();
   ctx.requestUpdate();
 }
 
 export function handleWsLockToggle(ctx: CanvasEventHost, wsId: string): void {
-  const ws = ctx.graphSync.graph.workspaces.find((w) => w.id === wsId);
-  if (!ws) return;
+  const idx = ctx.graphSync.graph.workspaces.findIndex((w) => w.id === wsId);
+  if (idx === -1) return;
 
-  ws.locked = !ws.locked;
+  const ws = ctx.graphSync.graph.workspaces[idx];
+  ctx.graphSync.graph.workspaces[idx] = { ...ws, locked: !ws.locked };
   ctx.graphSync.save();
   ctx.requestUpdate();
 }
@@ -265,8 +285,11 @@ export function handleKeydown(host: CanvasEventHost, e: KeyboardEvent): void {
   }
   if ((e.key === 'Delete' || e.key === 'Backspace') && host.selectedNodeId && !isInputFocused()) {
     e.preventDefault();
-    removeNode(host, host.selectedNodeId);
-    host.selectedNodeId = null;
+    const nodeId = host.selectedNodeId;
+    requestConfirm(host, 'canvas.confirmDeleteAgent', () => {
+      removeNode(host, nodeId);
+      host.selectedNodeId = null;
+    });
   }
 }
 

@@ -47,10 +47,7 @@ export class AgentCardSetup extends LightDomElement {
           &times;
         </button>
       </div>
-      <div
-        class="card-setup-field"
-        style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;margin-bottom:8px;"
-      >
+      <div class="card-setup-gmail-hint">
         Sign in securely with your Google account. No passwords stored.
       </div>
       ${statusHtml}
@@ -63,8 +60,7 @@ export class AgentCardSetup extends LightDomElement {
           Cancel
         </button>
         <button
-          class="btn-connect"
-          style="background:#4285F4;"
+          class="btn-connect btn-google"
           ?disabled=${this.isConnecting}
           @click=${() => this.fireAction('connect')}
         >

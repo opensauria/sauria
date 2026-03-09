@@ -49,14 +49,14 @@ export const setupComponentStyles = css`
   /* Success */
 
   .success-icon {
-    width: 64px;
-    height: 64px;
+    width: calc(4 * var(--spacing-md));
+    height: calc(4 * var(--spacing-md));
     border-radius: 50%;
     background: color-mix(in srgb, var(--success) 12%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: var(--spacing-xl);
     margin-bottom: var(--spacing-lg);
   }
 

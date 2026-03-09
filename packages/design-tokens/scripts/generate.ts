@@ -60,6 +60,7 @@ const lines: string[] = [
     label: typography.sizeLabel,
     micro: typography.sizeMicro,
     heading: typography.sizeHeading,
+    lg: typography.sizeLg,
   }),
   '',
   ...generateCssProperties('transition', transitions),

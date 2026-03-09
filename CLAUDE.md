@@ -307,11 +307,14 @@ Platforms:  --platform-telegram, --platform-discord, --platform-slack, --platfor
 ### Style System (CRITICAL)
 
 - **Zero CSS files** — all styles as Lit `css` tagged templates in TypeScript
-- **Zero hardcoded values** — NEVER use hex colors, rgba(), raw pixel values for spacing/sizing. Always use `var(--token)`.
+- **Zero hardcoded values** — NEVER use hex colors, rgba(), raw pixel values for spacing, sizing, z-index, font sizes, radii, or any design property. Always use `var(--token)`. This applies to ALL CSS properties without exception.
   - Colors: `var(--accent)`, `var(--text)`, `var(--border)`, etc.
   - Alpha variants: `color-mix(in srgb, var(--token) N%, transparent)`
   - Spacing: `var(--spacing-sm)`, `var(--spacing-md)`, etc.
   - Radii: `var(--radius)`, `var(--radius-sm)`, etc.
+  - Z-index: `var(--z-base)`, `var(--z-toolbar)`, `var(--z-panel)`, etc. — NEVER raw numbers
+  - Font sizes: `var(--font-size-base)`, `var(--font-size-small)`, etc.
+  - If a token doesn't exist for a value you need, ADD it to `@sauria/design-tokens` first
   - Exception: `1px`/`2px` borders, SVG stroke widths, animation dasharray/offset values
 - **Shared style modules** in `renderer/shared/styles/`: button, badge, card, dialog, search, empty-state, spinner, table, nav, segmented-toggle, form
 - **View-specific styles** in `renderer/{view}/styles.ts` — only view-specific CSS

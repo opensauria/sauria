@@ -1,21 +1,23 @@
-import { LitElement, html, nothing } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { t } from '../../i18n.js';
 import type { AgentNode, CanvasGraph, IntegrationDef } from '../types.js';
 import { fire } from '../fire.js';
 import { assignIntegration, unassignIntegration } from '../ipc.js';
+import { LightDomElement } from '../light-dom-element.js';
+import { adoptStyles } from '../../shared/styles/inject.js';
 import { agentIntegrationsStyles } from './agent-integrations-styles.js';
 
+adoptStyles(agentIntegrationsStyles);
+
 @customElement('agent-integrations-section')
-export class AgentIntegrationsSection extends LitElement {
+export class AgentIntegrationsSection extends LightDomElement {
   @property({ attribute: false }) node: AgentNode | null = null;
   @property({ attribute: false }) graph: CanvasGraph | null = null;
   @property({ attribute: false }) catalogMap = new Map<string, IntegrationDef>();
 
   @state() private showIntDropdown = false;
   @state() private intSearchFilter = '';
-
-  static styles = agentIntegrationsStyles;
 
   render() {
     if (!this.node) return nothing;
@@ -27,8 +29,8 @@ export class AgentIntegrationsSection extends LitElement {
     const assigned = node.integrations ?? [];
 
     return html`
-      <div class="section">
-        <span class="label">${t('canvas.integrations')}</span>
+      <div class="int-section">
+        <span class="int-label">${t('canvas.integrations')}</span>
         <div class="int-chips">
           ${assigned.map((aid) => {
             const inst = instances.find((i) => i.id === aid);
@@ -44,14 +46,7 @@ export class AgentIntegrationsSection extends LitElement {
                   class="int-chip-remove"
                   @click=${() => this.handleRemoveIntegration(node.id, inst.id)}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M18 6L6 18M6 6l12 12"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
+                  <img class="int-chip-remove-icon" src="/icons/x.svg" alt="" />
                 </button>
               </div>
             `;
@@ -85,28 +80,36 @@ export class AgentIntegrationsSection extends LitElement {
 
     return html`
       <div class="int-dropdown">
-        <input
-          class="int-dropdown-search"
-          type="text"
-          placeholder="Search..."
-          .value=${this.intSearchFilter}
-          @input=${(e: InputEvent) => {
-            this.intSearchFilter = (e.target as HTMLInputElement).value;
-          }}
-        />
-        ${filtered.length === 0
-          ? html`<div class="int-dropdown-empty">No integrations available</div>`
-          : filtered.map((inst) => {
-              const def = this.catalogMap.get(inst.integrationId);
-              return html`
-                <div
-                  class="int-dropdown-item"
-                  @click=${() => this.handleAssignIntegration(node.id, inst.id)}
-                >
-                  ${def?.name ?? inst.label}
-                </div>
-              `;
-            })}
+        <div class="int-dropdown-list">
+          ${filtered.length === 0
+            ? html`<div class="int-dropdown-empty">${t('canvas.noIntegrations')}</div>`
+            : filtered.map((inst) => {
+                const def = this.catalogMap.get(inst.integrationId);
+                return html`
+                  <div
+                    class="int-dropdown-item"
+                    @click=${() => this.handleAssignIntegration(node.id, inst.id)}
+                  >
+                    ${def?.icon
+                      ? html`<img src="/icons/integrations/${def.icon}.svg" alt="" />`
+                      : html`<div class="int-dropdown-item-placeholder"></div>`}
+                    ${def?.name ?? inst.label}
+                  </div>
+                `;
+              })}
+        </div>
+        <div class="int-dropdown-search-wrap">
+          <img class="int-search-icon" src="/icons/search.svg" alt="" />
+          <input
+            class="int-dropdown-search"
+            type="text"
+            placeholder="Search..."
+            .value=${this.intSearchFilter}
+            @input=${(e: InputEvent) => {
+              this.intSearchFilter = (e.target as HTMLInputElement).value;
+            }}
+          />
+        </div>
       </div>
     `;
   }

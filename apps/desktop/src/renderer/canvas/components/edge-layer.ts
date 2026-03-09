@@ -1,6 +1,6 @@
 import { html, nothing } from 'lit';
 import { LightDomElement } from '../light-dom-element.js';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 import type { AgentNode, Edge } from '../types.js';
 import { computeEdgeGeometry } from '../helpers.js';
 import { fire } from '../fire.js';
@@ -15,7 +15,7 @@ export class EdgeLayer extends LightDomElement {
   @property({ attribute: false }) nodes: AgentNode[] = [];
   @property({ attribute: false }) worldEl: HTMLElement | null = null;
 
-  @state() private hoveredEdgeId: string | null = null;
+  private hoveredEdgeId: string | null = null;
   private edgeHideTimeout: ReturnType<typeof setTimeout> | null = null;
 
   connectedCallback(): void {
@@ -124,7 +124,9 @@ export class EdgeLayer extends LightDomElement {
         '</g>';
     }
 
+    const tempLine = svg.querySelector('.edge-temp');
     svg.innerHTML = '<defs>' + defs + '</defs>' + paths;
+    if (tempLine) svg.appendChild(tempLine);
   }
 
   /** Public method: get midpoint of an edge for delete button positioning. */

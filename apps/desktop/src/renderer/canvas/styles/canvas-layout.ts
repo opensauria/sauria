@@ -44,6 +44,7 @@ export const canvasLayoutStyles = css`
     z-index: var(--z-base);
     user-select: none;
     cursor: grab;
+    pointer-events: none;
     transition:
       border-color var(--transition-normal),
       box-shadow var(--transition-normal);
@@ -66,7 +67,8 @@ export const canvasLayoutStyles = css`
     gap: var(--spacing-sm);
     padding: var(--spacing-sm) var(--spacing-md);
     cursor: grab;
-    min-height: 40px;
+    min-height: calc(2 * var(--spacing-mld));
+    pointer-events: auto;
   }
 
   .workspace-name {
@@ -111,8 +113,9 @@ export const canvasLayoutStyles = css`
     padding: 0;
     flex-shrink: 0;
     opacity: 0;
-    transition: all 0.12s ease;
+    transition: all var(--transition-fast);
     margin-left: auto;
+    pointer-events: auto;
   }
 
   .workspace-frame:hover .ws-gear {
@@ -127,7 +130,7 @@ export const canvasLayoutStyles = css`
     width: var(--spacing-md);
     height: var(--spacing-md);
     filter: brightness(0) invert(0.4);
-    transition: filter 0.12s ease;
+    transition: filter var(--transition-fast);
   }
 
   .ws-gear:hover img {
@@ -148,6 +151,7 @@ export const canvasLayoutStyles = css`
     opacity: 0;
     transition: opacity var(--transition-fast);
     color: var(--text-dim);
+    pointer-events: auto;
   }
 
   .workspace-frame:hover .ws-lock {
@@ -170,7 +174,8 @@ export const canvasLayoutStyles = css`
 
   .workspace-resize {
     position: absolute;
-    z-index: 2;
+    z-index: var(--z-base);
+    pointer-events: auto;
   }
 
   .workspace-resize-r {
@@ -211,7 +216,7 @@ export const canvasLayoutStyles = css`
     align-items: center;
     justify-content: center;
     perspective: 1200px;
-    z-index: 150;
+    z-index: var(--z-dock);
     background: linear-gradient(
       to bottom,
       transparent 0%,
@@ -307,7 +312,7 @@ export const canvasLayoutStyles = css`
     justify-content: center;
     gap: var(--spacing-smd);
     pointer-events: none;
-    z-index: 1000;
+    z-index: var(--z-ghost);
     transition:
       opacity var(--transition-fast),
       transform var(--transition-fast);
@@ -336,7 +341,7 @@ export const canvasLayoutStyles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 200;
+    z-index: var(--z-toolbar);
     transition: all var(--transition-normal);
     padding: 0;
   }
@@ -355,7 +360,7 @@ export const canvasLayoutStyles = css`
     height: var(--spacing-md);
     filter: brightness(0) invert(0.4);
     transition:
-      filter 0.12s ease,
+      filter var(--transition-fast),
       transform var(--transition-normal);
   }
 
@@ -382,13 +387,13 @@ export const canvasLayoutStyles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2;
+    z-index: var(--z-dropdown);
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.8);
     transition:
       opacity var(--transition-fast),
       transform var(--transition-fast),
-      background 0.12s ease;
+      background var(--transition-fast);
     pointer-events: none;
     padding: 0;
   }
@@ -408,7 +413,7 @@ export const canvasLayoutStyles = css`
     width: var(--spacing-smd);
     height: var(--spacing-smd);
     filter: brightness(0) invert(0.5);
-    transition: filter 0.12s ease;
+    transition: filter var(--transition-fast);
   }
 
   .edge-delete-btn:hover img {

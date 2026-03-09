@@ -12,7 +12,7 @@ export const brainViewToggleStyles = css`
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 2px;
-    z-index: 5;
+    z-index: var(--z-dropdown);
   }
 
   .brain-view-highlight {

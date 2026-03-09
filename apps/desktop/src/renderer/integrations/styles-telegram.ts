@@ -23,8 +23,8 @@ export const telegramStyles = css`
 
   .tg-bot-avatar,
   .tg-bot-avatar-placeholder {
-    width: 40px;
-    height: 40px;
+    width: calc(2 * var(--spacing-mld));
+    height: calc(2 * var(--spacing-mld));
     border-radius: 50%;
     flex-shrink: 0;
     overflow: hidden;
@@ -42,8 +42,8 @@ export const telegramStyles = css`
   }
 
   .tg-bot-avatar-placeholder img {
-    width: 20px;
-    height: 20px;
+    width: var(--spacing-mld);
+    height: var(--spacing-mld);
   }
 
   .tg-bot-info {
@@ -68,15 +68,15 @@ export const telegramStyles = css`
   }
 
   .tg-bot-dot {
-    width: 8px;
-    height: 8px;
+    width: var(--spacing-sm);
+    height: var(--spacing-sm);
     border-radius: 50%;
     background: var(--success);
   }
 
   .tg-bot-disconnect {
-    width: 32px;
-    height: 32px;
+    width: var(--spacing-xl);
+    height: var(--spacing-xl);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: none;

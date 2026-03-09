@@ -39,7 +39,7 @@ export const canvasCardStyles = css`
   .agent-card.dragging {
     cursor: grabbing;
     opacity: 0.9;
-    z-index: 100;
+    z-index: var(--z-toast);
   }
 
   .agent-avatar {
@@ -59,6 +59,8 @@ export const canvasCardStyles = css`
     width: 100%;
     height: 100%;
     object-fit: cover;
+    -webkit-user-drag: none;
+    pointer-events: none;
   }
 
   .agent-avatar svg {
@@ -123,7 +125,7 @@ export const canvasCardStyles = css`
     max-width: 100%;
     text-align: center;
     line-height: 1;
-    margin-top: -4px;
+    margin-top: calc(-1 * var(--spacing-xs));
   }
 
   .icon-mono {
@@ -196,9 +198,9 @@ export const canvasCardStyles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.12s ease;
+    transition: all var(--transition-fast);
     padding: 0;
-    z-index: 2;
+    z-index: var(--z-base);
     opacity: 0;
   }
 
@@ -221,7 +223,7 @@ export const canvasCardStyles = css`
     width: var(--spacing-md);
     height: var(--spacing-md);
     filter: brightness(0) invert(0.35);
-    transition: filter 0.12s ease;
+    transition: filter var(--transition-fast);
   }
 
   .card-gear:hover img {
@@ -274,7 +276,7 @@ export const canvasCardStyles = css`
   }
 
   .avatar-initials {
-    font-size: 18px;
+    font-size: var(--font-size-lg);
     font-weight: 600;
     color: var(--warning);
     line-height: 1;
@@ -339,7 +341,7 @@ export const canvasCardStyles = css`
     justify-content: center;
     font-size: var(--font-size-heading);
     line-height: 1;
-    transition: all 0.12s ease;
+    transition: all var(--transition-fast);
     padding: 0;
   }
 
@@ -533,5 +535,20 @@ export const canvasCardStyles = css`
   .agent-card.card-exit {
     animation: cardExplode 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
     pointer-events: none;
+  }
+
+  .card-setup-gmail-hint {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: var(--font-size-small);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .btn-google {
+    background: #4285f4;
+  }
+
+  .btn-google:hover {
+    background: #3367d6;
   }
 `;

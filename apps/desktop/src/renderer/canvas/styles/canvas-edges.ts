@@ -13,7 +13,8 @@ export const canvasEdgeStyles = css`
     z-index: var(--z-dropdown);
   }
 
-  .port:hover {
+  .port:hover,
+  .port.port-active {
     background: var(--accent);
     border-color: var(--accent);
     transform: scale(1.4);
@@ -38,21 +39,23 @@ export const canvasEdgeStyles = css`
     left: -5000px;
     width: 10000px;
     height: 10000px;
-    pointer-events: none;
     z-index: var(--z-base);
     overflow: visible;
+    pointer-events: none;
   }
 
   .edge-svg .edge-line {
     stroke-width: 1.5;
     fill: none;
     stroke-linecap: round;
+    pointer-events: none;
   }
 
   .edge-svg .edge-flow {
     stroke-width: 1.5;
     fill: none;
     stroke-linecap: round;
+    pointer-events: none;
     stroke-dasharray: 40 200;
     animation: edgeFlow 2.5s linear infinite;
     filter: blur(1px);

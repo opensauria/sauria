@@ -19,7 +19,7 @@ export const brainDialogStyles = css`
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    z-index: var(--z-modal);
   }
 
   .brain-dialog-overlay.visible {

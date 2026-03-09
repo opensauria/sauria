@@ -1,4 +1,4 @@
-import { LitElement, html, nothing } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { t } from '../../i18n.js';
 import type { AgentNode, CanvasGraph, IntegrationDef } from '../types.js';
@@ -6,6 +6,8 @@ import { getInitials, capitalize } from '../helpers.js';
 import { fire } from '../fire.js';
 import { getAgentKpis } from '../ipc.js';
 import { CEO_TEMPLATE, BOT_TEMPLATE } from '../constants.js';
+import { LightDomElement } from '../light-dom-element.js';
+import { adoptStyles } from '../../shared/styles/inject.js';
 import { agentDetailStyles } from './agent-detail-styles.js';
 import {
   renderRolePills,
@@ -17,15 +19,15 @@ import {
 } from './agent-detail-sections.js';
 import './agent-integrations-section.js';
 
+adoptStyles(agentDetailStyles);
+
 @customElement('agent-detail-panel')
-export class AgentDetailPanel extends LitElement {
+export class AgentDetailPanel extends LightDomElement {
   @property({ attribute: false }) node: AgentNode | null = null;
   @property({ attribute: false }) graph: CanvasGraph | null = null;
   @property({ attribute: false }) catalogMap = new Map<string, IntegrationDef>();
 
   @state() private kpis: KpiData | null = null;
-
-  static styles = agentDetailStyles;
 
   fireUpdate(patch: Partial<AgentNode>): void {
     fire(this, 'node-update', { nodeId: this.node?.id, patch });
@@ -52,12 +54,12 @@ export class AgentDetailPanel extends LitElement {
     const isOwner = node?.platform === 'owner';
 
     return html`
-      <div class="panel ${isOpen ? 'open' : ''}">
-        <div class="header">
-          <span class="title"
+      <div class="detail-panel ${isOpen ? 'open' : ''}">
+        <div class="detail-header">
+          <span class="detail-title"
             >${isOwner ? t('canvas.ownerSettings') : t('canvas.agentDetails')}</span
           >
-          <button class="close-btn" @click=${() => fire(this, 'close')}>
+          <button class="detail-close-btn" @click=${() => fire(this, 'close')}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
               <path
                 d="M18 6L6 18M6 6l12 12"
@@ -79,7 +81,7 @@ export class AgentDetailPanel extends LitElement {
     const platformLabel = isOwner ? t('canvas.youOwner') : capitalize(node.platform);
 
     return html`
-      <div class="body">
+      <div class="detail-body">
         ${this.renderIdentity(node, isOwner, displayName, handle, platformLabel)}
         ${!isOwner ? renderRolePills(this, node) : nothing}
         ${!isOwner ? renderAutonomy(this, node) : nothing}
@@ -110,12 +112,12 @@ export class AgentDetailPanel extends LitElement {
     platformLabel: string,
   ) {
     return html`
-      <div class="identity">
+      <div class="detail-identity">
         <div class="detail-avatar ${isOwner ? 'owner-avatar' : ''}">
           ${node.photo
             ? html`<img src="${node.photo}" alt="" />`
             : isOwner
-              ? html`<span class="avatar-initials">${getInitials(node.label)}</span>`
+              ? html`<span class="detail-avatar-initials">${getInitials(node.label)}</span>`
               : html`<span></span>`}
         </div>
         <div>
@@ -129,8 +131,8 @@ export class AgentDetailPanel extends LitElement {
 
   private renderDescription(node: AgentNode) {
     return html`
-      <div class="section">
-        <span class="label">${t('canvas.description')}</span>
+      <div class="detail-section">
+        <span class="detail-label">${t('canvas.description')}</span>
         <input
           type="text"
           .value=${node.description || ''}
@@ -151,15 +153,18 @@ export class AgentDetailPanel extends LitElement {
       : t('canvas.agentPersonaPlaceholder');
     const template = isOwner ? CEO_TEMPLATE : BOT_TEMPLATE;
     return html`
-      <div class="section">
-        <span class="label">${label}</span>
+      <div class="detail-section">
+        <span class="detail-label">${label}</span>
         <textarea
           .value=${node.instructions || ''}
           @input=${(e: InputEvent) =>
             this.fireUpdate({ instructions: (e.target as HTMLTextAreaElement).value })}
           placeholder=${placeholder}
         ></textarea>
-        <button class="template-btn" @click=${() => this.fireUpdate({ instructions: template })}>
+        <button
+          class="detail-template-btn"
+          @click=${() => this.fireUpdate({ instructions: template })}
+        >
           ${t('canvas.insertTemplate')}
         </button>
       </div>

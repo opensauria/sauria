@@ -28,7 +28,7 @@ export const brainGraphStyles = css`
     border: 1px solid var(--border);
     background: var(--bg-solid);
     color: var(--text-secondary);
-    font-size: 18px;
+    font-size: var(--font-size-lg);
     cursor: pointer;
     display: inline-flex;
     align-items: center;

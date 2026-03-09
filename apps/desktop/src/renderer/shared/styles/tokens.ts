@@ -38,6 +38,7 @@ const rootVars = `:root {
   --font-size-label: ${typography.sizeLabel};
   --font-size-micro: ${typography.sizeMicro};
   --font-size-heading: ${typography.sizeHeading};
+  --font-size-lg: ${typography.sizeLg};
   ${toVars('transition', transitions)}
   ${toVars('entity', entityColors)}
   ${toVars('shadow', shadows)}

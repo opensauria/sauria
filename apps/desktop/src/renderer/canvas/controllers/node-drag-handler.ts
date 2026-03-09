@@ -118,18 +118,16 @@ export class NodeDragHandler {
   }
 
   private moveEdge(e: MouseEvent): void {
-    const vp = this.cb.getViewportEl();
-    const { x: vpX, y: vpY } = this.cb.getVpXY();
-    const zoom = this.cb.getZoom();
-    const rect = vp.getBoundingClientRect();
-    const mx = (e.clientX - rect.left - vpX) / zoom;
-    const my = (e.clientY - rect.top - vpY) / zoom;
+    const { mx, my } = this.clientToWorld(e);
     const dy = Math.abs(my - this.edgeDragOrigin.y) * 0.4;
     const { x: ox, y: oy } = this.edgeDragOrigin;
     this.edgeTempLine!.setAttribute(
       'd',
       `M${ox},${oy} C${ox},${oy + dy} ${mx},${my - dy} ${mx},${my}`,
     );
+
+    const target = this.findSnapTarget(mx, my);
+    this.updateSnapFeedback(target);
   }
 
   private finishNodeDrag(e: MouseEvent): void {
@@ -159,24 +157,87 @@ export class NodeDragHandler {
 
   private finishEdgeDrag(e: MouseEvent): void {
     this.isEdgeDragging = false;
+    this.updateSnapFeedback(null);
+
     if (this.edgeTempLine) {
       this.edgeTempLine.remove();
       this.edgeTempLine = null;
     }
 
-    const target = document.elementFromPoint(e.clientX, e.clientY);
-    const port = target
-      ? ((target as HTMLElement).closest('.port[data-port="input"]') as HTMLElement | null)
-      : null;
+    if (!this.edgeFromId) return;
 
-    if (port && port.dataset.nodeId !== this.edgeFromId && this.edgeFromId) {
-      const toId = port.dataset.nodeId!;
+    const { mx, my } = this.clientToWorld(e);
+    const bestId = this.findSnapTarget(mx, my);
+
+    if (bestId) {
       const hasEdge = this.cb
         .getGraph()
-        .edges.some((edge) => edge.from === this.edgeFromId && edge.to === toId);
-      if (!hasEdge) this.cb.onEdgeCreated(this.edgeFromId, toId);
+        .edges.some(
+          (edge) =>
+            (edge.from === this.edgeFromId && edge.to === bestId) ||
+            (edge.from === bestId && edge.to === this.edgeFromId),
+        );
+      if (!hasEdge) this.cb.onEdgeCreated(this.edgeFromId, bestId);
     }
     this.edgeFromId = null;
+  }
+
+  private snapTargetId: string | null = null;
+
+  private clientToWorld(e: MouseEvent): { mx: number; my: number } {
+    const vp = this.cb.getViewportEl();
+    const { x: vpX, y: vpY } = this.cb.getVpXY();
+    const zoom = this.cb.getZoom();
+    const rect = vp.getBoundingClientRect();
+    return {
+      mx: (e.clientX - rect.left - vpX) / zoom,
+      my: (e.clientY - rect.top - vpY) / zoom,
+    };
+  }
+
+  private findSnapTarget(mx: number, my: number): string | null {
+    const graph = this.cb.getGraph();
+    const world = this.cb.getWorldEl();
+    const SNAP_THRESHOLD = 80;
+    let bestId: string | null = null;
+    let bestDist = SNAP_THRESHOLD;
+
+    for (const node of graph.nodes) {
+      if (node.id === this.edgeFromId) continue;
+      if (node.platform === 'owner') continue;
+      const card = world.querySelector(`[data-node-id="${node.id}"]`) as HTMLElement | null;
+      const w = card ? card.offsetWidth : CARD_FALLBACK_W;
+      const h = card ? card.offsetHeight : CARD_FALLBACK_H;
+      const cx = node.position.x + w / 2;
+      const cy = node.position.y + h / 2;
+      const dist = Math.hypot(mx - cx, my - cy);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestId = node.id;
+      }
+    }
+    return bestId;
+  }
+
+  private updateSnapFeedback(targetId: string | null): void {
+    if (targetId === this.snapTargetId) return;
+    const world = this.cb.getWorldEl();
+
+    if (this.snapTargetId) {
+      const prev = world.querySelector(
+        `[data-node-id="${this.snapTargetId}"] .port-input`,
+      ) as HTMLElement | null;
+      prev?.classList.remove('port-active');
+    }
+
+    if (targetId) {
+      const next = world.querySelector(
+        `[data-node-id="${targetId}"] .port-input`,
+      ) as HTMLElement | null;
+      next?.classList.add('port-active');
+    }
+
+    this.snapTargetId = targetId;
   }
 
   private getContext(): { graph: CanvasGraph; zoom: number; world: HTMLElement } {

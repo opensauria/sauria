@@ -60,6 +60,7 @@ export const typography = {
   sizeLabel: '14px',
   sizeMicro: '10px',
   sizeHeading: '16px',
+  sizeLg: '18px',
 } as const;
 
 export const transitions = {
@@ -90,8 +91,12 @@ export const zIndex = {
   dropdown: '10',
   sticky: '20',
   overlay: '30',
-  modal: '40',
-  toast: '50',
+  modal: '300',
+  toast: '350',
+  dock: '150',
+  toolbar: '200',
+  panel: '250',
+  ghost: '1000',
 } as const;
 
 export const observationColors = {

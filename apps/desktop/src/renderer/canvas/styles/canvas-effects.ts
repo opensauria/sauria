@@ -26,7 +26,7 @@ export const canvasEffectStyles = css`
   .agent-card.node-active .agent-avatar::after {
     content: '';
     position: absolute;
-    inset: -4px;
+    inset: calc(-1 * var(--spacing-xs));
     border-radius: 50%;
     border: 2px solid var(--accent);
     animation: nodePulse 1.5s ease-in-out infinite;
@@ -81,7 +81,7 @@ export const canvasEffectStyles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     pointer-events: none;
-    z-index: 2;
+    z-index: var(--z-base);
     transform: translate(-50%, -50%);
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -124,7 +124,7 @@ export const canvasEffectStyles = css`
     pointer-events: auto;
     opacity: 0;
     animation: orbitalPopIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-    z-index: 2;
+    z-index: var(--z-base);
   }
 
   .orbital-bubble img {
@@ -134,7 +134,7 @@ export const canvasEffectStyles = css`
 
   .orbital-tooltip {
     position: absolute;
-    bottom: calc(100% + 8px);
+    bottom: calc(100% + var(--spacing-sm));
     left: 50%;
     transform: translateX(-50%);
     background: color-mix(in srgb, var(--bg-solid) 95%, transparent);
