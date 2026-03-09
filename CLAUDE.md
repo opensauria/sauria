@@ -63,12 +63,18 @@ apps/
   desktop/                         # Tauri v2 app
     src/
       renderer/
-        canvas/index.html          # Agent canvas (inline JS, spring physics)
-        canvas/canvas.css          # Canvas styles
-        palette/index.html         # Command palette UI
-        setup/index.html           # Setup wizard UI
-        brain/index.html           # Brain knowledge graph UI
-        shared.css                 # Imports @sauria/design-tokens + shared components
+        shared/
+          light-dom-element.ts     # Base class for all Lit components (light DOM)
+          styles/                  # Shared style modules (button, badge, card, dialog, etc.)
+            inject.ts              # adoptGlobalStyles() — reset + tokens on document
+            reset.ts               # CSS reset, scrollbars, body defaults
+            tokens.ts              # :root vars from @sauria/design-tokens
+            index.ts               # Barrel export for all shared styles
+        canvas/                    # Agent canvas (Lit components + styles.ts)
+        palette/                   # Command palette (Lit components + styles.ts)
+        setup/                     # Setup wizard (Lit components + styles.ts)
+        brain/                     # Brain knowledge graph (Lit component + styles.ts)
+        integrations/              # Integrations hub (Lit components + styles.ts)
     src-tauri/src/
       main.rs                      # Tauri app builder, shortcut, daemon launch
       daemon_manager.rs            # Spawn, kill, health check (cross-platform)
@@ -274,21 +280,44 @@ For reverse messages (reply B→A on edge A→B), the dot travels `totalLength�
 
 Source of truth: `packages/design-tokens/src/tokens.ts` (typed `as const`).
 Generated outputs: `tokens.css` (CSS custom properties), `tokens.json`.
-Desktop `shared.css` imports via `@import '@sauria/design-tokens/tokens.css'`.
 
 ```
---bg: #1a1a1a          --surface: rgba(255,255,255,0.04)
---border: rgba(255,255,255,0.08)  --text: #ececec
---text-secondary: #999  --text-dim: #555
---accent: #038B9A       --accent-hover: #027A87
---success: #34d399      --error: #f87171
---warning: #f59e0b      --overlay: rgba(0,0,0,0.5)
---radius: 12px          --radius-sm: 8px
---radius-lg: 16px       --radius-pill: 9999px
---font-size-micro: 10px --font-size-small: 12px
---font-size-base: 14px  --font-size-heading: 16px
---entity-person: #3b82f6  --entity-project: #34d399  (+ 6 more)
+Colors:     --bg, --bg-solid, --surface, --surface-hover, --surface-light
+            --border, --border-active, --border-hover
+            --text, --text-secondary, --text-dim, --text-on-accent
+            --accent, --accent-hover, --accent-subtle
+            --success, --error, --warning, --overlay
+Radii:      --radius (12px), --radius-sm (8px), --radius-lg (16px), --radius-pill
+Spacing:    --spacing-xs (4), --spacing-sm (8), --spacing-smd (12), --spacing-md (16)
+            --spacing-mld (20), --spacing-lg (24), --spacing-xl (32), --spacing-xxl (48)
+Typography: --font-family, --font-family-mono
+            --font-size-micro (10), --font-size-small (12), --font-size-base (14)
+            --font-size-label (14), --font-size-heading (16), --font-size-x-small (12)
+Transitions:--transition-fast (0.15s), --transition-normal (0.2s)
+Opacity:    --opacity-disabled (0.4), --opacity-muted (0.6), --opacity-subtle (0.8)
+Shadows:    --shadow-sm, --shadow-md, --shadow-lg, --shadow-glow
+Z-index:    --z-base (0), --z-dropdown (10), --z-sticky (20), --z-overlay (30), --z-modal (40), --z-toast (50)
+Entities:   --entity-person, --entity-project, --entity-company, --entity-event
+            --entity-document, --entity-goal, --entity-place, --entity-concept
+Observations: --observation-trait, --observation-preference, --observation-behavior
+              --observation-skill, --observation-fact, --observation-goal, --observation-relationship
+Platforms:  --platform-telegram, --platform-discord, --platform-slack, --platform-whatsapp, --platform-email
 ```
+
+### Style System (CRITICAL)
+
+- **Zero CSS files** — all styles as Lit `css` tagged templates in TypeScript
+- **Zero hardcoded values** — NEVER use hex colors, rgba(), raw pixel values for spacing/sizing. Always use `var(--token)`.
+  - Colors: `var(--accent)`, `var(--text)`, `var(--border)`, etc.
+  - Alpha variants: `color-mix(in srgb, var(--token) N%, transparent)`
+  - Spacing: `var(--spacing-sm)`, `var(--spacing-md)`, etc.
+  - Radii: `var(--radius)`, `var(--radius-sm)`, etc.
+  - Exception: `1px`/`2px` borders, SVG stroke widths, animation dasharray/offset values
+- **Shared style modules** in `renderer/shared/styles/`: button, badge, card, dialog, search, empty-state, spinner, table, nav, segmented-toggle, form
+- **View-specific styles** in `renderer/{view}/styles.ts` — only view-specific CSS
+- **Global injection**: `adoptGlobalStyles()` from `shared/styles/inject.ts` — injects reset + tokens on `document.adoptedStyleSheets`
+- **Light DOM**: all components extend `LightDomElement`, BEM naming for isolation
+- Components import shared styles: `import { buttonStyles, badgeStyles } from '../shared/styles/index.js'`
 
 ### Spacing & Sizing — Multiples of 4 (ALWAYS)
 
@@ -332,10 +361,20 @@ Desktop `shared.css` imports via `@import '@sauria/design-tokens/tokens.css'`.
 
 ### Components
 
-- `.btn` base + `.btn-primary` / `.btn-secondary` variants
-- `.badge` + `.badge-accent` / `.badge-success` / `.badge-dim`
-- `.spinner` for loading states (24px, accent border-top)
-- Transitions: 0.15s ease for interactions
+- All UI components are Lit custom elements extending `LightDomElement`
+- Shared style modules: `buttonStyles`, `badgeStyles`, `cardStyles`, `dialogStyles`, `searchStyles`, `emptyStateStyles`, `spinnerStyles`, `tableStyles`, `navStyles`, `segmentedToggleStyles`, `formStyles`
+- `.btn` base + `.btn-primary` / `.btn-secondary` / `.btn-danger` / `.btn-icon` variants
+- `.badge` + `.badge-accent` / `.badge-success` / `.badge-dim` / `.badge-error` / `.badge-warning`
+- `.type-badge` + `.type-person` / `.type-project` / etc. (entity type badges using `--entity-*` tokens)
+- `.spinner` / `.spinner-sm` / `.spinner-inline` for loading states
+- `.card` + `.card.selected` / `.card.connected` variants
+- `.dialog-overlay` + `.dialog` for modal dialogs
+- `.search-bar` + `.search-filter` for search inputs
+- `.empty-state` for empty data views
+- `.data-table` for data tables with sticky headers
+- `.nav-item` + `.sidebar` for navigation
+- `.segmented-toggle` + `.seg-btn` for segmented controls
+- `.form-group` + `.form-input` + `.form-label` + `.form-toggle` for forms
 
 ## Git Rules
 
