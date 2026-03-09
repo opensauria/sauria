@@ -50,10 +50,7 @@ export class WorkspaceDetailPanel extends LightDomElement {
     const isOpen = ws !== null;
 
     return html`
-      <div
-        class="ws-panel ${isOpen ? 'open' : ''}"
-        style="width: ${this.panelWidth}px"
-      >
+      <div class="ws-panel ${isOpen ? 'open' : ''}" style="width: ${this.panelWidth}px">
         ${isOpen
           ? html`
               <div
@@ -138,7 +135,14 @@ export class WorkspaceDetailPanel extends LightDomElement {
                   <span class="ws-label">${t('canvas.dailyBudget')}</span>
                   <div class="stepper">
                     <button class="stepper-btn" @click=${() => this.handleBudgetStep(-1)}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
                         <line x1="5" y1="12" x2="19" y2="12" />
                       </svg>
                     </button>
@@ -152,7 +156,14 @@ export class WorkspaceDetailPanel extends LightDomElement {
                         this.handleInput('budget', (e.target as HTMLInputElement).value)}
                     />
                     <button class="stepper-btn" @click=${() => this.handleBudgetStep(1)}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
                         <line x1="12" y1="5" x2="12" y2="19" />
                         <line x1="5" y1="12" x2="19" y2="12" />
                       </svg>

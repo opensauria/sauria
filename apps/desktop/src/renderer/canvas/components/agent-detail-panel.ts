@@ -59,10 +59,7 @@ export class AgentDetailPanel extends LightDomElement {
     const isOwner = node?.platform === 'owner';
 
     return html`
-      <div
-        class="detail-panel ${isOpen ? 'open' : ''}"
-        style="width: ${this.panelWidth}px"
-      >
+      <div class="detail-panel ${isOpen ? 'open' : ''}" style="width: ${this.panelWidth}px">
         ${isOpen
           ? html`
               <div

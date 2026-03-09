@@ -10,9 +10,4 @@ export const paletteViewStyles = [
   paletteFormStyles,
 ];
 
-export {
-  paletteCommandStyles,
-  paletteFormStyles,
-  paletteLayoutStyles,
-  paletteTelegramStyles,
-};
+export { paletteCommandStyles, paletteFormStyles, paletteLayoutStyles, paletteTelegramStyles };

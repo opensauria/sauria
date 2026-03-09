@@ -122,9 +122,18 @@ export class WorkspaceDialog extends LightDomElement {
             <div class="stepper">
               <button
                 class="stepper-btn"
-                @click=${() => { this.budgetValue = Math.max(0, this.budgetValue - 1); }}
+                @click=${() => {
+                  this.budgetValue = Math.max(0, this.budgetValue - 1);
+                }}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
               </button>
@@ -135,14 +144,26 @@ export class WorkspaceDialog extends LightDomElement {
                 step="1"
                 .value=${String(this.budgetValue)}
                 @input=${(e: InputEvent) => {
-                  this.budgetValue = Math.max(0, parseInt((e.target as HTMLInputElement).value) || 0);
+                  this.budgetValue = Math.max(
+                    0,
+                    parseInt((e.target as HTMLInputElement).value) || 0,
+                  );
                 }}
               />
               <button
                 class="stepper-btn"
-                @click=${() => { this.budgetValue = this.budgetValue + 1; }}
+                @click=${() => {
+                  this.budgetValue = this.budgetValue + 1;
+                }}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>

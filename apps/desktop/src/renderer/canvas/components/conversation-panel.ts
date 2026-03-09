@@ -98,10 +98,7 @@ export class ConversationPanel extends LightDomElement {
     };
 
     return html`
-      <div
-        class="conv-panel ${this.isOpen ? 'open' : ''}"
-        style="width: ${this.panelWidth}px"
-      >
+      <div class="conv-panel ${this.isOpen ? 'open' : ''}" style="width: ${this.panelWidth}px">
         ${this.isOpen
           ? html`
               <div

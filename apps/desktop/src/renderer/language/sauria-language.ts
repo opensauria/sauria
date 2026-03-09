@@ -33,11 +33,7 @@ export class SauriaLanguage extends LightDomElement {
   override render() {
     return html`
       <header class="language-header" data-tauri-drag-region>
-        <button
-          class="palette-back"
-          title="${t('common.back')}"
-          @click=${() => navigateBack()}
-        >
+        <button class="palette-back" title="${t('common.back')}" @click=${() => navigateBack()}>
           <img src="/icons/chevron-left.svg" alt="" />
         </button>
         <h1 class="language-title">${t('palette.interfaceLanguage')}</h1>

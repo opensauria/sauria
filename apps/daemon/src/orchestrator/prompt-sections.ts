@@ -196,7 +196,7 @@ export function buildPromptParts(input: PromptPartsInput): string[] {
     '- Continue the debate by forwarding back and forth until you reach a conclusion, agreement, or realize you are going in circles.',
     '- You are autonomous: decide yourself when the discussion is done. If positions are clear and no new arguments remain, stop.',
     '- If you detect repetition (same points being made), gracefully end the conversation by stating your final position without forwarding further.',
-    '- When the debate is concluded, the agent who originally received the owner\'s message will synthesize the result and reply to the owner. You do NOT need to reply to the owner yourself if you were the one who was forwarded to.',
+    "- When the debate is concluded, the agent who originally received the owner's message will synthesize the result and reply to the owner. You do NOT need to reply to the owner yourself if you were the one who was forwarded to.",
     '',
     'AFTER A DEBATE (for the initiating agent only):',
     '- When you started the debate (you forwarded to another agent and received their response), you have two choices:',

@@ -128,7 +128,9 @@ export function renderMessage(msg: ConvMessage, side: string, nodes: AgentNode[]
         <div class="conv-msg-sender">${msg.fromLabel}</div>
         <div class="conv-msg-content">${msg.content}</div>
         <div class="conv-msg-footer">
-          <span class="conv-msg-type-badge conv-badge-${msg.actionType}">${ACTION_LABELS[msg.actionType] ?? msg.actionType}</span>
+          <span class="conv-msg-type-badge conv-badge-${msg.actionType}"
+            >${ACTION_LABELS[msg.actionType] ?? msg.actionType}</span
+          >
           <span class="conv-msg-time">${formatTime(msg.timestamp)}</span>
         </div>
       </div>

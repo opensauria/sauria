@@ -39,7 +39,6 @@ interface Command {
   hint: string;
 }
 
-
 const MAIN_COMMANDS: Command[] = [
   { id: 'canvas', labelKey: 'palette.squad', hint: '' },
   { id: 'brain', labelKey: 'palette.brain', hint: '' },
@@ -141,7 +140,9 @@ export class SauriaPalette extends LightDomElement {
                 </div>
                 <input
                   type="text"
-                  placeholder="${this.devMode ? t('palette.devTools') : t('palette.searchPlaceholder')}"
+                  placeholder="${this.devMode
+                    ? t('palette.devTools')
+                    : t('palette.searchPlaceholder')}"
                   autofocus
                   .value=${this.searchValue}
                   @input=${this.handleSearchInput}
@@ -149,7 +150,6 @@ export class SauriaPalette extends LightDomElement {
               </div>
             `
           : nothing}
-
         ${this.activePanel === 'commands'
           ? html`
               ${filtered.length > 0
@@ -382,7 +382,6 @@ export class SauriaPalette extends LightDomElement {
     const active = UI_LANGUAGES.find((l) => l.code === getLocale());
     langCmd.hint = active?.label ?? '';
   }
-
 
   private async checkForUpdate(manual = false) {
     const updateCmd = MAIN_COMMANDS.find((c) => c.id === 'update');

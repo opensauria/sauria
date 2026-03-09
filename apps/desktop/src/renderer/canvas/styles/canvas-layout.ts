@@ -182,7 +182,8 @@ export const canvasLayoutStyles = css`
   }
 
   .ws-lock.locked img {
-    filter: brightness(0) saturate(100%) invert(45%) sepia(98%) saturate(2000%) hue-rotate(200deg) brightness(100%);
+    filter: brightness(0) saturate(100%) invert(45%) sepia(98%) saturate(2000%) hue-rotate(200deg)
+      brightness(100%);
     opacity: 1;
   }
 

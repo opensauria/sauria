@@ -5,7 +5,6 @@ import type { TelegramBot } from '../shared/types.js';
 import { connectChannel, disconnectChannel, getTelegramStatus } from '../shared/ipc.js';
 import { t } from '../i18n.js';
 
-
 @customElement('palette-telegram-panel')
 export class PaletteTelegramPanel extends LightDomElement {
   @state() private bots: TelegramBot[] = [];
@@ -111,8 +110,8 @@ export class PaletteTelegramPanel extends LightDomElement {
       <div class="bot-card" data-node-id="${bot.nodeId ?? ''}">
         <div class="bot-avatar">
           ${photo
-                    ? html`<img src="${photo}" alt="" />`
-                    : html`<img src="/icons/telegram.svg" alt="" />`}
+            ? html`<img src="${photo}" alt="" />`
+            : html`<img src="/icons/telegram.svg" alt="" />`}
         </div>
         <div class="bot-info">
           <div class="bot-name">${name}</div>
