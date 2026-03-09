@@ -22,8 +22,8 @@ export class WorkspaceDetailPanel extends LitElement {
       bottom: 0;
       width: 320px;
       max-width: 100%;
-      background: var(--bg, #1a1a1a);
-      border-left: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+      background: var(--bg-solid);
+      border-left: 1px solid var(--border);
       z-index: 100;
       transform: translateX(100%);
       transition: transform 0.2s ease;
@@ -44,7 +44,7 @@ export class WorkspaceDetailPanel extends LitElement {
     .title {
       font-size: 14px;
       font-weight: 500;
-      color: var(--text, #ececec);
+      color: var(--text);
     }
     .close-btn {
       width: 28px;
@@ -55,8 +55,8 @@ export class WorkspaceDetailPanel extends LitElement {
       background: none;
       border: none;
       cursor: pointer;
-      color: var(--text-secondary, #999);
-      border-radius: var(--radius-sm, 8px);
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
     }
     .close-btn:hover {
       background: var(--surface-hover);
@@ -78,9 +78,9 @@ export class WorkspaceDetailPanel extends LitElement {
     textarea {
       width: 100%;
       box-sizing: border-box;
-      background: var(--surface, rgba(255, 255, 255, 0.04));
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       padding: 8px 12px;
       color: var(--text);
       font-size: 14px;
@@ -155,7 +155,7 @@ export class WorkspaceDetailPanel extends LitElement {
       justify-content: center;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       cursor: pointer;
       color: var(--text-secondary);
     }

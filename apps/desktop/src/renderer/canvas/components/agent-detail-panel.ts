@@ -40,8 +40,8 @@ export class AgentDetailPanel extends LitElement {
       bottom: 0;
       width: 340px;
       max-width: 100%;
-      background: var(--bg, #1a1a1a);
-      border-left: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+      background: var(--bg-solid);
+      border-left: 1px solid var(--border);
       z-index: 100;
       transform: translateX(100%);
       transition: transform 0.2s ease;
@@ -62,7 +62,7 @@ export class AgentDetailPanel extends LitElement {
     .title {
       font-size: 14px;
       font-weight: 500;
-      color: var(--text, #ececec);
+      color: var(--text);
     }
     .close-btn {
       width: 28px;
@@ -73,8 +73,8 @@ export class AgentDetailPanel extends LitElement {
       background: none;
       border: none;
       cursor: pointer;
-      color: var(--text-secondary, #999);
-      border-radius: var(--radius-sm, 8px);
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
     }
     .close-btn:hover {
       background: var(--surface-hover);
@@ -89,7 +89,7 @@ export class AgentDetailPanel extends LitElement {
     .label {
       display: block;
       font-size: 12px;
-      color: var(--text-secondary, #999);
+      color: var(--text-secondary);
       margin-bottom: 4px;
     }
     .identity {
@@ -106,7 +106,7 @@ export class AgentDetailPanel extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--surface, rgba(255, 255, 255, 0.04));
+      background: var(--surface);
     }
     .detail-avatar.owner-avatar {
       border: 2px solid var(--accent);
@@ -127,7 +127,7 @@ export class AgentDetailPanel extends LitElement {
     }
     .detail-agent-handle {
       font-size: 12px;
-      color: var(--text-dim, #555);
+      color: var(--text-dim);
     }
     .detail-agent-platform {
       font-size: 12px;
@@ -140,7 +140,7 @@ export class AgentDetailPanel extends LitElement {
     }
     .role-pill {
       padding: 4px 12px;
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       background: var(--surface);
       border: 1px solid var(--border);
       color: var(--text-secondary);
@@ -149,14 +149,14 @@ export class AgentDetailPanel extends LitElement {
     }
     .role-pill.active {
       background: var(--accent);
-      color: #fff;
+      color: var(--text-on-accent);
       border-color: var(--accent);
     }
     .autonomy-bar {
       display: flex;
       position: relative;
       background: var(--surface);
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       overflow: hidden;
     }
     .autonomy-seg {
@@ -170,14 +170,14 @@ export class AgentDetailPanel extends LitElement {
       z-index: 1;
     }
     .autonomy-seg.active {
-      color: #fff;
+      color: var(--text-on-accent);
     }
     .autonomy-highlight {
       position: absolute;
       top: 0;
       bottom: 0;
       background: var(--accent);
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       transition:
         left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
         width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -189,7 +189,7 @@ export class AgentDetailPanel extends LitElement {
       box-sizing: border-box;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       padding: 8px 12px;
       color: var(--text);
       font-size: 14px;
@@ -239,7 +239,7 @@ export class AgentDetailPanel extends LitElement {
       width: 14px;
       height: 14px;
       border-radius: 50%;
-      background: #fff;
+      background: var(--text-on-accent);
       transition: transform 0.15s ease;
     }
     .toggle-switch.active::after {
@@ -252,7 +252,7 @@ export class AgentDetailPanel extends LitElement {
     }
     .kpi-item {
       background: var(--surface);
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       padding: 8px 12px;
     }
     .kpi-value {
@@ -269,7 +269,7 @@ export class AgentDetailPanel extends LitElement {
     .template-btn {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       padding: 4px 12px;
       color: var(--text-secondary);
       font-size: 12px;
@@ -277,7 +277,7 @@ export class AgentDetailPanel extends LitElement {
       margin-top: 4px;
     }
     .template-btn:hover {
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--border);
     }
   `;
 

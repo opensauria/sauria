@@ -22,7 +22,7 @@ export class WorkspaceDialog extends LitElement {
     .overlay {
       position: fixed;
       inset: 0;
-      background: var(--overlay, rgba(0, 0, 0, 0.5));
+      background: var(--overlay);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -36,9 +36,9 @@ export class WorkspaceDialog extends LitElement {
       pointer-events: auto;
     }
     .dialog {
-      background: var(--bg, #1a1a1a);
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-      border-radius: var(--radius, 12px);
+      background: var(--bg-solid);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       padding: 24px;
       width: 380px;
       max-width: 90%;
@@ -46,7 +46,7 @@ export class WorkspaceDialog extends LitElement {
     h3 {
       margin: 0 0 16px;
       font-size: 16px;
-      color: var(--text, #ececec);
+      color: var(--text);
     }
     .field {
       margin-bottom: 12px;
@@ -54,18 +54,18 @@ export class WorkspaceDialog extends LitElement {
     label {
       display: block;
       font-size: 12px;
-      color: var(--text-secondary, #999);
+      color: var(--text-secondary);
       margin-bottom: 4px;
     }
     input,
     textarea {
       width: 100%;
       box-sizing: border-box;
-      background: var(--surface, rgba(255, 255, 255, 0.04));
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-      border-radius: var(--radius-sm, 8px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       padding: 8px 12px;
-      color: var(--text, #ececec);
+      color: var(--text);
       font-size: 14px;
       outline: none;
     }
@@ -75,7 +75,7 @@ export class WorkspaceDialog extends LitElement {
     }
     input:focus,
     textarea:focus {
-      border-color: var(--accent, #038b9a);
+      border-color: var(--accent);
     }
     .colors {
       display: flex;
@@ -91,7 +91,7 @@ export class WorkspaceDialog extends LitElement {
       transition: border-color 0.15s ease;
     }
     .swatch.active {
-      border-color: var(--text, #ececec);
+      border-color: var(--text);
     }
     .actions {
       display: flex;
@@ -102,7 +102,7 @@ export class WorkspaceDialog extends LitElement {
     button {
       padding: 8px 16px;
       border: none;
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       font-size: 14px;
       cursor: pointer;
       transition: background 0.15s ease;
@@ -112,14 +112,14 @@ export class WorkspaceDialog extends LitElement {
       color: var(--text-secondary);
     }
     .btn-cancel:hover {
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--border);
     }
     .btn-primary {
-      background: var(--accent, #038b9a);
-      color: #fff;
+      background: var(--accent);
+      color: var(--text-on-accent);
     }
     .btn-primary:hover {
-      background: var(--accent-hover, #027a87);
+      background: var(--accent-hover);
     }
   `;
 

@@ -24,7 +24,7 @@ export class AgentIntegrationsSection extends LitElement {
     .label {
       display: block;
       font-size: 12px;
-      color: var(--text-secondary, #999);
+      color: var(--text-secondary);
       margin-bottom: 4px;
     }
     .int-chips {
@@ -57,7 +57,7 @@ export class AgentIntegrationsSection extends LitElement {
     .add-int-btn {
       background: var(--surface);
       border: 1px dashed var(--border);
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       padding: 4px 12px;
       color: var(--text-secondary);
       font-size: 12px;
@@ -72,7 +72,7 @@ export class AgentIntegrationsSection extends LitElement {
       box-sizing: border-box;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       padding: 8px 12px;
       color: var(--text);
       font-size: 14px;
@@ -151,7 +151,7 @@ export class AgentIntegrationsSection extends LitElement {
 
     return html`
       <div
-        style="margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm,8px);max-height:160px;overflow-y:auto;padding:4px;"
+        style="margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:160px;overflow-y:auto;padding:4px;"
       >
         <input
           type="text"

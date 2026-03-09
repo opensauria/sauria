@@ -23,8 +23,8 @@ export class CanvasToolbar extends LitElement {
       gap: 4px;
       padding: 4px;
       background: rgba(30, 30, 30, 0.9);
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-      border-radius: var(--radius, 12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       z-index: 200;
@@ -46,13 +46,13 @@ export class CanvasToolbar extends LitElement {
       justify-content: center;
       border: none;
       background: transparent;
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      color: var(--text-secondary, #999);
+      color: var(--text-secondary);
       transition: background 0.15s ease;
     }
     .toolbar-btn:hover {
-      background: rgba(255, 255, 255, 0.06);
+      background: var(--surface-hover);
     }
     .toolbar-btn img,
     .toolbar-btn svg {
@@ -69,14 +69,14 @@ export class CanvasToolbar extends LitElement {
       min-width: 44px;
       text-align: center;
       font-size: 12px;
-      color: var(--text-dim, #555);
+      color: var(--text-dim);
       font-variant-numeric: tabular-nums;
     }
     .activity-btn {
       position: relative;
     }
     .activity-btn.active {
-      background: rgba(3, 139, 154, 0.15);
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
     }
     .activity-badge {
       position: absolute;
@@ -86,8 +86,8 @@ export class CanvasToolbar extends LitElement {
       height: 16px;
       padding: 0 4px;
       border-radius: 8px;
-      background: var(--error, #f87171);
-      color: #fff;
+      background: var(--error);
+      color: var(--text-on-accent);
       font-size: 10px;
       line-height: 16px;
       text-align: center;

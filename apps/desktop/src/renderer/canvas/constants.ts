@@ -1,3 +1,4 @@
+import { colors, entityColors, platformColors } from '@sauria/design-tokens';
 import type { PlatformField } from './types.js';
 
 export const CARD_FALLBACK_W = 120;
@@ -334,12 +335,12 @@ export const AUTONOMY_LEVELS = [
   { level: 3, label: 'Full' },
 ] as const;
 export const PRESET_COLORS = [
-  '#038B9A',
-  '#27A7E7',
-  '#34d399',
-  '#f59e0b',
-  '#f87171',
-  '#a78bfa',
+  colors.accent,
+  platformColors.telegram,
+  colors.success,
+  colors.warning,
+  colors.error,
+  entityColors.company,
 ] as const;
 
 export function getFieldsForPlatform(platform: string): PlatformField[] {

@@ -1,5 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { CanvasGraph, ConnectResult, IntegrationDef, OwnerProfile } from './types.js';
+import type { CanvasGraph, IntegrationDef, OwnerProfile } from './types.js';
+
+export { connectChannel, disconnectChannel, navigateBack } from '../shared/ipc.js';
+export type { ConnectResult } from '../shared/types.js';
 
 export function getCanvasGraph(): Promise<CanvasGraph> {
   return invoke<CanvasGraph>('get_canvas_graph');
@@ -7,17 +10,6 @@ export function getCanvasGraph(): Promise<CanvasGraph> {
 
 export function saveCanvasGraph(graph: CanvasGraph): Promise<void> {
   return invoke('save_canvas_graph', { graph });
-}
-
-export function connectChannel(
-  platform: string,
-  credentials: Record<string, unknown>,
-): Promise<ConnectResult> {
-  return invoke<ConnectResult>('connect_channel', { platform, credentials });
-}
-
-export function disconnectChannel(platform: string, nodeId: string): Promise<void> {
-  return invoke('disconnect_channel', { platform, nodeId });
 }
 
 export function getOwnerProfile(): Promise<OwnerProfile> {
@@ -49,10 +41,6 @@ export function assignIntegration(nodeId: string, instanceId: string): Promise<v
 
 export function unassignIntegration(nodeId: string, instanceId: string): Promise<void> {
   return invoke('integrations_unassign_instance', { nodeId, instanceId });
-}
-
-export function navigateBack(): Promise<void> {
-  return invoke('navigate_back');
 }
 
 export function listConversations(

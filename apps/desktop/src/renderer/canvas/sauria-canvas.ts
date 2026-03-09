@@ -1,6 +1,8 @@
 import { html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { LightDomElement } from './light-dom-element.js';
+import { adoptGlobalStyles, adoptStyles } from '../shared/styles/inject.js';
+import { canvasViewStyles } from './styles/index.js';
 import { GraphSyncController } from './controllers/graph-sync-controller.js';
 import { ViewportController } from './controllers/viewport-controller.js';
 import { DragController } from './controllers/drag-controller.js';
@@ -9,6 +11,9 @@ import type { AgentNode, IntegrationDef, Workspace } from './types.js';
 import { generateId } from './helpers.js';
 import { listIntegrationCatalog, navigateBack } from './ipc.js';
 import { initLocale } from '../i18n.js';
+
+adoptGlobalStyles();
+adoptStyles(...canvasViewStyles);
 import {
   handleCardAction,
   handleNodeUpdate,

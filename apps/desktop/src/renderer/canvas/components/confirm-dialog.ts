@@ -14,7 +14,7 @@ export class ConfirmDialog extends LitElement {
     .overlay {
       position: fixed;
       inset: 0;
-      background: var(--overlay, rgba(0, 0, 0, 0.5));
+      background: var(--overlay);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -28,9 +28,9 @@ export class ConfirmDialog extends LitElement {
       pointer-events: auto;
     }
     .dialog {
-      background: var(--bg, #1a1a1a);
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-      border-radius: var(--radius, 12px);
+      background: var(--bg-solid);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       padding: 24px;
       max-width: 360px;
       width: 90%;
@@ -38,7 +38,7 @@ export class ConfirmDialog extends LitElement {
     p {
       margin: 0 0 20px;
       font-size: 14px;
-      color: var(--text, #ececec);
+      color: var(--text);
     }
     .actions {
       display: flex;
@@ -48,24 +48,24 @@ export class ConfirmDialog extends LitElement {
     button {
       padding: 8px 16px;
       border: none;
-      border-radius: var(--radius-sm, 8px);
+      border-radius: var(--radius-sm);
       font-size: 14px;
       cursor: pointer;
       transition: background 0.15s ease;
     }
     .btn-cancel {
-      background: var(--surface, rgba(255, 255, 255, 0.04));
-      color: var(--text-secondary, #999);
+      background: var(--surface);
+      color: var(--text-secondary);
     }
     .btn-cancel:hover {
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--border);
     }
     .btn-danger {
-      background: var(--error, #f87171);
-      color: #fff;
+      background: var(--error);
+      color: var(--text-on-accent);
     }
     .btn-danger:hover {
-      background: #ef4444;
+      background: color-mix(in srgb, var(--error) 90%, transparent);
     }
   `;
 

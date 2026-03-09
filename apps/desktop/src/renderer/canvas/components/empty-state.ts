@@ -34,12 +34,12 @@ export class CanvasEmptyState extends LitElement {
       margin: 0 0 8px;
       font-size: 16px;
       font-weight: 500;
-      color: var(--text-secondary, #999);
+      color: var(--text-secondary);
     }
     p {
       margin: 0;
       font-size: 14px;
-      color: var(--text-dim, #555);
+      color: var(--text-dim);
     }
   `;
 

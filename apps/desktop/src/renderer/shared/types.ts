@@ -1,0 +1,64 @@
+export interface TelegramBot {
+  readonly nodeId?: string;
+  readonly label?: string;
+  readonly connected: boolean;
+  readonly photo?: string;
+  readonly profile?: { readonly username: string; readonly photo?: string };
+}
+
+export interface TelegramStatus {
+  readonly bots: readonly TelegramBot[];
+}
+
+export interface ConnectResult {
+  readonly success: boolean;
+  readonly error?: string;
+  readonly nodeId?: string;
+  readonly botUsername?: string;
+  readonly photo?: string;
+  readonly botId?: string;
+  readonly firstName?: string;
+  readonly teamName?: string;
+  readonly botUserId?: string;
+  readonly teamId?: string;
+  readonly displayName?: string;
+  readonly phoneNumberId?: string;
+  readonly email?: string;
+}
+
+export interface StatusResult {
+  readonly connected: boolean;
+  readonly provider?: string;
+  readonly authMethod?: string;
+}
+
+export interface McpRemoteServer {
+  readonly url: string;
+  readonly authorizationUrl?: string;
+  readonly tokenUrl?: string;
+}
+
+export interface IntegrationDefinition {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly icon: string;
+  readonly category: string;
+  readonly authType: 'api_key' | 'oauth' | 'token' | 'both';
+  readonly credentialKeys: readonly string[];
+  readonly mcpRemote?: McpRemoteServer;
+  readonly oauthProxy?: string;
+}
+
+export interface IntegrationTool {
+  readonly name: string;
+  readonly description?: string;
+}
+
+export interface IntegrationStatus {
+  readonly id: string;
+  readonly definition: IntegrationDefinition;
+  readonly connected: boolean;
+  readonly tools: readonly IntegrationTool[];
+  readonly error?: string;
+}

@@ -22,9 +22,9 @@ export class CanvasLegend extends LitElement {
       flex-direction: column;
       gap: 8px;
       padding: 12px 16px;
-      background: var(--surface, rgba(255, 255, 255, 0.04));
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-      border-radius: var(--radius-sm, 8px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       z-index: 50;
       opacity: 0;
       transform: translateY(-8px);
@@ -43,21 +43,21 @@ export class CanvasLegend extends LitElement {
       align-items: center;
       gap: 8px;
       font-size: 12px;
-      color: var(--text-secondary, #999);
+      color: var(--text-secondary);
     }
     .legend-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--accent, #038b9a);
-      box-shadow: 0 0 6px var(--accent, #038b9a);
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
     }
     .legend-ring {
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      border: 2px solid var(--accent, #038b9a);
-      box-shadow: 0 0 6px var(--accent, #038b9a);
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 6px var(--accent);
     }
   `;
 

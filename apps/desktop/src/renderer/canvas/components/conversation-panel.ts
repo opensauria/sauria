@@ -28,8 +28,8 @@ export class ConversationPanel extends LitElement {
       bottom: 0;
       width: 360px;
       max-width: 100%;
-      background: var(--bg, #1a1a1a);
-      border-left: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+      background: var(--bg-solid);
+      border-left: 1px solid var(--border);
       z-index: 100;
       transform: translateX(100%);
       transition: transform 0.2s ease;
@@ -55,8 +55,8 @@ export class ConversationPanel extends LitElement {
       background: none;
       border: none;
       cursor: pointer;
-      color: var(--text-secondary, #999);
-      border-radius: var(--radius-sm, 8px);
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
     }
     .close-btn:hover {
       background: var(--surface-hover);
@@ -91,7 +91,7 @@ export class ConversationPanel extends LitElement {
       object-fit: cover;
     }
     .separator {
-      color: var(--text-dim, #555);
+      color: var(--text-dim);
     }
     .feed-title {
       display: flex;
@@ -115,7 +115,7 @@ export class ConversationPanel extends LitElement {
     }
     .filter-pill {
       padding: 4px 12px;
-      border-radius: var(--radius-pill, 9999px);
+      border-radius: var(--radius-pill);
       background: var(--surface);
       border: 1px solid var(--border);
       color: var(--text-secondary);
@@ -125,7 +125,7 @@ export class ConversationPanel extends LitElement {
     }
     .filter-pill.active {
       background: var(--accent);
-      color: #fff;
+      color: var(--text-on-accent);
       border-color: var(--accent);
     }
     .messages {
