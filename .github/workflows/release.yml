@@ -10,6 +10,7 @@ permissions:
   attestations: write
 
 jobs:
+  # ── Create tag from .release-version ───────────
   release:
     name: Create tag
     if: "startsWith(github.event.head_commit.message, 'chore: release v')"
@@ -32,6 +33,7 @@ jobs:
           git tag "${{ steps.tag.outputs.tag }}"
           git push origin "${{ steps.tag.outputs.tag }}"
 
+  # ── Verify ─────────────────────────────────────
   verify:
     name: Verify
     runs-on: ubuntu-latest
@@ -92,7 +94,26 @@ jobs:
       - name: Build daemon
         run: pnpm turbo run build --filter='./packages/*' --filter=@sauria/cli
 
-  publish:
+      - name: Validate version
+        run: |
+          TAG="${{ needs.release.outputs.tag }}"
+          TAG="${TAG#v}"
+          DAEMON_V=$(node -p "require('./apps/daemon/package.json').version")
+          DESKTOP_V=$(node -p "require('./apps/desktop/package.json').version")
+          CARGO_V=$(grep '^version' apps/desktop/src-tauri/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          MISMATCH=0
+          for name_ver in "daemon:$DAEMON_V" "desktop:$DESKTOP_V" "cargo:$CARGO_V"; do
+            NAME="${name_ver%%:*}"
+            VER="${name_ver##*:}"
+            if [ "$VER" != "$TAG" ]; then
+              echo "::error::$NAME version ($VER) does not match tag ($TAG)"
+              MISMATCH=1
+            fi
+          done
+          if [ "$MISMATCH" -eq 1 ]; then exit 1; fi
+
+  # ── npm publish ────────────────────────────────
+  npm-publish:
     name: Publish to npm
     runs-on: ubuntu-latest
     needs: [release, verify]
@@ -114,9 +135,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build --filter='./packages/*' --filter=@sauria/cli
-
-      - name: Copy README for npm
-        run: cp README.md apps/daemon/README.md
 
       - name: Publish with trusted publishing
         working-directory: apps/daemon
@@ -141,10 +159,102 @@ jobs:
           path: sbom.spdx.json
           retention-days: 90
 
+  # ── Desktop builds (cross-platform) ───────────
+  desktop:
+    needs: [release, verify]
+    environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: darwin
+            arch: universal
+          - os: ubuntu-22.04
+            platform: linux
+            arch: x64
+          - os: windows-latest
+            platform: win32
+            arch: x64
+
+    runs-on: ${{ matrix.os }}
+    name: Desktop (${{ matrix.platform }}-${{ matrix.arch }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Import Apple certificate
+        if: matrix.platform == 'darwin'
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+      - name: Build packages
+        run: pnpm turbo run build --filter='./packages/*'
+
+      - name: Build daemon
+        run: pnpm --filter @sauria/cli run build
+
+      - name: Build desktop
+        working-directory: apps/desktop
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: pnpm run build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sauria-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/macos/*.dmg
+            apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+            apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: warn
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.tag }}
+          files: |
+            apps/desktop/src-tauri/target/release/bundle/**/*.dmg
+            apps/desktop/src-tauri/target/release/bundle/**/*.msi
+            apps/desktop/src-tauri/target/release/bundle/**/*.exe
+            apps/desktop/src-tauri/target/release/bundle/**/*.deb
+            apps/desktop/src-tauri/target/release/bundle/**/*.AppImage
+            apps/desktop/src-tauri/target/release/bundle/**/*.sig
+            apps/desktop/src-tauri/target/release/bundle/**/latest.json
+
+  # ── GitHub Release ─────────────────────────────
   github-release:
     name: GitHub Release
     runs-on: ubuntu-latest
-    needs: [release, publish]
+    needs: [release, npm-publish, desktop]
     permissions:
       contents: write
     steps:
@@ -189,6 +299,10 @@ jobs:
             ```bash
             npm install -g @sauria/cli@${{ needs.release.outputs.tag }}
             ```
+
+            ### Desktop
+
+            Download the desktop app for your platform from the assets below.
 
             ### Verification
 

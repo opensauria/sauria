@@ -467,12 +467,13 @@ When adding a new file that legitimately uses a banned pattern, add it to BOTH `
 
 ### Release Process
 
-Releases use CalVer (`vYYYY.M.D`). The process is fully automated:
+Releases use CalVer (`vYYYY.MDD.PATCH`), e.g. `v2026.309.0` for March 9, 2026. Same-day respin increments PATCH (`v2026.309.1`). All three semver parts are numeric.
+
+The process is fully automated:
 
 1. Trigger "Release PR" workflow manually in GitHub Actions
-2. Review and merge the release PR
-3. `release-tag.yml` auto-creates the tag on merge
-4. Tag triggers `release.yml`: verify → publish npm (requires approval) → GitHub Release + SBOM
+2. Review and merge the release PR into main
+3. Push to main triggers `release.yml`: create tag → verify → [npm-publish, desktop] → GitHub Release + SBOM + desktop binaries
 
 - Release PRs branch from `release/v*` — if a stale branch exists from a failed attempt, delete it before retrying
 - The `production` environment requires manual approval from `@teobouancheau`

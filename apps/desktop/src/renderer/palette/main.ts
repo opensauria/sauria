@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import type { Update } from '@tauri-apps/plugin-updater';
 import { t, getLocale, setLocale, applyTranslations, initLocale, UI_LANGUAGES } from '../i18n.js';
 
 interface StatusResult {
@@ -53,6 +54,8 @@ const icons: Record<string, string> = {
     '<svg viewBox="0 0 24 24" fill="none"><path d="M12 22c5.523 0 10-4.477 10-10h-4a6 6 0 01-6 6v4z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2C6.477 2 2 6.477 2 12h4a6 6 0 016-6V2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="7" r="2" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/><circle cx="7" cy="17" r="2" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/></svg>',
   language:
     '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/><path d="M2 12h20" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/></svg>',
+  update:
+    '<svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 01-9 9m0 0a9 9 0 01-9-9m9 9v-4m0 0l-3 3m3-3l3 3M3 12a9 9 0 019-9m0 0V7m0-4l3 3m-3-3L9 6" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 
 const mainCommands: Command[] = [
@@ -61,6 +64,7 @@ const mainCommands: Command[] = [
   { id: 'integrations', labelKey: 'palette.integrations', hint: '' },
   { id: 'language', labelKey: 'palette.language', hint: '' },
   { id: 'setup', labelKey: 'palette.aiProvider', hint: '' },
+  { id: 'update', labelKey: 'palette.checkForUpdates', hint: '' },
   { id: 'quit', labelKey: 'palette.quit', hint: '' },
 ];
 
@@ -180,6 +184,10 @@ function executeSelected() {
   const cmd = filtered[selectedIndex];
   if (cmd.id === 'language') {
     showLanguagePanel();
+    return;
+  }
+  if (cmd.id === 'update') {
+    manualCheckForUpdate();
     return;
   }
   invoke('execute_command', { id: cmd.id });
@@ -602,31 +610,67 @@ initLocale().then(() => {
    Auto-Update Check
    ═══════════════════════════════════════════════ */
 
-async function checkForUpdate() {
+function showUpdateBanner(update: Update) {
+  const existing = document.querySelector('.update-banner');
+  if (existing) existing.remove();
+
+  const banner = document.createElement('div');
+  banner.className = 'update-banner';
+  banner.innerHTML =
+    '<span>' +
+    t('palette.updateAvailable') +
+    ': ' +
+    update.version +
+    '</span>' +
+    '<button class="update-btn">Install & Restart</button>';
+  document.body.appendChild(banner);
+
+  requestAnimationFrame(() => banner.classList.add('visible'));
+
+  banner.querySelector('.update-btn')!.addEventListener('click', async () => {
+    banner.querySelector('.update-btn')!.textContent = t('palette.installing');
+    (banner.querySelector('.update-btn') as HTMLButtonElement).disabled = true;
+    await update.downloadAndInstall();
+  });
+}
+
+async function checkForUpdate(manual = false) {
+  const updateCmd = mainCommands.find((c) => c.id === 'update');
+
+  if (manual && updateCmd) {
+    updateCmd.hint = '<span class="spinner-inline"></span>';
+    render();
+  }
+
   try {
     const { check } = await import('@tauri-apps/plugin-updater');
     const update = await check();
-    if (!update) return;
 
-    const banner = document.createElement('div');
-    banner.className = 'update-banner';
-    banner.innerHTML =
-      '<span>Update ' +
-      update.version +
-      ' available</span>' +
-      '<button class="update-btn">Install & Restart</button>';
-    document.body.appendChild(banner);
-
-    requestAnimationFrame(() => banner.classList.add('visible'));
-
-    banner.querySelector('.update-btn')!.addEventListener('click', async () => {
-      banner.querySelector('.update-btn')!.textContent = 'Updating...';
-      (banner.querySelector('.update-btn') as HTMLButtonElement).disabled = true;
-      await update.downloadAndInstall();
-    });
+    if (update) {
+      if (updateCmd) {
+        updateCmd.hint =
+          '<span class="status-dot disconnected"></span>' +
+          t('palette.updateAvailable') +
+          ' ' +
+          update.version;
+        render();
+      }
+      showUpdateBanner(update);
+    } else if (manual && updateCmd) {
+      updateCmd.hint =
+        '<span class="status-dot connected"></span>' + t('palette.noUpdateAvailable');
+      render();
+    }
   } catch {
-    // Updater not configured or network error — silently ignore
+    if (manual && updateCmd) {
+      updateCmd.hint = '<span class="status-dot disconnected"></span>' + t('palette.updateError');
+      render();
+    }
   }
+}
+
+function manualCheckForUpdate() {
+  checkForUpdate(true);
 }
 
 checkForUpdate();

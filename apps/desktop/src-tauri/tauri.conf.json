@@ -52,7 +52,7 @@
     },
     "updater": {
       "endpoints": ["https://github.com/opensauria/sauria/releases/latest/download/latest.json"],
-      "pubkey": ""
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMxOTg5M0RDMjJEQTJBQjAKUldTd0t0b2kzSk9Zd1dQQW0xVkszMDFhZXZ2SC9YOXIzRUlxa2YwUWhSUTIzbFMrdXFwM0s0aSsK"
     }
   }
 }

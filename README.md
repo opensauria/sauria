@@ -37,9 +37,6 @@ curl -fsSL https://sauria.dev/install | sh
 
 # npm
 npm install -g @sauria/cli
-
-# Docker
-docker run -d sauria/sauria
 ```
 
 Requires Node.js 24+. The installer runs the setup wizard, stores credentials in an encrypted vault, and starts the background daemon.
