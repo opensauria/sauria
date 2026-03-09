@@ -5,3 +5,4 @@ coverage/
 *.enc
 *.log
 package-lock.json
+apps/desktop/src-tauri/gen/
