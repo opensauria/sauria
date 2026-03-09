@@ -85,6 +85,17 @@ const lucideIcons = [
   'link',
   'database',
   'share-2',
+  'clock',
+  'clipboard-list',
+  'heart-pulse',
+  'book-open',
+  'power',
+  'globe',
+  'refresh-cw',
+  'sparkles',
+  'lock',
+  'lock-open',
+  'check',
 ];
 
 for (const name of lucideIcons) {

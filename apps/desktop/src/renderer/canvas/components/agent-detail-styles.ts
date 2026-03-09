@@ -6,7 +6,6 @@ export const agentDetailStyles = css`
     top: 0;
     right: 0;
     bottom: 0;
-    width: 360px;
     max-width: 100%;
     background: var(--bg-solid);
     border-left: 1px solid var(--border);

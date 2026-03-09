@@ -32,6 +32,7 @@ const VALID_ACTION_TYPES = new Set([
   'learn',
   'group_message',
   'use_tool',
+  'conclude',
 ]);
 
 const VALID_PRIORITIES = new Set(['low', 'normal', 'high']);
@@ -122,6 +123,9 @@ function normalizeAction(raw: RawLLMAction): RoutingAction | null {
             content: raw.content,
           }
         : null;
+
+    case 'conclude':
+      return raw.content ? { type: 'conclude', content: raw.content } : null;
 
     default:
       return null;

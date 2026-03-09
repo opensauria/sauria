@@ -326,6 +326,90 @@ describe('Orchestrator Integration', () => {
     );
   });
 
+  it('conclude action sends debate result to owner via external channel', async () => {
+    const onActivity = vi.fn();
+    const concludeOrchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity,
+      db,
+      agentMemory,
+      kpiTracker,
+      checkpointManager,
+      onActivity,
+    });
+
+    // n2 is in a debate (forwarded from n1) and uses conclude to send result to owner
+    const debateSource: InboundMessage = {
+      sourceNodeId: 'n2',
+      platform: 'telegram',
+      senderId: 'n1',
+      senderIsOwner: false,
+      groupId: null,
+      content: 'Debate topic from n1',
+      contentType: 'text',
+      timestamp: new Date().toISOString(),
+      forwardDepth: 1,
+      replyToNodeId: 'n1',
+    };
+
+    await concludeOrchestrator.executeAction(
+      { type: 'conclude', content: 'Here is the debate conclusion' },
+      debateSource,
+    );
+
+    // conclude sends to the owner via the initiator's channel (n1 = ch1)
+    expect(ch1.sendMessage).toHaveBeenCalledWith('Here is the debate conclusion', null);
+    // n2's channel should NOT be called
+    expect(ch2.sendMessage).not.toHaveBeenCalled();
+    expect(onActivity).toHaveBeenCalledWith(
+      'activity:edge',
+      expect.objectContaining({ from: 'n2', to: 'n1', actionType: 'conclude' }),
+    );
+  });
+
+  it('reply during debate stays internal (never leaks to owner)', async () => {
+    const onActivity = vi.fn();
+    const debateOrchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity,
+      db,
+      agentMemory,
+      kpiTracker,
+      checkpointManager,
+      onActivity,
+    });
+
+    // Initiating agent (n1) receives a reply from n2 during debate
+    const debateReply: InboundMessage = {
+      sourceNodeId: 'n1',
+      platform: 'telegram',
+      senderId: 'n2',
+      senderIsOwner: false,
+      groupId: null,
+      content: '[Reply from bot-beta]\nMy counter-argument',
+      contentType: 'text',
+      timestamp: new Date().toISOString(),
+      forwardDepth: 1,
+      replyToNodeId: 'n1',
+    };
+
+    await debateOrchestrator.executeAction(
+      { type: 'reply', content: 'Interesting point, but...' },
+      debateReply,
+    );
+
+    // Reply during debate must stay internal — owner must NOT see it
+    expect(ch1.sendMessage).not.toHaveBeenCalled();
+    expect(ch2.sendMessage).not.toHaveBeenCalled();
+    // Should route internally to n2 (the debate partner)
+    expect(onActivity).toHaveBeenCalledWith(
+      'activity:edge',
+      expect.objectContaining({ from: 'n1', to: 'n2', actionType: 'reply' }),
+    );
+  });
+
   it('stops forwarding when forward depth limit is reached', async () => {
     const onActivity = vi.fn();
     const depthOrchestrator = new AgentOrchestrator({
@@ -340,7 +424,7 @@ describe('Orchestrator Integration', () => {
     });
 
     // Message at max depth should be silently dropped
-    await depthOrchestrator.handleInbound(makeMessage({ forwardDepth: 3 }));
+    await depthOrchestrator.handleInbound(makeMessage({ forwardDepth: 10 }));
 
     expect(onActivity).not.toHaveBeenCalled();
     expect(ch1.sendMessage).not.toHaveBeenCalled();

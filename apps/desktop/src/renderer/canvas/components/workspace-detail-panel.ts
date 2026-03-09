@@ -6,11 +6,16 @@ import { PRESET_COLORS } from '../constants.js';
 import { fire } from '../fire.js';
 import { LightDomElement } from '../light-dom-element.js';
 
+const MIN_PANEL_WIDTH = 280;
+const MAX_PANEL_WIDTH = 600;
+
 @customElement('workspace-detail-panel')
 export class WorkspaceDetailPanel extends LightDomElement {
   @property({ attribute: false }) workspace: Workspace | null = null;
 
   @state() private tagInput = '';
+  @state() private panelWidth = 360;
+  @state() private isResizing = false;
 
   private handleInput(field: string, value: string): void {
     fire(this, 'workspace-update', { field, value });
@@ -45,7 +50,18 @@ export class WorkspaceDetailPanel extends LightDomElement {
     const isOpen = ws !== null;
 
     return html`
-      <div class="ws-panel ${isOpen ? 'open' : ''}">
+      <div
+        class="ws-panel ${isOpen ? 'open' : ''}"
+        style="width: ${this.panelWidth}px"
+      >
+        ${isOpen
+          ? html`
+              <div
+                class="panel-resize-handle ${this.isResizing ? 'dragging' : ''}"
+                @mousedown=${this.startResize}
+              ></div>
+            `
+          : nothing}
         <div class="ws-header">
           <span class="ws-title">${t('canvas.workspaceDetails')}</span>
           <button class="ws-close-btn" @click=${() => fire(this, 'close')}>
@@ -120,21 +136,14 @@ export class WorkspaceDetailPanel extends LightDomElement {
                 </div>
                 <div class="ws-section">
                   <span class="ws-label">${t('canvas.dailyBudget')}</span>
-                  <div class="ws-stepper">
-                    <button class="ws-stepper-btn" @click=${() => this.handleBudgetStep(-1)}>
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
+                  <div class="stepper">
+                    <button class="stepper-btn" @click=${() => this.handleBudgetStep(-1)}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="5" y1="12" x2="19" y2="12" />
                       </svg>
                     </button>
                     <input
-                      class="ws-stepper-input"
+                      class="stepper-input"
                       type="number"
                       min="0"
                       step="1"
@@ -142,15 +151,8 @@ export class WorkspaceDetailPanel extends LightDomElement {
                       @input=${(e: InputEvent) =>
                         this.handleInput('budget', (e.target as HTMLInputElement).value)}
                     />
-                    <button class="ws-stepper-btn" @click=${() => this.handleBudgetStep(1)}>
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
+                    <button class="stepper-btn" @click=${() => this.handleBudgetStep(1)}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19" />
                         <line x1="5" y1="12" x2="19" y2="12" />
                       </svg>
@@ -163,4 +165,25 @@ export class WorkspaceDetailPanel extends LightDomElement {
       </div>
     `;
   }
+
+  private startResize = (e: MouseEvent): void => {
+    e.preventDefault();
+    this.isResizing = true;
+    const startX = e.clientX;
+    const startWidth = this.panelWidth;
+
+    const onMove = (ev: MouseEvent) => {
+      const delta = startX - ev.clientX;
+      this.panelWidth = Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, startWidth + delta));
+    };
+
+    const onUp = () => {
+      this.isResizing = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 }

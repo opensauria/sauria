@@ -81,14 +81,14 @@ export const paletteLayoutStyles = css`
   .footer span {
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
+    gap: var(--spacing-sm);
   }
 
   .footer .brand-label {
-    font-weight: 500;
+    font-weight: 600;
     font-size: var(--font-size-micro);
-    letter-spacing: 0.5px;
-    color: color-mix(in srgb, var(--text) 20%, transparent);
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
   }
 
   .settings-btn {
@@ -115,9 +115,11 @@ export const paletteLayoutStyles = css`
     background: color-mix(in srgb, var(--text) 10%, transparent);
   }
 
-  .settings-btn svg {
+  .settings-btn img {
     width: var(--spacing-md);
     height: var(--spacing-md);
+    filter: brightness(0) invert();
+    opacity: var(--opacity-muted);
   }
 
   /* -- Spinner inline -- */

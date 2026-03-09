@@ -8,7 +8,7 @@ use crate::paths::Paths;
 use crate::windows;
 
 const ALLOWED_COMMANDS: &[&str] = &[
-    "status", "telegram", "settings", "setup", "audit", "doctor", "docs", "quit", "canvas", "brain", "integrations",
+    "status", "telegram", "settings", "setup", "audit", "doctor", "docs", "quit", "canvas", "brain", "integrations", "language",
 ];
 
 #[tauri::command]
@@ -65,6 +65,9 @@ pub async fn execute_command(
         }
         "integrations" => {
             windows::navigate_palette_to(&app, "integrations")?;
+        }
+        "language" => {
+            windows::navigate_palette_to(&app, "language")?;
         }
         "docs" => {
             windows::hide_palette(&app)?;

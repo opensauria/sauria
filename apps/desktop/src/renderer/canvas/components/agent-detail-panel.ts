@@ -21,6 +21,9 @@ import './agent-integrations-section.js';
 
 adoptStyles(agentDetailStyles);
 
+const MIN_PANEL_WIDTH = 280;
+const MAX_PANEL_WIDTH = 600;
+
 @customElement('agent-detail-panel')
 export class AgentDetailPanel extends LightDomElement {
   @property({ attribute: false }) node: AgentNode | null = null;
@@ -28,6 +31,8 @@ export class AgentDetailPanel extends LightDomElement {
   @property({ attribute: false }) catalogMap = new Map<string, IntegrationDef>();
 
   @state() private kpis: KpiData | null = null;
+  @state() private panelWidth = 360;
+  @state() private isResizing = false;
 
   fireUpdate(patch: Partial<AgentNode>): void {
     fire(this, 'node-update', { nodeId: this.node?.id, patch });
@@ -54,7 +59,18 @@ export class AgentDetailPanel extends LightDomElement {
     const isOwner = node?.platform === 'owner';
 
     return html`
-      <div class="detail-panel ${isOpen ? 'open' : ''}">
+      <div
+        class="detail-panel ${isOpen ? 'open' : ''}"
+        style="width: ${this.panelWidth}px"
+      >
+        ${isOpen
+          ? html`
+              <div
+                class="panel-resize-handle ${this.isResizing ? 'dragging' : ''}"
+                @mousedown=${this.startResize}
+              ></div>
+            `
+          : nothing}
         <div class="detail-header">
           <span class="detail-title"
             >${isOwner ? t('canvas.ownerSettings') : t('canvas.agentDetails')}</span
@@ -74,6 +90,27 @@ export class AgentDetailPanel extends LightDomElement {
       </div>
     `;
   }
+
+  private startResize = (e: MouseEvent): void => {
+    e.preventDefault();
+    this.isResizing = true;
+    const startX = e.clientX;
+    const startWidth = this.panelWidth;
+
+    const onMove = (ev: MouseEvent) => {
+      const delta = startX - ev.clientX;
+      this.panelWidth = Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, startWidth + delta));
+    };
+
+    const onUp = () => {
+      this.isResizing = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 
   private renderBody(node: AgentNode, isOwner: boolean) {
     const displayName = isOwner ? node.label : node.meta.firstName || node.label.replace(/^@/, '');

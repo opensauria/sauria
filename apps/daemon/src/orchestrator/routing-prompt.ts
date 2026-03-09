@@ -63,6 +63,7 @@ export function buildRoutingPrompt(
     integrationRegistry,
     ruleActionsText,
     globalInstructions,
+    forwardDepth: message.forwardDepth ?? 0,
   });
 
   appendBehaviorToggles(promptParts, sourceNode);

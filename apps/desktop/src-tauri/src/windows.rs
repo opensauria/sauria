@@ -16,12 +16,13 @@ pub(crate) fn page_size(page: &str) -> PageSize {
         "brain" | "integrations" => PageSize { width: 1000.0, height: 700.0 },
         "canvas" => PageSize { width: 1200.0, height: 800.0 },
         "setup" => PageSize { width: 520.0, height: 680.0 },
+        "language" => PageSize { width: 480.0, height: 560.0 },
         _ => PageSize { width: PALETTE_WIDTH, height: PALETTE_HEIGHT },
     }
 }
 
 pub(crate) fn is_fixed_page(page: &str) -> bool {
-    page == "setup"
+    page == "setup" || page == "language"
 }
 
 pub fn create_palette_window(app: &AppHandle) -> Result<(), String> {

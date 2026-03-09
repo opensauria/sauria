@@ -10,6 +10,19 @@ import { handleAssign } from './action-assign.js';
 
 export { handleUseTool, handleAssign };
 
+export async function handleConclude(
+  action: Extract<RoutingAction, { readonly type: 'conclude' }>,
+  source: InboundMessage,
+  ctx: ActionContext,
+): Promise<void> {
+  recordReplyInMemory(ctx.helperDeps, source, action.content);
+
+  const replyTargetId = source.replyToNodeId ?? source.sourceNodeId;
+  await ctx.registry.sendTo(replyTargetId, action.content, source.groupId);
+  ctx.emitEdge(source.sourceNodeId, replyTargetId, 'conclude', contentPreview(action.content));
+  ctx.emitMessage(source.sourceNodeId, replyTargetId, action.content, 'conclude');
+}
+
 function createSyntheticMessage(
   targetNodeId: string,
   source: InboundMessage,
@@ -114,13 +127,29 @@ export async function handleReply(
   const replyTargetId = source.replyToNodeId ?? source.sourceNodeId;
   const isForwardedReply = (source.forwardDepth ?? 0) > 0 && replyTargetId !== source.sourceNodeId;
 
+  /**
+   * Guard: when the initiating agent (A) receives a peer reply during a debate
+   * and the LLM emits "reply" instead of "forward", the reply would leak to the
+   * owner because replyToNodeId === sourceNodeId.  Detect this case:
+   *   - forwardDepth > 0 (we are inside a forwarded chain)
+   *   - the last message came from another agent (senderId !== sourceNodeId)
+   *   - replyTargetId === sourceNodeId (would go to owner)
+   * Convert it to an internal reply back to the sender agent instead.
+   */
+  const isDebateReplyToOwner =
+    !isForwardedReply &&
+    (source.forwardDepth ?? 0) > 0 &&
+    source.senderId !== source.sourceNodeId &&
+    !source.senderIsOwner;
+
   recordReplyInMemory(ctx.helperDeps, source, action.content);
 
-  if (isForwardedReply) {
+  if (isForwardedReply || isDebateReplyToOwner) {
+    const internalTargetId = isDebateReplyToOwner ? source.senderId : replyTargetId;
     const sourceLabel = ctx.findNode(source.sourceNodeId)?.label ?? source.sourceNodeId;
     const enrichedContent = `[Reply from ${sourceLabel}]\n${action.content}`;
     const syntheticReply: InboundMessage = {
-      sourceNodeId: replyTargetId,
+      sourceNodeId: internalTargetId,
       platform: source.platform,
       senderId: source.sourceNodeId,
       senderIsOwner: false,
@@ -131,8 +160,8 @@ export async function handleReply(
       forwardDepth: source.forwardDepth ?? 0,
       replyToNodeId: source.replyToNodeId,
     };
-    ctx.emitEdge(source.sourceNodeId, replyTargetId, 'reply', contentPreview(action.content));
-    ctx.emitMessage(source.sourceNodeId, replyTargetId, action.content, 'reply');
+    ctx.emitEdge(source.sourceNodeId, internalTargetId, 'reply', contentPreview(action.content));
+    ctx.emitMessage(source.sourceNodeId, internalTargetId, action.content, 'reply');
     await ctx.handleInbound(syntheticReply);
   } else {
     await ctx.registry.sendTo(source.sourceNodeId, action.content, source.groupId);

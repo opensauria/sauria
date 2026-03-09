@@ -16,6 +16,7 @@ import {
   handleGroupMessage,
   handleAssign,
   handleUseTool,
+  handleConclude,
 } from './action-handlers.js';
 
 export interface ActionContext {
@@ -93,6 +94,10 @@ export async function executeAction(
     }
     case 'use_tool': {
       await handleUseTool(action, source, ctx);
+      break;
+    }
+    case 'conclude': {
+      await handleConclude(action, source, ctx);
       break;
     }
   }

@@ -8,7 +8,7 @@ import { getLogger } from '../utils/logger.js';
 import { IPC_EVENTS } from '@sauria/ipc-protocol';
 import type { ActivityCallback } from './orchestrator.js';
 
-const MAX_FORWARD_DEPTH = 3;
+const MAX_FORWARD_DEPTH = 10;
 
 interface InboundDeps {
   readonly getGraph: () => CanvasGraph;

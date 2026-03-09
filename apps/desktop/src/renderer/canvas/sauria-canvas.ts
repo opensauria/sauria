@@ -97,6 +97,8 @@ export class SauriaCanvas extends LightDomElement {
         if (dragDist < 5) {
           this.selectedNodeId = nodeId;
           const found = this.graphSync.graph.nodes.find((n) => n.id === nodeId);
+          this.detailWorkspaceId = null;
+          this.closeConvPanel();
           this.detailNode = found ? { ...found } : null;
         }
         this.graphSync.save();
@@ -194,11 +196,20 @@ export class SauriaCanvas extends LightDomElement {
     this.wsDrag.handleUp();
   };
 
+  private closeConvPanel(): void {
+    const panel = this.querySelector('conversation-panel') as
+      | (HTMLElement & { close: () => void })
+      | null;
+    panel?.close();
+  }
+
   private dispatchCardAction(e: CustomEvent): void {
     const { action, nodeId } = e.detail;
     if (action === 'gear') {
       const node = this.graphSync.graph.nodes.find((n) => n.id === nodeId);
       if (node) {
+        this.detailWorkspaceId = null;
+        this.closeConvPanel();
         this.detailNode = { ...node };
         return;
       }
@@ -259,6 +270,8 @@ export class SauriaCanvas extends LightDomElement {
                 @workspace-lock-toggle=${(e: CustomEvent) =>
                   handleWsLockToggle(this, e.detail.wsId)}
                 @workspace-edit=${(e: CustomEvent) => {
+                  this.detailNode = null;
+                  this.closeConvPanel();
                   this.detailWorkspaceId = e.detail.wsId;
                 }}
               >

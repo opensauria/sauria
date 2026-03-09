@@ -29,13 +29,11 @@ export const paletteCommandStyles = css`
     background: color-mix(in srgb, var(--text) 8%, transparent);
   }
 
-  .search-icon svg {
+  .search-icon img {
     width: var(--spacing-md);
     height: var(--spacing-md);
-  }
-
-  .search-icon.hidden {
-    display: none;
+    filter: brightness(0) invert();
+    opacity: var(--opacity-muted);
   }
 
   .search-bar input {
@@ -48,6 +46,10 @@ export const paletteCommandStyles = css`
     font-family: inherit;
   }
 
+  .search-bar input:focus-visible {
+    outline: none;
+  }
+
   .search-bar input::placeholder {
     color: color-mix(in srgb, var(--text) 30%, transparent);
   }
@@ -57,7 +59,7 @@ export const paletteCommandStyles = css`
   .command-list {
     flex: 1;
     overflow-y: auto;
-    padding: var(--spacing-xs) var(--spacing-sm);
+    padding: var(--spacing-sm);
   }
 
   .command-list::-webkit-scrollbar {
@@ -99,9 +101,14 @@ export const paletteCommandStyles = css`
     background: color-mix(in srgb, var(--text) 5%, transparent);
   }
 
-  .command-row .icon svg {
+  .command-row .icon img {
     width: var(--spacing-md);
     height: var(--spacing-md);
+  }
+
+  .command-row .icon img.icon-mono {
+    filter: brightness(0) invert();
+    opacity: var(--opacity-muted);
   }
 
   .command-row .label {
