@@ -54,9 +54,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Rebuild native modules
-        run: pnpm -r rebuild better-sqlite3
-
       - name: Build packages
         run: pnpm turbo run build --filter='./packages/*'
 
