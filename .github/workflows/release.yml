@@ -74,19 +74,31 @@ jobs:
             "createServer"
             ".listen("
           )
+          # Files that legitimately contain banned patterns:
+          # - banned-patterns.ts: defines the pattern list (contains string literals)
+          # - whatsapp.ts: WhatsApp Business API webhook server (localhost-only)
+          # - transcription.ts: execFile for Whisper voice transcription subprocess
+          # - vault-key.ts: execSync for hardware UUID detection (ioreg)
+          # - resolve.ts: execSync for API key resolution
+          # - machine-id.ts: execSync for hardware UUID detection
           FOUND=0
-          for p in "${BANNED[@]}"; do
-            if grep -rn --include="*.ts" \
+          for pattern in "${BANNED[@]}"; do
+            if grep -rn --include="*.ts" --include="*.js" \
+              --exclude-dir=node_modules \
               "--exclude=*banned-patterns*" "--exclude=*whatsapp*" \
               "--exclude=*transcription*" "--exclude=*vault-key*" \
               "--exclude=*resolve*" "--exclude=*machine-id*" \
               "--exclude=*daemon-ipc*" \
-              "$p" apps/daemon/src/ packages/; then
-              echo "::error::Banned pattern: $p"
+              "$pattern" apps/daemon/src/ packages/; then
+              echo "::error::Banned pattern found: $pattern"
               FOUND=1
             fi
           done
-          if [ "$FOUND" -eq 1 ]; then exit 1; fi
+          if [ "$FOUND" -eq 1 ]; then
+            echo "::error::Security scan failed."
+            exit 1
+          fi
+          echo "Security scan passed."
 
       - name: Test
         run: pnpm --filter @sauria/cli run test
@@ -220,7 +232,6 @@ jobs:
             codesign --force --sign "${{ secrets.APPLE_SIGNING_IDENTITY }}" \
             --timestamp --options runtime {} \;
 
-
       - name: Build desktop
         working-directory: apps/desktop
         env:
@@ -239,7 +250,6 @@ jobs:
           path: |
             apps/desktop/src-tauri/target/release/bundle/macos/*.dmg
             apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg
-            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
             apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
             apps/desktop/src-tauri/target/release/bundle/deb/*.deb
             apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
@@ -251,7 +261,6 @@ jobs:
           tag_name: ${{ needs.release.outputs.tag }}
           files: |
             apps/desktop/src-tauri/target/release/bundle/**/*.dmg
-            apps/desktop/src-tauri/target/release/bundle/**/*.msi
             apps/desktop/src-tauri/target/release/bundle/**/*.exe
             apps/desktop/src-tauri/target/release/bundle/**/*.deb
             apps/desktop/src-tauri/target/release/bundle/**/*.AppImage

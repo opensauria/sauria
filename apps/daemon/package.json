@@ -60,7 +60,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/opensauria/sauria.git",
+    "url": "git+https://github.com/opensauria/sauria.git",
     "directory": "apps/daemon"
   },
   "homepage": "https://github.com/opensauria/sauria",

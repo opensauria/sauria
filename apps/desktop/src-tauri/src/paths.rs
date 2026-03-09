@@ -5,6 +5,7 @@ pub struct Paths {
     pub config: PathBuf,
     pub vault: PathBuf,
     pub canvas: PathBuf,
+    #[cfg_attr(windows, allow(dead_code))]
     pub socket: PathBuf,
     #[cfg_attr(not(windows), allow(dead_code))]
     pub ipc_port: PathBuf,

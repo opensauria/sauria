@@ -1,6 +1,6 @@
 {
   "name": "sauria-desktop",
-  "version": "2026.309.3",
+  "version": "2026.309.4",
   "description": "Sauria — your AI workforce.",
   "private": true,
   "author": {
@@ -10,9 +10,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/opensauria/sauria.git",
+    "url": "git+https://github.com/opensauria/sauria.git",
     "directory": "apps/desktop"
   },
+  "type": "module",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "icons": "node scripts/copy-icons.js",
