@@ -1,294 +1,42 @@
-import { LitElement, html, css, nothing } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { t } from '../../i18n.js';
 import type { AgentNode, CanvasGraph, IntegrationDef } from '../types.js';
 import { getInitials, capitalize } from '../helpers.js';
 import { fire } from '../fire.js';
 import { getAgentKpis } from '../ipc.js';
+import { CEO_TEMPLATE, BOT_TEMPLATE } from '../constants.js';
+import { LightDomElement } from '../light-dom-element.js';
+import { adoptStyles } from '../../shared/styles/inject.js';
+import { agentDetailStyles } from './agent-detail-styles.js';
 import {
   renderRolePills,
   renderAutonomy,
-  renderDescription,
-  renderInstructions,
   renderLanguage,
   renderBehavior,
   renderKpis,
+  type KpiData,
 } from './agent-detail-sections.js';
 import './agent-integrations-section.js';
 
+adoptStyles(agentDetailStyles);
+
 @customElement('agent-detail-panel')
-export class AgentDetailPanel extends LitElement {
+export class AgentDetailPanel extends LightDomElement {
   @property({ attribute: false }) node: AgentNode | null = null;
   @property({ attribute: false }) graph: CanvasGraph | null = null;
   @property({ attribute: false }) catalogMap = new Map<string, IntegrationDef>();
 
-  @state() private kpis: {
-    messagesHandled: number;
-    tasksCompleted: number;
-    avgResponseTimeMs: number;
-    costUsd: number;
-  } | null = null;
+  @state() private kpis: KpiData | null = null;
 
-  static styles = css`
-    :host {
-      display: contents;
-    }
-    .panel {
-      position: fixed;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      width: 340px;
-      max-width: 100%;
-      background: var(--bg, #1a1a1a);
-      border-left: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-      z-index: 100;
-      transform: translateX(100%);
-      transition: transform 0.2s ease;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-    .panel.open {
-      transform: translateX(0);
-    }
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .title {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text, #ececec);
-    }
-    .close-btn {
-      width: 28px;
-      height: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--text-secondary, #999);
-      border-radius: var(--radius-sm, 8px);
-    }
-    .close-btn:hover {
-      background: var(--surface-hover);
-    }
-    .body {
-      padding: 16px;
-      flex: 1;
-    }
-    .section {
-      margin-bottom: 16px;
-    }
-    .label {
-      display: block;
-      font-size: 12px;
-      color: var(--text-secondary, #999);
-      margin-bottom: 4px;
-    }
-    .identity {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .detail-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--surface, rgba(255, 255, 255, 0.04));
-    }
-    .detail-avatar.owner-avatar {
-      border: 2px solid var(--accent);
-    }
-    .detail-avatar img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .avatar-initials {
-      font-size: 12px;
-      color: var(--text);
-    }
-    .detail-agent-name {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text);
-    }
-    .detail-agent-handle {
-      font-size: 12px;
-      color: var(--text-dim, #555);
-    }
-    .detail-agent-platform {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-    .role-pills {
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-    }
-    .role-pill {
-      padding: 4px 12px;
-      border-radius: var(--radius-sm, 8px);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text-secondary);
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .role-pill.active {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-    }
-    .autonomy-bar {
-      display: flex;
-      position: relative;
-      background: var(--surface);
-      border-radius: var(--radius-sm, 8px);
-      overflow: hidden;
-    }
-    .autonomy-seg {
-      flex: 1;
-      padding: 8px 4px;
-      text-align: center;
-      cursor: pointer;
-      font-size: 12px;
-      color: var(--text-secondary);
-      position: relative;
-      z-index: 1;
-    }
-    .autonomy-seg.active {
-      color: #fff;
-    }
-    .autonomy-highlight {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      background: var(--accent);
-      border-radius: var(--radius-sm, 8px);
-      transition:
-        left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-        width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    input,
-    textarea,
-    select {
-      width: 100%;
-      box-sizing: border-box;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm, 8px);
-      padding: 8px 12px;
-      color: var(--text);
-      font-size: 14px;
-      outline: none;
-    }
-    textarea {
-      resize: vertical;
-      min-height: 80px;
-    }
-    input:focus,
-    textarea:focus,
-    select:focus {
-      border-color: var(--accent);
-    }
-    select {
-      appearance: auto;
-    }
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-    }
-    .toggle-label {
-      font-size: 14px;
-      color: var(--text-secondary);
-    }
-    .toggle-switch {
-      width: 36px;
-      height: 20px;
-      border-radius: 10px;
-      cursor: pointer;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      position: relative;
-      transition: background 0.15s ease;
-    }
-    .toggle-switch.active {
-      background: var(--accent);
-      border-color: var(--accent);
-    }
-    .toggle-switch::after {
-      content: '';
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #fff;
-      transition: transform 0.15s ease;
-    }
-    .toggle-switch.active::after {
-      transform: translateX(16px);
-    }
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-    .kpi-item {
-      background: var(--surface);
-      border-radius: var(--radius-sm, 8px);
-      padding: 8px 12px;
-    }
-    .kpi-value {
-      display: block;
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text);
-    }
-    .kpi-label {
-      display: block;
-      font-size: 10px;
-      color: var(--text-secondary);
-    }
-    .template-btn {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm, 8px);
-      padding: 4px 12px;
-      color: var(--text-secondary);
-      font-size: 12px;
-      cursor: pointer;
-      margin-top: 4px;
-    }
-    .template-btn:hover {
-      background: rgba(255, 255, 255, 0.08);
-    }
-  `;
-
-  private fireUpdate(patch: Partial<AgentNode>): void {
+  fireUpdate(patch: Partial<AgentNode>): void {
     fire(this, 'node-update', { nodeId: this.node?.id, patch });
   }
 
   private async loadKpis(nodeId: string): Promise<void> {
     try {
       const result = await getAgentKpis(nodeId);
-      this.kpis = result as typeof this.kpis;
+      this.kpis = result as KpiData;
     } catch {
       this.kpis = null;
     }
@@ -301,17 +49,17 @@ export class AgentDetailPanel extends LitElement {
   }
 
   render() {
-    const node = this.node;
+    const { node } = this;
     const isOpen = node !== null;
     const isOwner = node?.platform === 'owner';
 
     return html`
-      <div class="panel ${isOpen ? 'open' : ''}">
-        <div class="header">
-          <span class="title"
+      <div class="detail-panel ${isOpen ? 'open' : ''}">
+        <div class="detail-header">
+          <span class="detail-title"
             >${isOwner ? t('canvas.ownerSettings') : t('canvas.agentDetails')}</span
           >
-          <button class="close-btn" @click=${() => fire(this, 'close')}>
+          <button class="detail-close-btn" @click=${() => fire(this, 'close')}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
               <path
                 d="M18 6L6 18M6 6l12 12"
@@ -331,18 +79,16 @@ export class AgentDetailPanel extends LitElement {
     const displayName = isOwner ? node.label : node.meta.firstName || node.label.replace(/^@/, '');
     const handle = !isOwner && node.label.startsWith('@') ? node.label : '';
     const platformLabel = isOwner ? t('canvas.youOwner') : capitalize(node.platform);
-    const update = (patch: Partial<AgentNode>) => this.fireUpdate(patch);
-    const fireFn = (name: string, detail?: unknown) => fire(this, name, detail);
 
     return html`
-      <div class="body">
+      <div class="detail-body">
         ${this.renderIdentity(node, isOwner, displayName, handle, platformLabel)}
-        ${!isOwner ? renderRolePills(node, update) : nothing}
-        ${!isOwner ? renderAutonomy(node, update) : nothing}
-        ${!isOwner ? renderDescription(node, update) : nothing}
-        ${renderInstructions(node, isOwner, update)}
-        ${isOwner ? renderLanguage(this.graph?.language || 'auto', fireFn) : nothing}
-        ${!isOwner ? renderBehavior(node, update) : nothing}
+        ${!isOwner ? renderRolePills(this, node) : nothing}
+        ${!isOwner ? renderAutonomy(this, node) : nothing}
+        ${!isOwner ? this.renderDescription(node) : nothing}
+        ${this.renderInstructions(node, isOwner)}
+        ${isOwner ? renderLanguage(this, this.graph?.language || 'auto') : nothing}
+        ${!isOwner ? renderBehavior(this, node) : nothing}
         ${!isOwner ? renderKpis(this.kpis) : nothing}
         ${!isOwner
           ? html`
@@ -366,12 +112,12 @@ export class AgentDetailPanel extends LitElement {
     platformLabel: string,
   ) {
     return html`
-      <div class="identity">
+      <div class="detail-identity">
         <div class="detail-avatar ${isOwner ? 'owner-avatar' : ''}">
           ${node.photo
             ? html`<img src="${node.photo}" alt="" />`
             : isOwner
-              ? html`<span class="avatar-initials">${getInitials(node.label)}</span>`
+              ? html`<span class="detail-avatar-initials">${getInitials(node.label)}</span>`
               : html`<span></span>`}
         </div>
         <div>
@@ -379,6 +125,48 @@ export class AgentDetailPanel extends LitElement {
           ${handle ? html`<div class="detail-agent-handle">${handle}</div>` : nothing}
           <div class="detail-agent-platform">${platformLabel}</div>
         </div>
+      </div>
+    `;
+  }
+
+  private renderDescription(node: AgentNode) {
+    return html`
+      <div class="detail-section">
+        <span class="detail-label">${t('canvas.description')}</span>
+        <input
+          type="text"
+          .value=${node.description || ''}
+          @input=${(e: InputEvent) =>
+            this.fireUpdate({
+              description: (e.target as HTMLInputElement).value || undefined,
+            })}
+          placeholder=${t('canvas.descriptionPlaceholder')}
+        />
+      </div>
+    `;
+  }
+
+  private renderInstructions(node: AgentNode, isOwner: boolean) {
+    const label = isOwner ? t('canvas.commStyle') : t('canvas.agentPersona');
+    const placeholder = isOwner
+      ? t('canvas.commStylePlaceholder')
+      : t('canvas.agentPersonaPlaceholder');
+    const template = isOwner ? CEO_TEMPLATE : BOT_TEMPLATE;
+    return html`
+      <div class="detail-section">
+        <span class="detail-label">${label}</span>
+        <textarea
+          .value=${node.instructions || ''}
+          @input=${(e: InputEvent) =>
+            this.fireUpdate({ instructions: (e.target as HTMLTextAreaElement).value })}
+          placeholder=${placeholder}
+        ></textarea>
+        <button
+          class="detail-template-btn"
+          @click=${() => this.fireUpdate({ instructions: template })}
+        >
+          ${t('canvas.insertTemplate')}
+        </button>
       </div>
     `;
   }

@@ -143,7 +143,7 @@ export class OrbitalBubbles extends LightDomElement {
 
       const tooltip = document.createElement('div');
       tooltip.className = 'orbital-tooltip';
-      tooltip.textContent = b.label;
+      tooltip.textContent = def?.name ?? b.label;
       bubble.appendChild(tooltip);
 
       this.appendChild(bubble);

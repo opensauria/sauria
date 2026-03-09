@@ -38,16 +38,14 @@ export class WorkspaceDragHandler {
 
   startWsDrag(wsId: string, e: MouseEvent): void {
     const graph = this.cb.getGraph();
+    const ws = graph.workspaces.find((w) => w.id === wsId);
+    if (!ws || ws.locked) return;
     this.isWsDragging = true;
     this.wsDragId = wsId;
     this.wsDragStartX = e.clientX;
     this.wsDragStartY = e.clientY;
-
-    const ws = graph.workspaces.find((w) => w.id === wsId);
-    if (ws) {
-      this.wsDragStartWsX = ws.position.x;
-      this.wsDragStartWsY = ws.position.y;
-    }
+    this.wsDragStartWsX = ws.position.x;
+    this.wsDragStartWsY = ws.position.y;
 
     this.wsDragNodeStarts = graph.nodes
       .filter((n) => n.workspaceId === wsId)

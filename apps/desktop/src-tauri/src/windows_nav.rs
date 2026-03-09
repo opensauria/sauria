@@ -1,8 +1,7 @@
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::windows::{
-    center_palette, is_fixed_page, page_size, resolve_page_url, PALETTE_HEIGHT, PALETTE_WIDTH,
-    TOP_OFFSET,
+    center_palette, is_fixed_page, page_size, PALETTE_HEIGHT, PALETTE_WIDTH, TOP_OFFSET,
 };
 
 const ANIMATION_STEPS: u32 = 15;
@@ -24,10 +23,9 @@ pub(crate) fn navigate_to(app: &AppHandle, page: &str) -> Result<(), String> {
     win.set_decorations(wants_decorations)
         .map_err(|e| e.to_string())?;
 
-    let query = if page != "palette" { "?inPalette=1" } else { "" };
-    let nav_url = resolve_page_url(&win, page, query)?;
-    win.navigate(nav_url)
-        .map_err(|e| format!("navigate failed: {e}"))?;
+    /* SPA: emit route event instead of full-page navigate */
+    win.emit("navigate", page)
+        .map_err(|e| format!("emit navigate failed: {e}"))?;
 
     let win_clone = win.clone();
     let target_w = size.width;
@@ -53,9 +51,9 @@ pub(crate) fn navigate_back(app: &AppHandle) -> Result<(), String> {
     let _ = win.set_min_size(None::<tauri::LogicalSize<f64>>);
     let _ = win.set_decorations(false);
 
-    let nav_url = resolve_page_url(&win, "palette", "")?;
-    win.navigate(nav_url)
-        .map_err(|e| format!("navigate_back failed: {e}"))?;
+    /* SPA: emit route event instead of full-page navigate */
+    win.emit("navigate", "palette")
+        .map_err(|e| format!("emit navigate failed: {e}"))?;
 
     let win_clone = win.clone();
     tauri::async_runtime::spawn(async move {
@@ -81,8 +79,8 @@ pub(crate) fn show(app: &AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    let nav_url = resolve_page_url(&win, "palette", "")?;
-    let _ = win.navigate(nav_url);
+    /* SPA: emit route to palette view */
+    let _ = win.emit("navigate", "palette");
     let _ = win.set_decorations(false);
     let _ = win.set_resizable(false);
     let _ = win.set_always_on_top(true);

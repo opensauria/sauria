@@ -7,7 +7,9 @@ export default defineConfig({
   define: {
     SAURIA_VERSION: JSON.stringify(process.env['npm_package_version'] ?? '0.0.0'),
   },
-  noExternal: [/.*/],
-  external: ['better-sqlite3'],
-  inlineOnly: false,
+  deps: {
+    alwaysBundle: [/.*/],
+    neverBundle: ['better-sqlite3'],
+    onlyAllowBundle: false,
+  },
 });

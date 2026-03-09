@@ -50,26 +50,32 @@ export const TIER_LOW: TierConfig = {
   layoutStepsPerFrame: 1,
 };
 
+import { entityColors } from '@sauria/design-tokens';
+
+function hexToNum(hex: string): number {
+  return parseInt(hex.slice(1), 16);
+}
+
 export const TYPE_COLORS: Record<string, number> = {
-  person: 0x3b82f6,
-  project: 0x34d399,
-  company: 0xa78bfa,
-  event: 0xf59e0b,
-  document: 0x6b7280,
-  goal: 0x038b9a,
-  place: 0xeab308,
-  concept: 0xec4899,
+  person: hexToNum(entityColors.person),
+  project: hexToNum(entityColors.project),
+  company: hexToNum(entityColors.company),
+  event: hexToNum(entityColors.event),
+  document: hexToNum(entityColors.document),
+  goal: hexToNum(entityColors.goal),
+  place: hexToNum(entityColors.place),
+  concept: hexToNum(entityColors.concept),
 };
 
 export const TYPE_COLOR_STRINGS: Record<string, string> = {
-  person: '#3b82f6',
-  project: '#34d399',
-  company: '#a78bfa',
-  event: '#f59e0b',
-  document: '#6b7280',
-  goal: '#038b9a',
-  place: '#eab308',
-  concept: '#ec4899',
+  person: entityColors.person,
+  project: entityColors.project,
+  company: entityColors.company,
+  event: entityColors.event,
+  document: entityColors.document,
+  goal: entityColors.goal,
+  place: entityColors.place,
+  concept: entityColors.concept,
 };
 
 export const DEFAULT_COLOR = 0x888888;

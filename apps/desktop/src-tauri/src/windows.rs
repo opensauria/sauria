@@ -3,7 +3,7 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use crate::windows_nav;
 
 pub(crate) const PALETTE_WIDTH: f64 = 680.0;
-pub(crate) const PALETTE_HEIGHT: f64 = 360.0;
+pub(crate) const PALETTE_HEIGHT: f64 = 400.0;
 pub(crate) const TOP_OFFSET: f64 = 200.0;
 
 pub(crate) struct PageSize {
@@ -24,22 +24,12 @@ pub(crate) fn is_fixed_page(page: &str) -> bool {
     page == "setup"
 }
 
-pub(crate) fn resolve_page_url(
-    win: &tauri::WebviewWindow,
-    page: &str,
-    query: &str,
-) -> Result<url::Url, String> {
-    let current = win.url().map_err(|e| e.to_string())?;
-    let path = format!("/src/renderer/{page}/index.html{query}");
-    current.join(&path).map_err(|e| e.to_string())
-}
-
 pub fn create_palette_window(app: &AppHandle) -> Result<(), String> {
     if app.get_webview_window("palette").is_some() {
         return Ok(());
     }
 
-    let url = WebviewUrl::App("src/renderer/palette/index.html".into());
+    let url = WebviewUrl::App("src/renderer/index.html".into());
     let builder = WebviewWindowBuilder::new(app, "palette", url)
         .title("Sauria")
         .inner_size(PALETTE_WIDTH, PALETTE_HEIGHT)
@@ -50,7 +40,14 @@ pub fn create_palette_window(app: &AppHandle) -> Result<(), String> {
         .skip_taskbar(true)
         .visible(false);
 
-    builder.build().map_err(|e| e.to_string())?;
+    let win = builder.build().map_err(|e| e.to_string())?;
+
+    // Debug: open devtools to inspect webview state
+    #[cfg(debug_assertions)]
+    win.open_devtools();
+
+    #[cfg(not(debug_assertions))]
+    let _ = win;
 
     Ok(())
 }

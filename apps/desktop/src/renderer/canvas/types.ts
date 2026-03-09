@@ -82,21 +82,7 @@ export interface OwnerProfile {
   customInstructions: string;
 }
 
-export interface ConnectResult {
-  success: boolean;
-  error?: string;
-  nodeId?: string;
-  botUsername?: string;
-  photo?: string;
-  botId?: string;
-  firstName?: string;
-  teamName?: string;
-  botUserId?: string;
-  teamId?: string;
-  displayName?: string;
-  phoneNumberId?: string;
-  email?: string;
-}
+export type { ConnectResult } from '../shared/types.js';
 
 export interface PlatformField {
   key: string;

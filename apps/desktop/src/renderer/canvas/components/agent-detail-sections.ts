@@ -1,29 +1,29 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing } from 'lit';
 import { t } from '../../i18n.js';
 import type { AgentNode } from '../types.js';
-import {
-  ROLES,
-  AUTONOMY_LEVELS,
-  CEO_TEMPLATE,
-  BOT_TEMPLATE,
-  RESPONSE_LANGUAGES,
-} from '../constants.js';
+import { ROLES, AUTONOMY_LEVELS, RESPONSE_LANGUAGES } from '../constants.js';
 import { capitalize } from '../helpers.js';
+import { fire } from '../fire.js';
+import type { AgentDetailPanel } from './agent-detail-panel.js';
 
-type FireUpdate = (patch: Partial<AgentNode>) => void;
-type FireFn = (name: string, detail?: unknown) => void;
+export interface KpiData {
+  readonly messagesHandled: number;
+  readonly tasksCompleted: number;
+  readonly avgResponseTimeMs: number;
+  readonly costUsd: number;
+}
 
-export function renderRolePills(node: AgentNode, fireUpdate: FireUpdate): TemplateResult {
+export function renderRolePills(panel: AgentDetailPanel, node: AgentNode) {
   const role = node.role || 'assistant';
   return html`
-    <div class="section">
-      <span class="label">${t('canvas.role')}</span>
-      <div class="role-pills">
+    <div class="detail-section">
+      <span class="detail-label">${t('canvas.role')}</span>
+      <div class="detail-role-pills">
         ${ROLES.map(
           (r) => html`
             <button
-              class="role-pill ${role === r ? 'active' : ''}"
-              @click=${() => fireUpdate({ role: r })}
+              class="detail-role-pill ${role === r ? 'active' : ''}"
+              @click=${() => panel.fireUpdate({ role: r })}
             >
               ${capitalize(r)}
             </button>
@@ -34,18 +34,21 @@ export function renderRolePills(node: AgentNode, fireUpdate: FireUpdate): Templa
   `;
 }
 
-export function renderAutonomy(node: AgentNode, fireUpdate: FireUpdate): TemplateResult {
+export function renderAutonomy(panel: AgentDetailPanel, node: AgentNode) {
   const level = typeof node.autonomy === 'number' ? node.autonomy : 1;
   return html`
-    <div class="section">
-      <span class="label">${t('canvas.autonomy')}</span>
-      <div class="autonomy-bar">
-        <div class="autonomy-highlight" style="left:${level * 25}%;width:25%"></div>
+    <div class="detail-section">
+      <span class="detail-label">${t('canvas.autonomy')}</span>
+      <div class="detail-autonomy-bar">
+        <div
+          class="detail-autonomy-highlight"
+          style="left:calc(var(--spacing-xs) + ${level} * (100% - 2 * var(--spacing-xs)) / 4);width:calc((100% - 2 * var(--spacing-xs)) / 4)"
+        ></div>
         ${AUTONOMY_LEVELS.map(
           (a) => html`
             <div
-              class="autonomy-seg ${level === a.level ? 'active' : ''}"
-              @click=${() => fireUpdate({ autonomy: a.level })}
+              class="detail-autonomy-seg ${level === a.level ? 'active' : ''}"
+              @click=${() => panel.fireUpdate({ autonomy: a.level })}
             >
               ${a.label}
             </div>
@@ -56,55 +59,14 @@ export function renderAutonomy(node: AgentNode, fireUpdate: FireUpdate): Templat
   `;
 }
 
-export function renderDescription(node: AgentNode, fireUpdate: FireUpdate): TemplateResult {
+export function renderLanguage(panel: AgentDetailPanel, lang: string) {
   return html`
-    <div class="section">
-      <span class="label">${t('canvas.description')}</span>
-      <input
-        type="text"
-        .value=${node.description || ''}
-        @input=${(e: InputEvent) =>
-          fireUpdate({ description: (e.target as HTMLInputElement).value || undefined })}
-        placeholder=${t('canvas.descriptionPlaceholder')}
-      />
-    </div>
-  `;
-}
-
-export function renderInstructions(
-  node: AgentNode,
-  isOwner: boolean,
-  fireUpdate: FireUpdate,
-): TemplateResult {
-  const label = isOwner ? t('canvas.commStyle') : t('canvas.agentPersona');
-  const placeholder = isOwner
-    ? t('canvas.commStylePlaceholder')
-    : t('canvas.agentPersonaPlaceholder');
-  const template = isOwner ? CEO_TEMPLATE : BOT_TEMPLATE;
-  return html`
-    <div class="section">
-      <span class="label">${label}</span>
-      <textarea
-        .value=${node.instructions || ''}
-        @input=${(e: InputEvent) =>
-          fireUpdate({ instructions: (e.target as HTMLTextAreaElement).value })}
-        placeholder=${placeholder}
-      ></textarea>
-      <button class="template-btn" @click=${() => fireUpdate({ instructions: template })}>
-        ${t('canvas.insertTemplate')}
-      </button>
-    </div>
-  `;
-}
-
-export function renderLanguage(lang: string, fireFn: FireFn): TemplateResult {
-  return html`
-    <div class="section">
-      <span class="label">${t('canvas.responseLanguage')}</span>
+    <div class="detail-section">
+      <span class="detail-label">${t('canvas.responseLanguage')}</span>
       <select
         .value=${lang}
         @change=${(e: Event) =>
-          fireFn('language-change', { value: (e.target as HTMLSelectElement).value })}
+          fire(panel, 'language-change', { value: (e.target as HTMLSelectElement).value })}
       >
         ${RESPONSE_LANGUAGES.map(
           (l) => html` <option value=${l.code} ?selected=${lang === l.code}>${l.label}</option> `,
@@ -119,55 +81,42 @@ function renderToggle(
   isActive: boolean,
   key: string,
   node: AgentNode,
-  fireUpdate: FireUpdate,
-): TemplateResult {
+  panel: AgentDetailPanel,
+) {
   return html`
-    <div class="toggle-row">
-      <span class="toggle-label">${label}</span>
+    <div class="detail-toggle-row">
+      <span class="detail-toggle-label">${label}</span>
       <div
-        class="toggle-switch ${isActive ? 'active' : ''}"
+        class="form-toggle ${isActive ? 'active' : ''}"
         @click=${() => {
           const behavior = { ...(node.behavior ?? {}) };
           (behavior as Record<string, boolean>)[key] = !isActive;
-          fireUpdate({ behavior });
+          panel.fireUpdate({ behavior });
         }}
       ></div>
     </div>
   `;
 }
 
-export function renderBehavior(node: AgentNode, fireUpdate: FireUpdate): TemplateResult {
+export function renderBehavior(panel: AgentDetailPanel, node: AgentNode) {
   const behavior = node.behavior ?? {};
   return html`
-    <div class="section">
-      <span class="label">${t('canvas.behavior')}</span>
-      ${renderToggle(
-        t('canvas.proactive'),
-        behavior.proactive === true,
-        'proactive',
-        node,
-        fireUpdate,
-      )}
+    <div class="detail-section">
+      <span class="detail-label">${t('canvas.behavior')}</span>
+      ${renderToggle(t('canvas.proactive'), behavior.proactive === true, 'proactive', node, panel)}
       ${renderToggle(
         t('canvas.ownerResponse'),
         behavior.ownerResponse !== false,
         'ownerResponse',
         node,
-        fireUpdate,
+        panel,
       )}
-      ${renderToggle(t('canvas.peer'), behavior.peer === true, 'peer', node, fireUpdate)}
+      ${renderToggle(t('canvas.peer'), behavior.peer === true, 'peer', node, panel)}
     </div>
   `;
 }
 
-interface KpiData {
-  readonly messagesHandled: number;
-  readonly tasksCompleted: number;
-  readonly avgResponseTimeMs: number;
-  readonly costUsd: number;
-}
-
-export function renderKpis(kpis: KpiData | null): TemplateResult | typeof nothing {
+export function renderKpis(kpis: KpiData | null) {
   if (!kpis) return nothing;
   const items = [
     { value: String(kpis.messagesHandled), label: t('canvas.kpiMessages') },
@@ -182,14 +131,14 @@ export function renderKpis(kpis: KpiData | null): TemplateResult | typeof nothin
     },
   ];
   return html`
-    <div class="section">
-      <span class="label">${t('canvas.kpis')}</span>
-      <div class="kpi-grid">
+    <div class="detail-section">
+      <span class="detail-label">${t('canvas.kpis')}</span>
+      <div class="detail-kpi-grid">
         ${items.map(
           (item) => html`
-            <div class="kpi-item">
-              <span class="kpi-value">${item.value}</span>
-              <span class="kpi-label">${item.label}</span>
+            <div class="detail-kpi-item">
+              <span class="detail-kpi-value">${item.value}</span>
+              <span class="detail-kpi-label">${item.label}</span>
             </div>
           `,
         )}

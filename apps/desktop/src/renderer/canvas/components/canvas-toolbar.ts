@@ -1,102 +1,15 @@
-import { LitElement, html, css } from 'lit';
+import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { t } from '../../i18n.js';
 import { fire } from '../fire.js';
+import { LightDomElement } from '../light-dom-element.js';
 
 @customElement('canvas-toolbar')
-export class CanvasToolbar extends LitElement {
+export class CanvasToolbar extends LightDomElement {
   @property({ type: Number }) zoom = 1;
   @property({ type: Boolean }) dockHidden = true;
   @property({ type: Number }) unreadCount = 0;
   @property({ type: Boolean }) feedActive = false;
-
-  static styles = css`
-    :host {
-      display: contents;
-    }
-    .canvas-toolbar {
-      position: fixed;
-      bottom: 16px;
-      left: 16px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px;
-      background: rgba(30, 30, 30, 0.9);
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-      border-radius: var(--radius, 12px);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      z-index: 200;
-      transition: bottom 0.3s ease;
-    }
-    :host([dock-hidden]) .canvas-toolbar {
-      bottom: 16px;
-    }
-    .toolbar-group {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .toolbar-btn {
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: none;
-      background: transparent;
-      border-radius: var(--radius-sm, 8px);
-      cursor: pointer;
-      color: var(--text-secondary, #999);
-      transition: background 0.15s ease;
-    }
-    .toolbar-btn:hover {
-      background: rgba(255, 255, 255, 0.06);
-    }
-    .toolbar-btn img,
-    .toolbar-btn svg {
-      width: 16px;
-      height: 16px;
-      filter: brightness(0) invert();
-      opacity: 0.5;
-    }
-    .toolbar-btn svg {
-      filter: none;
-      opacity: 1;
-    }
-    .zoom-display {
-      min-width: 44px;
-      text-align: center;
-      font-size: 12px;
-      color: var(--text-dim, #555);
-      font-variant-numeric: tabular-nums;
-    }
-    .activity-btn {
-      position: relative;
-    }
-    .activity-btn.active {
-      background: rgba(3, 139, 154, 0.15);
-    }
-    .activity-badge {
-      position: absolute;
-      top: 2px;
-      right: 2px;
-      min-width: 16px;
-      height: 16px;
-      padding: 0 4px;
-      border-radius: 8px;
-      background: var(--error, #f87171);
-      color: #fff;
-      font-size: 10px;
-      line-height: 16px;
-      text-align: center;
-      display: none;
-    }
-    .activity-badge.visible {
-      display: block;
-    }
-  `;
 
   render() {
     const zoomPct = Math.round(this.zoom * 100) + '%';

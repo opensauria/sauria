@@ -1,12 +1,16 @@
 import { html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { LightDomElement } from './light-dom-element.js';
+import { adoptGlobalStyles, adoptStyles } from '../shared/styles/inject.js';
+import { canvasViewStyles } from './styles/index.js';
 import { GraphSyncController } from './controllers/graph-sync-controller.js';
 import { ViewportController } from './controllers/viewport-controller.js';
-import { DragController } from './controllers/drag-controller.js';
+import { NodeDragHandler } from './controllers/node-drag-handler.js';
+import { WorkspaceDragHandler } from './controllers/workspace-drag-handler.js';
 import { ActivityController } from './controllers/activity-controller.js';
 import type { AgentNode, IntegrationDef, Workspace } from './types.js';
-import { generateId } from './helpers.js';
+import { computeEdgeGeometry, generateId } from './helpers.js';
 import { listIntegrationCatalog, navigateBack } from './ipc.js';
 import { initLocale } from '../i18n.js';
 import {
@@ -16,17 +20,20 @@ import {
   handleWorkspaceCreate,
   handleWorkspaceUpdate,
   handleWsLockToggle,
-} from './canvas-actions.js';
-import {
   handleViewportMouseDown,
   handleKeydown,
   handleCardHover,
   handleCardHoverLeave,
   openConversation,
   toggleFeed,
-} from './canvas-events.js';
+  removeEdge,
+  requestConfirm,
+} from './canvas-handlers.js';
 import type { EdgeLayer } from './components/edge-layer.js';
 import type { EdgeActivity } from './components/edge-activity.js';
+
+adoptGlobalStyles();
+adoptStyles(...canvasViewStyles);
 
 /* Side-effect imports register custom elements */
 import './components/empty-state.js';
@@ -49,7 +56,8 @@ import './components/orbital-bubbles.js';
 export class SauriaCanvas extends LightDomElement {
   readonly graphSync = new GraphSyncController(this);
   readonly viewport = new ViewportController(this);
-  readonly drag: DragController;
+  readonly nodeDrag: NodeDragHandler;
+  readonly wsDrag: WorkspaceDragHandler;
   private activity: ActivityController;
 
   @state() selectedNodeId: string | null = null;
@@ -58,41 +66,55 @@ export class SauriaCanvas extends LightDomElement {
   @state() detailWorkspaceId: string | null = null;
   @state() dockCollapsed = true;
   @state() wsDialogOpen = false;
-  @state() private confirmOpen = false;
-  @state() private confirmMessage = '';
+  @state() confirmOpen = false;
+  @state() confirmMessage = '';
   @state() private legendVisible = true;
   @state() private catalogMap = new Map<string, IntegrationDef>();
+  @state() private hoveredEdgeId: string | null = null;
 
-  private confirmCallback: (() => void) | null = null;
+  confirmCallback: (() => void) | null = null;
+  private unlistenOauth?: UnlistenFn;
+  private edgeHideTimer: ReturnType<typeof setTimeout> | null = null;
+  private edgeBtnPos = { x: 0, y: 0 };
+  private edgeBtnEdgeId = '';
 
   constructor() {
     super();
-    this.drag = new DragController(this, {
+    this.nodeDrag = new NodeDragHandler({
       getGraph: () => this.graphSync.graph,
       getWorldEl: () => this.querySelector('.canvas-world') as HTMLElement,
       getViewportEl: () => this.querySelector('.canvas-viewport') as HTMLElement,
       getZoom: () => this.viewport.zoom,
       getVpXY: () => ({ x: this.viewport.x, y: this.viewport.y }),
-      onNodeDragged: () => this.requestUpdate(),
+      onNodeDragged: () => {
+        const edgeLayer = this.querySelector('edge-layer') as EdgeLayer | null;
+        const edgeActivity = this.querySelector('edge-activity') as EdgeActivity | null;
+        edgeLayer?.requestUpdate();
+        edgeActivity?.requestUpdate();
+        this.requestUpdate();
+      },
       onNodeDropped: (nodeId: string, dragDist: number) => {
         if (dragDist < 5) {
           this.selectedNodeId = nodeId;
-          this.detailNode = this.graphSync.graph.nodes.find((n) => n.id === nodeId) ?? null;
+          const found = this.graphSync.graph.nodes.find((n) => n.id === nodeId);
+          this.detailNode = found ? { ...found } : null;
         }
         this.graphSync.save();
         this.requestUpdate();
       },
       onEdgeCreated: (fromId, toId) => {
-        this.graphSync.graph.edges.push({
-          id: generateId(),
-          from: fromId,
-          to: toId,
-          edgeType: 'default',
-          rules: [],
-        });
+        this.graphSync.graph.edges = [
+          ...this.graphSync.graph.edges,
+          { id: generateId(), from: fromId, to: toId, edgeType: 'default', rules: [] },
+        ];
         this.graphSync.save();
         this.requestUpdate();
       },
+    });
+    this.wsDrag = new WorkspaceDragHandler({
+      getGraph: () => this.graphSync.graph,
+      getWorldEl: () => this.querySelector('.canvas-world') as HTMLElement,
+      getZoom: () => this.viewport.zoom,
       onWorkspaceDragged: () => this.requestUpdate(),
       onWorkspaceDropped: () => {
         this.graphSync.save();
@@ -111,7 +133,13 @@ export class SauriaCanvas extends LightDomElement {
         ea?.animateEdgeTravel(from, to, preview);
       },
       onNodeActivity: () => this.requestUpdate(),
-      onMessageReceived: () => this.requestUpdate(),
+      onMessageReceived: () => {
+        this.requestUpdate();
+        const panel = this.querySelector('conversation-panel') as
+          | (HTMLElement & { notifyMessage: () => void })
+          | null;
+        panel?.notifyMessage();
+      },
       requestUpdate: () => this.requestUpdate(),
     });
   }
@@ -120,6 +148,7 @@ export class SauriaCanvas extends LightDomElement {
     super.connectedCallback();
     await initLocale();
     await this.graphSync.init();
+    this.activity.start().catch(() => {});
     document.addEventListener('keydown', this.onKeydown);
     document.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('mouseup', this.onMouseUp);
@@ -129,10 +158,15 @@ export class SauriaCanvas extends LightDomElement {
           this.catalogMap.set(item.id ?? item.definition.id, item.definition);
       })
       .catch(() => {});
+    listen('integration-oauth-complete', () => this.refreshCatalog()).then(
+      (fn) => (this.unlistenOauth = fn),
+    );
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    if (this.edgeHideTimer) clearTimeout(this.edgeHideTimer);
+    this.unlistenOauth?.();
     document.removeEventListener('keydown', this.onKeydown);
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('mouseup', this.onMouseUp);
@@ -147,7 +181,8 @@ export class SauriaCanvas extends LightDomElement {
       this.requestUpdate();
       return;
     }
-    this.drag.handleMouseMove(e);
+    this.nodeDrag.handleMove(e);
+    this.wsDrag.handleMove(e);
   };
 
   private onMouseUp = (e: MouseEvent): void => {
@@ -155,7 +190,8 @@ export class SauriaCanvas extends LightDomElement {
       this.requestUpdate();
       return;
     }
-    this.drag.handleMouseUp(e);
+    this.nodeDrag.handleUp(e);
+    this.wsDrag.handleUp();
   };
 
   private dispatchCardAction(e: CustomEvent): void {
@@ -163,7 +199,7 @@ export class SauriaCanvas extends LightDomElement {
     if (action === 'gear') {
       const node = this.graphSync.graph.nodes.find((n) => n.id === nodeId);
       if (node) {
-        this.detailNode = node;
+        this.detailNode = { ...node };
         return;
       }
     }
@@ -179,12 +215,12 @@ export class SauriaCanvas extends LightDomElement {
   }
 
   render() {
+    return html` ${this.renderViewport()} ${this.renderOverlays()} ${this.renderPanels()} `;
+  }
+
+  private renderViewport() {
     const { graph } = this.graphSync;
-    const { zoom } = this.viewport;
     return html`
-      <button class="palette-back" @click=${() => navigateBack()}>
-        <img src="/icons/chevron-left.svg" alt="" />
-      </button>
       <div
         class="canvas-viewport"
         @mousedown=${(e: MouseEvent) => handleViewportMouseDown(this, e)}
@@ -197,6 +233,13 @@ export class SauriaCanvas extends LightDomElement {
             .worldEl=${this.querySelector('.canvas-world')}
             @edge-click=${(e: CustomEvent) =>
               openConversation(this, e.detail.fromId, e.detail.toId)}
+            @edge-hover=${(e: CustomEvent) => {
+              if (this.edgeHideTimer) clearTimeout(this.edgeHideTimer);
+              this.hoveredEdgeId = e.detail.edgeId;
+            }}
+            @edge-hover-leave=${() => {
+              this.scheduleEdgeHide();
+            }}
           >
           </edge-layer>
           <edge-activity
@@ -235,6 +278,7 @@ export class SauriaCanvas extends LightDomElement {
               </agent-card>
             `,
           )}
+          ${this.renderEdgeDeleteBtn()}
           <orbital-bubbles
             .instances=${graph.instances ?? []}
             .catalogMap=${this.catalogMap}
@@ -242,6 +286,13 @@ export class SauriaCanvas extends LightDomElement {
           ></orbital-bubbles>
         </div>
       </div>
+    `;
+  }
+
+  private renderOverlays() {
+    const { graph } = this.graphSync;
+    const { zoom } = this.viewport;
+    return html`
       <canvas-empty-state .nodeCount=${graph.nodes.length}></canvas-empty-state>
       <canvas-toolbar
         .zoom=${zoom}
@@ -259,39 +310,6 @@ export class SauriaCanvas extends LightDomElement {
         }}
       >
       </canvas-toolbar>
-      <agent-detail-panel
-        .node=${this.detailNode}
-        .graph=${graph}
-        .catalogMap=${this.catalogMap}
-        @close=${() => {
-          this.detailNode = null;
-        }}
-        @node-update=${(e: CustomEvent) => {
-          handleNodeUpdate(this, e.detail.nodeId, e.detail.patch);
-        }}
-        @language-change=${(e: CustomEvent) => {
-          graph.language = e.detail.value === 'auto' ? undefined : e.detail.value;
-          this.graphSync.save();
-        }}
-      >
-      </agent-detail-panel>
-      <workspace-detail-panel
-        .workspace=${this.detailWorkspaceId
-          ? (graph.workspaces.find((w) => w.id === this.detailWorkspaceId) ?? null)
-          : null}
-        @close=${() => {
-          this.detailWorkspaceId = null;
-        }}
-        @workspace-update=${(e: CustomEvent) => {
-          handleWorkspaceUpdate(this, e.detail.field, e.detail.value, this.detailWorkspaceId!);
-        }}
-      >
-      </workspace-detail-panel>
-      <conversation-panel
-        .nodes=${graph.nodes}
-        .conversationBuffer=${this.activity.conversationBuffer}
-        .activeNodeIds=${this.activity.activeNodeIds}
-      ></conversation-panel>
       <workspace-dialog
         ?open=${this.wsDialogOpen}
         @workspace-create=${(e: CustomEvent) => this.onWorkspaceCreate(e)}
@@ -325,7 +343,112 @@ export class SauriaCanvas extends LightDomElement {
         <img src="/icons/chevron-down.svg" alt="Toggle" />
       </button>
       <canvas-legend ?visible=${this.legendVisible}></canvas-legend>
+      <button class="palette-back" @click=${() => navigateBack()}>
+        <img src="/icons/chevron-left.svg" alt="" />
+      </button>
     `;
+  }
+
+  private renderPanels() {
+    const { graph } = this.graphSync;
+    return html`
+      <agent-detail-panel
+        .node=${this.detailNode}
+        .graph=${graph}
+        .catalogMap=${this.catalogMap}
+        @close=${() => {
+          this.detailNode = null;
+        }}
+        @node-update=${(e: CustomEvent) => {
+          handleNodeUpdate(this, e.detail.nodeId, e.detail.patch);
+        }}
+        @language-change=${(e: CustomEvent) => {
+          graph.language = e.detail.value === 'auto' ? undefined : e.detail.value;
+          this.graphSync.save();
+        }}
+      >
+      </agent-detail-panel>
+      <workspace-detail-panel
+        .workspace=${this.detailWorkspaceId
+          ? (graph.workspaces.find((w) => w.id === this.detailWorkspaceId) ?? null)
+          : null}
+        @close=${() => {
+          this.detailWorkspaceId = null;
+        }}
+        @workspace-update=${(e: CustomEvent) => {
+          handleWorkspaceUpdate(this, e.detail.field, e.detail.value, this.detailWorkspaceId!);
+        }}
+      >
+      </workspace-detail-panel>
+      <conversation-panel
+        .nodes=${graph.nodes}
+        .conversationBuffer=${this.activity.conversationBuffer}
+        .activeNodeIds=${this.activity.activeNodeIds}
+      ></conversation-panel>
+    `;
+  }
+
+  private renderEdgeDeleteBtn() {
+    const isHovered = !!this.hoveredEdgeId;
+
+    if (isHovered) {
+      const { graph } = this.graphSync;
+      const edge = graph.edges.find((e) => e.id === this.hoveredEdgeId);
+      if (edge) {
+        const fromNode = graph.nodes.find((n) => n.id === edge.from);
+        const toNode = graph.nodes.find((n) => n.id === edge.to);
+        const worldEl = this.querySelector('.canvas-world') as HTMLElement | null;
+        if (fromNode && toNode && worldEl) {
+          const mid = computeEdgeGeometry(fromNode, toNode, worldEl);
+          if (mid) {
+            this.edgeBtnPos = { x: mid.midX, y: mid.midY };
+            this.edgeBtnEdgeId = this.hoveredEdgeId!;
+          }
+        }
+      }
+    }
+
+    const { x, y } = this.edgeBtnPos;
+    const edgeId = this.edgeBtnEdgeId;
+    return html`
+      <button
+        class="edge-delete-btn ${isHovered ? 'visible' : ''}"
+        style="left:${x}px;top:${y}px"
+        @click=${() => {
+          if (!edgeId) return;
+          requestConfirm(this, 'canvas.confirmDisconnectEdge', () => {
+            removeEdge(this, edgeId);
+            this.hoveredEdgeId = null;
+          });
+        }}
+        @mouseenter=${() => {
+          if (this.edgeHideTimer) clearTimeout(this.edgeHideTimer);
+          this.hoveredEdgeId = edgeId;
+        }}
+        @mouseleave=${() => {
+          this.scheduleEdgeHide();
+        }}
+      >
+        <img src="/icons/unlink.svg" alt="Disconnect" />
+      </button>
+    `;
+  }
+
+  private refreshCatalog(): void {
+    listIntegrationCatalog()
+      .then((catalog) => {
+        const updated = new Map<string, IntegrationDef>();
+        for (const item of catalog) updated.set(item.id ?? item.definition.id, item.definition);
+        this.catalogMap = updated;
+      })
+      .catch(() => {});
+  }
+
+  private scheduleEdgeHide(): void {
+    if (this.edgeHideTimer) clearTimeout(this.edgeHideTimer);
+    this.edgeHideTimer = setTimeout(() => {
+      this.hoveredEdgeId = null;
+    }, 300);
   }
 
   updated(): void {

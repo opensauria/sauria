@@ -4,7 +4,7 @@
   "private": true,
   "description": "Sauria — your AI workforce.",
   "type": "module",
-  "packageManager": "pnpm@9.15.4",
+  "packageManager": "pnpm@10.31.0",
   "author": {
     "name": "Teo Bouancheau",
     "email": "116342837+teobouancheau@users.noreply.github.com",
@@ -20,7 +20,7 @@
   },
   "engines": {
     "node": ">=24",
-    "pnpm": ">=9"
+    "pnpm": ">=10"
   },
   "scripts": {
     "build": "turbo run build",
@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "prettier": "3.8.1",
-    "turbo": "2.5.4",
+    "turbo": "2.8.14",
     "typescript": "5.9.3"
   },
   "license": "AGPL-3.0-or-later",

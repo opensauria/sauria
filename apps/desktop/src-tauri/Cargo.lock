@@ -3573,7 +3573,7 @@ dependencies = [
 
 [[package]]
 name = "sauria-desktop"
-version = "2026.309.4"
+version = "2026.309.8"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",

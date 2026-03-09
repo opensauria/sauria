@@ -9,7 +9,19 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { colors, radii, spacing, typography, transitions, entityColors } from '../src/tokens.js';
+import {
+  colors,
+  radii,
+  spacing,
+  opacity,
+  typography,
+  transitions,
+  entityColors,
+  shadows,
+  zIndex,
+  observationColors,
+  platformColors,
+} from '../src/tokens.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outDir = join(__dirname, '..', 'generated');
@@ -48,11 +60,22 @@ const lines: string[] = [
     label: typography.sizeLabel,
     micro: typography.sizeMicro,
     heading: typography.sizeHeading,
+    lg: typography.sizeLg,
   }),
   '',
   ...generateCssProperties('transition', transitions),
   '',
   ...generateCssProperties('entity', entityColors),
+  '',
+  ...generateCssProperties('shadow', shadows),
+  '',
+  ...generateCssProperties('z', zIndex),
+  '',
+  ...generateCssProperties('observation', observationColors),
+  '',
+  ...generateCssProperties('platform', platformColors),
+  '',
+  ...generateCssProperties('opacity', opacity),
   '}',
   '',
 ];
@@ -89,6 +112,21 @@ for (const [key, value] of Object.entries(transitions)) {
 }
 for (const [key, value] of Object.entries(entityColors)) {
   jsonTokens[`entity.${key}`] = value;
+}
+for (const [key, value] of Object.entries(shadows)) {
+  jsonTokens[`shadow.${key}`] = value;
+}
+for (const [key, value] of Object.entries(zIndex)) {
+  jsonTokens[`z.${key}`] = value;
+}
+for (const [key, value] of Object.entries(observationColors)) {
+  jsonTokens[`observation.${key}`] = value;
+}
+for (const [key, value] of Object.entries(platformColors)) {
+  jsonTokens[`platform.${key}`] = value;
+}
+for (const [key, value] of Object.entries(opacity)) {
+  jsonTokens[`opacity.${key}`] = value;
 }
 
 writeFileSync(join(outDir, 'tokens.json'), JSON.stringify(jsonTokens, null, 2) + '\n');

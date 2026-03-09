@@ -34,6 +34,7 @@ export class EdgeActivity extends LightDomElement {
       svg.setAttribute('width', '10000');
       svg.setAttribute('height', '10000');
       svg.setAttribute('viewBox', '-5000 -5000 10000 10000');
+      svg.style.pointerEvents = 'none';
 
       const defs = document.createElementNS(SVG_NS, 'defs');
       const filter = document.createElementNS(SVG_NS, 'filter');
