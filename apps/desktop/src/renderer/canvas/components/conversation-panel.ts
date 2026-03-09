@@ -48,10 +48,11 @@ export class ConversationPanel extends LightDomElement {
     if (changed.has('messageVersion') && this.isOpen) {
       const container = this.querySelector('.conv-messages');
       if (!container) return;
+      const justOpened = changed.has('isOpen') && !changed.get('isOpen');
       const threshold = 80;
       const isNearBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
-      if (isNearBottom) container.scrollTop = container.scrollHeight;
+      if (justOpened || isNearBottom) container.scrollTop = container.scrollHeight;
     }
   }
 
