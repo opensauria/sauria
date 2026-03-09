@@ -24,10 +24,20 @@ export const dialogStyles = css`
     max-width: 90vw;
   }
 
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .dialog-close {
+    flex-shrink: 0;
+  }
+
   .dialog-title {
     font-size: var(--font-size-heading);
     font-weight: 600;
-    margin-bottom: var(--spacing-sm);
   }
 
   .dialog-text {
@@ -51,6 +61,7 @@ export const dialogStyles = css`
   .dialog-actions {
     display: flex;
     gap: var(--spacing-sm);
+    justify-content: flex-end;
   }
 
   .dialog-actions .btn {

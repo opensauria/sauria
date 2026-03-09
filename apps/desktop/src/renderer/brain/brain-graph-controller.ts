@@ -65,6 +65,10 @@ export class BrainGraphController {
       this.canvas.style.display = 'block';
       await new Promise((resolve) => requestAnimationFrame(resolve));
       this.resize();
+      if (this.canvas.width === 0 || this.canvas.height === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        this.resize();
+      }
 
       const cx = this.canvas.width / 2 / (devicePixelRatio || 1);
       const cy = this.canvas.height / 2 / (devicePixelRatio || 1);
@@ -107,7 +111,8 @@ export class BrainGraphController {
       if (this.animId) cancelAnimationFrame(this.animId);
       this.cam = { x: 0, y: 0, zoom: 1 };
       this.tick();
-    } catch {
+    } catch (err) {
+      console.error('[brain-graph] load failed:', err);
       this.emptyEl.style.display = 'flex';
       this.canvas.style.display = 'none';
       const div = this.emptyEl.querySelector('div');

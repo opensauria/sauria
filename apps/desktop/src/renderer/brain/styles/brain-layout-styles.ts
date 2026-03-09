@@ -63,8 +63,16 @@ export const brainLayoutStyles = css`
     filter: brightness(0) invert();
   }
 
+  .brain-sidebar .palette-back {
+    position: static;
+    display: flex;
+    z-index: auto;
+    margin: var(--spacing-sm);
+  }
+
   .brain-nav-item.active .icon-mono {
     filter: brightness(0) invert() sepia(1) saturate(20) hue-rotate(160deg) brightness(0.7);
+    opacity: 1;
   }
 
   .brain-nav-count {

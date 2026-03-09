@@ -2,6 +2,9 @@ import type { Command } from 'commander';
 import { openDatabase, closeDatabase } from './db/connection.js';
 import { applySchema } from './db/schema.js';
 import { loadConfig } from './config/loader.js';
+import { ModelRouter } from './ai/router.js';
+import { AuditLogger } from './security/audit.js';
+import { resolveApiKey } from './auth/resolve.js';
 import { runSecurityChecks } from './security/startup-checks.js';
 import { startMcpServer } from './mcp/server.js';
 import type { AppContext } from './cli-actions.js';
@@ -129,9 +132,6 @@ function registerServiceCommands(program: Command): void {
     .command('mcp-server')
     .description('Start MCP server (stdio)')
     .action(async () => {
-      const { ModelRouter } = await import('./ai/router.js');
-      const { AuditLogger } = await import('./security/audit.js');
-      const { resolveApiKey } = await import('./auth/resolve.js');
       const config = await loadConfig();
       const db = openDatabase();
       applySchema(db);

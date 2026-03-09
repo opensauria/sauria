@@ -5,7 +5,6 @@ export const brainDialogStyles = css`
     background: color-mix(in srgb, var(--error) 12%, transparent);
     color: var(--error);
     border: 1px solid color-mix(in srgb, var(--error) 20%, transparent);
-    width: 100%;
   }
 
   .btn-danger:hover {
@@ -35,10 +34,16 @@ export const brainDialogStyles = css`
     max-width: 90vw;
   }
 
+  .brain-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+  }
+
   .brain-dialog-title {
     font-size: var(--font-size-heading);
     font-weight: 600;
-    margin-bottom: var(--spacing-sm);
   }
 
   .brain-dialog-text {
@@ -62,6 +67,7 @@ export const brainDialogStyles = css`
   .brain-dialog-actions {
     display: flex;
     gap: var(--spacing-sm);
+    justify-content: flex-end;
   }
 
   .brain-dialog-actions .btn {

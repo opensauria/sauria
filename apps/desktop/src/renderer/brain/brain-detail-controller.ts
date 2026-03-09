@@ -37,6 +37,9 @@ export class BrainDetailController {
     this.detailPanel.querySelector('#detail-close')!.addEventListener('click', () => this.close());
     this.detailDelete.addEventListener('click', () => this.showDeleteDialog());
     this.deleteCancel.addEventListener('click', () => this.hideDeleteDialog());
+    root
+      .querySelector('#delete-dialog-close')!
+      .addEventListener('click', () => this.hideDeleteDialog());
     this.deleteConfirm.addEventListener('click', () => this.confirmDelete());
   }
 

@@ -11,6 +11,14 @@ export const cardStyles = css`
     border-radius: var(--radius);
     cursor: pointer;
     transition: all var(--transition-fast);
+    animation: fadeIn var(--transition-normal);
+  }
+
+  .card-vertical {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-lg);
   }
 
   .card:hover {
@@ -92,5 +100,11 @@ export const cardStyles = css`
   .card-info span {
     font-size: var(--font-size-label);
     color: var(--text-secondary);
+  }
+
+  .card-category {
+    font-size: var(--font-size-x-small);
+    color: var(--text-dim);
+    text-transform: capitalize;
   }
 `;

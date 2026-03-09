@@ -104,8 +104,9 @@ export function renderParticipant(node: AgentNode | undefined): TemplateResult |
 
 export function renderMessage(msg: ConvMessage, side: string, nodes: AgentNode[]): TemplateResult {
   const node = nodes.find((n) => n.id === msg.from);
+  const isNew = Date.now() - new Date(msg.timestamp).getTime() < 2000;
   return html`
-    <div class="conv-msg-row ${side}">
+    <div class="conv-msg-row ${side} ${isNew ? 'conv-msg-new' : ''}">
       <div class="conv-msg-avatar">
         ${node?.photo ? html`<img src="${node.photo}" alt="" />` : nothing}
       </div>

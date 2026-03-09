@@ -54,6 +54,7 @@ export const navStyles = css`
 
   .nav-item.active .icon-mono {
     filter: brightness(0) invert() sepia(1) saturate(20) hue-rotate(160deg) brightness(0.7);
+    opacity: 1;
   }
 
   .nav-count {

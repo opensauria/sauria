@@ -128,76 +128,12 @@ export const layoutStyles = css`
     padding-top: calc(2 * var(--spacing-xl) + var(--spacing-md));
   }
 
-  /* ── Card ────────────────────────────────────── */
+  /* ── Card overrides ────────────────────────────── */
 
-  .integration-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: var(--spacing-lg);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-    animation: fadeIn var(--transition-normal);
-  }
-
-  .integration-card:hover {
-    border-color: var(--border-active);
-    background: var(--surface-hover);
-  }
-
-  .integration-card.connected {
-    border-color: color-mix(in srgb, var(--accent) 30%, transparent);
-  }
-
-  .integration-card-header {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-  }
-
-  .integration-card-icon {
+  .integrations-grid .card-icon-img {
     width: var(--spacing-xl);
     height: var(--spacing-xl);
     flex-shrink: 0;
-  }
-
-  .integration-card-name {
-    font-size: var(--font-size-base);
-    font-weight: 600;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .integration-card-description {
-    font-size: var(--font-size-small);
-    color: var(--text-secondary);
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .integration-card-footer {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-  }
-
-  .integration-card-footer .badge {
-    margin-left: 0;
-  }
-
-  .integration-card-category {
-    font-size: var(--font-size-x-small);
-    color: var(--text-dim);
-    text-transform: capitalize;
   }
 
   /* ── Responsive ──────────────────────────────── */

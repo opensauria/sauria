@@ -133,7 +133,13 @@ export class SauriaCanvas extends LightDomElement {
         ea?.animateEdgeTravel(from, to, preview);
       },
       onNodeActivity: () => this.requestUpdate(),
-      onMessageReceived: () => this.requestUpdate(),
+      onMessageReceived: () => {
+        this.requestUpdate();
+        const panel = this.querySelector('conversation-panel') as
+          | (HTMLElement & { notifyMessage: () => void })
+          | null;
+        panel?.notifyMessage();
+      },
       requestUpdate: () => this.requestUpdate(),
     });
   }

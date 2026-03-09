@@ -1,4 +1,4 @@
-import { html, nothing } from 'lit';
+import { html, nothing, type PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { AgentNode, ConvMessage } from '../types.js';
 import { convKey } from '../helpers.js';
@@ -42,6 +42,17 @@ export class ConversationPanel extends LightDomElement {
 
   notifyMessage(): void {
     this.messageVersion++;
+  }
+
+  override updated(changed: PropertyValues): void {
+    if (changed.has('messageVersion') && this.isOpen) {
+      const container = this.querySelector('.conv-messages');
+      if (!container) return;
+      const threshold = 80;
+      const isNearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+      if (isNearBottom) container.scrollTop = container.scrollHeight;
+    }
   }
 
   render() {

@@ -350,6 +350,31 @@ export const canvasPanelStyles = css`
   .conv-status.idle {
     color: var(--text-dim);
   }
+  .conv-status:not(.idle) {
+    animation: conv-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes conv-pulse {
+    0%,
+    100% {
+      opacity: var(--opacity-subtle);
+    }
+    50% {
+      opacity: var(--opacity-disabled);
+    }
+  }
+  @keyframes conv-msg-enter {
+    from {
+      opacity: 0;
+      transform: translateY(var(--spacing-sm));
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .conv-msg-new {
+    animation: conv-msg-enter var(--transition-normal) ease-out;
+  }
 
   /* Canvas toolbar */
   .canvas-toolbar {
@@ -490,8 +515,15 @@ export const canvasPanelStyles = css`
     max-width: 360px;
     width: 90%;
   }
-  .confirm-dialog p {
-    margin: 0 0 var(--spacing-mld);
+  .confirm-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-mld);
+  }
+  .confirm-header p {
+    margin: 0;
     font-size: var(--font-size-base);
     color: var(--text);
   }
@@ -499,28 +531,6 @@ export const canvasPanelStyles = css`
     display: flex;
     gap: var(--spacing-sm);
     justify-content: flex-end;
-  }
-  .confirm-btn {
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-base);
-    cursor: pointer;
-    transition: background var(--transition-fast);
-  }
-  .confirm-btn-cancel {
-    background: var(--surface);
-    color: var(--text-secondary);
-  }
-  .confirm-btn-cancel:hover {
-    background: var(--border);
-  }
-  .confirm-btn-danger {
-    background: var(--error);
-    color: var(--text-on-accent);
-  }
-  .confirm-btn-danger:hover {
-    background: color-mix(in srgb, var(--error) 90%, transparent);
   }
 
   /* Activity legend */

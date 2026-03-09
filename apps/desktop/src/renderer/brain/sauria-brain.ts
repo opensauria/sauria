@@ -236,7 +236,8 @@ export class SauriaBrain extends LightDomElement {
       this.currentRows = append ? this.currentRows.concat(result.rows) : result.rows;
       this.currentTotal = result.total;
       this.renderTableRows(append ? result.rows : this.currentRows, append);
-    } catch {
+    } catch (err) {
+      console.error(`[brain] loadData failed for view="${this.currentView}":`, err);
       if (!append) {
         this.$('table-body').innerHTML = '';
         this.$('empty-state').style.display = 'flex';
@@ -364,11 +365,7 @@ export class SauriaBrain extends LightDomElement {
   };
 
   private initPalette() {
-    const isInPalette = new URLSearchParams(window.location.search).has('inPalette');
-    if (!isInPalette) return;
-
     document.documentElement.style.background = 'transparent';
-    document.body.classList.add('in-palette');
     this.$('palette-back').addEventListener('click', () => invoke('navigate_back'));
 
     document.addEventListener('keydown', (e) => {
@@ -505,7 +502,12 @@ export class SauriaBrain extends LightDomElement {
 
 <div class="brain-dialog-overlay" id="delete-dialog">
   <div class="brain-dialog">
-    <div class="brain-dialog-title" data-i18n="brain.confirmDelete">Confirm Delete</div>
+    <div class="brain-dialog-header">
+      <div class="brain-dialog-title" data-i18n="brain.confirmDelete">Confirm Delete</div>
+      <button class="dialog-close btn-icon" id="delete-dialog-close">
+        <img src="/icons/x.svg" alt="Close" />
+      </button>
+    </div>
     <div class="brain-dialog-text" id="delete-dialog-text"></div>
     <div class="brain-dialog-warning" id="delete-dialog-warning"></div>
     <div class="brain-dialog-actions">

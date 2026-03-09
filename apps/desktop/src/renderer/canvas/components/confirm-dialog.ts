@@ -27,12 +27,17 @@ export class ConfirmDialog extends LightDomElement {
     return html`
       <div class="confirm-overlay open" @click=${this.handleOverlayClick}>
         <div class="confirm-dialog">
-          <p>${t(this.message)}</p>
+          <div class="confirm-header">
+            <p>${t(this.message)}</p>
+            <button class="dialog-close btn-icon" @click=${this.handleCancel}>
+              <img src="/icons/x.svg" alt="Close" />
+            </button>
+          </div>
           <div class="confirm-actions">
-            <button class="confirm-btn confirm-btn-cancel" @click=${this.handleCancel}>
+            <button class="btn btn-secondary" @click=${this.handleCancel}>
               ${t('common.cancel')}
             </button>
-            <button class="confirm-btn confirm-btn-danger" @click=${this.handleConfirm}>
+            <button class="btn btn-danger" @click=${this.handleConfirm}>
               ${t('canvas.remove')}
             </button>
           </div>
