@@ -485,9 +485,9 @@ The process is fully automated:
 - **Rulesets**: main (PR + CODEOWNERS review), develop (no force push), tags v\* (no delete/force push)
 - **Admin bypass**: `@teobouancheau` can bypass rulesets (solo maintainer)
 - **Merge**: squash merge only, auto-delete branches
-- **Actions**: read-only default permissions, selected actions only (GitHub-owned + verified + 3 trusted)
+- **Actions**: read-only default permissions, selected actions only (GitHub-owned + verified + 5 trusted: softprops/action-gh-release, anchore/sbom-action, pnpm/action-setup, dtolnay/rust-toolchain, apple-actions/import-codesign-certs)
 - **Environment `production`**: required reviewer `@teobouancheau`, deployment restricted to `v*` tags
-- **Secrets**: `NPM_TOKEN` at org level (`opensauria`)
+- **Secrets**: npm uses OIDC trusted publishing (no token needed)
 - **CODEOWNERS**: `* @teobouancheau`
 
 ### Dev Workflow
