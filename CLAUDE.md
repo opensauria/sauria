@@ -396,7 +396,7 @@ Desktop `shared.css` imports via `@import '@sauria/design-tokens/tokens.css'`.
 - `scripts/copy-native-deps.js` stages only runtime files to `native-deps/` (~1.9MB vs 12MB+ full)
 - `tauri.conf.json` bundles `native-deps/` as `node_modules` resource
 - `beforeBuildCommand` chain: `pnpm run native-deps` → `pnpm run sign-native-deps` → `pnpm run build:vite`
-- `scripts/sign-native-deps.js` signs `.node` files with Developer ID for macOS notarization. No-op when `APPLE_SIGNING_IDENTITY` is unset (dev, Linux, Windows). Uses `execFileSync` (no shell interpolation).
+- `scripts/sign-native-deps.js` guards on `process.platform === 'darwin'` first, then `APPLE_SIGNING_IDENTITY`. Cross-platform safe — instant no-op on Linux/Windows. Uses `execFileSync` (no shell interpolation).
 - `daemon_manager.rs` passes `NODE_PATH` env var pointing to bundled `Contents/Resources/node_modules/`
 - Error signature when broken: `Cannot find module 'bindings'` or `Cannot find module 'better-sqlite3'`
 
