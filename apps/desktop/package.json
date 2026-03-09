@@ -1,6 +1,6 @@
 {
   "name": "sauria-desktop",
-  "version": "2026.308.0",
+  "version": "2026.309.3",
   "description": "Sauria — your AI workforce.",
   "private": true,
   "author": {
@@ -20,6 +20,7 @@
     "build": "pnpm run icons && tauri build",
     "dev:vite": "vite",
     "native-deps": "node scripts/copy-native-deps.js",
+    "sign-native-deps": "node scripts/sign-native-deps.js",
     "build:vite": "vite build",
     "typecheck": "tsc --noEmit"
   },
