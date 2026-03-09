@@ -343,7 +343,7 @@ Desktop `shared.css` imports via `@import '@sauria/design-tokens/tokens.css'`.
 - Branch naming: `feat/description`, `fix/description`
 - Never commit to main directly
 - One logical change per commit
-- Never add Co-Authored-By or any AI attribution to commits
+- Never add Co-Authored-By, AI attribution, or "Generated with" lines anywhere — not in commits, PRs, code, or comments
 - Commit message: imperative mood, max 72 chars subject, body if needed
 
 ## Daemon Lifecycle
