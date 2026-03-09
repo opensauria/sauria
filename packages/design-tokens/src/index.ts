@@ -1,2 +1,26 @@
-export { colors, radii, spacing, typography, transitions, entityColors } from './tokens.js';
-export type { Colors, Radii, Spacing, Typography, Transitions, EntityColors } from './tokens.js';
+export {
+  colors,
+  radii,
+  spacing,
+  opacity,
+  typography,
+  transitions,
+  entityColors,
+  shadows,
+  zIndex,
+  observationColors,
+  platformColors,
+} from './tokens.js';
+export type {
+  Colors,
+  Radii,
+  Spacing,
+  Opacity,
+  Typography,
+  Transitions,
+  EntityColors,
+  Shadows,
+  ZIndex,
+  ObservationColors,
+  PlatformColors,
+} from './tokens.js';
