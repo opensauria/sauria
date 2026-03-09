@@ -1,6 +1,75 @@
 import type { AgentNode, ConnectResult } from './types.js';
 import { connectChannel } from './ipc.js';
 
+/* ------------------------------------------------------------------ */
+/*  Platform credential config                                         */
+/* ------------------------------------------------------------------ */
+
+interface PlatformCredentialConfig {
+  readonly fields: readonly string[];
+  readonly transform?: (
+    formData: Record<string, string>,
+    nodeId: string,
+  ) => Record<string, unknown>;
+}
+
+const PLATFORM_CREDENTIALS: Record<string, PlatformCredentialConfig> = {
+  telegram: {
+    fields: ['token', 'userId'],
+    transform: (form, nodeId) => {
+      const rawId = String(form.userId || '')
+        .trim()
+        .replace(/\D/g, '');
+      const parsedId = parseInt(rawId, 10);
+      if (!rawId || isNaN(parsedId) || parsedId <= 0) {
+        throw new Error('User ID must be a positive number');
+      }
+      return { token: (form.token || '').trim(), userId: parsedId, nodeId };
+    },
+  },
+  slack: { fields: ['token', 'signingSecret'] },
+  whatsapp: { fields: ['phoneNumberId', 'accessToken'] },
+  discord: { fields: ['token'] },
+  teams: { fields: ['appId', 'appSecret', 'tenantId'] },
+  messenger: { fields: ['pageAccessToken', 'pageId'] },
+  line: { fields: ['channelAccessToken', 'channelSecret'] },
+  'google-chat': { fields: ['serviceAccountKey', 'spaceId'] },
+  twilio: { fields: ['accountSid', 'authToken', 'phoneNumber'] },
+  matrix: { fields: ['homeserverUrl', 'accessToken'] },
+  gmail: { fields: [], transform: (_form, nodeId) => ({ oauth: true, nodeId }) },
+  email: {
+    fields: ['imapHost', 'smtpHost', 'username', 'password'],
+    transform: (form, nodeId) => ({
+      imapHost: (form.imapHost || '').trim(),
+      imapPort: parseInt(form.imapPort, 10) || 993,
+      smtpHost: (form.smtpHost || '').trim(),
+      smtpPort: parseInt(form.smtpPort, 10) || 587,
+      username: (form.username || '').trim(),
+      password: (form.password || '').trim(),
+      nodeId,
+    }),
+  },
+};
+
+function buildCredentials(
+  platform: string,
+  formData: Record<string, string>,
+  nodeId: string,
+): Record<string, unknown> {
+  const config = PLATFORM_CREDENTIALS[platform];
+  if (!config) return {};
+
+  if (config.transform) {
+    return config.transform(formData, nodeId);
+  }
+
+  const credentials: Record<string, unknown> = { nodeId };
+  for (const field of config.fields) {
+    credentials[field] = (formData[field] || '').trim();
+  }
+  return credentials;
+}
+
 /**
  * Build platform-specific credentials from form data and invoke connect_channel.
  * Returns the ConnectResult or throws.
@@ -8,84 +77,92 @@ import { connectChannel } from './ipc.js';
 export async function handleConnect(node: AgentNode): Promise<ConnectResult> {
   const formData = node._formData ?? {};
   const { platform } = node;
-  let credentials: Record<string, unknown> = {};
 
-  if (platform === 'telegram') {
-    const rawId = String(formData.userId || '')
-      .trim()
-      .replace(/\D/g, '');
-    const parsedId = parseInt(rawId, 10);
-    if (!rawId || isNaN(parsedId) || parsedId <= 0) {
-      return { success: false, error: 'User ID must be a positive number' };
-    }
-    credentials = { token: (formData.token || '').trim(), userId: parsedId, nodeId: node.id };
-  } else if (platform === 'slack') {
-    credentials = {
-      token: (formData.token || '').trim(),
-      signingSecret: (formData.signingSecret || '').trim(),
-      nodeId: node.id,
-    };
-  } else if (platform === 'whatsapp') {
-    credentials = {
-      phoneNumberId: (formData.phoneNumberId || '').trim(),
-      accessToken: (formData.accessToken || '').trim(),
-      nodeId: node.id,
-    };
-  } else if (platform === 'discord') {
-    credentials = { token: (formData.token || '').trim(), nodeId: node.id };
-  } else if (platform === 'teams') {
-    credentials = {
-      appId: (formData.appId || '').trim(),
-      appSecret: (formData.appSecret || '').trim(),
-      tenantId: (formData.tenantId || '').trim(),
-      nodeId: node.id,
-    };
-  } else if (platform === 'messenger') {
-    credentials = {
-      pageAccessToken: (formData.pageAccessToken || '').trim(),
-      pageId: (formData.pageId || '').trim(),
-      nodeId: node.id,
-    };
-  } else if (platform === 'line') {
-    credentials = {
-      channelAccessToken: (formData.channelAccessToken || '').trim(),
-      channelSecret: (formData.channelSecret || '').trim(),
-      nodeId: node.id,
-    };
-  } else if (platform === 'google-chat') {
-    credentials = {
-      serviceAccountKey: (formData.serviceAccountKey || '').trim(),
-      spaceId: (formData.spaceId || '').trim(),
-      nodeId: node.id,
-    };
-  } else if (platform === 'twilio') {
-    credentials = {
-      accountSid: (formData.accountSid || '').trim(),
-      authToken: (formData.authToken || '').trim(),
-      phoneNumber: (formData.phoneNumber || '').trim(),
-      nodeId: node.id,
-    };
-  } else if (platform === 'matrix') {
-    credentials = {
-      homeserverUrl: (formData.homeserverUrl || '').trim(),
-      accessToken: (formData.accessToken || '').trim(),
-      nodeId: node.id,
-    };
-  } else if (platform === 'gmail') {
-    credentials = { oauth: true, nodeId: node.id };
-  } else if (platform === 'email') {
-    credentials = {
-      imapHost: (formData.imapHost || '').trim(),
-      imapPort: parseInt(formData.imapPort, 10) || 993,
-      smtpHost: (formData.smtpHost || '').trim(),
-      smtpPort: parseInt(formData.smtpPort, 10) || 587,
-      username: (formData.username || '').trim(),
-      password: (formData.password || '').trim(),
-      nodeId: node.id,
-    };
+  try {
+    const credentials = buildCredentials(platform, formData, node.id);
+    return connectChannel(platform, credentials);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Invalid credentials';
+    return { success: false, error: message };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Platform result config                                             */
+/* ------------------------------------------------------------------ */
+
+function resultField(result: ConnectResult, key: string): string | undefined {
+  return (result as unknown as Record<string, unknown>)[key] as string | undefined;
+}
+
+interface PlatformResultConfig {
+  readonly labelKey?: string;
+  readonly labelPrefix?: string;
+  readonly labelFallback?: string;
+  readonly photoKey?: string;
+  readonly metaKeys?: Record<string, string>;
+  readonly metaFromCredentials?: Record<string, string>;
+  readonly credentialKey?: string;
+}
+
+const PLATFORM_RESULTS: Record<string, PlatformResultConfig> = {
+  telegram: {
+    labelKey: 'displayName',
+    labelPrefix: '@',
+    photoKey: 'photo',
+    metaKeys: { firstName: 'firstName', username: 'displayName' },
+  },
+  slack: {
+    labelKey: 'displayName',
+    labelFallback: 'Slack Bot',
+    photoKey: 'photo',
+    metaKeys: { botId: 'botId' },
+  },
+  discord: {
+    labelKey: 'displayName',
+    labelFallback: 'Discord Bot',
+    photoKey: 'photo',
+  },
+  whatsapp: {
+    labelKey: 'displayName',
+    labelFallback: 'WhatsApp Bot',
+    metaFromCredentials: { phoneNumberId: 'phoneNumberId' },
+  },
+  matrix: {
+    labelKey: 'displayName',
+    labelFallback: 'Matrix Bot',
+    metaFromCredentials: { homeserver: 'homeserverUrl' },
+  },
+  gmail: {
+    labelFallback: 'Gmail',
+    photoKey: 'photo',
+    metaKeys: { email: 'email' },
+    credentialKey: 'gmail_oauth',
+  },
+  email: {
+    labelKey: 'displayName',
+    labelFallback: 'Email',
+    metaFromCredentials: { username: 'username', imapHost: 'imapHost' },
+  },
+};
+
+function resolveLabel(
+  config: PlatformResultConfig,
+  result: ConnectResult,
+  fallbackLabel: string,
+): string {
+  /* gmail special case: try email first, then displayName, then fallback */
+  if (config.credentialKey === 'gmail_oauth') {
+    return result.email || result.displayName || config.labelFallback || fallbackLabel;
   }
 
-  return connectChannel(platform, credentials);
+  const value = config.labelKey ? resultField(result, config.labelKey) : undefined;
+
+  if (config.labelPrefix) {
+    return value ? config.labelPrefix + value : fallbackLabel;
+  }
+
+  return value || config.labelFallback || fallbackLabel;
 }
 
 /**
@@ -115,45 +192,29 @@ export function applyConnectResult(
   node._formData = undefined;
 
   const { platform } = node;
-  if (platform === 'telegram') {
-    node.label = result.displayName ? '@' + result.displayName : node.label;
-    node.photo = result.photo || null;
-    node.credentials = 'channel_token_' + (newNodeId || node.id);
-    node.meta = {
-      firstName: result.firstName || '',
-      username: result.displayName || '',
-    };
-  } else if (platform === 'slack') {
-    node.label = result.displayName || 'Slack Bot';
-    node.photo = result.photo || null;
-    node.credentials = 'channel_token_' + (newNodeId || node.id);
-    node.meta = { botId: result.botId || '' };
-  } else if (platform === 'discord') {
-    node.label = result.displayName || 'Discord Bot';
-    node.photo = result.photo || null;
-    node.credentials = 'channel_token_' + (newNodeId || node.id);
-    node.meta = {};
-  } else if (platform === 'whatsapp') {
-    node.label = result.displayName || 'WhatsApp Bot';
-    node.credentials = 'channel_token_' + (newNodeId || node.id);
-    node.meta = { phoneNumberId: credentials.phoneNumberId || '' };
-  } else if (platform === 'matrix') {
-    node.label = result.displayName || 'Matrix Bot';
-    node.credentials = 'channel_token_' + (newNodeId || node.id);
-    node.meta = { homeserver: credentials.homeserverUrl || '' };
-  } else if (platform === 'gmail') {
-    node.label = result.email || result.displayName || 'Gmail';
-    node.photo = result.photo || null;
-    node.credentials = 'gmail_oauth';
-    node.meta = { email: result.email || '' };
-  } else if (platform === 'email') {
-    node.label = result.displayName || 'Email';
-    node.credentials = 'channel_token_' + (newNodeId || node.id);
-    node.meta = {
-      username: credentials.username || '',
-      imapHost: credentials.imapHost || '',
-    };
+  const config = PLATFORM_RESULTS[platform];
+  if (!config) return newNodeId;
+
+  node.label = resolveLabel(config, result, node.label);
+
+  if (config.photoKey) {
+    node.photo = resultField(result, config.photoKey) || null;
   }
+
+  node.credentials = config.credentialKey ?? 'channel_token_' + (newNodeId || node.id);
+
+  const meta: Record<string, string> = {};
+  if (config.metaKeys) {
+    for (const [metaField, resultKey] of Object.entries(config.metaKeys)) {
+      meta[metaField] = resultField(result, resultKey) || '';
+    }
+  }
+  if (config.metaFromCredentials) {
+    for (const [metaField, credField] of Object.entries(config.metaFromCredentials)) {
+      meta[metaField] = credentials[credField] || '';
+    }
+  }
+  node.meta = meta;
 
   return newNodeId;
 }

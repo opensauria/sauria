@@ -40,7 +40,14 @@ pub fn create_palette_window(app: &AppHandle) -> Result<(), String> {
         .skip_taskbar(true)
         .visible(false);
 
-    builder.build().map_err(|e| e.to_string())?;
+    let win = builder.build().map_err(|e| e.to_string())?;
+
+    // Debug: open devtools to inspect webview state
+    #[cfg(debug_assertions)]
+    win.open_devtools();
+
+    #[cfg(not(debug_assertions))]
+    let _ = win;
 
     Ok(())
 }

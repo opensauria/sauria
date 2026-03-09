@@ -1,6 +1,6 @@
 import { css } from 'lit';
 
-export const canvasPortsEdgesStyles = css`
+export const canvasEdgeStyles = css`
   .port {
     position: absolute;
     width: 12px;

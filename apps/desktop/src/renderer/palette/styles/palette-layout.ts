@@ -56,13 +56,12 @@ export const paletteLayoutStyles = css`
     display: flex;
     align-items: center;
     gap: var(--spacing-smd);
-    padding: var(--spacing-smd) var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
     border-top: 0.5px solid color-mix(in srgb, var(--text) 6%, transparent);
     font-size: var(--font-size-x-small);
     color: color-mix(in srgb, var(--text) 20%, transparent);
     margin-top: auto;
     flex-shrink: 0;
-    min-height: 40px;
   }
 
   .footer kbd {

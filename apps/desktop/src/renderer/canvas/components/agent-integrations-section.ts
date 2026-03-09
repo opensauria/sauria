@@ -1,9 +1,10 @@
-import { LitElement, html, css, nothing } from 'lit';
+import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { t } from '../../i18n.js';
 import type { AgentNode, CanvasGraph, IntegrationDef } from '../types.js';
 import { fire } from '../fire.js';
 import { assignIntegration, unassignIntegration } from '../ipc.js';
+import { agentIntegrationsStyles } from './agent-integrations-styles.js';
 
 @customElement('agent-integrations-section')
 export class AgentIntegrationsSection extends LitElement {
@@ -14,74 +15,7 @@ export class AgentIntegrationsSection extends LitElement {
   @state() private showIntDropdown = false;
   @state() private intSearchFilter = '';
 
-  static styles = css`
-    :host {
-      display: contents;
-    }
-    .section {
-      margin-bottom: 16px;
-    }
-    .label {
-      display: block;
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-bottom: 4px;
-    }
-    .int-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-bottom: 8px;
-    }
-    .int-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      background: var(--surface);
-      border-radius: 4px;
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-    .int-chip img {
-      width: 16px;
-      height: 16px;
-    }
-    .int-chip-remove {
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      cursor: pointer;
-      padding: 0;
-    }
-    .add-int-btn {
-      background: var(--surface);
-      border: 1px dashed var(--border);
-      border-radius: var(--radius-sm);
-      padding: 4px 12px;
-      color: var(--text-secondary);
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .add-int-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-    input {
-      width: 100%;
-      box-sizing: border-box;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 8px 12px;
-      color: var(--text);
-      font-size: 14px;
-      outline: none;
-    }
-    input:focus {
-      border-color: var(--accent);
-    }
-  `;
+  static styles = agentIntegrationsStyles;
 
   render() {
     if (!this.node) return nothing;
@@ -150,27 +84,23 @@ export class AgentIntegrationsSection extends LitElement {
       : unassigned;
 
     return html`
-      <div
-        style="margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:160px;overflow-y:auto;padding:4px;"
-      >
+      <div class="int-dropdown">
         <input
+          class="int-dropdown-search"
           type="text"
           placeholder="Search..."
           .value=${this.intSearchFilter}
           @input=${(e: InputEvent) => {
             this.intSearchFilter = (e.target as HTMLInputElement).value;
           }}
-          style="margin-bottom:4px;"
         />
         ${filtered.length === 0
-          ? html`<div style="padding:8px;font-size:12px;color:var(--text-dim);">
-              No integrations available
-            </div>`
+          ? html`<div class="int-dropdown-empty">No integrations available</div>`
           : filtered.map((inst) => {
               const def = this.catalogMap.get(inst.integrationId);
               return html`
                 <div
-                  style="padding:4px 8px;cursor:pointer;font-size:12px;color:var(--text-secondary);border-radius:4px;"
+                  class="int-dropdown-item"
                   @click=${() => this.handleAssignIntegration(node.id, inst.id)}
                 >
                   ${def?.name ?? inst.label}

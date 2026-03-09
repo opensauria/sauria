@@ -13,20 +13,20 @@ export class WorkspaceDetailPanel extends LitElement {
 
   static styles = css`
     :host {
-      display: contents;
+      display: block;
     }
     .panel {
       position: fixed;
       top: 0;
       right: 0;
       bottom: 0;
-      width: 320px;
+      width: 340px;
       max-width: 100%;
       background: var(--bg-solid);
       border-left: 1px solid var(--border);
-      z-index: 100;
+      z-index: var(--z-modal);
       transform: translateX(100%);
-      transition: transform 0.2s ease;
+      transition: transform var(--transition-normal);
       display: flex;
       flex-direction: column;
       overflow-y: auto;
@@ -38,17 +38,17 @@ export class WorkspaceDetailPanel extends LitElement {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px;
+      padding: var(--spacing-md);
       border-bottom: 1px solid var(--border);
     }
     .title {
-      font-size: 14px;
+      font-size: var(--font-size-base);
       font-weight: 500;
       color: var(--text);
     }
     .close-btn {
-      width: 28px;
-      height: 28px;
+      width: var(--spacing-xl);
+      height: var(--spacing-xl);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -62,17 +62,17 @@ export class WorkspaceDetailPanel extends LitElement {
       background: var(--surface-hover);
     }
     .body {
-      padding: 16px;
+      padding: var(--spacing-md);
       flex: 1;
     }
     .section {
-      margin-bottom: 16px;
+      margin-bottom: var(--spacing-md);
     }
     .label {
       display: block;
-      font-size: 12px;
+      font-size: var(--font-size-small);
       color: var(--text-secondary);
-      margin-bottom: 4px;
+      margin-bottom: var(--spacing-xs);
     }
     input,
     textarea {
@@ -81,9 +81,9 @@ export class WorkspaceDetailPanel extends LitElement {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 8px 12px;
+      padding: var(--spacing-sm) var(--spacing-smd);
       color: var(--text);
-      font-size: 14px;
+      font-size: var(--font-size-base);
       outline: none;
     }
     textarea {
@@ -96,7 +96,7 @@ export class WorkspaceDetailPanel extends LitElement {
     }
     .colors {
       display: flex;
-      gap: 8px;
+      gap: var(--spacing-sm);
     }
     .swatch {
       width: 24px;
@@ -111,17 +111,17 @@ export class WorkspaceDetailPanel extends LitElement {
     .tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
+      gap: var(--spacing-xs);
       align-items: center;
     }
     .tag {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
+      gap: var(--spacing-xs);
+      padding: 2px var(--spacing-sm);
       background: var(--surface);
-      border-radius: 4px;
-      font-size: 12px;
+      border-radius: var(--spacing-xs);
+      font-size: var(--font-size-small);
       color: var(--text-secondary);
     }
     .tag-remove {
@@ -129,27 +129,27 @@ export class WorkspaceDetailPanel extends LitElement {
       border: none;
       color: var(--text-dim);
       cursor: pointer;
-      font-size: 12px;
+      font-size: var(--font-size-small);
       padding: 0;
     }
     .tag-input {
       flex: 1;
       min-width: 80px;
       border: none;
-      padding: 4px;
+      padding: var(--spacing-xs);
       background: transparent;
       color: var(--text);
-      font-size: 12px;
+      font-size: var(--font-size-small);
       outline: none;
     }
     .stepper {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: var(--spacing-xs);
     }
     .stepper-btn {
-      width: 28px;
-      height: 28px;
+      width: var(--spacing-xl);
+      height: var(--spacing-xl);
       display: flex;
       align-items: center;
       justify-content: center;
