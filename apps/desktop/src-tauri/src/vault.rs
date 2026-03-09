@@ -4,8 +4,6 @@ use pbkdf2::pbkdf2_hmac;
 use rand::RngCore;
 use sha2::{Digest, Sha256, Sha512};
 use std::fs;
-use std::process::Command;
-
 use crate::paths::Paths;
 
 const PBKDF2_ITERATIONS: u32 = 256_000;
@@ -39,6 +37,7 @@ fn resolve_platform_id() -> String {
 
     #[cfg(target_os = "macos")]
     {
+        use std::process::Command;
         if let Ok(output) = Command::new("ioreg")
             .args(["-rd1", "-c", "IOPlatformExpertDevice"])
             .output()
@@ -72,6 +71,7 @@ fn resolve_platform_id() -> String {
 
     #[cfg(target_os = "windows")]
     {
+        use std::process::Command;
         if let Ok(output) = Command::new("powershell")
             .args([
                 "-NoProfile",

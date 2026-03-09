@@ -10,9 +10,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/opensauria/sauria.git",
+    "url": "git+https://github.com/opensauria/sauria.git",
     "directory": "apps/desktop"
   },
+  "type": "module",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "icons": "node scripts/copy-icons.js",
