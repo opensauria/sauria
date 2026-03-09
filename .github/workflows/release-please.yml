@@ -24,10 +24,15 @@ jobs:
           DAY=$(date -u +%-d)
           MDD=$(( MONTH * 100 + DAY ))
           BASE="v${YEAR}.${MDD}"
-          PATCH=0
           CURRENT=$(cat .release-version 2>/dev/null || echo "")
+          PATCH=0
+          # Start past the current .release-version patch when same base
+          if echo "${CURRENT}" | grep -q "^${BASE}\."; then
+            CUR_PATCH=$(echo "${CURRENT}" | sed "s/^${BASE}\.\([0-9]*\)$/\1/")
+            PATCH=$((CUR_PATCH + 1))
+          fi
           TAG="${BASE}.${PATCH}"
-          while git tag -l "${TAG}" | grep -q . || [ "${TAG}" = "${CURRENT}" ]; do
+          while git tag -l "${TAG}" | grep -q .; do
             PATCH=$((PATCH + 1))
             TAG="${BASE}.${PATCH}"
           done
