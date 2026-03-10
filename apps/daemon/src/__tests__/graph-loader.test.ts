@@ -225,8 +225,8 @@ describe('loadCanvasGraph', () => {
 
     const graph = loadCanvasGraph();
 
-    expect(graph.instances).toHaveLength(1);
-    expect(graph.instances[0]?.id).toBe('github:default');
+    expect(graph.instances!).toHaveLength(1);
+    expect(graph.instances![0]?.id).toBe('github:default');
   });
 });
 

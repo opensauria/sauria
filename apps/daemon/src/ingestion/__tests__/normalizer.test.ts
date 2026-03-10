@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { normalizeRawEvent } from '../normalizer.js';
-import type { NormalizedEvent } from '../normalizer.js';
 
 describe('normalizeRawEvent', () => {
   beforeEach(() => {

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mergeProperties, resolveEntity } from '../resolver.js';
 
 vi.mock('../../db/world-model.js', () => ({
-  getEntityByName: vi.fn(() => null),
+  getEntityByName: vi.fn(() => undefined),
   searchEntities: vi.fn(() => []),
 }));
 
@@ -66,7 +66,7 @@ describe('resolveEntity', () => {
   });
 
   it('returns fuzzy match ID when similarity >= 0.7 and type matches', () => {
-    mockGetByName.mockReturnValue(null);
+    mockGetByName.mockReturnValue(undefined);
     mockSearch.mockReturnValue([
       {
         id: 'ent-fuzzy',
@@ -91,7 +91,7 @@ describe('resolveEntity', () => {
   });
 
   it('skips candidates with different type', () => {
-    mockGetByName.mockReturnValue(null);
+    mockGetByName.mockReturnValue(undefined);
     mockSearch.mockReturnValue([
       {
         id: 'ent-company',
@@ -113,7 +113,7 @@ describe('resolveEntity', () => {
   });
 
   it('generates new nanoid when no match found', () => {
-    mockGetByName.mockReturnValue(null);
+    mockGetByName.mockReturnValue(undefined);
     mockSearch.mockReturnValue([]);
 
     const db = {} as Parameters<typeof resolveEntity>[0];
@@ -126,7 +126,7 @@ describe('resolveEntity', () => {
   });
 
   it('matches when names are identical (case-insensitive)', () => {
-    mockGetByName.mockReturnValue(null);
+    mockGetByName.mockReturnValue(undefined);
     mockSearch.mockReturnValue([
       {
         id: 'ent-match',

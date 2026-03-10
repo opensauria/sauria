@@ -90,7 +90,7 @@ describe('IngestPipeline', () => {
     await pipeline.ingestEvent('email', { body: 'duplicate content' });
 
     expect(mockRecordEvent).not.toHaveBeenCalled();
-    expect((audit as { logAction: ReturnType<typeof vi.fn> }).logAction).toHaveBeenCalledWith(
+    expect((audit as unknown as { logAction: ReturnType<typeof vi.fn> }).logAction).toHaveBeenCalledWith(
       'ingestion:dedup_skip',
       expect.objectContaining({ source: 'email' }),
     );
@@ -195,7 +195,7 @@ describe('IngestPipeline', () => {
     const { pipeline, audit } = createPipeline();
     await pipeline.ingestEvent('telegram', { body: 'hello' });
 
-    expect((audit as { logAction: ReturnType<typeof vi.fn> }).logAction).toHaveBeenCalledWith(
+    expect((audit as unknown as { logAction: ReturnType<typeof vi.fn> }).logAction).toHaveBeenCalledWith(
       'ingestion:event_recorded',
       expect.objectContaining({
         source: 'telegram',

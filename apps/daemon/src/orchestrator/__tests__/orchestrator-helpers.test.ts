@@ -34,11 +34,13 @@ function makeGraph(
   workspaces: CanvasGraph['workspaces'] = [],
 ): CanvasGraph {
   return {
+    version: 2,
     nodes,
     edges: [],
     workspaces,
     globalInstructions: '',
-  } as CanvasGraph;
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
 }
 
 function makeSource(overrides: Partial<InboundMessage> = {}): InboundMessage {
@@ -186,7 +188,7 @@ describe('resolveInstanceId', () => {
   it('matches by integration id from instances array', () => {
     const graphWithInstances = {
       ...graph,
-      instances: [{ id: 'inst-abc', integrationId: 'linear', label: 'My Linear' }],
+      instances: [{ id: 'inst-abc', integrationId: 'linear', label: 'My Linear', connectedAt: '' }],
     } as CanvasGraph;
     expect(resolveInstanceId(graphWithInstances, 'linear', ['inst-abc'])).toBe('inst-abc');
   });
@@ -194,7 +196,7 @@ describe('resolveInstanceId', () => {
   it('matches by label case-insensitively', () => {
     const graphWithInstances = {
       ...graph,
-      instances: [{ id: 'inst-abc', integrationId: 'something', label: 'My Linear' }],
+      instances: [{ id: 'inst-abc', integrationId: 'something', label: 'My Linear', connectedAt: '' }],
     } as CanvasGraph;
     expect(resolveInstanceId(graphWithInstances, 'my linear', ['inst-abc'])).toBe('inst-abc');
   });
@@ -206,14 +208,14 @@ describe('resolveInstanceId', () => {
   it('skips instances not in assignedIds', () => {
     const graphWithInstances = {
       ...graph,
-      instances: [{ id: 'inst-abc', integrationId: 'linear', label: 'Linear' }],
+      instances: [{ id: 'inst-abc', integrationId: 'linear', label: 'Linear', connectedAt: '' }],
     } as CanvasGraph;
     expect(resolveInstanceId(graphWithInstances, 'linear', ['other-id'])).toBeNull();
   });
 
   it('handles graph with no instances array', () => {
     const graphNoInstances = { ...graph } as CanvasGraph;
-    delete (graphNoInstances as Record<string, unknown>)['instances'];
+    delete (graphNoInstances as unknown as Record<string, unknown>)['instances'];
     expect(resolveInstanceId(graphNoInstances, 'something', ['something-else'])).toBeNull();
   });
 });
@@ -266,7 +268,7 @@ describe('findGroupForNode', () => {
       position: { x: 0, y: 0 },
       size: { width: 400, height: 300 },
       checkpoints: [],
-      groups: [{ platform: 'slack' as const, groupId: 'slack-grp' }],
+      groups: [{ platform: 'slack' as const, groupId: 'slack-grp', name: 'Slack', ownerMemberId: '', autoCreated: false }],
     };
     const deps: HelperDeps = {
       graph: makeGraph([node], [workspace] as CanvasGraph['workspaces']),
@@ -290,7 +292,7 @@ describe('findGroupForNode', () => {
       position: { x: 0, y: 0 },
       size: { width: 400, height: 300 },
       checkpoints: [],
-      groups: [{ platform: 'telegram' as const, groupId: 'tg-grp-123' }],
+      groups: [{ platform: 'telegram' as const, groupId: 'tg-grp-123', name: 'TG', ownerMemberId: '', autoCreated: false }],
     };
     const deps: HelperDeps = {
       graph: makeGraph([node], [workspace] as CanvasGraph['workspaces']),

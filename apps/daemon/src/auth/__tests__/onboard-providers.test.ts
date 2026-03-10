@@ -79,6 +79,7 @@ describe('setupClaudeSubscription', () => {
       access_token: 'at-123',
       refresh_token: 'rt-456',
       expires_in: 3600,
+      token_type: 'bearer',
     });
 
     const result = await setupClaudeSubscription();
@@ -167,7 +168,7 @@ describe('setupLocal', () => {
     vi.mocked(detectLocalProviders).mockResolvedValue([]);
     mockSelect.mockResolvedValue('custom-provider');
 
-    const result = await setupLocal();
+    await setupLocal();
 
     expect(vaultStore).toHaveBeenCalledWith('local-base-url', 'http://localhost:11434');
   });

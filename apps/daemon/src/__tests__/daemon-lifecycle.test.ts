@@ -619,7 +619,7 @@ describe('startDaemonContext', () => {
 
     const ctx = await startDaemonContext();
 
-    const graphArg = vi.mocked(setupOrchestrator).mock.calls[0]?.[0] as {
+    const graphArg = vi.mocked(setupOrchestrator).mock.calls[0]?.[0] as unknown as {
       nodes: Array<{ id: string; codeMode?: { terminalActive: boolean } }>;
     };
     const n1 = graphArg.nodes.find((n) => n.id === 'n1');

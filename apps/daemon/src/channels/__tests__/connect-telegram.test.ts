@@ -458,7 +458,7 @@ describe('connectTelegram — cancel handling', () => {
   it('exits when user cancels token input', async () => {
     const prompts = await import('@clack/prompts');
     (prompts.password as ReturnType<typeof vi.fn>).mockResolvedValueOnce(Symbol('cancel'));
-    (prompts.isCancel as ReturnType<typeof vi.fn>).mockImplementation(
+    (prompts.isCancel as unknown as ReturnType<typeof vi.fn>).mockImplementation(
       (val: unknown) => typeof val === 'symbol',
     );
 
@@ -488,7 +488,7 @@ describe('connectTelegram — cancel handling', () => {
     });
 
     let cancelCallCount = 0;
-    (prompts.isCancel as ReturnType<typeof vi.fn>).mockImplementation((val: unknown) => {
+    (prompts.isCancel as unknown as ReturnType<typeof vi.fn>).mockImplementation((val: unknown) => {
       cancelCallCount++;
       return cancelCallCount === 2 && typeof val === 'symbol';
     });

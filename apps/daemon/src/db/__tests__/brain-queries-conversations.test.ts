@@ -8,10 +8,6 @@ import {
   listFacts,
 } from '../brain-queries-conversations.js';
 
-function seedEntities(db: Database.Database): void {
-  db.prepare("INSERT INTO entities (id, type, name) VALUES ('e1', 'person', 'Alice')").run();
-}
-
 function seedEvents(db: Database.Database): void {
   db.prepare(
     "INSERT INTO events (id, source, event_type, timestamp) VALUES ('ev1', 'email', 'meeting', '2026-01-01T10:00:00')",

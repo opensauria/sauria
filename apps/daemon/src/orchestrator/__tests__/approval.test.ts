@@ -26,10 +26,12 @@ function makeContext(overrides: Partial<ApprovalContext> = {}): ApprovalContext 
     } as unknown as ApprovalContext['registry'],
     ownerIdentity: { telegram: { userId: 123 } },
     getGraph: vi.fn(() => ({
+      version: 2 as const,
       nodes: [] as AgentNode[],
       edges: [],
       workspaces: [],
       globalInstructions: '',
+      viewport: { x: 0, y: 0, zoom: 1 },
     })),
     ...overrides,
   };
@@ -111,10 +113,12 @@ describe('queuePendingApprovals', () => {
 
     const ctx = makeContext({
       getGraph: vi.fn(() => ({
+        version: 2 as const,
         nodes: [ownerNode],
         edges: [],
         workspaces: [],
         globalInstructions: '',
+        viewport: { x: 0, y: 0, zoom: 1 },
       })),
     });
 
@@ -138,14 +142,16 @@ describe('queuePendingApprovals', () => {
       autonomy: 'full',
       status: 'connected',
       workspaceId: 'ws-1',
-    } as AgentNode;
+    } as unknown as AgentNode;
 
     const ctx = makeContext({
       getGraph: vi.fn(() => ({
+        version: 2 as const,
         nodes: [ownerPlatformNode],
         edges: [],
         workspaces: [],
         globalInstructions: '',
+        viewport: { x: 0, y: 0, zoom: 1 },
       })),
     });
 
@@ -160,6 +166,7 @@ describe('queuePendingApprovals', () => {
 
     const ctx = makeContext({
       getGraph: vi.fn(() => ({
+        version: 2 as const,
         nodes: [
           {
             id: 'ch-1',
@@ -169,11 +176,12 @@ describe('queuePendingApprovals', () => {
             autonomy: 'full',
             status: 'connected',
             workspaceId: 'ws-1',
-          } as AgentNode,
+          } as unknown as AgentNode,
         ],
         edges: [],
         workspaces: [],
         globalInstructions: '',
+        viewport: { x: 0, y: 0, zoom: 1 },
       })),
     });
 

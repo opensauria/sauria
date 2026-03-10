@@ -46,21 +46,29 @@ function makeMessage(overrides: Partial<InboundMessage> = {}): InboundMessage {
   } as InboundMessage;
 }
 
-function makeDeps(overrides: Record<string, unknown> = {}) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeDeps(overrides: Record<string, unknown> = {}): any {
   return {
     getGraph: vi.fn(() => ({
+      version: 2 as const,
       nodes: [makeNode()],
       edges: [],
       workspaces: [
         {
           id: 'ws-1',
           name: 'Engineering',
+          color: '#333',
           purpose: 'Dev',
           topics: [],
+          budget: { dailyLimitUsd: 5, preferCheap: false },
+          position: { x: 0, y: 0 },
+          size: { width: 400, height: 300 },
+          checkpoints: [],
           groups: [],
         } as Workspace,
       ],
       globalInstructions: '',
+      viewport: { x: 0, y: 0, zoom: 1 },
     })),
     agentMemory: {
       getOrCreateConversation: vi.fn(() => 'conv-1'),
@@ -157,7 +165,7 @@ describe('handleInbound', () => {
     const codeModeRouter = {
       route: vi.fn().mockResolvedValue([{ type: 'reply' as const, content: 'code output' }]),
     };
-    const node = makeNode({ codeMode: { enabled: true, projectPath: '/tmp/project' } });
+    const node = makeNode({ codeMode: { enabled: true, projectPath: '/tmp/project', permissionMode: 'auto' } });
     const deps = makeDeps({
       findNode: vi.fn(() => node),
       codeModeRouter,

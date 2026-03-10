@@ -56,7 +56,7 @@ describe('ingestCalendarEvents', () => {
 
     expect(count).toBe(2);
     expect(
-      (pipeline as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent,
+      (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent,
     ).toHaveBeenCalledTimes(2);
   });
 
@@ -94,7 +94,7 @@ describe('ingestCalendarEvents', () => {
     await ingestCalendarEvents(client, pipeline, 99999);
 
     expect(
-      (client as { callTool: ReturnType<typeof vi.fn> }).callTool,
+      (client as unknown as { callTool: ReturnType<typeof vi.fn> }).callTool,
     ).toHaveBeenCalledWith('list_events', { limit: 500 });
   });
 
@@ -115,7 +115,7 @@ describe('ingestCalendarEvents', () => {
 
     await ingestCalendarEvents(client, pipeline);
 
-    const call = (pipeline as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock.calls[0];
+    const call = (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock.calls[0];
     expect(call?.[0]).toBe('calendar');
     expect(call?.[1]).toEqual(
       expect.objectContaining({
@@ -137,7 +137,7 @@ describe('ingestCalendarEvents', () => {
 
     await ingestCalendarEvents(client, pipeline);
 
-    const rawData = (pipeline as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock
+    const rawData = (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock
       .calls[0]?.[1];
     expect(rawData.description).toBe('');
     expect(rawData.end).toBe('');

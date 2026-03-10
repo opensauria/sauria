@@ -73,7 +73,7 @@ describe('ingestEmails', () => {
 
     expect(count).toBe(2);
     expect(
-      (pipeline as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent,
+      (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent,
     ).toHaveBeenCalledTimes(2);
   });
 
@@ -116,7 +116,7 @@ describe('ingestEmails', () => {
     await ingestEmails(client, pipeline, 99999);
 
     expect(
-      (client as { callTool: ReturnType<typeof vi.fn> }).callTool,
+      (client as unknown as { callTool: ReturnType<typeof vi.fn> }).callTool,
     ).toHaveBeenCalledWith('list_messages', { limit: 100 });
   });
 
@@ -127,7 +127,7 @@ describe('ingestEmails', () => {
 
     await ingestEmails(client, pipeline);
 
-    const call = (pipeline as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock.calls[0];
+    const call = (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock.calls[0];
     expect(call?.[0]).toBe('email');
     expect(call?.[1]).toEqual({
       type: 'email',

@@ -146,9 +146,7 @@ describe('brain-queries-mutations', () => {
 
     it('updates last_updated_at timestamp', () => {
       seedEntity(db);
-      const before = db.prepare('SELECT last_updated_at FROM entities WHERE id = ?').get('e1') as {
-        last_updated_at: string;
-      };
+      db.prepare('SELECT last_updated_at FROM entities WHERE id = ?').get('e1');
       updateEntity(db, 'e1', { name: 'Updated' });
       const after = db.prepare('SELECT last_updated_at FROM entities WHERE id = ?').get('e1') as {
         last_updated_at: string;

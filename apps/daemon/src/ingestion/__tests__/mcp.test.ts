@@ -4,7 +4,7 @@ const mockConnect = vi.fn(async () => undefined);
 const mockListTools = vi.fn(async () => ({
   tools: [{ name: 'tool-a' }, { name: 'tool-b' }],
 }));
-const mockCallTool = vi.fn(async () => ({
+const mockCallTool = vi.fn(async (): Promise<Record<string, unknown>> => ({
   content: [{ type: 'text', text: '{"result": true}' }],
 }));
 const mockClose = vi.fn(async () => undefined);
@@ -38,6 +38,8 @@ describe('McpSourceClient', () => {
       const client = await McpSourceClient.connect({
         command: 'node',
         args: ['server.js'],
+        autoIngest: false,
+        interval: 300,
       });
 
       expect(client).toBeDefined();
@@ -50,6 +52,8 @@ describe('McpSourceClient', () => {
       const client = await McpSourceClient.connect({
         command: 'node',
         args: [],
+        autoIngest: false,
+        interval: 300,
       });
 
       const tools = await client.listTools();
@@ -62,6 +66,8 @@ describe('McpSourceClient', () => {
       const client = await McpSourceClient.connect({
         command: 'node',
         args: [],
+        autoIngest: false,
+        interval: 300,
       });
 
       const result = await client.callTool('test', {});
@@ -76,7 +82,7 @@ describe('McpSourceClient', () => {
         ],
       });
 
-      const client = await McpSourceClient.connect({ command: 'node', args: [] });
+      const client = await McpSourceClient.connect({ command: 'node', args: [], autoIngest: false, interval: 300 });
       const result = await client.callTool('test', {});
       expect(result).toEqual(['line1', 'line2']);
     });
@@ -86,7 +92,7 @@ describe('McpSourceClient', () => {
         toolResult: 'direct-result',
       });
 
-      const client = await McpSourceClient.connect({ command: 'node', args: [] });
+      const client = await McpSourceClient.connect({ command: 'node', args: [], autoIngest: false, interval: 300 });
       const result = await client.callTool('test', {});
       expect(result).toBe('direct-result');
     });
@@ -97,7 +103,7 @@ describe('McpSourceClient', () => {
         content: [{ type: 'text', text: 'Something broke' }],
       });
 
-      const client = await McpSourceClient.connect({ command: 'node', args: [] });
+      const client = await McpSourceClient.connect({ command: 'node', args: [], autoIngest: false, interval: 300 });
       await expect(client.callTool('broken', {})).rejects.toThrow(
         'MCP tool "broken" failed: Something broke',
       );
@@ -108,7 +114,7 @@ describe('McpSourceClient', () => {
         content: [{ type: 'text', text: 'not json' }],
       });
 
-      const client = await McpSourceClient.connect({ command: 'node', args: [] });
+      const client = await McpSourceClient.connect({ command: 'node', args: [], autoIngest: false, interval: 300 });
       const result = await client.callTool('test', {});
       expect(result).toBe('not json');
     });
@@ -118,7 +124,7 @@ describe('McpSourceClient', () => {
         content: 'raw-string',
       });
 
-      const client = await McpSourceClient.connect({ command: 'node', args: [] });
+      const client = await McpSourceClient.connect({ command: 'node', args: [], autoIngest: false, interval: 300 });
       const result = await client.callTool('test', {});
       expect(result).toEqual({ content: 'raw-string' });
     });
@@ -129,6 +135,8 @@ describe('McpSourceClient', () => {
       const client = await McpSourceClient.connect({
         command: 'node',
         args: [],
+        autoIngest: false,
+        interval: 300,
       });
 
       await expect(client.disconnect()).resolves.not.toThrow();
@@ -139,7 +147,7 @@ describe('McpSourceClient', () => {
 
 describe('connectToMcpSource', () => {
   it('delegates to McpSourceClient.connect', async () => {
-    const client = await connectToMcpSource({ command: 'node', args: ['server.js'] });
+    const client = await connectToMcpSource({ command: 'node', args: ['server.js'], autoIngest: false, interval: 300 });
     expect(client).toBeDefined();
   });
 });

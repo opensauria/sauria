@@ -58,7 +58,7 @@ function getBotInstance(channel: TelegramChannel): MockBot {
 
 function getMiddleware(channel: TelegramChannel): (ctx: unknown, next: () => Promise<void>) => Promise<void> {
   const bot = getBotInstance(channel);
-  return bot.use.mock.calls[0][0] as (ctx: unknown, next: () => Promise<void>) => Promise<void>;
+  return bot.use.mock.calls[0]![0] as (ctx: unknown, next: () => Promise<void>) => Promise<void>;
 }
 
 function getCommand(channel: TelegramChannel, name: string): (ctx: unknown) => Promise<void> {
@@ -445,7 +445,7 @@ describe('middleware and command callbacks', () => {
     await channel.start();
 
     const bot = getBotInstance(channel);
-    const errorHandler = bot.catch.mock.calls[0][0] as (err: unknown) => void;
+    const errorHandler = bot.catch.mock.calls[0]![0] as (err: unknown) => void;
 
     errorHandler(new Error('connection lost'));
 
@@ -462,7 +462,7 @@ describe('middleware and command callbacks', () => {
     await channel.start();
 
     const bot = getBotInstance(channel);
-    const startOptions = bot.start.mock.calls[0][0] as { onStart: () => void };
+    const startOptions = bot.start.mock.calls[0]![0] as { onStart: () => void };
     // Invoke onStart — should not throw
     startOptions.onStart();
   });

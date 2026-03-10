@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { McpHealthMonitor } from '../health.js';
-import type { ConnectedClient, McpServerConfig } from '../types.js';
+import type { ConnectedClient } from '../types.js';
 
 vi.mock('../../utils/logger.js', () => ({
   getLogger: () => ({
@@ -22,12 +22,6 @@ function makeClient(overrides: Partial<{ listToolsFails: boolean }> = {}): Conne
     transport: {} as ConnectedClient['transport'],
     config: { name: 'test-server', command: 'node', args: ['server.js'] },
   };
-}
-
-function makeAudit() {
-  return { logAction: vi.fn() } as unknown as Parameters<typeof McpHealthMonitor['prototype']['healthCheck']> extends never[]
-    ? never
-    : { logAction: ReturnType<typeof vi.fn> };
 }
 
 describe('McpHealthMonitor', () => {

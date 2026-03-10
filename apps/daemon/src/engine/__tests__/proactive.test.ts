@@ -165,9 +165,9 @@ describe('ProactiveEngine', () => {
   });
 
   it('deduplicates alerts with same key within cooldown', async () => {
-    const deadlineAlert = {
+    const deadlineAlert: import('../deadlines.js').DeadlineAlert = {
       type: 'deadline_approaching',
-      priority: 'critical' as const,
+      priority: 'critical',
       numericPriority: 4,
       title: 'Due soon: Deploy',
       details: 'Due in 2h',

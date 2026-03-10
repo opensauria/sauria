@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { PendingApproval } from '../../orchestrator/checkpoint.js';
+import type { RoutingAction } from '../../orchestrator/types.js';
 
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: class {
@@ -76,8 +78,8 @@ describe('startMcpServer', () => {
 
   it('registers approval tools when checkpointManager is provided', async () => {
     const checkpointManager = {
-      getPending: vi.fn(() => []),
-      approve: vi.fn(() => []),
+      getPending: vi.fn((): PendingApproval[] => []),
+      approve: vi.fn((): RoutingAction[] => []),
       reject: vi.fn(),
     };
     vi.mocked(registerTool).mockClear();
@@ -125,8 +127,8 @@ describe('additional coverage — startMcpServer', () => {
 
   it('registers 3 approval tool names when checkpointManager provided', async () => {
     const checkpointManager = {
-      getPending: vi.fn(() => []),
-      approve: vi.fn(() => []),
+      getPending: vi.fn((): PendingApproval[] => []),
+      approve: vi.fn((): RoutingAction[] => []),
       reject: vi.fn(),
     };
     vi.mocked(registerTool).mockClear();
@@ -154,8 +156,8 @@ describe('additional coverage — startMcpServer', () => {
       executeApprovedActions: vi.fn().mockResolvedValue(2),
     };
     const checkpointManager = {
-      getPending: vi.fn(() => []),
-      approve: vi.fn(() => []),
+      getPending: vi.fn((): PendingApproval[] => []),
+      approve: vi.fn((): RoutingAction[] => []),
       reject: vi.fn(),
     };
     vi.mocked(registerTool).mockClear();
@@ -186,8 +188,8 @@ function getRegisteredHandler(toolName: string) {
 /* ------------------------------------------------------------------ */
 describe('approval tool handlers', () => {
   const checkpointManager = {
-    getPending: vi.fn(() => []),
-    approve: vi.fn(() => []),
+    getPending: vi.fn((): PendingApproval[] => []),
+    approve: vi.fn((): RoutingAction[] => []),
     reject: vi.fn(),
   };
   const orchestrator = {
@@ -215,7 +217,7 @@ describe('approval tool handlers', () => {
       checkpointManager.getPending.mockReturnValue([]);
       const handler = getRegisteredHandler('sauria_pending_approvals');
       const result = await handler({});
-      expect(result.content[0].text).toBe('No pending approvals.');
+      expect(result.content[0]!.text).toBe('No pending approvals.');
     });
 
     it('formats pending approvals with actions', async () => {
@@ -225,17 +227,18 @@ describe('approval tool handlers', () => {
           agentId: 'agent-a',
           workspaceId: 'ws-1',
           description: 'Send email',
-          actions: [{ type: 'reply' }],
+          actions: [{ type: 'reply' as const, content: '' }],
           createdAt: '2026-03-10T00:00:00Z',
+          status: 'pending' as const,
         },
       ]);
       const handler = getRegisteredHandler('sauria_pending_approvals');
       const result = await handler({});
-      expect(result.content[0].text).toContain('[ap-1]');
-      expect(result.content[0].text).toContain('Agent: agent-a');
-      expect(result.content[0].text).toContain('Workspace: ws-1');
-      expect(result.content[0].text).toContain('Send email');
-      expect(result.content[0].text).toContain('reply');
+      expect(result.content[0]!.text).toContain('[ap-1]');
+      expect(result.content[0]!.text).toContain('Agent: agent-a');
+      expect(result.content[0]!.text).toContain('Workspace: ws-1');
+      expect(result.content[0]!.text).toContain('Send email');
+      expect(result.content[0]!.text).toContain('reply');
     });
 
     it('formats actions with targetNodeId', async () => {
@@ -245,13 +248,14 @@ describe('approval tool handlers', () => {
           agentId: 'agent-b',
           workspaceId: 'ws-2',
           description: 'Forward task',
-          actions: [{ type: 'forward', targetNodeId: 'node-x' }],
+          actions: [{ type: 'forward' as const, targetNodeId: 'node-x', content: '' }],
           createdAt: '2026-03-10T01:00:00Z',
+          status: 'pending' as const,
         },
       ]);
       const handler = getRegisteredHandler('sauria_pending_approvals');
       const result = await handler({});
-      expect(result.content[0].text).toContain('node-x');
+      expect(result.content[0]!.text).toContain('node-x');
     });
 
     it('formats multiple pending approvals', async () => {
@@ -261,22 +265,24 @@ describe('approval tool handlers', () => {
           agentId: 'agent-a',
           workspaceId: 'ws-1',
           description: 'Task 1',
-          actions: [{ type: 'reply' }],
+          actions: [{ type: 'reply' as const, content: '' }],
           createdAt: '2026-03-10T00:00:00Z',
+          status: 'pending' as const,
         },
         {
           id: 'ap-2',
           agentId: 'agent-b',
           workspaceId: 'ws-1',
           description: 'Task 2',
-          actions: [{ type: 'forward', targetNodeId: 'n1' }],
+          actions: [{ type: 'forward' as const, targetNodeId: 'n1', content: '' }],
           createdAt: '2026-03-10T01:00:00Z',
+          status: 'pending' as const,
         },
       ]);
       const handler = getRegisteredHandler('sauria_pending_approvals');
       const result = await handler({});
-      expect(result.content[0].text).toContain('[ap-1]');
-      expect(result.content[0].text).toContain('[ap-2]');
+      expect(result.content[0]!.text).toContain('[ap-1]');
+      expect(result.content[0]!.text).toContain('[ap-2]');
     });
   });
 
@@ -284,13 +290,13 @@ describe('approval tool handlers', () => {
     it('approves and executes actions with orchestrator', async () => {
       checkpointManager.getPending.mockReturnValue([
         { id: 'ap-1', agentId: 'agent-a' },
-      ]);
-      checkpointManager.approve.mockReturnValue([{ type: 'reply' }]);
+      ] as unknown as PendingApproval[]);
+      checkpointManager.approve.mockReturnValue([{ type: 'reply' }] as unknown as RoutingAction[]);
       orchestrator.executeApprovedActions.mockResolvedValue(1);
 
       const handler = getRegisteredHandler('sauria_approve');
       const result = await handler({ approvalId: 'ap-1' });
-      expect(result.content[0].text).toBe('Approved and executed 1 action(s).');
+      expect(result.content[0]!.text).toBe('Approved and executed 1 action(s).');
       expect(orchestrator.executeApprovedActions).toHaveBeenCalledWith('agent-a', [{ type: 'reply' }]);
       expect(mockAudit.logAction).toHaveBeenCalledWith('mcp:approval_approved', {
         approvalId: 'ap-1',
@@ -310,34 +316,34 @@ describe('approval tool handlers', () => {
 
       checkpointManager.getPending.mockReturnValue([
         { id: 'ap-1', agentId: 'agent-a' },
-      ]);
-      checkpointManager.approve.mockReturnValue([{ type: 'reply' }]);
+      ] as unknown as PendingApproval[]);
+      checkpointManager.approve.mockReturnValue([{ type: 'reply' }] as unknown as RoutingAction[]);
 
       const handler = getRegisteredHandler('sauria_approve');
       const result = await handler({ approvalId: 'ap-1' });
-      expect(result.content[0].text).toBe('Approved 1 action(s). No orchestrator to execute them.');
+      expect(result.content[0]!.text).toBe('Approved 1 action(s). No orchestrator to execute them.');
     });
 
     it('returns no-orchestrator message when approve returns empty actions', async () => {
       checkpointManager.getPending.mockReturnValue([
         { id: 'ap-1', agentId: 'agent-a' },
-      ]);
+      ] as unknown as PendingApproval[]);
       checkpointManager.approve.mockReturnValue([]);
 
       const handler = getRegisteredHandler('sauria_approve');
       const result = await handler({ approvalId: 'ap-1' });
-      expect(result.content[0].text).toBe('Approved 0 action(s). No orchestrator to execute them.');
+      expect(result.content[0]!.text).toBe('Approved 0 action(s). No orchestrator to execute them.');
       expect(orchestrator.executeApprovedActions).not.toHaveBeenCalled();
     });
 
     it('uses empty agentId when approval not found in pending', async () => {
       checkpointManager.getPending.mockReturnValue([]);
-      checkpointManager.approve.mockReturnValue([{ type: 'reply' }]);
+      checkpointManager.approve.mockReturnValue([{ type: 'reply' }] as unknown as RoutingAction[]);
       orchestrator.executeApprovedActions.mockResolvedValue(1);
 
       const handler = getRegisteredHandler('sauria_approve');
       const result = await handler({ approvalId: 'ap-unknown' });
-      expect(result.content[0].text).toBe('Approved and executed 1 action(s).');
+      expect(result.content[0]!.text).toBe('Approved and executed 1 action(s).');
       expect(orchestrator.executeApprovedActions).toHaveBeenCalledWith('', [{ type: 'reply' }]);
     });
   });
@@ -346,7 +352,7 @@ describe('approval tool handlers', () => {
     it('rejects an approval', async () => {
       const handler = getRegisteredHandler('sauria_reject');
       const result = await handler({ approvalId: 'ap-1' });
-      expect(result.content[0].text).toBe('Approval ap-1 rejected.');
+      expect(result.content[0]!.text).toBe('Approval ap-1 rejected.');
       expect(checkpointManager.reject).toHaveBeenCalledWith('ap-1');
       expect(mockAudit.logAction).toHaveBeenCalledWith('mcp:approval_rejected', { approvalId: 'ap-1' });
     });
@@ -362,8 +368,8 @@ describe('guardRateLimit and auditToolCall via approval handlers', () => {
     vi.mocked(createLimiter).mockReturnValue({ tryConsume: vi.fn(() => false) } as never);
 
     const checkpointManager = {
-      getPending: vi.fn(() => []),
-      approve: vi.fn(() => []),
+      getPending: vi.fn((): PendingApproval[] => []),
+      approve: vi.fn((): RoutingAction[] => []),
       reject: vi.fn(),
     };
 
@@ -393,8 +399,8 @@ describe('guardRateLimit and auditToolCall via approval handlers', () => {
     vi.mocked(validateToolInput).mockReturnValueOnce('plain-string' as never);
 
     const checkpointManager = {
-      getPending: vi.fn(() => []),
-      approve: vi.fn(() => []),
+      getPending: vi.fn((): PendingApproval[] => []),
+      approve: vi.fn((): RoutingAction[] => []),
       reject: vi.fn(),
     };
 
@@ -422,8 +428,8 @@ describe('guardRateLimit and auditToolCall via approval handlers', () => {
 
   it('auditToolCall hashes object params', async () => {
     const checkpointManager = {
-      getPending: vi.fn(() => []),
-      approve: vi.fn(() => []),
+      getPending: vi.fn((): PendingApproval[] => []),
+      approve: vi.fn((): RoutingAction[] => []),
       reject: vi.fn(),
     };
 

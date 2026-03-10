@@ -29,14 +29,32 @@ function makeNode(overrides: Partial<AgentNode> = {}): AgentNode {
   } as AgentNode;
 }
 
+function makeWorkspace(overrides: Partial<import('../types.js').Workspace> = {}): import('../types.js').Workspace {
+  return {
+    id: 'ws-1',
+    name: 'Engineering',
+    color: '#333',
+    purpose: 'Dev',
+    topics: [],
+    budget: { dailyLimitUsd: 5, preferCheap: false },
+    position: { x: 0, y: 0 },
+    size: { width: 400, height: 300 },
+    checkpoints: [],
+    groups: [],
+    ...overrides,
+  };
+}
+
 function makeGraph(overrides: Partial<CanvasGraph> = {}): CanvasGraph {
   return {
+    version: 2,
     nodes: [makeNode()],
     edges: [],
-    workspaces: [{ id: 'ws-1', name: 'Engineering', purpose: 'Dev', topics: [], groups: [] }],
+    workspaces: [makeWorkspace()],
     globalInstructions: '',
+    viewport: { x: 0, y: 0, zoom: 1 },
     ...overrides,
-  } as CanvasGraph;
+  };
 }
 
 function makeContext(overrides: Partial<OwnerCommandContext> = {}): OwnerCommandContext {
@@ -192,7 +210,7 @@ describe('handleOwnerCommand', () => {
         type: 'hire',
         platform: 'telegram',
         workspace: 'Engineering',
-        role: 'analyst',
+        role: 'specialist',
       };
       await handleOwnerCommand(command, ctx);
       expect(ctx.persistGraph).not.toHaveBeenCalled();
@@ -205,7 +223,7 @@ describe('handleOwnerCommand', () => {
       const node2 = makeNode({ id: 'agent-2', workspaceId: 'ws-1' });
       const graph = makeGraph({
         nodes: [node1, node2],
-        workspaces: [{ id: 'ws-1', name: 'Engineering', purpose: 'Dev', topics: [], groups: [] }],
+        workspaces: [makeWorkspace()],
       });
       const ctx = makeContext({
         getGraph: vi.fn(() => graph),
@@ -220,7 +238,7 @@ describe('handleOwnerCommand', () => {
       const node1 = makeNode({ id: 'agent-1', workspaceId: 'ws-1' });
       const graph = makeGraph({
         nodes: [node1],
-        workspaces: [{ id: 'ws-1', name: 'Engineering', purpose: 'Dev', topics: [], groups: [] }],
+        workspaces: [makeWorkspace()],
       });
       const ctx = makeContext({
         getGraph: vi.fn(() => graph),
@@ -243,7 +261,7 @@ describe('handleOwnerCommand', () => {
       const node2 = makeNode({ id: 'agent-2', workspaceId: 'ws-1' });
       const graph = makeGraph({
         nodes: [node1, node2],
-        workspaces: [{ id: 'ws-1', name: 'Engineering', purpose: 'Dev', topics: [], groups: [] }],
+        workspaces: [makeWorkspace()],
       });
       const ctx = makeContext({
         getGraph: vi.fn(() => graph),
@@ -259,7 +277,7 @@ describe('handleOwnerCommand', () => {
       const node2 = makeNode({ id: 'agent-2', workspaceId: 'ws-1' });
       const graph = makeGraph({
         nodes: [node1, node2],
-        workspaces: [{ id: 'ws-1', name: 'Engineering', purpose: 'Dev', topics: [], groups: [] }],
+        workspaces: [makeWorkspace()],
       });
       const stopFn = vi.fn()
         .mockRejectedValueOnce(new Error('fail'))

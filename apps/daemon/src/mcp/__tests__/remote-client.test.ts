@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-let mockConnect: ReturnType<typeof vi.fn>;
+let mockConnect: (...args: unknown[]) => unknown;
 
 vi.mock('@modelcontextprotocol/sdk/client/index.js', () => {
   const MockClient = vi.fn().mockImplementation(function (this: Record<string, unknown>) {

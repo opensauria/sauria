@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SauriaConfig } from '../../config/schema.js';
 import type { LLMProvider, StreamChunk, ChatMessage, ChatOptions } from '../providers/base.js';
-import { ModelRouter } from '../router.js';
+import { ModelRouter, type ApiKeyGetter } from '../router.js';
 
 function createMockProvider(name = 'mock'): LLMProvider {
   return {
@@ -59,7 +59,7 @@ describe('ModelRouter', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getApiKey = vi.fn().mockResolvedValue('test-key');
-    router = new ModelRouter(createMinimalConfig(), getApiKey);
+    router = new ModelRouter(createMinimalConfig(), getApiKey as unknown as ApiKeyGetter);
   });
 
   describe('initialization', () => {
@@ -71,7 +71,7 @@ describe('ModelRouter', () => {
       const config = createMinimalConfig({
         extraction: { provider: 'ollama', model: 'llama3' },
       });
-      const ollamaRouter = new ModelRouter(config, getApiKey);
+      const ollamaRouter = new ModelRouter(config, getApiKey as unknown as ApiKeyGetter);
 
       const { createProvider } = await import('../router-helpers.js');
       const mockCreateProvider = vi.mocked(createProvider);
@@ -94,7 +94,7 @@ describe('ModelRouter', () => {
       const config = createMinimalConfig({
         extraction: { provider: 'local', model: 'local-model' },
       });
-      const localRouter = new ModelRouter(config, getApiKey);
+      const localRouter = new ModelRouter(config, getApiKey as unknown as ApiKeyGetter);
 
       const { createProvider, collectStream } = await import('../router-helpers.js');
       vi.mocked(createProvider).mockReturnValue(createMockProvider('local'));
@@ -251,7 +251,7 @@ describe('ModelRouter', () => {
         return createMockProvider(`mock-${callCount}`);
       });
 
-      const freshRouter = new ModelRouter(createMinimalConfig(), getApiKey);
+      const freshRouter = new ModelRouter(createMinimalConfig(), getApiKey as unknown as ApiKeyGetter);
       const provider1 = freshRouter.getProvider('openai', 'key', 'https://a.com');
       const provider2 = freshRouter.getProvider('openai', 'key', 'https://b.com');
       expect(provider1.name).not.toBe(provider2.name);

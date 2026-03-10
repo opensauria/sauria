@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { executeAction } from '../action-executor.js';
 import type { ActionContext } from '../action-executor.js';
-import type { InboundMessage, AgentNode, CanvasGraph, RoutingAction, Workspace } from '../types.js';
+import type { InboundMessage, CanvasGraph, RoutingAction, Workspace } from '../types.js';
 
 vi.mock('../action-handlers.js', () => ({
   handleForward: vi.fn().mockResolvedValue(undefined),
@@ -120,7 +120,7 @@ describe('executeAction', () => {
     const { handleUseTool } = await import('../action-handlers.js');
     const ctx = makeCtx();
     const source = makeSource();
-    const action: RoutingAction = { type: 'use_tool', instanceId: 'inst-1', tool: 'search', input: {} };
+    const action: RoutingAction = { type: 'use_tool', integration: 'inst-1', tool: 'search', arguments: {}, content: 'search' };
 
     await executeAction(action, source, ctx);
 
@@ -132,7 +132,7 @@ describe('executeAction', () => {
     const workspace = { id: 'ws1', name: 'WS' } as Workspace;
     const ctx = makeCtx({ findWorkspace: () => workspace });
     const source = makeSource();
-    const action: RoutingAction = { type: 'assign', targetNodeId: 'n2', task: 'do it', priority: 'medium' };
+    const action: RoutingAction = { type: 'assign', targetNodeId: 'n2', task: 'do it', priority: 'normal' };
 
     await executeAction(action, source, ctx);
 

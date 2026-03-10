@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 describe('version', () => {
   it('getVersion returns the SAURIA_VERSION global', async () => {

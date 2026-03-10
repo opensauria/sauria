@@ -22,7 +22,7 @@ describe('detectLocalProviders', () => {
   });
 
   it('marks provider as running when /v1/models responds ok', async () => {
-    fetchSpy.mockImplementation(async (url) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       if (typeof url === 'string' && url.includes('11434')) {
         return new Response('{}', { status: 200 });
       }
@@ -36,7 +36,7 @@ describe('detectLocalProviders', () => {
   });
 
   it('marks provider as running when base url responds (fallback)', async () => {
-    fetchSpy.mockImplementation(async (url) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === 'string' ? url : url.toString();
       if (urlStr.includes('1234/v1/models')) {
         throw new Error('Not found');
@@ -54,7 +54,7 @@ describe('detectLocalProviders', () => {
   });
 
   it('treats 404 on base url as running', async () => {
-    fetchSpy.mockImplementation(async (url) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === 'string' ? url : url.toString();
       if (urlStr.includes('11434/v1/models')) {
         throw new Error('Not found');
@@ -94,7 +94,7 @@ describe('findRunningLocalProvider', () => {
   });
 
   it('returns first running provider', async () => {
-    fetchSpy.mockImplementation(async (url) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       if (typeof url === 'string' && url.includes('11434')) {
         return new Response('{}', { status: 200 });
       }

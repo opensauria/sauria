@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { scanDeadlines } from '../deadlines.js';
-import type { DeadlineAlert } from '../deadlines.js';
 import { applySchema } from '../../db/schema.js';
 
 vi.mock('../../db/temporal.js', () => ({
