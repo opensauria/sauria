@@ -4,12 +4,8 @@ import {
   radii,
   spacing,
   typography,
-  opacity,
-  transitions,
   entityColors,
-  shadows,
   zIndex,
-  observationColors,
   platformColors,
 } from '../tokens.js';
 
@@ -45,7 +41,7 @@ describe('design tokens', () => {
     });
 
     it('all spacing values are multiples of 4', () => {
-      for (const [key, value] of Object.entries(spacing)) {
+      for (const [, value] of Object.entries(spacing)) {
         const numericValue = parseInt(value, 10);
         expect(numericValue % 4).toBe(0);
       }
