@@ -135,6 +135,53 @@ pub fn get_telegram_status(paths: tauri::State<'_, Paths>) -> TelegramStatus {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ChannelStatus {
+    connected: bool,
+    bots: Vec<Value>,
+}
+
+#[tauri::command]
+pub fn get_slack_status(paths: tauri::State<'_, Paths>) -> ChannelStatus {
+    let canvas_nodes: Vec<Value> = if paths.canvas.exists() {
+        fs::read_to_string(&paths.canvas)
+            .ok()
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+            .and_then(|c| c.get("nodes").cloned())
+            .and_then(|n| serde_json::from_value::<Vec<Value>>(n).ok())
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|n| n.get("platform").and_then(|p| p.as_str()) == Some("slack"))
+            .collect()
+    } else {
+        vec![]
+    };
+
+    let mut bots = Vec::new();
+    for node in &canvas_nodes {
+        let nid = node.get("id").and_then(|v| v.as_str()).unwrap_or("");
+        let status = node.get("status").and_then(|v| v.as_str()).unwrap_or("setup");
+        let has_token = crate::vault::vault_exists(&paths, &format!("channel_token_{nid}"));
+
+        let team_name = node.get("meta")
+            .and_then(|m| m.get("teamName"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        bots.push(serde_json::json!({
+            "nodeId": nid,
+            "connected": status == "connected" && has_token,
+            "label": node.get("label").and_then(|v| v.as_str()).unwrap_or("Slack Bot"),
+            "teamName": team_name,
+        }));
+    }
+
+    let connected = bots.iter().any(|b| b.get("connected").and_then(|v| v.as_bool()).unwrap_or(false));
+
+    ChannelStatus { connected, bots }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OwnerProfile {
     full_name: String,
     photo: Option<String>,

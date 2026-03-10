@@ -10,6 +10,17 @@ export interface TelegramStatus {
   readonly bots: readonly TelegramBot[];
 }
 
+export interface ChannelBot {
+  readonly nodeId?: string;
+  readonly label?: string;
+  readonly connected: boolean;
+  readonly teamName?: string;
+}
+
+export interface ChannelStatus {
+  readonly bots: readonly ChannelBot[];
+}
+
 export interface ConnectResult {
   readonly success: boolean;
   readonly error?: string;

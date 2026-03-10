@@ -206,6 +206,17 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - Each channel has: `start()`, `stop()`, `sendAlert()`, `sendMessage()`, `sendToGroup()`
 - Channels with orchestrator integration have `onInbound` callback in deps
 - Per-node vault keys: `channel_token_<nodeId>` alongside legacy global keys
+- Slack auto-discovers channels via `users.conversations` API (`resolvedChannelIds` pattern, same as Discord)
+- Error messages from platform APIs are mapped to human-readable strings (e.g., `format_slack_error()`, `format_whatsapp_error()` in `cmd_channels_connect.rs`)
+
+### Integrations Panel
+
+- **Channel panels** (Telegram, Slack): hardcoded `<PLATFORM>_CARD` constants in `sauria-integrations.ts`, custom Lit components (`integration-<platform>-panel.ts`), `connectChannel()` IPC, vault storage
+- **MCP catalog integrations** (GitHub, Linear, etc.): loaded from `integrations_list_catalog`, generic OAuth/API key forms
+- Shared bot card styles in `styles-channel-panel.ts` (`.ch-` prefix) — used by all channel panels, no per-platform CSS duplication
+- `integration-config-panel.ts` routes `panelId` to custom panel or generic form
+- Rust status commands: `get_telegram_status`, `get_slack_status` in `cmd_canvas.rs` — read canvas nodes filtered by platform, check vault for tokens
+- To add a new channel panel: types, IPC, Rust command, Lit component, config routing, main panel card, i18n keys
 
 ### Orchestrator
 

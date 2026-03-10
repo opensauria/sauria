@@ -1,8 +1,8 @@
 import { authStyles } from './styles-auth.js';
+import { channelPanelStyles } from './styles-channel-panel.js';
 import { configStyles } from './styles-config.js';
 import { layoutStyles } from './styles-layout.js';
-import { telegramStyles } from './styles-telegram.js';
 
-export const integrationStyles = [layoutStyles, configStyles, authStyles, telegramStyles];
+export const integrationStyles = [layoutStyles, configStyles, authStyles, channelPanelStyles];
 
-export { authStyles, configStyles, layoutStyles, telegramStyles };
+export { authStyles, channelPanelStyles, configStyles, layoutStyles };

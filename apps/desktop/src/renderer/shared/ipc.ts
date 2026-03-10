@@ -1,5 +1,11 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { ConnectResult, TelegramStatus, StatusResult, IntegrationStatus } from './types.js';
+import type {
+  ConnectResult,
+  TelegramStatus,
+  ChannelStatus,
+  StatusResult,
+  IntegrationStatus,
+} from './types.js';
 
 export function connectChannel(
   platform: string,
@@ -14,6 +20,10 @@ export function disconnectChannel(platform: string, nodeId: string): Promise<voi
 
 export function getTelegramStatus(): Promise<TelegramStatus> {
   return invoke<TelegramStatus>('get_telegram_status');
+}
+
+export function getSlackStatus(): Promise<ChannelStatus> {
+  return invoke<ChannelStatus>('get_slack_status');
 }
 
 export function navigateBack(): Promise<void> {

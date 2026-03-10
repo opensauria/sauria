@@ -4,10 +4,11 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { LightDomElement } from '../shared/light-dom-element.js';
 import { adoptGlobalStyles, adoptStyles } from '../shared/styles/inject.js';
 import { integrationStyles } from './styles.js';
-import type { IntegrationStatus, TelegramBot } from '../shared/types.js';
+import type { IntegrationStatus, TelegramBot, ChannelBot } from '../shared/types.js';
 import {
   invokeWithRetry,
   getTelegramStatus,
+  getSlackStatus,
   getIntegrationAccounts,
   navigateBack,
 } from '../shared/ipc.js';
@@ -51,10 +52,19 @@ const TELEGRAM_CARD = {
   category: 'communication',
 } as const;
 
+const SLACK_CARD = {
+  id: 'slack',
+  name: 'Slack',
+  description: 'Workspace messaging for agent communication',
+  icon: 'slack',
+  category: 'communication',
+} as const;
+
 @customElement('sauria-integrations')
 export class SauriaIntegrations extends LightDomElement {
   @state() private catalog: IntegrationStatus[] = [];
   @state() private telegramBots: readonly TelegramBot[] = [];
+  @state() private slackBots: readonly ChannelBot[] = [];
   @state() private accountLabels: Record<string, string> = {};
   @state() private searchQuery = '';
   @state() private activeCategory = 'all';
@@ -77,12 +87,15 @@ export class SauriaIntegrations extends LightDomElement {
     await initLocale();
     applyTranslations();
 
-    const [mcpCatalog, tgStatus, labels] = await Promise.all([
+    const [mcpCatalog, tgStatus, slStatus, labels] = await Promise.all([
       invokeWithRetry<IntegrationStatus[]>('integrations_list_catalog').catch(
         () => [] as IntegrationStatus[],
       ),
       invokeWithRetry<{ bots: TelegramBot[] }>('get_telegram_status').catch(() => ({
         bots: [] as TelegramBot[],
+      })),
+      invokeWithRetry<{ bots: ChannelBot[] }>('get_slack_status').catch(() => ({
+        bots: [] as ChannelBot[],
       })),
       invokeWithRetry<Record<string, string>>('get_integration_accounts').catch(
         () => ({}) as Record<string, string>,
@@ -91,6 +104,7 @@ export class SauriaIntegrations extends LightDomElement {
 
     this.catalog = mcpCatalog;
     this.telegramBots = tgStatus.bots ?? [];
+    this.slackBots = slStatus.bots ?? [];
     this.accountLabels = labels;
     this.ready = true;
 
@@ -126,8 +140,9 @@ export class SauriaIntegrations extends LightDomElement {
     const visibleTabs = CATEGORY_ORDER.filter(
       (cat) => cat.id === 'all' || presentCategories.has(cat.id),
     );
+    const channelPanels = new Set(['telegram', 'slack']);
     const openItem =
-      this.openPanelId && this.openPanelId !== 'telegram'
+      this.openPanelId && !channelPanels.has(this.openPanelId)
         ? (this.catalog.find((c) => c.id === this.openPanelId) ?? null)
         : null;
 
@@ -237,20 +252,23 @@ export class SauriaIntegrations extends LightDomElement {
       toolLabel: string;
     }> = [];
 
-    const isTgConnected = this.telegramBots.some((b) => b.connected);
-    const tgBotCount = this.telegramBots.filter((b) => b.connected).length;
-
-    if (this.matchesFilter(TELEGRAM_CARD.name, TELEGRAM_CARD.category, query, category)) {
-      items.push({
-        id: TELEGRAM_CARD.id,
-        name: TELEGRAM_CARD.name,
-        icon: TELEGRAM_CARD.icon,
-        description: TELEGRAM_CARD.description,
-        category: TELEGRAM_CARD.category,
-        connected: isTgConnected,
-        toolCount: tgBotCount,
-        toolLabel: tgBotCount === 1 ? t('integ.bot') : t('integ.bots'),
-      });
+    for (const card of [
+      { card: TELEGRAM_CARD, bots: this.telegramBots },
+      { card: SLACK_CARD, bots: this.slackBots },
+    ]) {
+      const connectedBots = card.bots.filter((b) => b.connected);
+      if (this.matchesFilter(card.card.name, card.card.category, query, category)) {
+        items.push({
+          id: card.card.id,
+          name: card.card.name,
+          icon: card.card.icon,
+          description: card.card.description,
+          category: card.card.category,
+          connected: connectedBots.length > 0,
+          toolCount: connectedBots.length,
+          toolLabel: connectedBots.length === 1 ? t('integ.bot') : t('integ.bots'),
+        });
+      }
     }
 
     for (const item of this.catalog) {
@@ -286,6 +304,7 @@ export class SauriaIntegrations extends LightDomElement {
   private getPresentCategories(): Set<string> {
     const categories = new Set<string>();
     categories.add(TELEGRAM_CARD.category);
+    categories.add(SLACK_CARD.category);
     for (const item of this.catalog) {
       categories.add(item.definition.category);
     }
@@ -293,7 +312,13 @@ export class SauriaIntegrations extends LightDomElement {
   }
 
   private getPanelTitle(): string {
-    if (this.openPanelId === 'telegram') return 'Telegram';
+    const channelTitles: Record<string, string> = {
+      telegram: 'Telegram',
+      slack: 'Slack',
+    };
+    if (this.openPanelId && channelTitles[this.openPanelId]) {
+      return channelTitles[this.openPanelId];
+    }
     const item = this.catalog.find((c) => c.id === this.openPanelId);
     return item?.definition.name ?? t('integ.configure');
   }
@@ -329,9 +354,14 @@ export class SauriaIntegrations extends LightDomElement {
 
   private async handleConfigRefresh() {
     await this.refreshCatalog();
-    const tgStatus = await getTelegramStatus().catch(() => ({ bots: [] as TelegramBot[] }));
+    const channelPanels = new Set(['telegram', 'slack']);
+    const [tgStatus, slStatus] = await Promise.all([
+      getTelegramStatus().catch(() => ({ bots: [] as TelegramBot[] })),
+      getSlackStatus().catch(() => ({ bots: [] as ChannelBot[] })),
+    ]);
     this.telegramBots = tgStatus.bots ?? [];
-    if (this.openPanelId && this.openPanelId !== 'telegram') {
+    this.slackBots = slStatus.bots ?? [];
+    if (this.openPanelId && !channelPanels.has(this.openPanelId)) {
       const updated = this.catalog.find((c) => c.id === this.openPanelId);
       if (!updated?.connected) this.openPanelId = null;
     }

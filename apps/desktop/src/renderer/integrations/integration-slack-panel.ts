@@ -1,13 +1,13 @@
 import { html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { LightDomElement } from '../shared/light-dom-element.js';
-import type { TelegramBot } from '../shared/types.js';
-import { connectChannel, disconnectChannel, getTelegramStatus } from '../shared/ipc.js';
+import type { ChannelBot } from '../shared/types.js';
+import { connectChannel, disconnectChannel, getSlackStatus } from '../shared/ipc.js';
 import { t } from '../i18n.js';
 
-@customElement('integration-telegram-panel')
-export class IntegrationTelegramPanel extends LightDomElement {
-  @state() private bots: readonly TelegramBot[] = [];
+@customElement('integration-slack-panel')
+export class IntegrationSlackPanel extends LightDomElement {
+  @state() private bots: readonly ChannelBot[] = [];
   @state() private showForm = false;
   @state() private submitting = false;
   @state() private statusText = '';
@@ -30,12 +30,12 @@ export class IntegrationTelegramPanel extends LightDomElement {
         style="${connected.length > 0 && !this.showForm ? 'display:none' : ''}"
       >
         <div class="config-field">
-          <label class="config-label">${t('integ.telegramUserId')}</label>
+          <label class="config-label">${t('integ.slackOwnerId')}</label>
           <input
             class="config-input"
             type="text"
-            id="tg-userid"
-            placeholder="${t('integ.userIdHint')}"
+            id="sl-ownerid"
+            placeholder="${t('integ.slackOwnerIdHint')}"
             autocomplete="off"
             @input=${this.validate}
           />
@@ -45,8 +45,19 @@ export class IntegrationTelegramPanel extends LightDomElement {
           <input
             class="config-input"
             type="password"
-            id="tg-token"
-            placeholder="${t('integ.tokenHint')}"
+            id="sl-token"
+            placeholder="${t('integ.slackTokenHint')}"
+            autocomplete="off"
+            @input=${this.validate}
+          />
+        </div>
+        <div class="config-field">
+          <label class="config-label">${t('integ.slackSigningSecret')}</label>
+          <input
+            class="config-input"
+            type="password"
+            id="sl-signing"
+            placeholder="${t('integ.slackSigningHint')}"
             autocomplete="off"
             @input=${this.validate}
           />
@@ -87,19 +98,17 @@ export class IntegrationTelegramPanel extends LightDomElement {
     `;
   }
 
-  private renderBotCard(bot: TelegramBot) {
-    const name = bot.label || (bot.profile ? `@${bot.profile.username}` : 'Telegram Bot');
-    const photo = bot.photo || bot.profile?.photo;
+  private renderBotCard(bot: ChannelBot) {
+    const name = bot.label || 'Slack Bot';
+    const subtitle = bot.teamName ? `· ${bot.teamName}` : '';
 
     return html`
       <div class="ch-bot-card">
-        ${photo
-          ? html`<img class="ch-bot-avatar" src="${photo}" alt="" />`
-          : html`<div class="ch-bot-avatar-placeholder">
-              <img src="/icons/integrations/telegram.svg" alt="" />
-            </div>`}
+        <div class="ch-bot-avatar-placeholder">
+          <img src="/icons/integrations/slack.svg" alt="" />
+        </div>
         <div class="ch-bot-info">
-          <div class="ch-bot-name">${name}</div>
+          <div class="ch-bot-name">${name} <span class="ch-bot-subtitle">${subtitle}</span></div>
           <div class="ch-bot-status"><span class="ch-bot-dot"></span>${t('integ.online')}</div>
         </div>
         <button
@@ -129,23 +138,28 @@ export class IntegrationTelegramPanel extends LightDomElement {
   }
 
   private async loadBots() {
-    const status = await getTelegramStatus();
+    const status = await getSlackStatus();
     this.bots = status.bots ?? [];
     this.fireStatusChange();
   }
 
-  private getUserIdInput(): HTMLInputElement | null {
-    return this.querySelector<HTMLInputElement>('#tg-userid');
+  private getOwnerIdInput(): HTMLInputElement | null {
+    return this.querySelector<HTMLInputElement>('#sl-ownerid');
   }
 
   private getTokenInput(): HTMLInputElement | null {
-    return this.querySelector<HTMLInputElement>('#tg-token');
+    return this.querySelector<HTMLInputElement>('#sl-token');
+  }
+
+  private getSigningInput(): HTMLInputElement | null {
+    return this.querySelector<HTMLInputElement>('#sl-signing');
   }
 
   private isValid(): boolean {
-    const userId = this.getUserIdInput()?.value.trim() ?? '';
+    const ownerId = this.getOwnerIdInput()?.value.trim() ?? '';
     const token = this.getTokenInput()?.value.trim() ?? '';
-    return userId.length > 0 && token.length > 0;
+    const signing = this.getSigningInput()?.value.trim() ?? '';
+    return token.length > 0 && signing.length > 0 && ownerId.length > 0;
   }
 
   private validate() {
@@ -153,30 +167,23 @@ export class IntegrationTelegramPanel extends LightDomElement {
   }
 
   private async handleSubmit() {
-    const userIdInput = this.getUserIdInput();
+    const ownerIdInput = this.getOwnerIdInput();
     const tokenInput = this.getTokenInput();
-    if (!userIdInput || !tokenInput) return;
-
-    const rawId = userIdInput.value.trim().replace(/\D/g, '');
-    const parsedId = parseInt(rawId, 10);
-    if (!rawId || isNaN(parsedId) || parsedId <= 0) {
-      this.statusText = t('integ.userIdError');
-      this.statusClass = 'error';
-      userIdInput.focus();
-      return;
-    }
+    const signingInput = this.getSigningInput();
+    if (!ownerIdInput || !tokenInput || !signingInput) return;
 
     this.submitting = true;
     this.statusText = t('integ.connecting');
     this.statusClass = '';
 
     try {
-      const result = await connectChannel('telegram', {
+      const result = await connectChannel('slack', {
+        ownerId: ownerIdInput.value.trim(),
         token: tokenInput.value.trim(),
-        userId: parsedId,
+        signingSecret: signingInput.value.trim(),
       });
       if (result.success) {
-        this.statusText = `${t('integ.connectedTo')} @${result.botUsername}`;
+        this.statusText = `${t('integ.connectedTo')} ${result.displayName ?? 'Slack'}`;
         this.statusClass = 'success';
         setTimeout(() => this.loadBots(), 800);
       } else {
@@ -194,7 +201,7 @@ export class IntegrationTelegramPanel extends LightDomElement {
   private async handleDisconnect(e: Event, nodeId: string) {
     e.stopPropagation();
     if (!nodeId) return;
-    await disconnectChannel('telegram', nodeId);
+    await disconnectChannel('slack', nodeId);
     await this.loadBots();
   }
 
@@ -204,7 +211,7 @@ export class IntegrationTelegramPanel extends LightDomElement {
     this.statusText = '';
     this.statusClass = '';
     this.dispatchEvent(
-      new CustomEvent('telegram-status-change', {
+      new CustomEvent('slack-status-change', {
         detail: { bots: this.bots },
         bubbles: true,
       }),

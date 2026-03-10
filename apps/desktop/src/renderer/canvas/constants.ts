@@ -149,6 +149,13 @@ const PLATFORM_FIELDS: Record<string, PlatformField[]> = {
   ],
   slack: [
     {
+      key: 'ownerId',
+      label: 'Your Slack User ID',
+      type: 'text',
+      placeholder: 'U0123456789',
+      hint: 'Profile > ⋯ > Copy member ID',
+    },
+    {
       key: 'token',
       label: 'Bot Token',
       type: 'password',
