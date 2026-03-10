@@ -15,7 +15,7 @@ export const canvasPanelStyles = css`
     transition: transform var(--transition-normal);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
   }
   .ws-panel.open {
     transform: translateX(0);
@@ -26,6 +26,7 @@ export const canvasPanelStyles = css`
     justify-content: space-between;
     padding: var(--spacing-md) var(--spacing-lg);
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
   .ws-title {
     font-size: var(--font-size-small);
@@ -56,6 +57,7 @@ export const canvasPanelStyles = css`
     display: flex;
     flex-direction: column;
     gap: var(--spacing-lg);
+    overflow-y: auto;
   }
   .ws-section {
   }

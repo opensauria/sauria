@@ -51,6 +51,7 @@ import './components/coverflow-dock.js';
 import './components/agent-detail-panel.js';
 import './components/conversation-panel.js';
 import './components/orbital-bubbles.js';
+import './components/code-terminal-panel.js';
 
 @customElement('sauria-canvas')
 export class SauriaCanvas extends LightDomElement {
@@ -71,6 +72,7 @@ export class SauriaCanvas extends LightDomElement {
   @state() private legendVisible = true;
   @state() private catalogMap = new Map<string, IntegrationDef>();
   @state() private hoveredEdgeId: string | null = null;
+  @state() private codeTerminalNode: AgentNode | null = null;
 
   confirmCallback: (() => void) | null = null;
   private unlistenOauth?: UnlistenFn;
@@ -214,9 +216,59 @@ export class SauriaCanvas extends LightDomElement {
         return;
       }
     }
+    if (action === 'terminal') {
+      const node = this.graphSync.graph.nodes.find((n) => n.id === nodeId);
+      if (node?.codeMode?.enabled) {
+        this.openTerminal(node);
+        return;
+      }
+    }
     handleCardAction(this, action, nodeId);
     if ((action === 'cancel' || action === 'disconnect') && this.selectedNodeId === nodeId)
       this.selectedNodeId = null;
+  }
+
+  private getDetailPanelWidth(): number {
+    const panel = this.querySelector('.detail-panel.open') as HTMLElement | null;
+    return panel?.offsetWidth ?? 0;
+  }
+
+  private openTerminal(node: AgentNode): void {
+    this.codeTerminalNode = { ...node };
+    const panel = this.querySelector('code-terminal-panel') as
+      | (HTMLElement & { open: (n: AgentNode) => Promise<void> })
+      | null;
+    panel?.open(this.codeTerminalNode);
+  }
+
+  private handleTerminalSessionUpdate(detail: {
+    nodeId: string;
+    sessionId?: string;
+    terminalActive: boolean;
+  }): void {
+    const { graph } = this.graphSync;
+    const node = graph.nodes.find((n) => n.id === detail.nodeId);
+    if (!node?.codeMode) return;
+
+    const updatedNode = {
+      ...node,
+      codeMode: {
+        ...node.codeMode,
+        sessionId: detail.sessionId ?? node.codeMode.sessionId,
+        terminalActive: detail.terminalActive,
+      },
+    };
+
+    // New array reference so Lit detects the change
+    graph.nodes = graph.nodes.map((n) => (n.id === detail.nodeId ? updatedNode : n));
+
+    if (this.detailNode?.id === detail.nodeId) {
+      this.detailNode = { ...updatedNode };
+    }
+
+    // Force immediate save — terminalActive is a mutex guard,
+    // debouncing risks a 300ms window where daemon ignores the flag
+    this.graphSync.saveImmediate();
   }
 
   private onWorkspaceCreate(e: CustomEvent): void {
@@ -379,8 +431,11 @@ export class SauriaCanvas extends LightDomElement {
           graph.language = e.detail.value === 'auto' ? undefined : e.detail.value;
           this.graphSync.save();
         }}
-      >
-      </agent-detail-panel>
+        @open-terminal=${(e: CustomEvent) => {
+          const node = graph.nodes.find((n) => n.id === e.detail.nodeId);
+          if (node?.codeMode?.enabled) this.openTerminal(node);
+        }}
+      ></agent-detail-panel>
       <workspace-detail-panel
         .workspace=${this.detailWorkspaceId
           ? (graph.workspaces.find((w) => w.id === this.detailWorkspaceId) ?? null)
@@ -398,6 +453,16 @@ export class SauriaCanvas extends LightDomElement {
         .conversationBuffer=${this.activity.conversationBuffer}
         .activeNodeIds=${this.activity.activeNodeIds}
       ></conversation-panel>
+      <code-terminal-panel
+        .node=${this.codeTerminalNode}
+        .rightOffset=${this.detailNode ? this.getDetailPanelWidth() : 0}
+        @terminal-close=${() => {
+          this.codeTerminalNode = null;
+        }}
+        @terminal-session-update=${(e: CustomEvent) => {
+          this.handleTerminalSessionUpdate(e.detail);
+        }}
+      ></code-terminal-panel>
     `;
   }
 

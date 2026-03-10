@@ -61,6 +61,9 @@ export function handleCardAction(ctx: CanvasEventHost, action: string, nodeId: s
   if (action === 'gear') {
     return; // detail panel opened by caller for all nodes
   }
+  if (action === 'terminal') {
+    return; // terminal panel opened by caller
+  }
   if (action === 'close-edit') {
     if (node._formData?.description !== undefined) {
       node.description = node._formData.description;

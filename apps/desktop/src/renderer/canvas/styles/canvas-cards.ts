@@ -182,6 +182,25 @@ export const canvasCardStyles = css`
     letter-spacing: 1px;
   }
 
+  .code-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-micro);
+    font-weight: 500;
+    padding: 2px var(--spacing-sm);
+    border-radius: var(--spacing-xs);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    margin-top: 2px;
+  }
+
+  .code-badge .icon-mono {
+    width: var(--spacing-smd);
+    height: var(--spacing-smd);
+    filter: brightness(0) invert(1);
+  }
+
   /* --- Gear button --- */
 
   .card-gear {

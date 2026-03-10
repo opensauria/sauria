@@ -29,6 +29,13 @@ export interface AgentNode {
   _animateIn?: boolean;
   _editing?: boolean;
   integrations?: string[];
+  codeMode?: {
+    enabled?: boolean;
+    projectPath?: string;
+    permissionMode?: string;
+    sessionId?: string;
+    terminalActive?: boolean;
+  };
 }
 
 export interface Edge {

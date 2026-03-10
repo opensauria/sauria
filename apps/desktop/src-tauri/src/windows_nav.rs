@@ -54,12 +54,15 @@ pub(crate) fn navigate_back(app: &AppHandle) -> Result<(), String> {
     /* SPA: emit route event instead of full-page navigate */
     win.emit("navigate", "palette")
         .map_err(|e| format!("emit navigate failed: {e}"))?;
+    let _ = win.emit("palette-reset", ());
 
     let win_clone = win.clone();
     tauri::async_runtime::spawn(async move {
         animate_to_palette(&win_clone).await;
         let _ = win_clone.set_always_on_top(true);
         let _ = win_clone.set_resizable(false);
+        let _ = win_clone.set_focus();
+        let _ = win_clone.emit("palette-show", ());
     });
 
     Ok(())

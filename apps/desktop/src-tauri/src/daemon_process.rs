@@ -28,7 +28,7 @@ fn resolve_login_shell() -> (String, Vec<String>) {
     }
 }
 
-fn shell_which(name: &str) -> Option<String> {
+pub(crate) fn shell_which(name: &str) -> Option<String> {
     let (shell, args) = resolve_login_shell();
 
     #[cfg(not(target_os = "windows"))]

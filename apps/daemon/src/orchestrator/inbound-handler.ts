@@ -2,6 +2,7 @@ import type { CanvasGraph, InboundMessage, RoutingAction, Workspace, AgentNode }
 import type { LLMRoutingBrain, RoutingContext } from './llm-router.js';
 import type { AgentMemory } from './agent-memory.js';
 import type { KPITracker } from './kpi-tracker.js';
+import type { CodeModeRouter } from './code-mode-router.js';
 import { AutonomyEnforcer } from './autonomy.js';
 import { evaluateEdgeRules } from './routing.js';
 import { getLogger } from '../utils/logger.js';
@@ -24,6 +25,7 @@ interface InboundDeps {
     node: AgentNode,
     actions: readonly RoutingAction[],
   ) => Promise<void>;
+  readonly codeModeRouter?: CodeModeRouter;
 }
 
 export async function handleInbound(message: InboundMessage, deps: InboundDeps): Promise<void> {
@@ -57,6 +59,15 @@ export async function handleInbound(message: InboundMessage, deps: InboundDeps):
       content: message.content,
       contentType: message.contentType,
     });
+  }
+
+  // Code Mode intercept: bypass LLM routing, use Claude Code CLI
+  if (node.codeMode?.enabled && node.codeMode.projectPath && deps.codeModeRouter) {
+    const actions = await deps.codeModeRouter.route(node, message);
+    await processActions(node, actions, message, deps);
+    deps.onActivity?.(IPC_EVENTS.ACTIVITY_NODE, { nodeId: message.sourceNodeId, state: 'idle' });
+    if (deps.kpiTracker) deps.kpiTracker.recordMessageHandled(node.id, Date.now() - startTime);
+    return;
   }
 
   const ruleActions = evaluateEdgeRules(node, message, [...deps.getGraph().edges]);

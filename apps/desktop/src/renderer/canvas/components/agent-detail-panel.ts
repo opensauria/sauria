@@ -14,6 +14,7 @@ import {
   renderAutonomy,
   renderLanguage,
   renderBehavior,
+  renderCodeMode,
   renderKpis,
   type KpiData,
 } from './agent-detail-sections.js';
@@ -21,7 +22,7 @@ import './agent-integrations-section.js';
 
 adoptStyles(agentDetailStyles);
 
-const MIN_PANEL_WIDTH = 280;
+const MIN_PANEL_WIDTH = 320;
 const MAX_PANEL_WIDTH = 600;
 
 @customElement('agent-detail-panel')
@@ -31,7 +32,7 @@ export class AgentDetailPanel extends LightDomElement {
   @property({ attribute: false }) catalogMap = new Map<string, IntegrationDef>();
 
   @state() private kpis: KpiData | null = null;
-  @state() private panelWidth = 360;
+  @state() private panelWidth = 400;
   @state() private isResizing = false;
 
   fireUpdate(patch: Partial<AgentNode>): void {
@@ -123,6 +124,7 @@ export class AgentDetailPanel extends LightDomElement {
         ${this.renderInstructions(node, isOwner)}
         ${isOwner ? renderLanguage(this, this.graph?.language || 'auto') : nothing}
         ${!isOwner ? renderBehavior(this, node) : nothing}
+        ${!isOwner ? renderCodeMode(this, node) : nothing}
         ${!isOwner ? renderKpis(this.kpis) : nothing}
         ${!isOwner
           ? html`

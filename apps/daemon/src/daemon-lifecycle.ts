@@ -22,6 +22,7 @@ import { startIpcServer, type DaemonIpcServer } from './daemon-ipc.js';
 import type { ChannelRegistry } from './channels/registry.js';
 import type { AgentOrchestrator } from './orchestrator/orchestrator.js';
 import type { MessageQueue } from './orchestrator/message-queue.js';
+import type { CanvasGraph } from './orchestrator/types.js';
 import { CheckpointManager } from './orchestrator/checkpoint.js';
 import { IntegrationRegistry } from './integrations/registry.js';
 import { INTEGRATION_CATALOG } from './integrations/catalog.js';
@@ -117,13 +118,34 @@ export async function startDaemonContext(): Promise<DaemonContext> {
 
   const ipcServer = await startIpcServer(paths.socket, db, Date.now());
 
-  // Canvas-based orchestrator setup
-  const graph = loadCanvasGraph();
+  // Canvas-based orchestrator setup — clear stale terminalActive flags
+  // from a previous desktop crash (on reload via file watcher, the flag
+  // is trusted — only cleared at daemon startup)
+  const rawGraph = loadCanvasGraph();
+  const graph: CanvasGraph = {
+    ...rawGraph,
+    nodes: rawGraph.nodes.map((n) =>
+      n.codeMode?.terminalActive ? { ...n, codeMode: { ...n.codeMode, terminalActive: false } } : n,
+    ),
+  };
+
   const checkpointManager = new CheckpointManager(db);
 
   const bundle = await setupOrchestrator(
     graph,
-    { db, router, audit, config },
+    {
+      db,
+      router,
+      audit,
+      config,
+      resolveAnthropicKey: async () => {
+        try {
+          return await resolveApiKey('anthropic');
+        } catch {
+          return null;
+        }
+      },
+    },
     checkpointManager,
     ipcServer.broadcast.bind(ipcServer),
     integrationRegistry,

@@ -89,6 +89,7 @@ jobs:
               "--exclude=*transcription*" "--exclude=*vault-key*" \
               "--exclude=*resolve*" "--exclude=*machine-id*" \
               "--exclude=*daemon-ipc*" \
+              "--exclude=*claude-code-service*" \
               "$pattern" apps/daemon/src/ packages/; then
               echo "::error::Banned pattern found: $pattern"
               FOUND=1
