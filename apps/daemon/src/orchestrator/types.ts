@@ -4,6 +4,8 @@ export type {
   AgentRole,
   AutonomyLevel,
   Platform,
+  CodePermissionMode,
+  CodeModeConfig,
   AgentBehavior,
   WorkspaceGroup,
   Checkpoint,

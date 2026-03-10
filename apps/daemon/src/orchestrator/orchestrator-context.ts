@@ -7,6 +7,7 @@ import type { AgentMemory } from './agent-memory.js';
 import type { KPITracker } from './kpi-tracker.js';
 import type { CheckpointManager } from './checkpoint.js';
 import type { IntegrationRegistry } from '../integrations/registry.js';
+import type { CodeModeRouter } from './code-mode-router.js';
 import type { ActionContext } from './action-executor.js';
 import type { ApprovalContext } from './approval.js';
 import type { OwnerCommandContext } from './owner-commands.js';
@@ -31,6 +32,7 @@ export interface OrchestratorState {
   readonly canvasPath: string | null;
   readonly onActivity: ActivityCallback | null;
   readonly integrationRegistry: IntegrationRegistry | null;
+  readonly codeModeRouter: CodeModeRouter | null;
 }
 
 export function buildHelperDeps(state: OrchestratorState): HelperDeps {

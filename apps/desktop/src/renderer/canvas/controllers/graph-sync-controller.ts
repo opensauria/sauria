@@ -47,6 +47,7 @@ export class GraphSyncController implements ReactiveController {
       this.graph.globalInstructions = '';
     }
 
+    this.clearStaleTerminalFlags();
     await this.ensureOwnerNode();
     this.preloadCatalog();
     this.host.requestUpdate();
@@ -102,6 +103,17 @@ export class GraphSyncController implements ReactiveController {
     }
   }
 
+  /** Clear stale terminalActive flags from a previous crash / force-quit. */
+  private clearStaleTerminalFlags(): void {
+    const hasStale = this.graph.nodes.some((n) => n.codeMode?.terminalActive);
+    if (!hasStale) return;
+
+    this.graph.nodes = this.graph.nodes.map((n) =>
+      n.codeMode?.terminalActive ? { ...n, codeMode: { ...n.codeMode, terminalActive: false } } : n,
+    );
+    this.save();
+  }
+
   private preloadCatalog(): void {
     listIntegrationCatalog()
       .then((catalog) => {
@@ -119,6 +131,12 @@ export class GraphSyncController implements ReactiveController {
     this.saveTimer = setTimeout(() => {
       saveCanvasGraph(this.graph);
     }, SAVE_DEBOUNCE_MS);
+  }
+
+  /** Bypass debounce for critical state (e.g. terminalActive mutex). */
+  saveImmediate(): void {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    saveCanvasGraph(this.graph);
   }
 
   saveViewport(x: number, y: number, zoom: number): void {

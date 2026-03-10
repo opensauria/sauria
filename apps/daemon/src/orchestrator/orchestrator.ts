@@ -16,6 +16,7 @@ import type { KPITracker } from './kpi-tracker.js';
 import type { CheckpointManager } from './checkpoint.js';
 import { AutonomyEnforcer } from './autonomy.js';
 import type { IntegrationRegistry } from '../integrations/registry.js';
+import type { CodeModeRouter } from './code-mode-router.js';
 import { executeAction as executeActionImpl } from './action-executor.js';
 import { handleOwnerCommand as handleOwnerCommandImpl } from './owner-commands.js';
 import { queuePendingApprovals } from './approval.js';
@@ -43,6 +44,7 @@ interface OrchestratorDeps {
   readonly canvasPath?: string;
   readonly onActivity?: ActivityCallback;
   readonly integrationRegistry?: IntegrationRegistry;
+  readonly codeModeRouter?: CodeModeRouter;
 }
 
 export class AgentOrchestrator {
@@ -62,6 +64,7 @@ export class AgentOrchestrator {
       canvasPath: deps.canvasPath ?? null,
       onActivity: deps.onActivity ?? null,
       integrationRegistry: deps.integrationRegistry ?? null,
+      codeModeRouter: deps.codeModeRouter ?? null,
     };
   }
 
@@ -110,6 +113,7 @@ export class AgentOrchestrator {
       findWorkspace: (nodeId) => this.findWorkspace(nodeId),
       executeAction: (action, source) => this.executeAction(action, source),
       queuePendingApprovals: (node, actions) => this.queuePendingApprovals(node, actions),
+      codeModeRouter: this.state.codeModeRouter ?? undefined,
     });
   }
 

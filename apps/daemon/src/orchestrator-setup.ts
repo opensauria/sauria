@@ -18,6 +18,9 @@ import type { ModelRouter } from './ai/router.js';
 import type { AuditLogger } from './security/audit.js';
 import type { SauriaConfig } from './config/schema.js';
 import type { CanvasGraph, InboundMessage } from './orchestrator/types.js';
+import { CodeModeRouter } from './orchestrator/code-mode-router.js';
+import { persistCanvasGraph } from './graph-persistence.js';
+import { loadCanvasGraph } from './graph-loader.js';
 
 export interface OrchestratorBundle {
   readonly registry: ChannelRegistry;
@@ -92,6 +95,7 @@ export async function setupOrchestrator(
     readonly router: ModelRouter;
     readonly audit: AuditLogger;
     readonly config: SauriaConfig;
+    readonly resolveAnthropicKey?: () => Promise<string | null>;
   },
   checkpointManager: CheckpointManager,
   onActivity?: (event: string, data: Record<string, unknown>) => void,
@@ -118,6 +122,21 @@ export async function setupOrchestrator(
     integrationRegistry,
   );
 
+  const codeModeRouter = new CodeModeRouter(deps.audit, deps.resolveAnthropicKey);
+  codeModeRouter.setSessionPersistCallback((nodeId: string, sessionId: string) => {
+    const currentGraph = loadCanvasGraph();
+    const node = currentGraph.nodes.find((n) => n.id === nodeId);
+    if (!node?.codeMode) return;
+
+    const updatedGraph: CanvasGraph = {
+      ...currentGraph,
+      nodes: currentGraph.nodes.map((n) =>
+        n.id === nodeId ? { ...n, codeMode: { ...n.codeMode!, sessionId } } : n,
+      ),
+    };
+    persistCanvasGraph(paths.canvas, updatedGraph);
+  });
+
   const ownerIdentity = buildOwnerIdentity(deps.config);
   const orchestrator = new AgentOrchestrator({
     registry,
@@ -131,6 +150,7 @@ export async function setupOrchestrator(
     canvasPath: paths.canvas,
     onActivity,
     integrationRegistry,
+    codeModeRouter,
   });
 
   const queue = new MessageQueue((msg: InboundMessage) => orchestrator.handleInbound(msg), {

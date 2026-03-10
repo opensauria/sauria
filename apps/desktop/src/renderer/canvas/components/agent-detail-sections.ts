@@ -116,6 +116,110 @@ export function renderBehavior(panel: AgentDetailPanel, node: AgentNode) {
   `;
 }
 
+const CODE_PERMISSION_MODES = [
+  { value: 'plan', labelKey: 'canvas.permissionPlan' },
+  { value: 'acceptEdits', labelKey: 'canvas.permissionAcceptEdits' },
+  { value: 'auto', labelKey: 'canvas.permissionAuto' },
+  { value: 'default', labelKey: 'canvas.permissionDefault' },
+] as const;
+
+export function renderCodeMode(panel: AgentDetailPanel, node: AgentNode) {
+  const config = node.codeMode ?? { enabled: false, projectPath: '', permissionMode: 'default' };
+  const isEnabled = config.enabled === true;
+  const canOpenTerminal = isEnabled && node.status === 'connected' && config.projectPath;
+
+  return html`
+    <div class="detail-section">
+      <span class="detail-label">${t('canvas.codeMode')}</span>
+      <div class="detail-toggle-row">
+        <span class="detail-toggle-label">${t('canvas.codeModeEnabled')}</span>
+        <div
+          class="form-toggle ${isEnabled ? 'active' : ''}"
+          @click=${() => {
+            const codeMode = { ...config, enabled: !isEnabled };
+            panel.fireUpdate({ codeMode });
+          }}
+        ></div>
+      </div>
+      ${isEnabled ? renderCodeModeOptions(panel, config) : nothing}
+      ${canOpenTerminal
+        ? html`
+            <button
+              class="detail-terminal-btn"
+              @click=${() => fire(panel, 'open-terminal', { nodeId: node.id })}
+            >
+              <img class="icon-mono" src="/icons/terminal.svg" alt="" />
+              ${t('canvas.openTerminal')}
+            </button>
+          `
+        : nothing}
+    </div>
+  `;
+}
+
+function renderCodeModeOptions(
+  panel: AgentDetailPanel,
+  config: { enabled?: boolean; projectPath?: string; permissionMode?: string; sessionId?: string },
+) {
+  const activeMode = config.permissionMode ?? 'default';
+  const modeCount = CODE_PERMISSION_MODES.length;
+
+  const activeIndex = CODE_PERMISSION_MODES.findIndex((m) => m.value === activeMode);
+  const idx = activeIndex >= 0 ? activeIndex : modeCount - 1;
+
+  return html`
+    <div class="detail-section" style="gap: var(--spacing-smd)">
+      <span class="detail-label">${t('canvas.projectPath')}</span>
+      <input
+        type="text"
+        .value=${config.projectPath ?? ''}
+        @change=${(e: Event) =>
+          panel.fireUpdate({
+            codeMode: { ...config, projectPath: (e.target as HTMLInputElement).value },
+          })}
+        placeholder="/path/to/project"
+      />
+    </div>
+
+    <div class="detail-section" style="gap: var(--spacing-smd)">
+      <span class="detail-label">${t('canvas.permissionMode')}</span>
+      <div class="detail-autonomy-bar">
+        <div
+          class="detail-autonomy-highlight"
+          style="left:calc(var(--spacing-xs) + ${idx} * (100% - 2 * var(--spacing-xs)) / ${modeCount});width:calc((100% - 2 * var(--spacing-xs)) / ${modeCount})"
+        ></div>
+        ${CODE_PERMISSION_MODES.map(
+          (m) => html`
+            <div
+              class="detail-autonomy-seg ${activeMode === m.value ? 'active' : ''}"
+              @click=${() =>
+                panel.fireUpdate({
+                  codeMode: { ...config, permissionMode: m.value },
+                })}
+            >
+              ${t(m.labelKey)}
+            </div>
+          `,
+        )}
+      </div>
+    </div>
+
+    ${config.sessionId
+      ? html`
+          <button
+            class="detail-template-btn"
+            @click=${() =>
+              panel.fireUpdate({
+                codeMode: { ...config, sessionId: undefined },
+              })}
+          >
+            ${t('canvas.resetSession')}
+          </button>
+        `
+      : nothing}
+  `;
+}
+
 export function renderKpis(kpis: KpiData | null) {
   if (!kpis) return nothing;
   const items = [

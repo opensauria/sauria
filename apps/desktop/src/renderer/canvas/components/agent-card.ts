@@ -19,12 +19,14 @@ export class AgentCard extends LightDomElement {
     super.connectedCallback();
     this.addEventListener('mouseenter', this.handleMouseEnter);
     this.addEventListener('mouseleave', this.handleMouseLeave);
+    this.addEventListener('dblclick', this.handleDblClick);
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.removeEventListener('mouseenter', this.handleMouseEnter);
     this.removeEventListener('mouseleave', this.handleMouseLeave);
+    this.removeEventListener('dblclick', this.handleDblClick);
   }
 
   private handleMouseEnter = (): void => {
@@ -45,6 +47,18 @@ export class AgentCard extends LightDomElement {
         detail: { nodeId: this.node.id },
       }),
     );
+  };
+
+  private handleDblClick = (): void => {
+    if (this.node?.codeMode?.enabled && this.node.status === 'connected') {
+      this.dispatchEvent(
+        new CustomEvent('card-action', {
+          bubbles: true,
+          composed: true,
+          detail: { action: 'terminal', nodeId: this.node.id },
+        }),
+      );
+    }
   };
 
   render() {
@@ -141,6 +155,11 @@ export class AgentCard extends LightDomElement {
       <div class="agent-name">${displayName}</div>
       ${botInfo ? html`<div class="agent-bot-info">${botInfo}</div>` : nothing}
       <span class="platform-badge ${node.platform}">${node.platform}</span>
+      ${node.codeMode?.enabled
+        ? html`<span class="code-badge"
+            ><img class="icon-mono" src="/icons/code-xml.svg" alt="" /> Code</span
+          >`
+        : nothing}
       <div class="port port-input" data-node-id=${node.id} data-port="input"></div>
       <div class="port port-output" data-node-id=${node.id} data-port="output"></div>
     `;

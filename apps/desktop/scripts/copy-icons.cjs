@@ -96,6 +96,8 @@ const lucideIcons = [
   'lock',
   'lock-open',
   'check',
+  'code-xml',
+  'terminal',
 ];
 
 for (const name of lucideIcons) {

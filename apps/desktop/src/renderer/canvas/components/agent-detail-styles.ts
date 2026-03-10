@@ -14,7 +14,7 @@ export const agentDetailStyles = css`
     transition: transform var(--transition-normal);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
   }
   .detail-panel.open {
     transform: translateX(0);
@@ -27,6 +27,7 @@ export const agentDetailStyles = css`
     justify-content: space-between;
     padding: var(--spacing-md) var(--spacing-lg);
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
   .detail-title {
     font-size: var(--font-size-small);
@@ -60,6 +61,7 @@ export const agentDetailStyles = css`
     display: flex;
     flex-direction: column;
     gap: var(--spacing-lg);
+    overflow-y: auto;
   }
 
   /* --- Identity block --- */
@@ -160,8 +162,10 @@ export const agentDetailStyles = css`
   }
   .detail-autonomy-seg {
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: var(--spacing-sm) var(--spacing-xs);
-    text-align: center;
     cursor: pointer;
     font-size: var(--font-size-small);
     font-weight: 500;
@@ -287,5 +291,30 @@ export const agentDetailStyles = css`
   .detail-template-btn:hover {
     background: var(--surface-hover);
     border-color: var(--border-active);
+  }
+
+  /* --- Terminal button --- */
+  .detail-terminal-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    padding: var(--spacing-smd) var(--spacing-md);
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-on-accent);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+  .detail-terminal-btn:hover {
+    background: var(--accent-hover);
+  }
+  .detail-terminal-btn img {
+    width: var(--spacing-md);
+    height: var(--spacing-md);
+    filter: brightness(0) invert();
   }
 `;

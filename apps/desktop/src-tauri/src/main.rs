@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod cmd_brain;
+mod cmd_code;
 mod cmd_brain_types;
 mod cmd_canvas;
 mod cmd_canvas_helpers;
@@ -51,6 +52,7 @@ fn main() {
 
     let daemon_state = Arc::new(tokio::sync::Mutex::new(DaemonState::new()));
     let daemon_client = Arc::new(DaemonClient::new(&paths));
+    let code_terminal_state = Arc::new(tokio::sync::Mutex::new(cmd_code::CodeTerminalState::new()));
 
     // Clone for health check
     let health_state = daemon_state.clone();
@@ -65,6 +67,7 @@ fn main() {
         .manage(paths)
         .manage(daemon_state.clone())
         .manage(daemon_client)
+        .manage(code_terminal_state)
         .invoke_handler(tauri::generate_handler![
             // Setup
             cmd_setup::get_status,
@@ -122,6 +125,15 @@ fn main() {
             cmd_oauth_integrations::start_proxy_oauth,
             // OAuth account labels
             cmd_oauth_integrations::get_integration_accounts,
+            // Code Terminal
+            cmd_code::open_code_terminal,
+            cmd_code::write_code_terminal,
+            cmd_code::resize_code_terminal,
+            cmd_code::close_code_terminal,
+            cmd_code::has_code_terminal,
+            cmd_code::detach_code_terminal,
+            cmd_code::attach_code_terminal,
+            cmd_code::discover_code_session_id,
         ])
         .setup(move |app| {
             // Hide dock icon on macOS

@@ -12,6 +12,19 @@ export type AutonomyLevel = 'full' | 'supervised' | 'approval' | 'manual';
 
 export type Platform = 'telegram' | 'slack' | 'whatsapp' | 'discord' | 'email' | 'owner';
 
+// ─── Code Mode ────────────────────────────────────────────────────
+
+/** Only safe modes — bypassPermissions and dontAsk excluded by design */
+export type CodePermissionMode = 'plan' | 'auto' | 'acceptEdits' | 'default';
+
+export interface CodeModeConfig {
+  readonly enabled: boolean;
+  readonly projectPath: string;
+  readonly permissionMode: CodePermissionMode;
+  readonly sessionId?: string;
+  readonly terminalActive?: boolean;
+}
+
 // ─── Agent Behavior ────────────────────────────────────────────────
 
 export interface AgentBehavior {
@@ -85,6 +98,7 @@ export interface AgentNode {
   readonly description?: string;
   readonly behavior?: AgentBehavior;
   readonly integrations?: readonly string[];
+  readonly codeMode?: CodeModeConfig;
 }
 
 // ─── Edge ──────────────────────────────────────────────────────────

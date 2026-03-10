@@ -8,6 +8,7 @@ import type {
   Workspace,
   AutonomyLevel,
   AgentRole,
+  CodeModeConfig,
 } from './orchestrator/types.js';
 import { createEmptyGraph } from './orchestrator/types.js';
 import type { SauriaConfig } from './config/schema.js';
@@ -31,6 +32,7 @@ interface RawNode {
   readonly instructions?: string;
   readonly behavior?: AgentNode['behavior'];
   readonly integrations?: readonly string[];
+  readonly codeMode?: CodeModeConfig;
 }
 
 interface RawEdge {
@@ -105,6 +107,7 @@ function normalizeNode(raw: RawNode): AgentNode {
     instructions: raw.instructions ?? '',
     behavior: raw.behavior,
     integrations: raw.integrations,
+    codeMode: raw.codeMode,
   };
 }
 
