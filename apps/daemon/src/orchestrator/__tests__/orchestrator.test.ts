@@ -375,6 +375,177 @@ describe('executeAction reply internal routing', () => {
   });
 });
 
+describe('AgentOrchestrator updateGraph', () => {
+  let db: Database.Database;
+  let registry: ChannelRegistry;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    applySchema(db);
+    registry = new ChannelRegistry();
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('clears conversations when node instructions change', () => {
+    const agentMemory = new AgentMemory(db);
+    const clearSpy = vi.spyOn(agentMemory, 'clearAgentConversations');
+
+    const graph = makeGraph([makeNode({ id: 'n1', instructions: 'old instructions' })]);
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory,
+    });
+
+    const newGraph = makeGraph([makeNode({ id: 'n1', instructions: 'new instructions' })]);
+    orchestrator.updateGraph(newGraph);
+
+    expect(clearSpy).toHaveBeenCalledWith('n1');
+  });
+
+  it('does not clear conversations when instructions unchanged', () => {
+    const agentMemory = new AgentMemory(db);
+    const clearSpy = vi.spyOn(agentMemory, 'clearAgentConversations');
+
+    const graph = makeGraph([makeNode({ id: 'n1', instructions: 'same' })]);
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory,
+    });
+
+    const newGraph = makeGraph([makeNode({ id: 'n1', instructions: 'same' })]);
+    orchestrator.updateGraph(newGraph);
+
+    expect(clearSpy).not.toHaveBeenCalled();
+  });
+
+  it('clears all conversations when globalInstructions change', () => {
+    const agentMemory = new AgentMemory(db);
+    const clearSpy = vi.spyOn(agentMemory, 'clearAgentConversations');
+
+    const graph = makeGraph([makeNode({ id: 'n1' }), makeNode({ id: 'n2', label: '@bot2' })]);
+    (graph as { globalInstructions: string }).globalInstructions = 'old global';
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph,
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory,
+    });
+
+    const newGraph = makeGraph([makeNode({ id: 'n1' }), makeNode({ id: 'n2', label: '@bot2' })]);
+    (newGraph as { globalInstructions: string }).globalInstructions = 'new global';
+    orchestrator.updateGraph(newGraph);
+
+    expect(clearSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears brain cache on graph update', () => {
+    const brain = { clearCache: vi.fn() };
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity: { telegram: { userId: 123 } },
+      brain: brain as never,
+    });
+
+    orchestrator.updateGraph(makeGraph());
+
+    expect(brain.clearCache).toHaveBeenCalled();
+  });
+
+  it('does not fail when brain is not provided', () => {
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity: { telegram: { userId: 123 } },
+    });
+
+    orchestrator.updateGraph(makeGraph());
+    // Should not throw
+  });
+});
+
+describe('AgentOrchestrator findNode', () => {
+  it('finds node by id', () => {
+    const registry = new ChannelRegistry();
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity: { telegram: { userId: 123 } },
+    });
+
+    expect(orchestrator.findNode('n1')?.label).toBe('@support_bot');
+  });
+
+  it('returns null for unknown id', () => {
+    const registry = new ChannelRegistry();
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity: { telegram: { userId: 123 } },
+    });
+
+    expect(orchestrator.findNode('unknown')).toBeNull();
+  });
+});
+
+describe('AgentOrchestrator executeApprovedActions', () => {
+  let db: Database.Database;
+  let registry: ChannelRegistry;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    applySchema(db);
+    registry = new ChannelRegistry();
+    registry.sendTo = vi.fn().mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('executes all approved actions and returns count', async () => {
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph(),
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory: new AgentMemory(db),
+    });
+
+    const count = await orchestrator.executeApprovedActions('n1', [
+      { type: 'reply', content: 'first' },
+      { type: 'reply', content: 'second' },
+    ]);
+
+    expect(count).toBe(2);
+    const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
+    expect(sendTo).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses node platform for synthetic source', async () => {
+    const slackNode = makeNode({ id: 'slack-node', platform: 'slack' });
+    const orchestrator = new AgentOrchestrator({
+      registry,
+      graph: makeGraph([slackNode]),
+      ownerIdentity: { telegram: { userId: 123 } },
+      agentMemory: new AgentMemory(db),
+    });
+
+    await orchestrator.executeApprovedActions('slack-node', [
+      { type: 'reply', content: 'approved' },
+    ]);
+
+    const sendTo = registry.sendTo as ReturnType<typeof vi.fn>;
+    expect(sendTo).toHaveBeenCalledWith('slack-node', 'approved', null);
+  });
+});
+
 describe('handleOwnerCommand graph persistence', () => {
   let tmpDir: string;
   let canvasPath: string;
