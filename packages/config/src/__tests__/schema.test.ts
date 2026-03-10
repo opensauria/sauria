@@ -67,7 +67,11 @@ describe('SauriaConfigSchema', () => {
           },
         },
         channels: {
-          telegram: { enabled: true, allowedUserIds: [123], voice: { enabled: true, model: 'auto', maxDurationSeconds: 60 } },
+          telegram: {
+            enabled: true,
+            allowedUserIds: [123],
+            voice: { enabled: true, model: 'auto', maxDurationSeconds: 60 },
+          },
           slack: { enabled: false },
           whatsapp: { enabled: false, webhookPort: 9090 },
           discord: { enabled: false },
@@ -192,7 +196,11 @@ describe('SauriaConfigSchema', () => {
     it('rejects invalid whatsapp webhookPort below 1024', () => {
       const result = SauriaConfigSchema.safeParse({
         channels: {
-          telegram: { enabled: false, allowedUserIds: [], voice: { enabled: true, model: 'auto', maxDurationSeconds: 120 } },
+          telegram: {
+            enabled: false,
+            allowedUserIds: [],
+            voice: { enabled: true, model: 'auto', maxDurationSeconds: 120 },
+          },
           slack: { enabled: false },
           whatsapp: { enabled: true, webhookPort: 80 },
           discord: { enabled: false },
@@ -205,7 +213,11 @@ describe('SauriaConfigSchema', () => {
     it('rejects whatsapp webhookPort above 65535', () => {
       const result = SauriaConfigSchema.safeParse({
         channels: {
-          telegram: { enabled: false, allowedUserIds: [], voice: { enabled: true, model: 'auto', maxDurationSeconds: 120 } },
+          telegram: {
+            enabled: false,
+            allowedUserIds: [],
+            voice: { enabled: true, model: 'auto', maxDurationSeconds: 120 },
+          },
           slack: { enabled: false },
           whatsapp: { enabled: true, webhookPort: 70000 },
           discord: { enabled: false },
@@ -225,7 +237,11 @@ describe('SauriaConfigSchema', () => {
     it('rejects voice maxDurationSeconds exceeding 300', () => {
       const result = SauriaConfigSchema.safeParse({
         channels: {
-          telegram: { enabled: false, allowedUserIds: [], voice: { enabled: true, model: 'auto', maxDurationSeconds: 500 } },
+          telegram: {
+            enabled: false,
+            allowedUserIds: [],
+            voice: { enabled: true, model: 'auto', maxDurationSeconds: 500 },
+          },
           slack: { enabled: false },
           whatsapp: { enabled: false, webhookPort: 9090 },
           discord: { enabled: false },

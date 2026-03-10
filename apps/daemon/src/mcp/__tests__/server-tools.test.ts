@@ -27,7 +27,12 @@ import {
   createInsightsHandler,
   createContextHandler,
 } from '../server-tools.js';
-import { searchEntities, getEntityByName, getEntityRelations, getEntityTimeline } from '../../db/world-model.js';
+import {
+  searchEntities,
+  getEntityByName,
+  getEntityRelations,
+  getEntityTimeline,
+} from '../../db/world-model.js';
 import { getUpcomingDeadlines } from '../../db/temporal.js';
 import { hybridSearch } from '../../db/search.js';
 import { reasonAbout } from '../../ai/reason.js';
@@ -273,9 +278,9 @@ describe('createInsightsHandler', () => {
     };
     vi.mocked(getEntityByName).mockReturnValue(entity);
 
-    const mockAll = vi.fn().mockReturnValue([
-      { content: 'an insight', created_at: '2026-01-01', confidence: 0.9 },
-    ]);
+    const mockAll = vi
+      .fn()
+      .mockReturnValue([{ content: 'an insight', created_at: '2026-01-01', confidence: 0.9 }]);
     vi.mocked(mockDb.prepare).mockReturnValue({ all: mockAll } as never);
 
     const handler = createInsightsHandler(deps);
@@ -302,7 +307,9 @@ describe('createInsightsHandler', () => {
     const mockAll = vi
       .fn()
       .mockReturnValueOnce([])
-      .mockReturnValueOnce([{ content: 'global insight', created_at: '2026-01-01', confidence: 0.5 }]);
+      .mockReturnValueOnce([
+        { content: 'global insight', created_at: '2026-01-01', confidence: 0.5 },
+      ]);
     vi.mocked(mockDb.prepare).mockReturnValue({ all: mockAll } as never);
 
     const handler = createInsightsHandler(deps);

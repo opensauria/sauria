@@ -15,7 +15,10 @@ import {
 
 import type { BannedPatternViolation } from '../banned-patterns.js';
 
-function makeDirEntry(name: string, isDir: boolean): {
+function makeDirEntry(
+  name: string,
+  isDir: boolean,
+): {
   name: string;
   isDirectory: () => boolean;
   isFile: () => boolean;
@@ -56,9 +59,7 @@ describe('scanForBannedPatterns', () => {
   });
 
   it('detects violations in mock files', async () => {
-    vi.mocked(readdir).mockResolvedValue([
-      makeDirEntry('bad.ts', false),
-    ] as never);
+    vi.mocked(readdir).mockResolvedValue([makeDirEntry('bad.ts', false)] as never);
 
     vi.mocked(readFile).mockResolvedValue(
       'import { exec } from "child_process";\nconst x = eval("code");',
@@ -73,16 +74,12 @@ describe('scanForBannedPatterns', () => {
   });
 
   it('returns correct line numbers', async () => {
-    vi.mocked(readdir).mockResolvedValue([
-      makeDirEntry('file.ts', false),
-    ] as never);
+    vi.mocked(readdir).mockResolvedValue([makeDirEntry('file.ts', false)] as never);
 
     vi.mocked(readFile).mockResolvedValue('line 1\neval("bad")\nline 3');
 
     const violations = await scanForBannedPatterns('/src');
-    const evalViolation = violations.find(
-      (v: BannedPatternViolation) => v.pattern === 'eval(',
-    );
+    const evalViolation = violations.find((v: BannedPatternViolation) => v.pattern === 'eval(');
     expect(evalViolation).toBeDefined();
     expect(evalViolation!.line).toBe(2);
   });
@@ -102,11 +99,11 @@ describe('scanForBannedPatterns', () => {
   });
 
   it('returns empty array for clean files', async () => {
-    vi.mocked(readdir).mockResolvedValue([
-      makeDirEntry('clean.ts', false),
-    ] as never);
+    vi.mocked(readdir).mockResolvedValue([makeDirEntry('clean.ts', false)] as never);
 
-    vi.mocked(readFile).mockResolvedValue('const greeting = "hello world";\nexport default greeting;');
+    vi.mocked(readFile).mockResolvedValue(
+      'const greeting = "hello world";\nexport default greeting;',
+    );
 
     const violations = await scanForBannedPatterns('/src');
     expect(violations).toHaveLength(0);
@@ -120,9 +117,7 @@ describe('assertNoBannedPatterns', () => {
   });
 
   it('passes on clean code', async () => {
-    vi.mocked(readdir).mockResolvedValue([
-      makeDirEntry('ok.ts', false),
-    ] as never);
+    vi.mocked(readdir).mockResolvedValue([makeDirEntry('ok.ts', false)] as never);
 
     vi.mocked(readFile).mockResolvedValue('const x = 42;');
 
@@ -130,9 +125,7 @@ describe('assertNoBannedPatterns', () => {
   });
 
   it('throws on violations with summary', async () => {
-    vi.mocked(readdir).mockResolvedValue([
-      makeDirEntry('evil.ts', false),
-    ] as never);
+    vi.mocked(readdir).mockResolvedValue([makeDirEntry('evil.ts', false)] as never);
 
     vi.mocked(readFile).mockResolvedValue('eval("bad code")');
 

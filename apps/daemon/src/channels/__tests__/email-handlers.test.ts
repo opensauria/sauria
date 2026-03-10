@@ -62,7 +62,9 @@ describe('processInboundEmail', () => {
 
     await processInboundEmail(makeEmail(), { audit, pipeline } as never, guards);
 
-    expect(audit.logAction).toHaveBeenCalledWith('email:rate_limited', { from: 'sender@example.com' });
+    expect(audit.logAction).toHaveBeenCalledWith('email:rate_limited', {
+      from: 'sender@example.com',
+    });
     expect(pipeline.ingestEvent).not.toHaveBeenCalled();
   });
 
@@ -94,11 +96,7 @@ describe('processInboundEmail', () => {
     const onInbound = vi.fn();
     const guards = mockGuards();
 
-    await processInboundEmail(
-      makeEmail(),
-      { audit, pipeline, onInbound } as never,
-      guards,
-    );
+    await processInboundEmail(makeEmail(), { audit, pipeline, onInbound } as never, guards);
 
     expect(onInbound).toHaveBeenCalledWith(
       expect.objectContaining({ sourceNodeId: 'email-default' }),
@@ -122,11 +120,14 @@ describe('processInboundEmail', () => {
 
     await processInboundEmail(makeEmail(), { audit, pipeline } as never, guards);
 
-    expect(pipeline.ingestEvent).toHaveBeenCalledWith('email:message', expect.objectContaining({
-      content: 'Email body content',
-      from: 'sender@example.com',
-      subject: 'Test Subject',
-    }));
+    expect(pipeline.ingestEvent).toHaveBeenCalledWith(
+      'email:message',
+      expect.objectContaining({
+        content: 'Email body content',
+        from: 'sender@example.com',
+        subject: 'Test Subject',
+      }),
+    );
   });
 
   it('handles pipeline ingest error gracefully', async () => {
@@ -177,11 +178,18 @@ describe('processInboundEmail', () => {
     const guards = mockGuards();
     const longSubject = 'x'.repeat(300);
 
-    await processInboundEmail(makeEmail({ subject: longSubject }), { audit, pipeline } as never, guards);
+    await processInboundEmail(
+      makeEmail({ subject: longSubject }),
+      { audit, pipeline } as never,
+      guards,
+    );
 
-    expect(pipeline.ingestEvent).toHaveBeenCalledWith('email:message', expect.objectContaining({
-      subject: longSubject.slice(0, 200),
-    }));
+    expect(pipeline.ingestEvent).toHaveBeenCalledWith(
+      'email:message',
+      expect.objectContaining({
+        subject: longSubject.slice(0, 200),
+      }),
+    );
   });
 
   it('handles non-InputTooLongError on subject by using empty string', async () => {
@@ -199,9 +207,12 @@ describe('processInboundEmail', () => {
 
     await processInboundEmail(makeEmail(), { audit, pipeline } as never, guards);
 
-    expect(pipeline.ingestEvent).toHaveBeenCalledWith('email:message', expect.objectContaining({
-      subject: '',
-    }));
+    expect(pipeline.ingestEvent).toHaveBeenCalledWith(
+      'email:message',
+      expect.objectContaining({
+        subject: '',
+      }),
+    );
   });
 });
 

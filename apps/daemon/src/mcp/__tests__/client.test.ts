@@ -69,7 +69,9 @@ describe('McpClientManager', () => {
     it('connects a new server', async () => {
       await manager.connect(config);
       expect(manager.getConnectedServers()).toContain('test-server');
-      expect(mockAudit.logAction).toHaveBeenCalledWith('mcp:client_connect', { server: 'test-server' });
+      expect(mockAudit.logAction).toHaveBeenCalledWith('mcp:client_connect', {
+        server: 'test-server',
+      });
     });
 
     it('throws when server is already connected', async () => {
@@ -91,7 +93,9 @@ describe('McpClientManager', () => {
       await manager.connect(config);
       await manager.disconnect('test-server');
       expect(manager.getConnectedServers()).not.toContain('test-server');
-      expect(mockAudit.logAction).toHaveBeenCalledWith('mcp:client_disconnect', { server: 'test-server' });
+      expect(mockAudit.logAction).toHaveBeenCalledWith('mcp:client_disconnect', {
+        server: 'test-server',
+      });
     });
 
     it('throws when server is not connected', async () => {
@@ -115,7 +119,11 @@ describe('McpClientManager', () => {
 
     it('calls tool and returns text result', async () => {
       await manager.connect(config);
-      const entry = (manager as unknown as { clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }> }).clients.get('test-server');
+      const entry = (
+        manager as unknown as {
+          clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }>;
+        }
+      ).clients.get('test-server');
       entry?.client.callTool.mockResolvedValue({
         content: [{ type: 'text', text: '{"key":"value"}' }],
       });
@@ -125,7 +133,11 @@ describe('McpClientManager', () => {
 
     it('returns raw text when JSON parse fails', async () => {
       await manager.connect(config);
-      const entry = (manager as unknown as { clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }> }).clients.get('test-server');
+      const entry = (
+        manager as unknown as {
+          clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }>;
+        }
+      ).clients.get('test-server');
       entry?.client.callTool.mockResolvedValue({
         content: [{ type: 'text', text: 'plain text result' }],
       });
@@ -135,7 +147,11 @@ describe('McpClientManager', () => {
 
     it('returns multiple text parts as array', async () => {
       await manager.connect(config);
-      const entry = (manager as unknown as { clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }> }).clients.get('test-server');
+      const entry = (
+        manager as unknown as {
+          clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }>;
+        }
+      ).clients.get('test-server');
       entry?.client.callTool.mockResolvedValue({
         content: [
           { type: 'text', text: 'part1' },
@@ -148,17 +164,27 @@ describe('McpClientManager', () => {
 
     it('throws on tool error', async () => {
       await manager.connect(config);
-      const entry = (manager as unknown as { clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }> }).clients.get('test-server');
+      const entry = (
+        manager as unknown as {
+          clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }>;
+        }
+      ).clients.get('test-server');
       entry?.client.callTool.mockResolvedValue({
         isError: true,
         content: [{ type: 'text', text: 'something broke' }],
       });
-      await expect(manager.callTool('test-server', 'my-tool', {})).rejects.toThrow('something broke');
+      await expect(manager.callTool('test-server', 'my-tool', {})).rejects.toThrow(
+        'something broke',
+      );
     });
 
     it('returns toolResult when content is not an array', async () => {
       await manager.connect(config);
-      const entry = (manager as unknown as { clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }> }).clients.get('test-server');
+      const entry = (
+        manager as unknown as {
+          clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }>;
+        }
+      ).clients.get('test-server');
       entry?.client.callTool.mockResolvedValue({
         content: 'not-array',
         toolResult: 42,
@@ -175,7 +201,11 @@ describe('McpClientManager', () => {
 
     it('returns tool info list', async () => {
       await manager.connect(config);
-      const entry = (manager as unknown as { clients: Map<string, { client: { listTools: ReturnType<typeof vi.fn> } }> }).clients.get('test-server');
+      const entry = (
+        manager as unknown as {
+          clients: Map<string, { client: { listTools: ReturnType<typeof vi.fn> } }>;
+        }
+      ).clients.get('test-server');
       entry?.client.listTools.mockResolvedValue({
         tools: [{ name: 'tool1', description: 'desc1' }, { name: 'tool2' }],
       });

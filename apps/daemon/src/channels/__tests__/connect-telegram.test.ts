@@ -135,11 +135,13 @@ describe('connectTelegram', () => {
 
   it('reads existing canvas when file exists', async () => {
     mockExistsSync.mockReturnValue(true);
-    mockReadFileSync.mockReturnValue(JSON.stringify({
-      nodes: [{ id: 'other-node' }],
-      edges: [],
-      workspaces: [],
-    }));
+    mockReadFileSync.mockReturnValue(
+      JSON.stringify({
+        nodes: [{ id: 'other-node' }],
+        edges: [],
+        workspaces: [],
+      }),
+    );
 
     const { secureFetch } = await import('../../security/url-allowlist.js');
     (secureFetch as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -163,7 +165,11 @@ describe('additional coverage — connectTelegram', () => {
     vi.clearAllMocks();
   });
 
-  async function mockValidBot(overrides?: { id?: number; first_name?: string; username?: string }): Promise<void> {
+  async function mockValidBot(overrides?: {
+    id?: number;
+    first_name?: string;
+    username?: string;
+  }): Promise<void> {
     const { secureFetch } = await import('../../security/url-allowlist.js');
     (secureFetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       json: vi.fn().mockResolvedValue({
@@ -193,11 +199,13 @@ describe('additional coverage — connectTelegram', () => {
 
   it('updates existing node when same id already in canvas', async () => {
     mockExistsSync.mockReturnValue(true);
-    mockReadFileSync.mockReturnValue(JSON.stringify({
-      nodes: [{ id: 'telegram_999', label: 'old-label' }],
-      edges: [],
-      workspaces: [],
-    }));
+    mockReadFileSync.mockReturnValue(
+      JSON.stringify({
+        nodes: [{ id: 'telegram_999', label: 'old-label' }],
+        edges: [],
+        workspaces: [],
+      }),
+    );
     await mockValidBot();
 
     const { connectTelegram } = await import('../connect-telegram.js');
@@ -294,7 +302,12 @@ describe('connectTelegram — fetchBotPhoto', () => {
           json: vi.fn().mockResolvedValue({
             ok: true,
             result: {
-              photos: [[{ file_id: 'fid1', width: 160, height: 160 }, { file_id: 'fid2', width: 640, height: 640 }]],
+              photos: [
+                [
+                  { file_id: 'fid1', width: 160, height: 160 },
+                  { file_id: 'fid2', width: 640, height: 640 },
+                ],
+              ],
             },
           }),
         };
@@ -315,7 +328,9 @@ describe('connectTelegram — fetchBotPhoto', () => {
 
     const written = mockWriteFileSync.mock.calls[0]?.[1] as string;
     const parsed = JSON.parse(written) as { nodes: Array<{ photo: string | null }> };
-    expect(parsed.nodes[0]?.photo).toBe('https://api.telegram.org/file/bottest-token/photos/file_0.jpg');
+    expect(parsed.nodes[0]?.photo).toBe(
+      'https://api.telegram.org/file/bottest-token/photos/file_0.jpg',
+    );
   });
 
   it('sets photo to null when bot has no profile photos', async () => {

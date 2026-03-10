@@ -30,10 +30,9 @@ describe('GoogleProvider', () => {
 
     const provider = new GoogleProvider('key');
     await expect(async () => {
-      for await (const _ of provider.chat(
-        [{ role: 'user', content: 'hi' }],
-        { model: 'gemini-pro' },
-      )) {
+      for await (const _ of provider.chat([{ role: 'user', content: 'hi' }], {
+        model: 'gemini-pro',
+      })) {
         // consume
       }
     }).rejects.toThrow('Google API error 400');
@@ -68,10 +67,9 @@ describe('GoogleProvider', () => {
 
     const provider = new GoogleProvider('key');
     const chunks: Array<{ text: string; done: boolean }> = [];
-    for await (const chunk of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'gemini-pro' },
-    )) {
+    for await (const chunk of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'gemini-pro',
+    })) {
       chunks.push(chunk);
     }
 
@@ -87,10 +85,9 @@ describe('GoogleProvider', () => {
 
     const provider = new GoogleProvider('key');
     const chunks: Array<{ text: string; done: boolean }> = [];
-    for await (const chunk of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'gemini-pro' },
-    )) {
+    for await (const chunk of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'gemini-pro',
+    })) {
       chunks.push(chunk);
     }
 
@@ -129,10 +126,10 @@ describe('GoogleProvider', () => {
     } as never);
 
     const provider = new GoogleProvider('key');
-    for await (const _ of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'gemini-pro', systemPrompt: 'fallback prompt' },
-    )) {
+    for await (const _ of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'gemini-pro',
+      systemPrompt: 'fallback prompt',
+    })) {
       // consume
     }
 

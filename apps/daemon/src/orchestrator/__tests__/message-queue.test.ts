@@ -64,7 +64,10 @@ describe('MessageQueue', () => {
   it('reports active count during processing', async () => {
     let resolveHandler: (() => void) | null = null;
     const blockingHandler = vi.fn().mockImplementation(
-      () => new Promise<void>((resolve) => { resolveHandler = resolve; }),
+      () =>
+        new Promise<void>((resolve) => {
+          resolveHandler = resolve;
+        }),
     );
     const q = new MessageQueue(blockingHandler, { maxConcurrent: 2, maxQueueSize: 10 });
     q.enqueue(makeMessage('blocking'));
@@ -107,7 +110,10 @@ describe('MessageQueue', () => {
   it('gracefulStop waits for in-flight messages', async () => {
     let resolveHandler: (() => void) | null = null;
     const blockingHandler = vi.fn().mockImplementation(
-      () => new Promise<void>((resolve) => { resolveHandler = resolve; }),
+      () =>
+        new Promise<void>((resolve) => {
+          resolveHandler = resolve;
+        }),
     );
     const q = new MessageQueue(blockingHandler, { maxConcurrent: 1, maxQueueSize: 10 });
     q.enqueue(makeMessage('in-flight'));

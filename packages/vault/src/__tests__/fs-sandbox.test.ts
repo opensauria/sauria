@@ -16,9 +16,8 @@ vi.mock('node:fs/promises', () => ({
   mkdir: (path: string, opts: Record<string, unknown>) => mockMkdir(path, opts),
 }));
 
-const { PathTraversalError, safePath, safeReadFile, safeWriteFile, safeMkdir } = await import(
-  '../fs-sandbox.js'
-);
+const { PathTraversalError, safePath, safeReadFile, safeWriteFile, safeMkdir } =
+  await import('../fs-sandbox.js');
 
 describe('fs-sandbox', () => {
   beforeEach(() => {
@@ -58,9 +57,7 @@ describe('fs-sandbox', () => {
     });
 
     it('throws PathTraversalError for ../ traversal', () => {
-      expect(() => safePath('/tmp/sauria-test/vault/../../etc/passwd')).toThrow(
-        PathTraversalError,
-      );
+      expect(() => safePath('/tmp/sauria-test/vault/../../etc/passwd')).toThrow(PathTraversalError);
     });
 
     it('throws PathTraversalError for absolute path outside home', () => {

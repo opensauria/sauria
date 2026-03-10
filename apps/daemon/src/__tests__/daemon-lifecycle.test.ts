@@ -516,7 +516,11 @@ describe('startDaemonContext', () => {
     const { startIpcServer } = await import('../daemon-ipc.js');
     const ctx = await startDaemonContext();
 
-    expect(startIpcServer).toHaveBeenCalledWith('/mock/socket', expect.anything(), expect.any(Number));
+    expect(startIpcServer).toHaveBeenCalledWith(
+      '/mock/socket',
+      expect.anything(),
+      expect.any(Number),
+    );
     clearInterval(ctx.refreshInterval);
   });
 
@@ -540,7 +544,9 @@ describe('startDaemonContext', () => {
   it('logs daemon:start audit action', async () => {
     const { AuditLogger } = await import('../security/audit.js');
     const mockLogAction = vi.fn();
-    vi.mocked(AuditLogger).mockImplementationOnce(function (this: { logAction: typeof mockLogAction }) {
+    vi.mocked(AuditLogger).mockImplementationOnce(function (this: {
+      logAction: typeof mockLogAction;
+    }) {
       this.logAction = mockLogAction;
     } as never);
 
@@ -557,7 +563,9 @@ describe('startDaemonContext', () => {
   it('registers onCostIncurred callback on the router', async () => {
     const { ModelRouter } = await import('../ai/router.js');
     const mockOnCostIncurred = vi.fn();
-    vi.mocked(ModelRouter).mockImplementationOnce(function (this: { onCostIncurred: typeof mockOnCostIncurred }) {
+    vi.mocked(ModelRouter).mockImplementationOnce(function (this: {
+      onCostIncurred: typeof mockOnCostIncurred;
+    }) {
       this.onCostIncurred = mockOnCostIncurred;
     } as never);
 
@@ -571,7 +579,9 @@ describe('startDaemonContext', () => {
     const { ModelRouter } = await import('../ai/router.js');
     const { recordSpend, isOverBudget } = await import('../utils/budget.js');
     let capturedCallback: ((model: string, cost: number) => void) | undefined;
-    vi.mocked(ModelRouter).mockImplementationOnce(function (this: { onCostIncurred: ReturnType<typeof vi.fn> }) {
+    vi.mocked(ModelRouter).mockImplementationOnce(function (this: {
+      onCostIncurred: ReturnType<typeof vi.fn>;
+    }) {
       this.onCostIncurred = vi.fn((cb: (model: string, cost: number) => void) => {
         capturedCallback = cb;
       });
@@ -590,7 +600,9 @@ describe('startDaemonContext', () => {
     const { ModelRouter } = await import('../ai/router.js');
     const { isOverBudget } = await import('../utils/budget.js');
     let capturedCallback: ((model: string, cost: number) => void) | undefined;
-    vi.mocked(ModelRouter).mockImplementationOnce(function (this: { onCostIncurred: ReturnType<typeof vi.fn> }) {
+    vi.mocked(ModelRouter).mockImplementationOnce(function (this: {
+      onCostIncurred: ReturnType<typeof vi.fn>;
+    }) {
       this.onCostIncurred = vi.fn((cb: (model: string, cost: number) => void) => {
         capturedCallback = cb;
       });
@@ -653,9 +665,7 @@ describe('startDaemonContext', () => {
     (INTEGRATION_CATALOG as unknown as { length: number; [index: number]: unknown }).length = 0;
     Object.assign(INTEGRATION_CATALOG, testCatalog);
 
-    vi.mocked(vaultGet).mockResolvedValueOnce(
-      JSON.stringify({ expiresAt: Date.now() + 60_000 }),
-    );
+    vi.mocked(vaultGet).mockResolvedValueOnce(JSON.stringify({ expiresAt: Date.now() + 60_000 }));
 
     const ctx = await startDaemonContext();
 
@@ -789,7 +799,11 @@ describe('startDaemonContext', () => {
     const { ProactiveEngine } = await import('../engine/proactive.js');
     const ctx = await startDaemonContext();
 
-    expect(ProactiveEngine).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.any(Function));
+    expect(ProactiveEngine).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.any(Function),
+    );
     clearInterval(ctx.refreshInterval);
   });
 

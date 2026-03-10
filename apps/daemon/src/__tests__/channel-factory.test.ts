@@ -1,19 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../channels/telegram.js', () => ({
-  TelegramChannel: vi.fn(function () { return { type: 'telegram' }; }),
+  TelegramChannel: vi.fn(function () {
+    return { type: 'telegram' };
+  }),
 }));
 
 vi.mock('../channels/slack.js', () => ({
-  SlackChannel: vi.fn(function () { return { type: 'slack' }; }),
+  SlackChannel: vi.fn(function () {
+    return { type: 'slack' };
+  }),
 }));
 
 vi.mock('../channels/discord.js', () => ({
-  DiscordChannel: vi.fn(function () { return { type: 'discord' }; }),
+  DiscordChannel: vi.fn(function () {
+    return { type: 'discord' };
+  }),
 }));
 
 vi.mock('../channels/email.js', () => ({
-  EmailChannel: vi.fn(function () { return { type: 'email' }; }),
+  EmailChannel: vi.fn(function () {
+    return { type: 'email' };
+  }),
 }));
 
 vi.mock('../channels/transcription.js', () => ({
@@ -188,7 +196,10 @@ describe('createChannelForNode', () => {
     await createChannelForNode(makeNode(), baseDeps);
 
     expect(TelegramChannel).toHaveBeenCalled();
-    const callArgs = vi.mocked(TelegramChannel).mock.calls[0]?.[0] as unknown as Record<string, unknown>;
+    const callArgs = vi.mocked(TelegramChannel).mock.calls[0]?.[0] as unknown as Record<
+      string,
+      unknown
+    >;
     const instructions = callArgs['instructions'] as string;
     expect(instructions).toContain('test_bot');
     expect(instructions).toContain('assistant');
@@ -198,13 +209,13 @@ describe('createChannelForNode', () => {
   it('uses meta firstName for display name when available', async () => {
     vi.mocked(vaultGet).mockResolvedValue('bot-token');
 
-    await createChannelForNode(
-      makeNode({ meta: { firstName: 'Karl' } }),
-      baseDeps,
-    );
+    await createChannelForNode(makeNode({ meta: { firstName: 'Karl' } }), baseDeps);
 
     expect(TelegramChannel).toHaveBeenCalled();
-    const callArgs = vi.mocked(TelegramChannel).mock.calls[0]?.[0] as unknown as Record<string, unknown>;
+    const callArgs = vi.mocked(TelegramChannel).mock.calls[0]?.[0] as unknown as Record<
+      string,
+      unknown
+    >;
     const instructions = callArgs['instructions'] as string;
     expect(instructions).toContain('Karl');
   });
@@ -224,7 +235,14 @@ describe('createChannelForNode', () => {
       ...baseDeps,
       config: {
         channels: {
-          email: { imapHost: '', imapPort: 993, smtpHost: '', smtpPort: 587, username: '', tls: true },
+          email: {
+            imapHost: '',
+            imapPort: 993,
+            smtpHost: '',
+            smtpPort: 587,
+            username: '',
+            tls: true,
+          },
         },
       } as never,
     };

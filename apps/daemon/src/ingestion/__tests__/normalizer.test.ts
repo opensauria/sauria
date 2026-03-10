@@ -95,7 +95,7 @@ describe('normalizeRawEvent', () => {
 
     it('normalizes tabs and newlines into single space', () => {
       const result = normalizeRawEvent('test', {
-        body: "hello\t\t\nworld",
+        body: 'hello\t\t\nworld',
       });
       expect(result.content).toBe('hello world');
     });

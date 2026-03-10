@@ -41,20 +41,20 @@ describe('OllamaProvider', () => {
 
       const provider = new OllamaProvider();
       await expect(async () => {
-        for await (const _ of provider.chat(
-          [{ role: 'user', content: 'hi' }],
-          { model: 'llama3' },
-        )) {
+        for await (const _ of provider.chat([{ role: 'user', content: 'hi' }], {
+          model: 'llama3',
+        })) {
           // consume
         }
       }).rejects.toThrow('Ollama API error 500');
     });
 
     it('streams NDJSON chat chunks', async () => {
-      const ndjson = [
-        '{"message":{"content":"Hi"},"done":false}',
-        '{"message":{"content":" there"},"done":true}',
-      ].join('\n') + '\n';
+      const ndjson =
+        [
+          '{"message":{"content":"Hi"},"done":false}',
+          '{"message":{"content":" there"},"done":true}',
+        ].join('\n') + '\n';
 
       const encoder = new TextEncoder();
       let readCount = 0;
@@ -77,10 +77,9 @@ describe('OllamaProvider', () => {
 
       const provider = new OllamaProvider();
       const chunks: Array<{ text: string; done: boolean }> = [];
-      for await (const chunk of provider.chat(
-        [{ role: 'user', content: 'hi' }],
-        { model: 'llama3' },
-      )) {
+      for await (const chunk of provider.chat([{ role: 'user', content: 'hi' }], {
+        model: 'llama3',
+      })) {
         chunks.push(chunk);
       }
 
@@ -96,10 +95,9 @@ describe('OllamaProvider', () => {
 
       const provider = new OllamaProvider();
       const chunks: Array<{ text: string; done: boolean }> = [];
-      for await (const chunk of provider.chat(
-        [{ role: 'user', content: 'hi' }],
-        { model: 'llama3' },
-      )) {
+      for await (const chunk of provider.chat([{ role: 'user', content: 'hi' }], {
+        model: 'llama3',
+      })) {
         chunks.push(chunk);
       }
 
@@ -113,10 +111,10 @@ describe('OllamaProvider', () => {
       } as never);
 
       const provider = new OllamaProvider();
-      for await (const _ of provider.chat(
-        [{ role: 'user', content: 'hi' }],
-        { model: 'llama3', systemPrompt: 'be helpful' },
-      )) {
+      for await (const _ of provider.chat([{ role: 'user', content: 'hi' }], {
+        model: 'llama3',
+        systemPrompt: 'be helpful',
+      })) {
         // consume
       }
 

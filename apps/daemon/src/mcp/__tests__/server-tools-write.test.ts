@@ -17,7 +17,12 @@ vi.mock('../../security/sanitize.js', () => ({
 }));
 
 import { createAddEventHandler, createRememberHandler } from '../server-tools-write.js';
-import { getEntityByName, recordEvent, upsertEntity, upsertRelation } from '../../db/world-model.js';
+import {
+  getEntityByName,
+  recordEvent,
+  upsertEntity,
+  upsertRelation,
+} from '../../db/world-model.js';
 import { resolveEntity } from '../../ingestion/resolver.js';
 
 const mockDb = {} as unknown as import('better-sqlite3').Database;
@@ -52,12 +57,15 @@ describe('createAddEventHandler', () => {
     });
     expect(guardRateLimit).toHaveBeenCalledWith('sauria_add_event');
     expect(auditToolCall).toHaveBeenCalledWith('sauria_add_event', expect.anything());
-    expect(recordEvent).toHaveBeenCalledWith(mockDb, expect.objectContaining({
-      id: 'mock-id',
-      source: 'manual',
-      eventType: 'note',
-      contentHash: 'content-hash',
-    }));
+    expect(recordEvent).toHaveBeenCalledWith(
+      mockDb,
+      expect.objectContaining({
+        id: 'mock-id',
+        source: 'manual',
+        eventType: 'note',
+        contentHash: 'content-hash',
+      }),
+    );
     expect(result.content[0]?.text).toContain('mock-id');
   });
 
@@ -155,7 +163,10 @@ describe('createRememberHandler', () => {
   });
 
   it('uses plural relations text', async () => {
-    vi.mocked(resolveEntity).mockReturnValueOnce('id-a').mockReturnValueOnce('id-b').mockReturnValueOnce('id-c');
+    vi.mocked(resolveEntity)
+      .mockReturnValueOnce('id-a')
+      .mockReturnValueOnce('id-b')
+      .mockReturnValueOnce('id-c');
     const handler = createRememberHandler(deps);
     const result = await handler({
       entities: [

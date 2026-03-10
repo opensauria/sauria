@@ -30,7 +30,12 @@ function makeSource(overrides: Partial<InboundMessage> = {}): InboundMessage {
 
 function makeCtx(overrides: Partial<ActionContext> = {}): ActionContext {
   return {
-    graph: { nodes: [], edges: [], workspaces: [], globalInstructions: '' } as unknown as CanvasGraph,
+    graph: {
+      nodes: [],
+      edges: [],
+      workspaces: [],
+      globalInstructions: '',
+    } as unknown as CanvasGraph,
     registry: { sendTo: vi.fn() } as never,
     db: null,
     agentMemory: null,
@@ -39,7 +44,12 @@ function makeCtx(overrides: Partial<ActionContext> = {}): ActionContext {
     brain: null,
     integrationRegistry: null,
     onActivity: null,
-    helperDeps: { graph: {} as CanvasGraph, agentMemory: null, ownerIdentity: {}, findNode: () => null },
+    helperDeps: {
+      graph: {} as CanvasGraph,
+      agentMemory: null,
+      ownerIdentity: {},
+      findNode: () => null,
+    },
     findNode: () => null,
     findWorkspace: () => null,
     handleInbound: vi.fn().mockResolvedValue(undefined),
@@ -120,7 +130,13 @@ describe('executeAction', () => {
     const { handleUseTool } = await import('../action-handlers.js');
     const ctx = makeCtx();
     const source = makeSource();
-    const action: RoutingAction = { type: 'use_tool', integration: 'inst-1', tool: 'search', arguments: {}, content: 'search' };
+    const action: RoutingAction = {
+      type: 'use_tool',
+      integration: 'inst-1',
+      tool: 'search',
+      arguments: {},
+      content: 'search',
+    };
 
     await executeAction(action, source, ctx);
 
@@ -132,7 +148,12 @@ describe('executeAction', () => {
     const workspace = { id: 'ws1', name: 'WS' } as Workspace;
     const ctx = makeCtx({ findWorkspace: () => workspace });
     const source = makeSource();
-    const action: RoutingAction = { type: 'assign', targetNodeId: 'n2', task: 'do it', priority: 'normal' };
+    const action: RoutingAction = {
+      type: 'assign',
+      targetNodeId: 'n2',
+      task: 'do it',
+      priority: 'normal',
+    };
 
     await executeAction(action, source, ctx);
 
@@ -151,7 +172,13 @@ describe('executeAction', () => {
 
     await executeAction(action, source, ctx);
 
-    expect(storeFact).toHaveBeenCalledWith('n1', 'ws1', 'important info', ['topic1'], 'orchestrator');
+    expect(storeFact).toHaveBeenCalledWith(
+      'n1',
+      'ws1',
+      'important info',
+      ['topic1'],
+      'orchestrator',
+    );
   });
 
   it('skips learn action when agentMemory is null', async () => {
@@ -193,12 +220,9 @@ describe('executeAction', () => {
 
     await executeAction(action, source, ctx);
 
-    expect(queueForApproval).toHaveBeenCalledWith(
-      'n1',
-      'ws1',
-      'Need approval',
-      [{ type: 'reply', content: 'pending' }],
-    );
+    expect(queueForApproval).toHaveBeenCalledWith('n1', 'ws1', 'Need approval', [
+      { type: 'reply', content: 'pending' },
+    ]);
   });
 
   it('skips checkpoint action when checkpointManager is null', async () => {

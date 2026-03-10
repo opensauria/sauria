@@ -72,12 +72,23 @@ function makeCtx(overrides: Partial<ActionContext> = {}): ActionContext {
     integrationRegistry: null,
     onActivity: null,
     helperDeps: {
-      graph: { nodes: [makeNode(), makeNode({ id: 'n2', label: '@design_bot' })], edges: [], workspaces: [], globalInstructions: '' } as unknown as CanvasGraph,
+      graph: {
+        nodes: [makeNode(), makeNode({ id: 'n2', label: '@design_bot' })],
+        edges: [],
+        workspaces: [],
+        globalInstructions: '',
+      } as unknown as CanvasGraph,
       agentMemory: null,
       ownerIdentity: {},
-      findNode: (id: string) => (id === 'n1' ? makeNode() : id === 'n2' ? makeNode({ id: 'n2', label: '@design_bot' }) : null),
+      findNode: (id: string) =>
+        id === 'n1'
+          ? makeNode()
+          : id === 'n2'
+            ? makeNode({ id: 'n2', label: '@design_bot' })
+            : null,
     },
-    findNode: (id: string) => (id === 'n1' ? makeNode() : id === 'n2' ? makeNode({ id: 'n2', label: '@design_bot' }) : null),
+    findNode: (id: string) =>
+      id === 'n1' ? makeNode() : id === 'n2' ? makeNode({ id: 'n2', label: '@design_bot' }) : null,
     findWorkspace: () => null,
     handleInbound: vi.fn().mockResolvedValue(undefined),
     emitMessage: vi.fn(),
@@ -91,11 +102,7 @@ describe('handleConclude', () => {
     const ctx = makeCtx();
     const source = makeSource();
 
-    await handleConclude(
-      { type: 'conclude', content: 'Final answer' },
-      source,
-      ctx,
-    );
+    await handleConclude({ type: 'conclude', content: 'Final answer' }, source, ctx);
 
     expect(ctx.registry.sendTo).toHaveBeenCalledWith('n1', 'Final answer', null);
     expect(ctx.emitEdge).toHaveBeenCalledWith('n1', 'n1', 'conclude', expect.any(String));
@@ -106,11 +113,7 @@ describe('handleConclude', () => {
     const ctx = makeCtx();
     const source = makeSource({ replyToNodeId: 'n2' });
 
-    await handleConclude(
-      { type: 'conclude', content: 'Done' },
-      source,
-      ctx,
-    );
+    await handleConclude({ type: 'conclude', content: 'Done' }, source, ctx);
 
     expect(ctx.registry.sendTo).toHaveBeenCalledWith('n2', 'Done', null);
   });
@@ -142,13 +145,10 @@ describe('handleForward', () => {
     const ctx = makeCtx();
     const source = makeSource({ forwardDepth: 1 });
 
-    await handleForward(
-      { type: 'forward', targetNodeId: 'n2', content: 'fwd' },
-      source,
-      ctx,
-    );
+    await handleForward({ type: 'forward', targetNodeId: 'n2', content: 'fwd' }, source, ctx);
 
-    const syntheticMsg = (ctx.handleInbound as ReturnType<typeof vi.fn>).mock.calls[0]![0] as InboundMessage;
+    const syntheticMsg = (ctx.handleInbound as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as InboundMessage;
     expect(syntheticMsg.forwardDepth).toBe(2);
   });
 
@@ -165,7 +165,8 @@ describe('handleForward', () => {
       ctx,
     );
 
-    const syntheticMsg = (ctx.handleInbound as ReturnType<typeof vi.fn>).mock.calls[0]![0] as InboundMessage;
+    const syntheticMsg = (ctx.handleInbound as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as InboundMessage;
     expect(syntheticMsg.content).toBe('[Context]\n\nPlease handle');
   });
 });
@@ -175,11 +176,7 @@ describe('handleNotify', () => {
     const ctx = makeCtx();
     const source = makeSource();
 
-    await handleNotify(
-      { type: 'notify', targetNodeId: 'n2', summary: 'FYI: update' },
-      source,
-      ctx,
-    );
+    await handleNotify({ type: 'notify', targetNodeId: 'n2', summary: 'FYI: update' }, source, ctx);
 
     expect(ctx.handleInbound).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -214,9 +211,7 @@ describe('handleSendToAll', () => {
     );
 
     expect(ctx.handleInbound).toHaveBeenCalledTimes(1);
-    expect(ctx.handleInbound).toHaveBeenCalledWith(
-      expect.objectContaining({ sourceNodeId: 'n2' }),
-    );
+    expect(ctx.handleInbound).toHaveBeenCalledWith(expect.objectContaining({ sourceNodeId: 'n2' }));
   });
 
   it('does nothing when no other nodes in workspace', async () => {

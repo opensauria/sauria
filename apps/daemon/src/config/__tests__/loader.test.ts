@@ -37,7 +37,9 @@ vi.mock('../defaults.js', () => ({
 vi.mock('json5', () => ({
   default: {
     parse: vi.fn((s: string) => JSON.parse(s)),
-    stringify: vi.fn((v: unknown, opts?: { space?: number }) => JSON.stringify(v, null, opts?.space)),
+    stringify: vi.fn((v: unknown, opts?: { space?: number }) =>
+      JSON.stringify(v, null, opts?.space),
+    ),
   },
 }));
 
@@ -72,7 +74,10 @@ describe('loadConfig', () => {
   });
 
   it('parses config from file', async () => {
-    const configData = { auth: { anthropic: { method: 'encrypted_file' } }, models: { primary: 'claude-sonnet-4-20250514' } };
+    const configData = {
+      auth: { anthropic: { method: 'encrypted_file' } },
+      models: { primary: 'claude-sonnet-4-20250514' },
+    };
     vi.mocked(safeReadFile).mockResolvedValue(Buffer.from(JSON.stringify(configData)));
 
     const config = await loadConfig();

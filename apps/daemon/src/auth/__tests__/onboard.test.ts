@@ -60,7 +60,12 @@ vi.mock('../onboard-providers.js', () => ({
 import { runOnboarding } from '../onboard.js';
 import * as p from '@clack/prompts';
 import { saveConfig } from '../../config/loader.js';
-import { chooseConnectionMode, setupClaudeSubscription, setupApiKey, setupLocal } from '../onboard-providers.js';
+import {
+  chooseConnectionMode,
+  setupClaudeSubscription,
+  setupApiKey,
+  setupLocal,
+} from '../onboard-providers.js';
 import { detectMcpClients } from '../../setup/detect-clients.js';
 import { registerMcpInAllClients } from '../../setup/register-mcp.js';
 import { generateDaemonService } from '../../setup/daemon-service.js';
@@ -173,7 +178,9 @@ describe('runOnboarding', () => {
 
     await runOnboarding();
 
-    const spinnerInstance = vi.mocked(p.spinner).mock.results[1]?.value as { stop: ReturnType<typeof vi.fn> };
+    const spinnerInstance = vi.mocked(p.spinner).mock.results[1]?.value as {
+      stop: ReturnType<typeof vi.fn>;
+    };
     expect(spinnerInstance.stop).toHaveBeenCalledWith(expect.stringContaining('launchd'));
   });
 });

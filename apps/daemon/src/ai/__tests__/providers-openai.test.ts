@@ -47,10 +47,9 @@ describe('OpenAIProvider', () => {
 
     const provider = new OpenAIProvider('key');
     const chunks: Array<{ text: string; done: boolean }> = [];
-    for await (const chunk of provider.chat(
-      [{ role: 'user', content: 'hello' }],
-      { model: 'gpt-4' },
-    )) {
+    for await (const chunk of provider.chat([{ role: 'user', content: 'hello' }], {
+      model: 'gpt-4',
+    })) {
       chunks.push(chunk);
     }
 
@@ -78,10 +77,9 @@ describe('OpenAIProvider', () => {
 
     const provider = new OpenAIProvider('key');
     const chunks: Array<{ text: string; done: boolean }> = [];
-    for await (const chunk of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'gpt-4' },
-    )) {
+    for await (const chunk of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'gpt-4',
+    })) {
       chunks.push(chunk);
     }
 
@@ -110,10 +108,9 @@ describe('OpenAIProvider', () => {
 
     const provider = new OpenAIProvider('key');
     const chunks: Array<{ text: string; done: boolean }> = [];
-    for await (const chunk of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'gpt-4' },
-    )) {
+    for await (const chunk of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'gpt-4',
+    })) {
       chunks.push(chunk);
     }
 
@@ -128,10 +125,10 @@ describe('OpenAIProvider', () => {
     });
 
     const provider = new OpenAIProvider('key');
-    for await (const _ of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'gpt-4', systemPrompt: 'be helpful' },
-    )) {
+    for await (const _ of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'gpt-4',
+      systemPrompt: 'be helpful',
+    })) {
       // consume
     }
 
@@ -140,9 +137,7 @@ describe('OpenAIProvider', () => {
   });
 
   it('yields done at end of stream without finish_reason', async () => {
-    const streamData = [
-      { choices: [{ delta: { content: 'text' }, finish_reason: null }] },
-    ];
+    const streamData = [{ choices: [{ delta: { content: 'text' }, finish_reason: null }] }];
 
     mockCreate.mockResolvedValue({
       [Symbol.asyncIterator]: () => {
@@ -158,10 +153,9 @@ describe('OpenAIProvider', () => {
 
     const provider = new OpenAIProvider('key');
     const chunks: Array<{ text: string; done: boolean }> = [];
-    for await (const chunk of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'gpt-4' },
-    )) {
+    for await (const chunk of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'gpt-4',
+    })) {
       chunks.push(chunk);
     }
 

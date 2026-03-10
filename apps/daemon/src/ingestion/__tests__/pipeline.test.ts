@@ -62,7 +62,9 @@ function createPipeline(rateLimitOk = true) {
   } as unknown as ConstructorParameters<typeof IngestPipeline>[0];
 
   const router = {} as ConstructorParameters<typeof IngestPipeline>[1];
-  const audit = { logAction: vi.fn() } as unknown as ConstructorParameters<typeof IngestPipeline>[2];
+  const audit = { logAction: vi.fn() } as unknown as ConstructorParameters<
+    typeof IngestPipeline
+  >[2];
   const rateLimiter = {
     tryConsume: vi.fn(() => rateLimitOk),
   } as unknown as ConstructorParameters<typeof IngestPipeline>[3];
@@ -90,18 +92,15 @@ describe('IngestPipeline', () => {
     await pipeline.ingestEvent('email', { body: 'duplicate content' });
 
     expect(mockRecordEvent).not.toHaveBeenCalled();
-    expect((audit as unknown as { logAction: ReturnType<typeof vi.fn> }).logAction).toHaveBeenCalledWith(
-      'ingestion:dedup_skip',
-      expect.objectContaining({ source: 'email' }),
-    );
+    expect(
+      (audit as unknown as { logAction: ReturnType<typeof vi.fn> }).logAction,
+    ).toHaveBeenCalledWith('ingestion:dedup_skip', expect.objectContaining({ source: 'email' }));
   });
 
   it('extracts entities, upserts them, and records event', async () => {
     mockIsDuplicate.mockReturnValue(false);
     mockExtract.mockResolvedValue({
-      entities: [
-        { name: 'Alice', type: 'person', properties: { role: 'engineer' } },
-      ],
+      entities: [{ name: 'Alice', type: 'person', properties: { role: 'engineer' } }],
       relations: [],
       facts: [],
     });
@@ -121,9 +120,7 @@ describe('IngestPipeline', () => {
         { name: 'Alice', type: 'person' },
         { name: 'Bob', type: 'person' },
       ],
-      relations: [
-        { from: 'Alice', to: 'Bob', type: 'works_with', context: 'Same team' },
-      ],
+      relations: [{ from: 'Alice', to: 'Bob', type: 'works_with', context: 'Same team' }],
       facts: [],
     });
     mockResolveEntity.mockImplementation((_db, input) => {
@@ -148,9 +145,7 @@ describe('IngestPipeline', () => {
     mockIsDuplicate.mockReturnValue(false);
     mockExtract.mockResolvedValue({
       entities: [{ name: 'Alice', type: 'person' }],
-      relations: [
-        { from: 'Alice', to: 'Unknown', type: 'knows' },
-      ],
+      relations: [{ from: 'Alice', to: 'Unknown', type: 'knows' }],
       facts: [],
     });
     mockResolveEntity.mockReturnValue('ent-alice');
@@ -195,7 +190,9 @@ describe('IngestPipeline', () => {
     const { pipeline, audit } = createPipeline();
     await pipeline.ingestEvent('telegram', { body: 'hello' });
 
-    expect((audit as unknown as { logAction: ReturnType<typeof vi.fn> }).logAction).toHaveBeenCalledWith(
+    expect(
+      (audit as unknown as { logAction: ReturnType<typeof vi.fn> }).logAction,
+    ).toHaveBeenCalledWith(
       'ingestion:event_recorded',
       expect.objectContaining({
         source: 'telegram',

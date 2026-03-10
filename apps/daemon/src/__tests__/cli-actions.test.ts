@@ -39,7 +39,12 @@ import {
 import type { AppContext } from '../cli-actions.js';
 import { searchByKeyword } from '../db/search.js';
 import { getUpcomingDeadlines } from '../db/temporal.js';
-import { getEntityByName, getEntityRelations, getEntityTimeline, searchEntities } from '../db/world-model.js';
+import {
+  getEntityByName,
+  getEntityRelations,
+  getEntityTimeline,
+  searchEntities,
+} from '../db/world-model.js';
 import { reasonAbout } from '../ai/reason.js';
 
 function createMockContext(): AppContext {
@@ -289,9 +294,11 @@ describe('insightsAction', () => {
     const ctx = createMockContext();
     const mockPrepare = vi.fn().mockReturnValue({
       get: vi.fn(),
-      all: vi.fn().mockReturnValue([
-        { content: 'Pattern found', confidence: 0.85, created_at: '2026-03-10' },
-      ]),
+      all: vi
+        .fn()
+        .mockReturnValue([
+          { content: 'Pattern found', confidence: 0.85, created_at: '2026-03-10' },
+        ]),
     });
     (ctx.db as unknown as { prepare: typeof mockPrepare }).prepare = mockPrepare;
 

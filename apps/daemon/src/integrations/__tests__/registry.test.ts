@@ -24,10 +24,7 @@ vi.mock('../../utils/logger.js', () => ({
 
 import type { IntegrationDefinition, IntegrationTool } from '@sauria/types';
 import { IntegrationRegistry } from '../registry.js';
-import {
-  connectIntegrationInstance,
-  disconnectIntegrationInstance,
-} from '../registry-connect.js';
+import { connectIntegrationInstance, disconnectIntegrationInstance } from '../registry-connect.js';
 
 const mockMcpClients = {
   connect: vi.fn(),
@@ -63,11 +60,7 @@ const fakeRemoteDef: IntegrationDefinition = {
 } as IntegrationDefinition;
 
 function createRegistry(catalog: readonly IntegrationDefinition[] = [fakeDef]) {
-  return new IntegrationRegistry(
-    mockMcpClients as never,
-    mockAudit as never,
-    catalog,
-  );
+  return new IntegrationRegistry(mockMcpClients as never, mockAudit as never, catalog);
 }
 
 /** Helper: make connectIntegrationInstance mock also populate the instances map */
@@ -105,7 +98,13 @@ describe('IntegrationRegistry', () => {
 
     it('delegates to connectInstance for known integration', async () => {
       const tools: IntegrationTool[] = [
-        { instanceId: 'github:default', integrationId: 'github', integrationName: 'GitHub', name: 'list_repos', description: 'List repos' },
+        {
+          instanceId: 'github:default',
+          integrationId: 'github',
+          integrationName: 'GitHub',
+          name: 'list_repos',
+          description: 'List repos',
+        },
       ];
       mockConnectPopulating('github:default', 'github', 'GitHub', tools);
 
@@ -183,7 +182,13 @@ describe('IntegrationRegistry', () => {
 
     it('returns tools for specific integration', async () => {
       const tools: IntegrationTool[] = [
-        { instanceId: 'github:default', integrationId: 'github', integrationName: 'GitHub', name: 'tool1', description: 'desc' },
+        {
+          instanceId: 'github:default',
+          integrationId: 'github',
+          integrationName: 'GitHub',
+          name: 'tool1',
+          description: 'desc',
+        },
       ];
       mockConnectPopulating('github:default', 'github', 'GitHub', tools);
 
@@ -200,7 +205,13 @@ describe('IntegrationRegistry', () => {
 
     it('returns all tools when no id specified', async () => {
       const tools: IntegrationTool[] = [
-        { instanceId: 'github:default', integrationId: 'github', integrationName: 'GitHub', name: 'tool1', description: 'desc' },
+        {
+          instanceId: 'github:default',
+          integrationId: 'github',
+          integrationName: 'GitHub',
+          name: 'tool1',
+          description: 'desc',
+        },
       ];
       mockConnectPopulating('github:default', 'github', 'GitHub', tools);
 
@@ -269,9 +280,9 @@ describe('IntegrationRegistry', () => {
   describe('connectInstance', () => {
     it('throws for unknown integration id', async () => {
       const registry = createRegistry();
-      await expect(
-        registry.connectInstance('test:1', 'unknown', 'Test', {}),
-      ).rejects.toThrow('Unknown integration: unknown');
+      await expect(registry.connectInstance('test:1', 'unknown', 'Test', {})).rejects.toThrow(
+        'Unknown integration: unknown',
+      );
     });
 
     it('passes remote option when mcpRemote and accessToken present', async () => {
@@ -356,7 +367,13 @@ describe('IntegrationRegistry', () => {
   describe('getToolsForInstances', () => {
     it('returns tools from specified instances', async () => {
       const tools: IntegrationTool[] = [
-        { instanceId: 'github:default', integrationId: 'github', integrationName: 'GitHub', name: 'tool1', description: 'desc' },
+        {
+          instanceId: 'github:default',
+          integrationId: 'github',
+          integrationName: 'GitHub',
+          name: 'tool1',
+          description: 'desc',
+        },
       ];
       mockConnectPopulating('github:default', 'github', 'GitHub', tools);
 
@@ -371,9 +388,9 @@ describe('IntegrationRegistry', () => {
   describe('callToolForInstance', () => {
     it('throws when instance not connected', async () => {
       const registry = createRegistry();
-      await expect(
-        registry.callToolForInstance('github:1', 'tool', {}),
-      ).rejects.toThrow('Instance not connected: github:1');
+      await expect(registry.callToolForInstance('github:1', 'tool', {})).rejects.toThrow(
+        'Instance not connected: github:1',
+      );
     });
 
     it('calls tool via mcp client', async () => {

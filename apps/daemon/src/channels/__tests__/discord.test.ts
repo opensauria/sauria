@@ -333,7 +333,9 @@ describe('DiscordChannel', () => {
     await channel.start();
 
     // Override fetch for the send to fail
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Send failed')) as unknown as typeof fetch;
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error('Send failed')) as unknown as typeof fetch;
     await channel.sendMessage('Fail', 'ch-1');
 
     expect(audit.logAction).toHaveBeenCalledWith(
@@ -375,7 +377,9 @@ describe('DiscordChannel', () => {
   });
 
   it('handles guild channel resolution error', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('guild fail')) as unknown as typeof fetch;
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error('guild fail')) as unknown as typeof fetch;
 
     channel = new DiscordChannel({
       ...baseDeps,

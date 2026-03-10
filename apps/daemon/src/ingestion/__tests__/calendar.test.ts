@@ -115,7 +115,8 @@ describe('ingestCalendarEvents', () => {
 
     await ingestCalendarEvents(client, pipeline);
 
-    const call = (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock.calls[0];
+    const call = (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock
+      .calls[0];
     expect(call?.[0]).toBe('calendar');
     expect(call?.[1]).toEqual(
       expect.objectContaining({
@@ -137,8 +138,8 @@ describe('ingestCalendarEvents', () => {
 
     await ingestCalendarEvents(client, pipeline);
 
-    const rawData = (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock
-      .calls[0]?.[1];
+    const rawData = (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent
+      .mock.calls[0]?.[1];
     expect(rawData.description).toBe('');
     expect(rawData.end).toBe('');
     expect(rawData.location).toBe('');

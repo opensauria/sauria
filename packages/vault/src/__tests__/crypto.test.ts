@@ -28,12 +28,10 @@ vi.mock('../fs-sandbox.js', () => ({
 }));
 
 // Import after mocks
-const { generateMasterKey, deriveWrappingKey, encryptData, decryptData } = await import(
-  '../crypto.js'
-);
-const { storeSecret, getSecret, deleteSecret, vaultStore, vaultGet, vaultDelete } = await import(
-  '../crypto.js'
-);
+const { generateMasterKey, deriveWrappingKey, encryptData, decryptData } =
+  await import('../crypto.js');
+const { storeSecret, getSecret, deleteSecret, vaultStore, vaultGet, vaultDelete } =
+  await import('../crypto.js');
 const fsSandbox = await import('../fs-sandbox.js');
 
 const mockSafeReadFile = fsSandbox.safeReadFile as Mock;
@@ -182,10 +180,7 @@ describe('crypto', () => {
 
       if (process.platform !== 'win32') {
         await storeSecret('key', 'val', 'pwd');
-        expect(mockChmod).toHaveBeenCalledWith(
-          expect.stringContaining('.enc'),
-          0o600,
-        );
+        expect(mockChmod).toHaveBeenCalledWith(expect.stringContaining('.enc'), 0o600);
       }
     });
   });
@@ -221,9 +216,7 @@ describe('crypto', () => {
       await deleteSecret('test');
 
       // deleteSecret reads the file, overwrites, then unlinks
-      expect(mockSafeReadFile).toHaveBeenCalledWith(
-        expect.stringContaining('test.enc'),
-      );
+      expect(mockSafeReadFile).toHaveBeenCalledWith(expect.stringContaining('test.enc'));
     });
   });
 

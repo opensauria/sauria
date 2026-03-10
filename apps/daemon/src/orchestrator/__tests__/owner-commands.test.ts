@@ -29,7 +29,9 @@ function makeNode(overrides: Partial<AgentNode> = {}): AgentNode {
   } as AgentNode;
 }
 
-function makeWorkspace(overrides: Partial<import('../types.js').Workspace> = {}): import('../types.js').Workspace {
+function makeWorkspace(
+  overrides: Partial<import('../types.js').Workspace> = {},
+): import('../types.js').Workspace {
   return {
     id: 'ws-1',
     name: 'Engineering',
@@ -279,7 +281,8 @@ describe('handleOwnerCommand', () => {
         nodes: [node1, node2],
         workspaces: [makeWorkspace()],
       });
-      const stopFn = vi.fn()
+      const stopFn = vi
+        .fn()
         .mockRejectedValueOnce(new Error('fail'))
         .mockResolvedValueOnce(undefined);
       const ctx = makeContext({

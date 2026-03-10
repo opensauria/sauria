@@ -48,7 +48,14 @@ function makeSource(overrides?: Partial<InboundMessage>): InboundMessage {
 
 function makeCtx(overrides?: Partial<ActionContext>): ActionContext {
   return {
-    graph: { nodes: [], edges: [], workspaces: [], globalInstructions: '', version: 2, viewport: { x: 0, y: 0, zoom: 1 } },
+    graph: {
+      nodes: [],
+      edges: [],
+      workspaces: [],
+      globalInstructions: '',
+      version: 2,
+      viewport: { x: 0, y: 0, zoom: 1 },
+    },
     registry: {} as never,
     db: null,
     agentMemory: null,

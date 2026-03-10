@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { countRows, handleStatus, handleEntity, handleUpcoming, handleInsights } from '../telegram-queries.js';
+import {
+  countRows,
+  handleStatus,
+  handleEntity,
+  handleUpcoming,
+  handleInsights,
+} from '../telegram-queries.js';
 
 vi.mock('../../security/sanitize.js', () => ({
   sanitizeChannelInput: vi.fn((text: string) => text),
@@ -148,9 +154,7 @@ describe('handleInsights', () => {
     const ctx = mockCtx();
     const db = mockDb();
     db.prepare.mockReturnValue({
-      all: vi.fn().mockReturnValue([
-        { content: 'Insight one', created_at: '2024-01-01' },
-      ]),
+      all: vi.fn().mockReturnValue([{ content: 'Insight one', created_at: '2024-01-01' }]),
     });
 
     await handleInsights(ctx as never, db as never);

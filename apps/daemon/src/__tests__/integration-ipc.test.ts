@@ -109,9 +109,9 @@ describe('registerIntegrationHandlers', () => {
   it('connect throws for unknown integration', async () => {
     const handler = registeredHandlers.get('integrations:connect')!;
 
-    await expect(
-      handler({} as never, { id: 'unknown', credentials: {} }),
-    ).rejects.toThrow('Unknown integration: unknown');
+    await expect(handler({} as never, { id: 'unknown', credentials: {} })).rejects.toThrow(
+      'Unknown integration: unknown',
+    );
   });
 
   it('disconnect deletes vault keys and saves config', async () => {
@@ -147,9 +147,9 @@ describe('registerIntegrationHandlers', () => {
 
     const handler = registeredHandlers.get('integrations:assign-instance')!;
 
-    expect(() =>
-      handler({} as never, { nodeId: 'missing', instanceId: 'test:default' }),
-    ).toThrow('Node not found: missing');
+    expect(() => handler({} as never, { nodeId: 'missing', instanceId: 'test:default' })).toThrow(
+      'Node not found: missing',
+    );
   });
 
   it('assign-instance returns success if already assigned', () => {

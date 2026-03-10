@@ -24,7 +24,10 @@ vi.mock('../../auth/validate.js', () => ({
 }));
 
 vi.mock('../../auth/model-presets.js', () => ({
-  getModelPreset: vi.fn(() => ({ primary: 'claude-sonnet-4-20250514', fallback: 'claude-haiku-4-20250514' })),
+  getModelPreset: vi.fn(() => ({
+    primary: 'claude-sonnet-4-20250514',
+    fallback: 'claude-haiku-4-20250514',
+  })),
 }));
 
 vi.mock('../detect-clients.js', () => ({
@@ -55,10 +58,20 @@ describe('runSilentSetup', () => {
       models: { primary: '', fallback: '' },
       owner: { telegram: undefined, slack: undefined, whatsapp: undefined },
       channels: {
-        telegram: { allowedUserIds: [], voice: { enabled: false, model: 'auto', maxDurationSeconds: 120 } },
+        telegram: {
+          allowedUserIds: [],
+          voice: { enabled: false, model: 'auto', maxDurationSeconds: 120 },
+        },
         discord: { guildId: '', botUserId: '' },
         whatsapp: { phoneNumberId: '', webhookPort: 9090 },
-        email: { imapHost: '', imapPort: 993, smtpHost: '', smtpPort: 587, username: '', tls: true },
+        email: {
+          imapHost: '',
+          imapPort: 993,
+          smtpHost: '',
+          smtpPort: 587,
+          username: '',
+          tls: true,
+        },
       },
     } as never);
     vi.mocked(saveConfig).mockResolvedValue(undefined);

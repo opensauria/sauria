@@ -25,9 +25,12 @@ function insertEvent(
     timestamp: new Date().toISOString(),
   };
   const evt = { ...defaults, ...overrides };
-  db.prepare(
-    'INSERT INTO events (id, source, event_type, timestamp) VALUES (?, ?, ?, ?)',
-  ).run(evt.id, evt.source, evt.event_type, evt.timestamp);
+  db.prepare('INSERT INTO events (id, source, event_type, timestamp) VALUES (?, ?, ?, ?)').run(
+    evt.id,
+    evt.source,
+    evt.event_type,
+    evt.timestamp,
+  );
 }
 
 function insertEntity(

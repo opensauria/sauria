@@ -51,7 +51,9 @@ describe('runMigrations', () => {
     runMigrations(db, dataDir);
     expect(() => runMigrations(db, dataDir)).not.toThrow();
 
-    const applied = db.prepare('SELECT version FROM migrations').all() as Array<{ version: number }>;
+    const applied = db.prepare('SELECT version FROM migrations').all() as Array<{
+      version: number;
+    }>;
     expect(applied.find((r) => r.version === 1)).toBeDefined();
   });
 
@@ -68,14 +70,12 @@ describe('runMigrations', () => {
 
   it('does not re-apply already applied migrations', () => {
     runMigrations(db, dataDir);
-    const countBefore = (
-      db.prepare('SELECT COUNT(*) as c FROM migrations').get() as { c: number }
-    ).c;
+    const countBefore = (db.prepare('SELECT COUNT(*) as c FROM migrations').get() as { c: number })
+      .c;
 
     runMigrations(db, dataDir);
-    const countAfter = (
-      db.prepare('SELECT COUNT(*) as c FROM migrations').get() as { c: number }
-    ).c;
+    const countAfter = (db.prepare('SELECT COUNT(*) as c FROM migrations').get() as { c: number })
+      .c;
 
     expect(countAfter).toBe(countBefore);
   });

@@ -130,13 +130,9 @@ describe('additional coverage — ChannelRegistry', () => {
     registry.register('n1', ch);
 
     const graph = {
-      nodes: [
-        { id: 'n1', workspaceId: 'ws1', platform: 'telegram' },
-      ],
+      nodes: [{ id: 'n1', workspaceId: 'ws1', platform: 'telegram' }],
       edges: [],
-      workspaces: [
-        { id: 'ws1', groups: [{ platform: 'telegram', groupId: 'g1' }] },
-      ],
+      workspaces: [{ id: 'ws1', groups: [{ platform: 'telegram', groupId: 'g1' }] }],
     } as never;
 
     await registry.sendToWorkspace('ws1', 'broadcast', graph);
@@ -145,13 +141,9 @@ describe('additional coverage — ChannelRegistry', () => {
 
   it('sendToWorkspace skips nodes without registered channels', async () => {
     const graph = {
-      nodes: [
-        { id: 'unregistered', workspaceId: 'ws1', platform: 'telegram' },
-      ],
+      nodes: [{ id: 'unregistered', workspaceId: 'ws1', platform: 'telegram' }],
       edges: [],
-      workspaces: [
-        { id: 'ws1', groups: [{ platform: 'telegram', groupId: 'g1' }] },
-      ],
+      workspaces: [{ id: 'ws1', groups: [{ platform: 'telegram', groupId: 'g1' }] }],
     } as never;
 
     await expect(registry.sendToWorkspace('ws1', 'msg', graph)).resolves.toBeUndefined();
@@ -164,9 +156,7 @@ describe('additional coverage — ChannelRegistry', () => {
     const graph = {
       nodes: [{ id: 'n1', workspaceId: 'ws1', platform: 'telegram' }],
       edges: [],
-      workspaces: [
-        { id: 'ws1', groups: [{ platform: 'slack', groupId: 'g1' }] },
-      ],
+      workspaces: [{ id: 'ws1', groups: [{ platform: 'slack', groupId: 'g1' }] }],
     } as never;
 
     await registry.sendToWorkspace('ws1', 'msg', graph);
@@ -181,9 +171,7 @@ describe('additional coverage — ChannelRegistry', () => {
     const graph = {
       nodes: [{ id: 'n1', workspaceId: 'ws1', platform: 'telegram' }],
       edges: [],
-      workspaces: [
-        { id: 'ws1', groups: [{ platform: 'telegram', groupId: 'g1' }] },
-      ],
+      workspaces: [{ id: 'ws1', groups: [{ platform: 'telegram', groupId: 'g1' }] }],
     } as never;
 
     await expect(registry.sendToWorkspace('ws1', 'msg', graph)).resolves.toBeUndefined();

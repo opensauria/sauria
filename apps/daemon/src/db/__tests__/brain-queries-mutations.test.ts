@@ -73,9 +73,7 @@ describe('brain-queries-mutations', () => {
 
   describe('deleteConversation', () => {
     it('deletes conversation and its messages', () => {
-      db.prepare(
-        "INSERT INTO agent_conversations (id, platform) VALUES ('c1', 'telegram')",
-      ).run();
+      db.prepare("INSERT INTO agent_conversations (id, platform) VALUES ('c1', 'telegram')").run();
       db.prepare(
         "INSERT INTO agent_messages (id, conversation_id, source_node_id, sender_id, platform, content) VALUES ('m1', 'c1', 'n1', 's1', 'telegram', 'hello')",
       ).run();

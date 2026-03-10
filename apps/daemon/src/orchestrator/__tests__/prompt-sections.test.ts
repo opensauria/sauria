@@ -130,8 +130,7 @@ describe('buildPromptParts', () => {
 
   it('includes other agents list when provided', () => {
     const input = makePromptInput({
-      otherAgentsList:
-        '- @alice (analyst) [nodeId: "node-2"] in workspace "Research" on telegram',
+      otherAgentsList: '- @alice (analyst) [nodeId: "node-2"] in workspace "Research" on telegram',
     });
     const result = buildPromptParts(input);
     const joined = result.join('\n');
@@ -264,12 +263,7 @@ describe('appendLanguageDirective', () => {
 
   it('prefers detected language over graph language', () => {
     const parts: string[] = [];
-    appendLanguageDirective(
-      parts,
-      'Always reply in German',
-      makeNode(),
-      'fr',
-    );
+    appendLanguageDirective(parts, 'Always reply in German', makeNode(), 'fr');
     expect(parts.some((p) => p.includes('German'))).toBe(true);
   });
 

@@ -50,12 +50,8 @@ describe('startDaemon', () => {
 
     await expect(startDaemon()).rejects.toThrow('process.exit');
 
-    expect(writeSpy).toHaveBeenCalledWith(
-      expect.stringContaining('"status":"error"'),
-    );
-    expect(writeSpy).toHaveBeenCalledWith(
-      expect.stringContaining('init failed'),
-    );
+    expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('"status":"error"'));
+    expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('init failed'));
     expect(exitSpy).toHaveBeenCalledWith(1);
 
     exitSpy.mockRestore();
@@ -84,9 +80,7 @@ describe('additional coverage — startDaemon', () => {
     const { startDaemon } = await import('../daemon.js');
     await expect(startDaemon()).rejects.toThrow('process.exit');
 
-    expect(writeSpy).toHaveBeenCalledWith(
-      expect.stringContaining('string error'),
-    );
+    expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('string error'));
 
     exitSpy.mockRestore();
   });

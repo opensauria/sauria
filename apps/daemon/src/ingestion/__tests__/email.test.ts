@@ -64,9 +64,7 @@ describe('ingestEmails', () => {
 
   it('fetches full message for each list item and ingests', async () => {
     const listItems = [makeEmail('msg-1'), makeEmail('msg-2')];
-    const client = createMockMcpClient(listItems, (id) =>
-      makeEmail(id, `Full body for ${id}`),
-    );
+    const client = createMockMcpClient(listItems, (id) => makeEmail(id, `Full body for ${id}`));
     const pipeline = createMockPipeline();
 
     const count = await ingestEmails(client, pipeline);
@@ -78,12 +76,7 @@ describe('ingestEmails', () => {
   });
 
   it('skips list items that are not valid EmailMessage objects', async () => {
-    const listItems = [
-      makeEmail('msg-1'),
-      { id: 'msg-2', sender: 'no-body' },
-      null,
-      'string',
-    ];
+    const listItems = [makeEmail('msg-1'), { id: 'msg-2', sender: 'no-body' }, null, 'string'];
     const client = createMockMcpClient(listItems, (id) => makeEmail(id));
     const pipeline = createMockPipeline();
 
@@ -127,7 +120,8 @@ describe('ingestEmails', () => {
 
     await ingestEmails(client, pipeline);
 
-    const call = (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock.calls[0];
+    const call = (pipeline as unknown as { ingestEvent: ReturnType<typeof vi.fn> }).ingestEvent.mock
+      .calls[0];
     expect(call?.[0]).toBe('email');
     expect(call?.[1]).toEqual({
       type: 'email',

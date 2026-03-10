@@ -35,9 +35,21 @@ describe('paths', () => {
   describe('all path keys exist', () => {
     it('exports all expected path keys', () => {
       const expectedKeys = [
-        'home', 'config', 'db', 'dbEncrypted', 'logs', 'tmp',
-        'exports', 'vault', 'audit', 'canvas', 'ownerCommands',
-        'pidFile', 'socket', 'ipcPort', 'botProfiles',
+        'home',
+        'config',
+        'db',
+        'dbEncrypted',
+        'logs',
+        'tmp',
+        'exports',
+        'vault',
+        'audit',
+        'canvas',
+        'ownerCommands',
+        'pidFile',
+        'socket',
+        'ipcPort',
+        'botProfiles',
       ];
       for (const key of expectedKeys) {
         expect(paths).toHaveProperty(key);

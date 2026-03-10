@@ -9,9 +9,7 @@ import {
 } from '../search-vectors.js';
 
 function seedEntity(db: Database.Database, id: string, name: string): void {
-  db.prepare(
-    `INSERT INTO entities (id, type, name) VALUES (?, 'person', ?)`,
-  ).run(id, name);
+  db.prepare(`INSERT INTO entities (id, type, name) VALUES (?, 'person', ?)`).run(id, name);
 }
 
 describe('search-vectors', () => {

@@ -32,7 +32,12 @@ vi.mock('../../setup/detect-local-providers.js', () => ({
   detectLocalProviders: vi.fn(),
 }));
 
-import { chooseConnectionMode, setupClaudeSubscription, setupApiKey, setupLocal } from '../onboard-providers.js';
+import {
+  chooseConnectionMode,
+  setupClaudeSubscription,
+  setupApiKey,
+  setupLocal,
+} from '../onboard-providers.js';
 import * as p from '@clack/prompts';
 import { vaultStore } from '../../security/vault-key.js';
 import { validateCredential } from '../validate.js';
@@ -87,9 +92,12 @@ describe('setupClaudeSubscription', () => {
     expect(result.provider).toBe('anthropic');
     expect(result.authMethod).toBe('oauth');
     expect(result.credential).toBe('at-123');
-    expect(storeOAuthTokens).toHaveBeenCalledWith('anthropic', expect.objectContaining({
-      access_token: 'at-123',
-    }));
+    expect(storeOAuthTokens).toHaveBeenCalledWith(
+      'anthropic',
+      expect.objectContaining({
+        access_token: 'at-123',
+      }),
+    );
   });
 });
 

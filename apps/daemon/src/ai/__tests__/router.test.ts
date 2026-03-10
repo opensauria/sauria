@@ -36,7 +36,9 @@ function createMinimalConfig(overrides?: Partial<SauriaConfig['models']>): Sauri
 }
 
 vi.mock('../router-helpers.js', () => ({
-  createProvider: vi.fn((_name: string, _key: string, _url?: string): LLMProvider => createMockProvider(_name)),
+  createProvider: vi.fn(
+    (_name: string, _key: string, _url?: string): LLMProvider => createMockProvider(_name),
+  ),
   collectStream: vi.fn(async (stream: AsyncGenerator<StreamChunk>): Promise<string> => {
     let result = '';
     for await (const chunk of stream) {
@@ -251,7 +253,10 @@ describe('ModelRouter', () => {
         return createMockProvider(`mock-${callCount}`);
       });
 
-      const freshRouter = new ModelRouter(createMinimalConfig(), getApiKey as unknown as ApiKeyGetter);
+      const freshRouter = new ModelRouter(
+        createMinimalConfig(),
+        getApiKey as unknown as ApiKeyGetter,
+      );
       const provider1 = freshRouter.getProvider('openai', 'key', 'https://a.com');
       const provider2 = freshRouter.getProvider('openai', 'key', 'https://b.com');
       expect(provider1.name).not.toBe(provider2.name);

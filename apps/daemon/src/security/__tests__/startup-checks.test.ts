@@ -21,7 +21,11 @@ vi.mock('../rate-limiter.js', () => ({
 }));
 
 import { stat, chmod } from 'node:fs/promises';
-import { enforceFilePermissions, runSecurityChecks, SecurityCheckError } from '../startup-checks.js';
+import {
+  enforceFilePermissions,
+  runSecurityChecks,
+  SecurityCheckError,
+} from '../startup-checks.js';
 
 beforeEach(() => {
   vi.clearAllMocks();

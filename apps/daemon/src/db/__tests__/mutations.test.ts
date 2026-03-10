@@ -123,9 +123,9 @@ describe('mutations', () => {
       expect(deleteMessage(db, 'm1')).toBe(true);
       expect(db.prepare('SELECT * FROM agent_messages WHERE id = ?').get('m1')).toBeUndefined();
 
-      const conv = db.prepare('SELECT message_count FROM agent_conversations WHERE id = ?').get(
-        'c1',
-      ) as { message_count: number };
+      const conv = db
+        .prepare('SELECT message_count FROM agent_conversations WHERE id = ?')
+        .get('c1') as { message_count: number };
       expect(conv.message_count).toBe(1);
     });
 
@@ -138,9 +138,9 @@ describe('mutations', () => {
         "INSERT INTO agent_conversations (id, platform, message_count) VALUES ('c1', 'telegram', 5)",
       ).run();
       deleteMessage(db, 'nonexistent');
-      const conv = db.prepare('SELECT message_count FROM agent_conversations WHERE id = ?').get(
-        'c1',
-      ) as { message_count: number };
+      const conv = db
+        .prepare('SELECT message_count FROM agent_conversations WHERE id = ?')
+        .get('c1') as { message_count: number };
       expect(conv.message_count).toBe(5);
     });
   });
@@ -198,12 +198,12 @@ describe('mutations', () => {
 
     it('updates multiple fields simultaneously', () => {
       seedEntity(db);
-      expect(updateEntity(db, 'e1', { name: 'Carol', type: 'company', summary: 'CEO' })).toBe(
-        true,
-      );
-      const row = db.prepare('SELECT name, type, summary FROM entities WHERE id = ?').get(
-        'e1',
-      ) as { name: string; type: string; summary: string };
+      expect(updateEntity(db, 'e1', { name: 'Carol', type: 'company', summary: 'CEO' })).toBe(true);
+      const row = db.prepare('SELECT name, type, summary FROM entities WHERE id = ?').get('e1') as {
+        name: string;
+        type: string;
+        summary: string;
+      };
       expect(row.name).toBe('Carol');
       expect(row.type).toBe('company');
       expect(row.summary).toBe('CEO');

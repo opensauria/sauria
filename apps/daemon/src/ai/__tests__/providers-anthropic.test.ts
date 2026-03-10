@@ -51,10 +51,9 @@ describe('AnthropicProvider', () => {
 
     const provider = new AnthropicProvider('sk-test-key');
     const chunks: Array<{ text: string; done: boolean }> = [];
-    for await (const chunk of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'claude-3-5-sonnet-20241022' },
-    )) {
+    for await (const chunk of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'claude-3-5-sonnet-20241022',
+    })) {
       chunks.push(chunk);
     }
 
@@ -83,10 +82,9 @@ describe('AnthropicProvider', () => {
 
     const provider = new AnthropicProvider('sk-test-key');
     const chunks: Array<{ text: string; done: boolean }> = [];
-    for await (const chunk of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'claude-3-5-sonnet-20241022' },
-    )) {
+    for await (const chunk of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'claude-3-5-sonnet-20241022',
+    })) {
       chunks.push(chunk);
     }
 
@@ -115,10 +113,9 @@ describe('AnthropicProvider', () => {
 
     const provider = new AnthropicProvider('sk-test-key');
     const chunks: Array<{ text: string; done: boolean }> = [];
-    for await (const chunk of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'claude-3-5-sonnet-20241022' },
-    )) {
+    for await (const chunk of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'claude-3-5-sonnet-20241022',
+    })) {
       chunks.push(chunk);
     }
 
@@ -159,10 +156,10 @@ describe('AnthropicProvider', () => {
     });
 
     const provider = new AnthropicProvider('sk-test-key');
-    for await (const _ of provider.chat(
-      [{ role: 'user', content: 'hi' }],
-      { model: 'claude-3-5-sonnet-20241022', systemPrompt: 'fallback' },
-    )) {
+    for await (const _ of provider.chat([{ role: 'user', content: 'hi' }], {
+      model: 'claude-3-5-sonnet-20241022',
+      systemPrompt: 'fallback',
+    })) {
       // consume
     }
 

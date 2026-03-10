@@ -19,10 +19,7 @@ vi.mock('../../utils/logger.js', () => ({
 
 import { existsSync } from 'node:fs';
 import type { IntegrationDefinition } from '@sauria/types';
-import {
-  connectIntegrationInstance,
-  disconnectIntegrationInstance,
-} from '../registry-connect.js';
+import { connectIntegrationInstance, disconnectIntegrationInstance } from '../registry-connect.js';
 
 const mockMcpClients = {
   connect: vi.fn(),
@@ -104,10 +101,13 @@ describe('connectIntegrationInstance', () => {
     expect(result.tools[0]?.name).toBe('list_repos');
     expect(result.tools[0]?.integrationId).toBe('github');
     expect(instances.has('github:1')).toBe(true);
-    expect(mockAudit.logAction).toHaveBeenCalledWith('integration:connect', expect.objectContaining({
-      instanceId: 'github:1',
-      toolCount: 2,
-    }));
+    expect(mockAudit.logAction).toHaveBeenCalledWith(
+      'integration:connect',
+      expect.objectContaining({
+        instanceId: 'github:1',
+        toolCount: 2,
+      }),
+    );
   });
 
   it('applies env value template when provided', async () => {
@@ -188,7 +188,16 @@ describe('disconnectIntegrationInstance', () => {
 
   it('disconnects and removes from instances map', async () => {
     const instances = new Map([
-      ['github:1', { instanceId: 'github:1', integrationId: 'github', label: 'GH', tools: [], connectedAt: '2026-01-01' }],
+      [
+        'github:1',
+        {
+          instanceId: 'github:1',
+          integrationId: 'github',
+          label: 'GH',
+          tools: [],
+          connectedAt: '2026-01-01',
+        },
+      ],
     ]);
 
     mockMcpClients.disconnect.mockResolvedValue(undefined);
@@ -201,12 +210,23 @@ describe('disconnectIntegrationInstance', () => {
     );
 
     expect(instances.has('github:1')).toBe(false);
-    expect(mockAudit.logAction).toHaveBeenCalledWith('integration:disconnect', { instanceId: 'github:1' });
+    expect(mockAudit.logAction).toHaveBeenCalledWith('integration:disconnect', {
+      instanceId: 'github:1',
+    });
   });
 
   it('handles disconnect error gracefully', async () => {
     const instances = new Map([
-      ['github:1', { instanceId: 'github:1', integrationId: 'github', label: 'GH', tools: [], connectedAt: '2026-01-01' }],
+      [
+        'github:1',
+        {
+          instanceId: 'github:1',
+          integrationId: 'github',
+          label: 'GH',
+          tools: [],
+          connectedAt: '2026-01-01',
+        },
+      ],
     ]);
 
     mockMcpClients.disconnect.mockRejectedValue(new Error('Already disconnected'));

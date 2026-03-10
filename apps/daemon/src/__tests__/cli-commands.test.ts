@@ -12,7 +12,9 @@ vi.mock('../db/schema.js', () => ({
 }));
 
 vi.mock('../config/loader.js', () => ({
-  loadConfig: vi.fn().mockResolvedValue({ models: { reasoning: { provider: 'anthropic', model: 'claude' } } }),
+  loadConfig: vi
+    .fn()
+    .mockResolvedValue({ models: { reasoning: { provider: 'anthropic', model: 'claude' } } }),
 }));
 
 vi.mock('../ai/router.js', () => ({

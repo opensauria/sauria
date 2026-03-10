@@ -36,27 +36,21 @@ describe('handleConnection', () => {
     handleConnection(socket as never, mockDb, methods);
     socket.emit('data', Buffer.from('not json\n'));
 
-    expect(socket.write).toHaveBeenCalledWith(
-      expect.stringContaining('"PARSE_ERROR"'),
-    );
+    expect(socket.write).toHaveBeenCalledWith(expect.stringContaining('"PARSE_ERROR"'));
   });
 
   it('responds with INVALID_REQUEST when id or method is missing', () => {
     handleConnection(socket as never, mockDb, methods);
     socket.emit('data', Buffer.from('{"foo":"bar"}\n'));
 
-    expect(socket.write).toHaveBeenCalledWith(
-      expect.stringContaining('"INVALID_REQUEST"'),
-    );
+    expect(socket.write).toHaveBeenCalledWith(expect.stringContaining('"INVALID_REQUEST"'));
   });
 
   it('responds with UNKNOWN_METHOD for unregistered method', () => {
     handleConnection(socket as never, mockDb, methods);
     socket.emit('data', Buffer.from('{"id":1,"method":"nope"}\n'));
 
-    expect(socket.write).toHaveBeenCalledWith(
-      expect.stringContaining('"UNKNOWN_METHOD"'),
-    );
+    expect(socket.write).toHaveBeenCalledWith(expect.stringContaining('"UNKNOWN_METHOD"'));
   });
 
   it('calls handler and writes result for valid request', () => {
@@ -120,9 +114,7 @@ describe('handleConnection', () => {
     const largePayload = 'x'.repeat(70_000);
     socket.emit('data', Buffer.from(largePayload));
 
-    expect(socket.write).toHaveBeenCalledWith(
-      expect.stringContaining('"REQUEST_TOO_LARGE"'),
-    );
+    expect(socket.write).toHaveBeenCalledWith(expect.stringContaining('"REQUEST_TOO_LARGE"'));
   });
 
   it('processes multiple newline-delimited messages in one chunk', () => {

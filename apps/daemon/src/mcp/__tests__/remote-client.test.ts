@@ -68,9 +68,7 @@ describe('connectRemoteMcp', () => {
 
     expect(result.client).toBeDefined();
     expect(SSEClientTransport).toHaveBeenCalledTimes(1);
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      expect.stringContaining('test-server via SSE'),
-    );
+    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('test-server via SSE'));
   });
 
   it('propagates error when both transports fail', async () => {

@@ -66,9 +66,7 @@ describe('schema', () => {
     applySchema(db);
 
     const triggers = db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'entities_a%'",
-      )
+      .prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'entities_a%'")
       .all() as Array<{ name: string }>;
     const triggerNames = triggers.map((t) => t.name);
 

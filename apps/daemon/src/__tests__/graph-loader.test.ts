@@ -58,9 +58,7 @@ describe('loadCanvasGraph', () => {
             autonomy: 'full',
           },
         ],
-        edges: [
-          { id: 'e1', from: 'n1', to: 'n2', label: 'forward' },
-        ],
+        edges: [{ id: 'e1', from: 'n1', to: 'n2', label: 'forward' }],
         workspaces: [
           {
             id: 'w1',
@@ -218,7 +216,12 @@ describe('loadCanvasGraph', () => {
     vi.mocked(readFileSync).mockReturnValue(
       JSON.stringify({
         instances: [
-          { id: 'github:default', integrationId: 'github', label: 'GitHub', connectedAt: '2026-01-01' },
+          {
+            id: 'github:default',
+            integrationId: 'github',
+            label: 'GitHub',
+            connectedAt: '2026-01-01',
+          },
         ],
       }),
     );

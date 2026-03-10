@@ -23,13 +23,17 @@ describe('AuditLogger', () => {
 
   describe('logAction', () => {
     it('inserts a row with all fields', () => {
-      logger.logAction('test_action', { key: 'value' }, {
-        promptHash: 'phash',
-        responseHash: 'rhash',
-        costUsd: 0.05,
-        clientId: 'client1',
-        success: true,
-      });
+      logger.logAction(
+        'test_action',
+        { key: 'value' },
+        {
+          promptHash: 'phash',
+          responseHash: 'rhash',
+          costUsd: 0.05,
+          clientId: 'client1',
+          success: true,
+        },
+      );
 
       const rows = db.prepare('SELECT * FROM audit_log').all() as Array<Record<string, unknown>>;
       expect(rows).toHaveLength(1);
@@ -45,14 +49,18 @@ describe('AuditLogger', () => {
     it('defaults success to 1 when not specified', () => {
       logger.logAction('action', { test: true });
 
-      const rows = db.prepare('SELECT success FROM audit_log').all() as Array<Record<string, unknown>>;
+      const rows = db.prepare('SELECT success FROM audit_log').all() as Array<
+        Record<string, unknown>
+      >;
       expect(rows[0]!['success']).toBe(1);
     });
 
     it('stores success as 0 when explicitly false', () => {
       logger.logAction('action', { test: true }, { success: false });
 
-      const rows = db.prepare('SELECT success FROM audit_log').all() as Array<Record<string, unknown>>;
+      const rows = db.prepare('SELECT success FROM audit_log').all() as Array<
+        Record<string, unknown>
+      >;
       expect(rows[0]!['success']).toBe(0);
     });
 
@@ -138,7 +146,7 @@ describe('AuditLogger', () => {
 
   describe('getTotalCost', () => {
     it('sums costs', () => {
-      logger.logAction('a', {}, { costUsd: 0.10 });
+      logger.logAction('a', {}, { costUsd: 0.1 });
       logger.logAction('b', {}, { costUsd: 0.25 });
 
       const total = logger.getTotalCost();

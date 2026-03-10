@@ -145,9 +145,7 @@ describe('exchangeAuthorizationCode', () => {
 
     expect(mockSecureFetch).toHaveBeenCalledOnce();
     const [, init] = mockSecureFetch.mock.calls[0]!;
-    expect(init?.headers).toEqual(
-      expect.objectContaining({ 'content-type': 'application/json' }),
-    );
+    expect(init?.headers).toEqual(expect.objectContaining({ 'content-type': 'application/json' }));
     const body = JSON.parse(init?.body as string) as Record<string, unknown>;
     expect(body['grant_type']).toBe('authorization_code');
     expect(body['code']).toBe('my-code');

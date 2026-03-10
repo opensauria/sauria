@@ -59,7 +59,11 @@ describe('TokenRefreshService', () => {
 
       const service = createService();
       // expiresAt is 10 minutes from now, margin is 5 minutes, so delay = 5 minutes
-      service.scheduleRefresh('github', 'https://auth.example.com/token', Date.now() + 10 * 60 * 1000);
+      service.scheduleRefresh(
+        'github',
+        'https://auth.example.com/token',
+        Date.now() + 10 * 60 * 1000,
+      );
 
       // Advance past the delay
       await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 100);
@@ -83,8 +87,16 @@ describe('TokenRefreshService', () => {
       const service = createService();
       const clearSpy = vi.spyOn(globalThis, 'clearTimeout');
 
-      service.scheduleRefresh('github', 'https://auth.example.com/token', Date.now() + 20 * 60 * 1000);
-      service.scheduleRefresh('github', 'https://auth.example.com/token', Date.now() + 30 * 60 * 1000);
+      service.scheduleRefresh(
+        'github',
+        'https://auth.example.com/token',
+        Date.now() + 20 * 60 * 1000,
+      );
+      service.scheduleRefresh(
+        'github',
+        'https://auth.example.com/token',
+        Date.now() + 30 * 60 * 1000,
+      );
 
       expect(clearSpy).toHaveBeenCalled();
 
@@ -149,9 +161,9 @@ describe('TokenRefreshService', () => {
         JSON.stringify({ kind: 'oauth', accessToken: 'a', refreshToken: 'r', expiresAt: 0 }),
       );
 
-      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response('Unauthorized', { status: 401 }),
-      );
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(new Response('Unauthorized', { status: 401 }));
 
       const service = createService();
       service.scheduleRefresh('test', 'https://auth.example.com/token', Date.now());

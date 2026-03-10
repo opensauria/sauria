@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ingestText, handleTextMessage, handleVoice, handleAsk, handleTeach } from '../telegram-handlers.js';
+import {
+  ingestText,
+  handleTextMessage,
+  handleVoice,
+  handleAsk,
+  handleTeach,
+} from '../telegram-handlers.js';
 
 vi.mock('../../utils/logger.js', () => ({
   getLogger: () => ({
@@ -393,7 +399,9 @@ describe('handleVoice — successful transcription', () => {
       message: { text: '', voice: { file_size: 1024, duration: 5 } },
       getFile: vi.fn().mockResolvedValue({ file_path: 'voice/file.ogg' }),
     });
-    const transcription = { transcribeVoice: vi.fn().mockRejectedValue(new Error('transcription failed')) };
+    const transcription = {
+      transcribeVoice: vi.fn().mockRejectedValue(new Error('transcription failed')),
+    };
     const audit = mockAudit();
     const deps = {
       token: 'tok',

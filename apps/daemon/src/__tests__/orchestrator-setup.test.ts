@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { connectMcpSources, autoConnectIntegrations, setupOrchestrator } from '../orchestrator-setup.js';
+import {
+  connectMcpSources,
+  autoConnectIntegrations,
+  setupOrchestrator,
+} from '../orchestrator-setup.js';
 import type { CanvasGraph, AgentNode } from '../orchestrator/types.js';
 
 vi.mock('../utils/logger.js', () => ({
@@ -15,9 +19,7 @@ vi.mock('../security/vault-key.js', () => ({
 }));
 
 vi.mock('../integrations/catalog.js', () => ({
-  INTEGRATION_CATALOG: [
-    { id: 'linear', credentialKeys: ['api_key'] },
-  ],
+  INTEGRATION_CATALOG: [{ id: 'linear', credentialKeys: ['api_key'] }],
 }));
 
 vi.mock('../channel-factory.js', () => ({
@@ -396,7 +398,13 @@ describe('setupOrchestrator', () => {
     const onActivity = vi.fn();
     const integrationRegistry = {} as never;
 
-    const result = await setupOrchestrator(graph, deps, {} as never, onActivity, integrationRegistry);
+    const result = await setupOrchestrator(
+      graph,
+      deps,
+      {} as never,
+      onActivity,
+      integrationRegistry,
+    );
 
     expect(result).not.toBeNull();
   });

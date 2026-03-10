@@ -107,12 +107,8 @@ describe('brain-queries-shared', () => {
     });
 
     it('counts rows across all tables', () => {
-      db.prepare(
-        "INSERT INTO entities (id, type, name) VALUES ('e1', 'person', 'Alice')",
-      ).run();
-      db.prepare(
-        "INSERT INTO entities (id, type, name) VALUES ('e2', 'person', 'Bob')",
-      ).run();
+      db.prepare("INSERT INTO entities (id, type, name) VALUES ('e1', 'person', 'Alice')").run();
+      db.prepare("INSERT INTO entities (id, type, name) VALUES ('e2', 'person', 'Bob')").run();
       db.prepare(
         "INSERT INTO relations (id, from_entity_id, to_entity_id, type) VALUES ('r1', 'e1', 'e2', 'knows')",
       ).run();
@@ -122,9 +118,7 @@ describe('brain-queries-shared', () => {
       db.prepare(
         "INSERT INTO observations (id, type, content) VALUES ('o1', 'fact', 'some fact')",
       ).run();
-      db.prepare(
-        "INSERT INTO agent_conversations (id, platform) VALUES ('c1', 'telegram')",
-      ).run();
+      db.prepare("INSERT INTO agent_conversations (id, platform) VALUES ('c1', 'telegram')").run();
       db.prepare(
         "INSERT INTO agent_messages (id, conversation_id, source_node_id, sender_id, platform, content) VALUES ('m1', 'c1', 'n1', 's1', 'telegram', 'hello')",
       ).run();

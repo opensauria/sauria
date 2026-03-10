@@ -55,27 +55,27 @@ sauria insights           # AI-generated observations
 sauria doctor             # Health checks
 ```
 
-| Command                   | Description                       |
-| ------------------------- | --------------------------------- |
-| `sauria onboard`          | Interactive setup wizard          |
-| `sauria daemon`           | Start background daemon           |
-| `sauria ask <question>`   | Natural language query            |
-| `sauria interactive`      | Interactive REPL mode             |
-| `sauria status`           | System overview                   |
-| `sauria focus <entity>`   | Deep dive on an entity            |
-| `sauria entity <name>`    | Look up entity details            |
-| `sauria upcoming [hours]` | Upcoming deadlines (default: 24h) |
-| `sauria insights`         | AI-generated observations         |
-| `sauria teach <fact>`     | Add knowledge manually            |
-| `sauria sources`          | List configured data sources      |
-| `sauria mcp-server`       | Start MCP server (stdio)          |
-| `sauria doctor`           | Run health checks                 |
-| `sauria audit [count]`    | Show audit log                    |
-| `sauria export`           | Encrypted backup                  |
-| `sauria purge`            | Secure delete all data            |
-| `sauria import <file>`    | Import data                       |
-| `sauria connect <channel>`| Connect a channel                 |
-| `sauria config`           | Show current config               |
+| Command                    | Description                       |
+| -------------------------- | --------------------------------- |
+| `sauria onboard`           | Interactive setup wizard          |
+| `sauria daemon`            | Start background daemon           |
+| `sauria ask <question>`    | Natural language query            |
+| `sauria interactive`       | Interactive REPL mode             |
+| `sauria status`            | System overview                   |
+| `sauria focus <entity>`    | Deep dive on an entity            |
+| `sauria entity <name>`     | Look up entity details            |
+| `sauria upcoming [hours]`  | Upcoming deadlines (default: 24h) |
+| `sauria insights`          | AI-generated observations         |
+| `sauria teach <fact>`      | Add knowledge manually            |
+| `sauria sources`           | List configured data sources      |
+| `sauria mcp-server`        | Start MCP server (stdio)          |
+| `sauria doctor`            | Run health checks                 |
+| `sauria audit [count]`     | Show audit log                    |
+| `sauria export`            | Encrypted backup                  |
+| `sauria purge`             | Secure delete all data            |
+| `sauria import <file>`     | Import data                       |
+| `sauria connect <channel>` | Connect a channel                 |
+| `sauria config`            | Show current config               |
 
 ## Desktop App
 
@@ -90,19 +90,19 @@ sauria doctor             # Health checks
 
 When running as an MCP server, Sauria exposes 11 tools to connected agents:
 
-| Tool                        | Description                                                     |
-| --------------------------- | --------------------------------------------------------------- |
-| `sauria_query`              | Natural language question answered from knowledge graph         |
-| `sauria_get_entity`         | Entity details + relations + timeline                           |
-| `sauria_search`             | Hybrid semantic + keyword search                                |
-| `sauria_get_upcoming`       | Deadlines and meetings in next N hours                          |
-| `sauria_get_insights`       | AI-generated observations and patterns                          |
-| `sauria_get_context_for`    | Full context dump for a topic                                   |
-| `sauria_add_event`          | Feed an event into the knowledge graph                          |
-| `sauria_remember`           | Store structured knowledge (entities + relations)               |
-| `sauria_pending_approvals`  | List pending approval requests from agents                      |
-| `sauria_approve`            | Approve a pending action by ID                                  |
-| `sauria_reject`             | Reject a pending action by ID                                   |
+| Tool                       | Description                                             |
+| -------------------------- | ------------------------------------------------------- |
+| `sauria_query`             | Natural language question answered from knowledge graph |
+| `sauria_get_entity`        | Entity details + relations + timeline                   |
+| `sauria_search`            | Hybrid semantic + keyword search                        |
+| `sauria_get_upcoming`      | Deadlines and meetings in next N hours                  |
+| `sauria_get_insights`      | AI-generated observations and patterns                  |
+| `sauria_get_context_for`   | Full context dump for a topic                           |
+| `sauria_add_event`         | Feed an event into the knowledge graph                  |
+| `sauria_remember`          | Store structured knowledge (entities + relations)       |
+| `sauria_pending_approvals` | List pending approval requests from agents              |
+| `sauria_approve`           | Approve a pending action by ID                          |
+| `sauria_reject`            | Reject a pending action by ID                           |
 
 All inputs validated. Rate limited. Audit logged.
 

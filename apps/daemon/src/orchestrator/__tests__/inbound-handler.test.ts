@@ -165,7 +165,9 @@ describe('handleInbound', () => {
     const codeModeRouter = {
       route: vi.fn().mockResolvedValue([{ type: 'reply' as const, content: 'code output' }]),
     };
-    const node = makeNode({ codeMode: { enabled: true, projectPath: '/tmp/project', permissionMode: 'auto' } });
+    const node = makeNode({
+      codeMode: { enabled: true, projectPath: '/tmp/project', permissionMode: 'auto' },
+    });
     const deps = makeDeps({
       findNode: vi.fn(() => node),
       codeModeRouter,

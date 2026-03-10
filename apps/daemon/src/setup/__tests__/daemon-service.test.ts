@@ -38,10 +38,9 @@ describe('generateDaemonService', () => {
     expect(result?.servicePath).toContain('ai.sauria.daemon.plist');
     expect(result?.activationCommand).toContain('launchctl load');
     expect(writeFileSync).toHaveBeenCalled();
-    expect(mkdirSync).toHaveBeenCalledWith(
-      expect.stringContaining('LaunchAgents'),
-      { recursive: true },
-    );
+    expect(mkdirSync).toHaveBeenCalledWith(expect.stringContaining('LaunchAgents'), {
+      recursive: true,
+    });
   });
 
   it('skips mkdir on macOS when LaunchAgents exists', () => {

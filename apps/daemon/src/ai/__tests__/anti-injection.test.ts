@@ -155,7 +155,8 @@ describe('parseAIResponse', () => {
   });
 
   it('throws InjectionDetectedError for canary token inside markdown fencing', () => {
-    const raw = '```json\n{"entities":[],"relations":[],"facts":[],"x":"' + CANARY_TOKEN + '"}\n```';
+    const raw =
+      '```json\n{"entities":[],"relations":[],"facts":[],"x":"' + CANARY_TOKEN + '"}\n```';
     expect(() => parseAIResponse(raw)).toThrow(InjectionDetectedError);
   });
 

@@ -252,9 +252,7 @@ describe('additional coverage — setupCanvasWatcher reload logic', () => {
     createChannelForNode.mockResolvedValue(mockChannel);
 
     loadCanvasGraph.mockReturnValue({
-      nodes: [
-        { id: 'new-node', status: 'connected', platform: 'telegram', label: 'Test' },
-      ],
+      nodes: [{ id: 'new-node', status: 'connected', platform: 'telegram', label: 'Test' }],
       edges: [],
       workspaces: [],
       globalInstructions: '',
@@ -296,9 +294,7 @@ describe('additional coverage — setupCanvasWatcher reload logic', () => {
     mockWatch.mockReturnValue(fakeWatcher);
 
     loadCanvasGraph.mockReturnValue({
-      nodes: [
-        { id: 'owner-1', status: 'connected', platform: 'owner', label: 'Owner' },
-      ],
+      nodes: [{ id: 'owner-1', status: 'connected', platform: 'owner', label: 'Owner' }],
       edges: [],
       workspaces: [],
       globalInstructions: '',
@@ -372,9 +368,7 @@ describe('additional coverage — setupCanvasWatcher reload logic', () => {
     createChannelForNode.mockRejectedValue(new Error('creation failed'));
 
     loadCanvasGraph.mockReturnValue({
-      nodes: [
-        { id: 'fail-node', status: 'connected', platform: 'telegram', label: 'F' },
-      ],
+      nodes: [{ id: 'fail-node', status: 'connected', platform: 'telegram', label: 'F' }],
       edges: [],
       workspaces: [],
       globalInstructions: '',
@@ -454,9 +448,7 @@ describe('additional coverage — setupCanvasWatcher reload logic', () => {
     createChannelForNode.mockResolvedValue(null);
 
     loadCanvasGraph.mockReturnValue({
-      nodes: [
-        { id: 'null-node', status: 'connected', platform: 'telegram', label: 'N' },
-      ],
+      nodes: [{ id: 'null-node', status: 'connected', platform: 'telegram', label: 'N' }],
       edges: [],
       workspaces: [],
       globalInstructions: '',
@@ -524,11 +516,7 @@ describe('additional coverage — setupOwnerCommandWatcher processing', () => {
 
     expect(logAction).toHaveBeenCalledWith('owner:command_received', expect.any(Object));
     expect(handleOwnerCommand).toHaveBeenCalled();
-    expect(mockWriteFileSync).toHaveBeenCalledWith(
-      '/mock/owner-commands.jsonl',
-      '',
-      'utf-8',
-    );
+    expect(mockWriteFileSync).toHaveBeenCalledWith('/mock/owner-commands.jsonl', '', 'utf-8');
   });
 
   it('handles invalid JSON lines gracefully', () => {

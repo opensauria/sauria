@@ -88,9 +88,7 @@ describe('ingestManualInput', () => {
   it('extracts entities and upserts them', async () => {
     mockIsDuplicate.mockReturnValue(false);
     mockExtract.mockResolvedValue({
-      entities: [
-        { name: 'Alice', type: 'person', properties: { role: 'CEO' } },
-      ],
+      entities: [{ name: 'Alice', type: 'person', properties: { role: 'CEO' } }],
       relations: [],
       facts: [],
     });
@@ -109,9 +107,7 @@ describe('ingestManualInput', () => {
         { name: 'Alice', type: 'person' },
         { name: 'Bob', type: 'person' },
       ],
-      relations: [
-        { from: 'Alice', to: 'Bob', type: 'manages', context: 'Direct report' },
-      ],
+      relations: [{ from: 'Alice', to: 'Bob', type: 'manages', context: 'Direct report' }],
       facts: [],
     });
     mockResolveEntity.mockImplementation((_db, input) => {
@@ -136,9 +132,7 @@ describe('ingestManualInput', () => {
     mockIsDuplicate.mockReturnValue(false);
     mockExtract.mockResolvedValue({
       entities: [{ name: 'Alice', type: 'person' }],
-      relations: [
-        { from: 'Alice', to: 'Unknown', type: 'knows' },
-      ],
+      relations: [{ from: 'Alice', to: 'Unknown', type: 'knows' }],
       facts: [],
     });
     mockResolveEntity.mockReturnValue('ent-alice');

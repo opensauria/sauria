@@ -66,9 +66,7 @@ describe('formatEntity', () => {
   });
 
   it('renders properties when present', () => {
-    const result = formatEntity(
-      makeEntity({ properties: { role: 'engineer', team: 'backend' } }),
-    );
+    const result = formatEntity(makeEntity({ properties: { role: 'engineer', team: 'backend' } }));
     expect(result).toContain('Properties:');
     expect(result).toContain('role: engineer');
     expect(result).toContain('team: backend');
@@ -82,9 +80,7 @@ describe('formatEntity', () => {
 
 describe('isObservationRow', () => {
   it('returns true for valid observation row', () => {
-    expect(
-      isObservationRow({ content: 'likes coffee', created_at: '2026-01-01' }),
-    ).toBe(true);
+    expect(isObservationRow({ content: 'likes coffee', created_at: '2026-01-01' })).toBe(true);
   });
 
   it('returns false for null', () => {

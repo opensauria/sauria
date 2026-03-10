@@ -39,7 +39,12 @@ describe('processInboundMessage', () => {
     const pipeline = mockPipeline();
     const guards = mockGuards();
 
-    await processInboundMessage('ch-1', makeMessage({ content: '   ' }), { audit, pipeline } as never, guards);
+    await processInboundMessage(
+      'ch-1',
+      makeMessage({ content: '   ' }),
+      { audit, pipeline } as never,
+      guards,
+    );
 
     expect(pipeline.ingestEvent).not.toHaveBeenCalled();
   });
@@ -95,9 +100,7 @@ describe('processInboundMessage', () => {
       guards,
     );
 
-    expect(onInbound).toHaveBeenCalledWith(
-      expect.objectContaining({ senderIsOwner: true }),
-    );
+    expect(onInbound).toHaveBeenCalledWith(expect.objectContaining({ senderIsOwner: true }));
   });
 
   it('uses default nodeId when not provided', async () => {

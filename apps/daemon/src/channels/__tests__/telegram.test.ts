@@ -56,7 +56,9 @@ function getBotInstance(channel: TelegramChannel): MockBot {
   return (channel as any).bot as MockBot;
 }
 
-function getMiddleware(channel: TelegramChannel): (ctx: unknown, next: () => Promise<void>) => Promise<void> {
+function getMiddleware(
+  channel: TelegramChannel,
+): (ctx: unknown, next: () => Promise<void>) => Promise<void> {
   const bot = getBotInstance(channel);
   return bot.use.mock.calls[0]![0] as (ctx: unknown, next: () => Promise<void>) => Promise<void>;
 }

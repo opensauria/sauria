@@ -190,7 +190,10 @@ describe('buildMethodMap', () => {
     handler(db, { id: 'conv-1', limit: 10 });
 
     const mod = await import('../db/brain-queries.js');
-    expect(mod.getConversationMessages).toHaveBeenCalledWith(db, 'conv-1', { id: 'conv-1', limit: 10 });
+    expect(mod.getConversationMessages).toHaveBeenCalledWith(db, 'conv-1', {
+      id: 'conv-1',
+      limit: 10,
+    });
   });
 
   it('brain:list-facts forwards params', async () => {

@@ -122,9 +122,7 @@ describe('queuePendingApprovals', () => {
       })),
     });
 
-    const actions: RoutingAction[] = [
-      { type: 'forward', targetNodeId: 'node-2', content: 'Help' },
-    ];
+    const actions: RoutingAction[] = [{ type: 'forward', targetNodeId: 'node-2', content: 'Help' }];
     await queuePendingApprovals('node-1', 'ws-1', actions, ctx);
     expect(ctx.registry.sendTo).toHaveBeenCalledWith(
       'owner-node',

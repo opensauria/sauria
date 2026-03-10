@@ -13,11 +13,25 @@ describe('design tokens', () => {
   describe('colors', () => {
     it('defines all required color tokens', () => {
       const requiredKeys = [
-        'bg', 'bgSolid', 'surface', 'surfaceHover', 'surfaceLight',
-        'border', 'borderActive', 'borderHover',
-        'text', 'textSecondary', 'textDim', 'textOnAccent',
-        'accent', 'accentHover', 'accentSubtle',
-        'success', 'error', 'warning', 'overlay',
+        'bg',
+        'bgSolid',
+        'surface',
+        'surfaceHover',
+        'surfaceLight',
+        'border',
+        'borderActive',
+        'borderHover',
+        'text',
+        'textSecondary',
+        'textDim',
+        'textOnAccent',
+        'accent',
+        'accentHover',
+        'accentSubtle',
+        'success',
+        'error',
+        'warning',
+        'overlay',
       ] as const;
       for (const key of requiredKeys) {
         expect(colors[key]).toBeDefined();
@@ -85,7 +99,15 @@ describe('design tokens', () => {
     });
 
     it('all font sizes are even numbers', () => {
-      const sizeKeys = ['sizeBase', 'sizeSmall', 'sizeXSmall', 'sizeMicro', 'sizeLabel', 'sizeHeading', 'sizeLg'] as const;
+      const sizeKeys = [
+        'sizeBase',
+        'sizeSmall',
+        'sizeXSmall',
+        'sizeMicro',
+        'sizeLabel',
+        'sizeHeading',
+        'sizeLg',
+      ] as const;
       for (const key of sizeKeys) {
         const value = parseInt(typography[key], 10);
         expect(value % 2).toBe(0);
@@ -100,7 +122,16 @@ describe('design tokens', () => {
 
   describe('entity colors', () => {
     it('defines colors for all entity types', () => {
-      const types = ['person', 'project', 'company', 'event', 'document', 'goal', 'place', 'concept'] as const;
+      const types = [
+        'person',
+        'project',
+        'company',
+        'event',
+        'document',
+        'goal',
+        'place',
+        'concept',
+      ] as const;
       for (const type of types) {
         expect(entityColors[type]).toBeDefined();
         expect(entityColors[type]).toMatch(/^#[0-9a-fA-F]{6}$/);
@@ -120,7 +151,18 @@ describe('design tokens', () => {
 
   describe('z-index', () => {
     it('defines all z-index layers', () => {
-      const layers = ['base', 'dropdown', 'sticky', 'overlay', 'modal', 'toast', 'dock', 'toolbar', 'panel', 'ghost'] as const;
+      const layers = [
+        'base',
+        'dropdown',
+        'sticky',
+        'overlay',
+        'modal',
+        'toast',
+        'dock',
+        'toolbar',
+        'panel',
+        'ghost',
+      ] as const;
       for (const layer of layers) {
         expect(zIndex[layer]).toBeDefined();
       }

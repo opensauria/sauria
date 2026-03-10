@@ -7,16 +7,16 @@ import { upsertEntity, recordEvent } from '../world-model.js';
 /** SQLite datetime('now') returns UTC without the 'Z' suffix, so we must
  *  produce timestamps in the same format for comparison to work. */
 function sqliteNowPlusHours(db: Database.Database, hours: number): string {
-  const row = db
-    .prepare(`SELECT datetime('now', ? || ' hours') AS ts`)
-    .get(String(hours)) as { ts: string };
+  const row = db.prepare(`SELECT datetime('now', ? || ' hours') AS ts`).get(String(hours)) as {
+    ts: string;
+  };
   return row.ts;
 }
 
 function sqliteNowMinusDays(db: Database.Database, days: number): string {
-  const row = db
-    .prepare(`SELECT datetime('now', ? || ' days') AS ts`)
-    .get(String(-days)) as { ts: string };
+  const row = db.prepare(`SELECT datetime('now', ? || ' days') AS ts`).get(String(-days)) as {
+    ts: string;
+  };
   return row.ts;
 }
 

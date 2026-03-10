@@ -196,7 +196,9 @@ describe('resolveInstanceId', () => {
   it('matches by label case-insensitively', () => {
     const graphWithInstances = {
       ...graph,
-      instances: [{ id: 'inst-abc', integrationId: 'something', label: 'My Linear', connectedAt: '' }],
+      instances: [
+        { id: 'inst-abc', integrationId: 'something', label: 'My Linear', connectedAt: '' },
+      ],
     } as CanvasGraph;
     expect(resolveInstanceId(graphWithInstances, 'my linear', ['inst-abc'])).toBe('inst-abc');
   });
@@ -268,7 +270,15 @@ describe('findGroupForNode', () => {
       position: { x: 0, y: 0 },
       size: { width: 400, height: 300 },
       checkpoints: [],
-      groups: [{ platform: 'slack' as const, groupId: 'slack-grp', name: 'Slack', ownerMemberId: '', autoCreated: false }],
+      groups: [
+        {
+          platform: 'slack' as const,
+          groupId: 'slack-grp',
+          name: 'Slack',
+          ownerMemberId: '',
+          autoCreated: false,
+        },
+      ],
     };
     const deps: HelperDeps = {
       graph: makeGraph([node], [workspace] as CanvasGraph['workspaces']),
@@ -292,7 +302,15 @@ describe('findGroupForNode', () => {
       position: { x: 0, y: 0 },
       size: { width: 400, height: 300 },
       checkpoints: [],
-      groups: [{ platform: 'telegram' as const, groupId: 'tg-grp-123', name: 'TG', ownerMemberId: '', autoCreated: false }],
+      groups: [
+        {
+          platform: 'telegram' as const,
+          groupId: 'tg-grp-123',
+          name: 'TG',
+          ownerMemberId: '',
+          autoCreated: false,
+        },
+      ],
     };
     const deps: HelperDeps = {
       graph: makeGraph([node], [workspace] as CanvasGraph['workspaces']),

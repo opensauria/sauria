@@ -18,7 +18,10 @@ vi.mock('../../security/rate-limiter.js', () => ({
 }));
 vi.mock('../tools.js', () => {
   const { z } = require('zod');
-  const makeSchema = (shape: Record<string, unknown>) => ({ shape, parse: vi.fn((v: unknown) => v) });
+  const makeSchema = (shape: Record<string, unknown>) => ({
+    shape,
+    parse: vi.fn((v: unknown) => v),
+  });
   return {
     TOOL_DEFS: {
       sauria_query: { description: 'd', schema: makeSchema({ query: z.string() }) },
@@ -180,7 +183,9 @@ function getRegisteredHandler(toolName: string) {
   const calls = vi.mocked(registerTool).mock.calls;
   const match = calls.find((c) => c[1] === toolName);
   if (!match) throw new Error(`Handler for ${toolName} not found`);
-  return match[4] as (args: Record<string, unknown>) => Promise<{ content: Array<{ type: string; text: string }> }>;
+  return match[4] as (
+    args: Record<string, unknown>,
+  ) => Promise<{ content: Array<{ type: string; text: string }> }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -297,7 +302,9 @@ describe('approval tool handlers', () => {
       const handler = getRegisteredHandler('sauria_approve');
       const result = await handler({ approvalId: 'ap-1' });
       expect(result.content[0]!.text).toBe('Approved and executed 1 action(s).');
-      expect(orchestrator.executeApprovedActions).toHaveBeenCalledWith('agent-a', [{ type: 'reply' }]);
+      expect(orchestrator.executeApprovedActions).toHaveBeenCalledWith('agent-a', [
+        { type: 'reply' },
+      ]);
       expect(mockAudit.logAction).toHaveBeenCalledWith('mcp:approval_approved', {
         approvalId: 'ap-1',
         actionCount: 1,
@@ -321,7 +328,9 @@ describe('approval tool handlers', () => {
 
       const handler = getRegisteredHandler('sauria_approve');
       const result = await handler({ approvalId: 'ap-1' });
-      expect(result.content[0]!.text).toBe('Approved 1 action(s). No orchestrator to execute them.');
+      expect(result.content[0]!.text).toBe(
+        'Approved 1 action(s). No orchestrator to execute them.',
+      );
     });
 
     it('returns no-orchestrator message when approve returns empty actions', async () => {
@@ -332,7 +341,9 @@ describe('approval tool handlers', () => {
 
       const handler = getRegisteredHandler('sauria_approve');
       const result = await handler({ approvalId: 'ap-1' });
-      expect(result.content[0]!.text).toBe('Approved 0 action(s). No orchestrator to execute them.');
+      expect(result.content[0]!.text).toBe(
+        'Approved 0 action(s). No orchestrator to execute them.',
+      );
       expect(orchestrator.executeApprovedActions).not.toHaveBeenCalled();
     });
 
@@ -354,7 +365,9 @@ describe('approval tool handlers', () => {
       const result = await handler({ approvalId: 'ap-1' });
       expect(result.content[0]!.text).toBe('Approval ap-1 rejected.');
       expect(checkpointManager.reject).toHaveBeenCalledWith('ap-1');
-      expect(mockAudit.logAction).toHaveBeenCalledWith('mcp:approval_rejected', { approvalId: 'ap-1' });
+      expect(mockAudit.logAction).toHaveBeenCalledWith('mcp:approval_rejected', {
+        approvalId: 'ap-1',
+      });
     });
   });
 });

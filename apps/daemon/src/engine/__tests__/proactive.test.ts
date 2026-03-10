@@ -39,9 +39,8 @@ vi.mock('../../security/rate-limiter.js', () => ({
 }));
 
 vi.mock('../alert-converters.js', async () => {
-  const actual = await vi.importActual<typeof import('../alert-converters.js')>(
-    '../alert-converters.js',
-  );
+  const actual =
+    await vi.importActual<typeof import('../alert-converters.js')>('../alert-converters.js');
   return {
     ...actual,
     buildInsightContext: vi.fn(() => ''),
@@ -67,7 +66,7 @@ function createTestDb(): InstanceType<typeof Database> {
 }
 
 function createMockRouter() {
-  return {} as Parameters<typeof ProactiveEngine.prototype['start']> extends never[]
+  return {} as Parameters<(typeof ProactiveEngine.prototype)['start']> extends never[]
     ? never
     : ConstructorParameters<typeof ProactiveEngine>[1];
 }

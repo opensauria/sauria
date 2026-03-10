@@ -20,11 +20,7 @@ vi.mock('node:crypto', () => ({
 import { execFile } from 'node:child_process';
 import { TranscriptionService } from '../transcription.js';
 
-type ExecFileCallback = (
-  error: ExecFileException | null,
-  stdout: string,
-  stderr: string,
-) => void;
+type ExecFileCallback = (error: ExecFileException | null, stdout: string, stderr: string) => void;
 
 const mockExecFile = vi.mocked(execFile);
 
@@ -59,9 +55,7 @@ describe('TranscriptionService', () => {
       const service = createService();
       const oversizeBuffer = Buffer.alloc(20 * 1024 * 1024 + 1);
 
-      await expect(service.transcribeVoice(oversizeBuffer)).rejects.toThrow(
-        /byte limit/,
-      );
+      await expect(service.transcribeVoice(oversizeBuffer)).rejects.toThrow(/byte limit/);
     });
 
     it('accepts audio under 20MB limit', async () => {
@@ -90,9 +84,7 @@ describe('TranscriptionService', () => {
         },
       );
 
-      await expect(service.transcribeVoice(buffer)).rejects.toThrow(
-        /empty transcription/,
-      );
+      await expect(service.transcribeVoice(buffer)).rejects.toThrow(/empty transcription/);
     });
 
     it('rejects when execFile returns an error', async () => {
@@ -107,9 +99,7 @@ describe('TranscriptionService', () => {
         },
       );
 
-      await expect(service.transcribeVoice(buffer)).rejects.toThrow(
-        /Whisper transcription failed/,
-      );
+      await expect(service.transcribeVoice(buffer)).rejects.toThrow(/Whisper transcription failed/);
     });
 
     it('passes timeout from config to execFile options', async () => {
@@ -155,9 +145,7 @@ describe('TranscriptionService', () => {
         },
       );
 
-      await expect(service.transcribeVoice(buffer)).rejects.toThrow(
-        /ModuleNotFoundError/,
-      );
+      await expect(service.transcribeVoice(buffer)).rejects.toThrow(/ModuleNotFoundError/);
     });
   });
 });
