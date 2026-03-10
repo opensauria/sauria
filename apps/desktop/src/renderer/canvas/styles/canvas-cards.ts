@@ -461,6 +461,7 @@ export const canvasCardStyles = css`
     min-height: var(--spacing-md);
     display: flex;
     align-items: center;
+    gap: var(--spacing-xs);
   }
 
   .card-setup-status.error {
@@ -476,15 +477,16 @@ export const canvasCardStyles = css`
   }
 
   .card-spinner {
-    display: inline-block;
     width: var(--spacing-md);
     height: var(--spacing-md);
+    min-width: var(--spacing-md);
+    min-height: var(--spacing-md);
     border: 2px solid var(--border-hover);
     border-top-color: var(--accent);
     border-radius: 50%;
+    box-sizing: border-box;
     animation: cardSpin 0.6s linear infinite;
-    vertical-align: middle;
-    margin-right: var(--spacing-sm);
+    flex-shrink: 0;
   }
 
   @keyframes cardSpin {

@@ -56,6 +56,238 @@ describe('SlackChannel', () => {
     vi.restoreAllMocks();
   });
 
+  describe('channel discovery', () => {
+    it('auto-discovers channels when channelIds is empty', async () => {
+      fetchSpy
+        .mockResolvedValueOnce(
+          createSlackResponse(true, {
+            channels: [
+              { id: 'C100', name: 'general' },
+              { id: 'C200', name: 'random' },
+            ],
+            response_metadata: { next_cursor: '' },
+          }),
+        )
+        // init timestamps for C100
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }))
+        // init timestamps for C200
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }));
+
+      const deps = createDeps({ channelIds: [] });
+      const channel = new SlackChannel(deps);
+      await channel.start();
+
+      // First call = users.conversations, then 2 init calls
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+      const [discoverUrl] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(discoverUrl).toBe('https://slack.com/api/users.conversations');
+
+      const audit = deps.audit as unknown as { logAction: ReturnType<typeof vi.fn> };
+      expect(audit.logAction).toHaveBeenCalledWith(
+        'slack:start',
+        expect.objectContaining({ channelIds: ['C100', 'C200'] }),
+      );
+
+      await channel.stop();
+    });
+
+    it('paginates through all channels with cursor', async () => {
+      fetchSpy
+        // Page 1
+        .mockResolvedValueOnce(
+          createSlackResponse(true, {
+            channels: [{ id: 'C100', name: 'general' }],
+            response_metadata: { next_cursor: 'page2cursor' },
+          }),
+        )
+        // Page 2
+        .mockResolvedValueOnce(
+          createSlackResponse(true, {
+            channels: [{ id: 'C200', name: 'random' }],
+            response_metadata: { next_cursor: '' },
+          }),
+        )
+        // init timestamps
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }))
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }));
+
+      const deps = createDeps({ channelIds: [] });
+      const channel = new SlackChannel(deps);
+      await channel.start();
+
+      // 2 discovery pages + 2 init calls
+      expect(fetchSpy).toHaveBeenCalledTimes(4);
+
+      const page2Body = JSON.parse(
+        (fetchSpy.mock.calls[1] as [string, RequestInit])[1].body as string,
+      ) as Record<string, string>;
+      expect(page2Body['cursor']).toBe('page2cursor');
+
+      await channel.stop();
+    });
+
+    it('skips discovery when channelIds are provided', async () => {
+      fetchSpy.mockResolvedValueOnce(createSlackResponse(true, { messages: [] }));
+
+      const deps = createDeps({ channelIds: ['C001'] });
+      const channel = new SlackChannel(deps);
+      await channel.start();
+
+      // Only init call, no discovery
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      const [url] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe('https://slack.com/api/conversations.history');
+
+      await channel.stop();
+    });
+
+    it('handles discovery API error gracefully', async () => {
+      fetchSpy.mockRejectedValueOnce(new Error('network down'));
+
+      const deps = createDeps({ channelIds: [] });
+      const channel = new SlackChannel(deps);
+      await channel.start();
+
+      const audit = deps.audit as unknown as { logAction: ReturnType<typeof vi.fn> };
+      expect(audit.logAction).toHaveBeenCalledWith(
+        'slack:discover_channels_error',
+        expect.objectContaining({ error: expect.stringContaining('network down') }),
+        { success: false },
+      );
+      // Should still start (with 0 channels), not throw
+      expect(audit.logAction).toHaveBeenCalledWith(
+        'slack:start',
+        expect.objectContaining({ channelIds: [] }),
+      );
+
+      await channel.stop();
+    });
+
+    it('handles discovery API returning ok: false', async () => {
+      fetchSpy.mockResolvedValueOnce(createSlackResponse(false, {}, 'missing_scope'));
+
+      const deps = createDeps({ channelIds: [] });
+      const channel = new SlackChannel(deps);
+      await channel.start();
+
+      const audit = deps.audit as unknown as { logAction: ReturnType<typeof vi.fn> };
+      expect(audit.logAction).toHaveBeenCalledWith(
+        'slack:discover_channels_error',
+        expect.objectContaining({ error: 'missing_scope' }),
+        { success: false },
+      );
+
+      await channel.stop();
+    });
+
+    it('polls discovered channels', async () => {
+      fetchSpy
+        // Discovery
+        .mockResolvedValueOnce(
+          createSlackResponse(true, {
+            channels: [{ id: 'C100', name: 'general' }],
+            response_metadata: { next_cursor: '' },
+          }),
+        )
+        // Init timestamp
+        .mockResolvedValueOnce(
+          createSlackResponse(true, {
+            messages: [{ ts: '1700000000.000000', user: 'U001', text: 'init' }],
+          }),
+        );
+
+      const onInbound = vi.fn<(message: InboundMessage) => void>();
+      const deps = createDeps({ channelIds: [], onInbound, nodeId: 'slack-1' });
+      const channel = new SlackChannel(deps);
+      await channel.start();
+
+      // Poll returns new message
+      fetchSpy.mockResolvedValueOnce(
+        createSlackResponse(true, {
+          messages: [{ ts: '1700000003.000000', user: 'U002', text: 'hello' }],
+        }),
+      );
+      await channel.pollOnce();
+
+      expect(onInbound).toHaveBeenCalledOnce();
+      const inbound = onInbound.mock.calls[0]![0] as InboundMessage;
+      expect(inbound.groupId).toBe('C100');
+      expect(inbound.content).toBe('hello');
+
+      await channel.stop();
+    });
+
+    it('sends alerts to discovered channels', async () => {
+      fetchSpy
+        // Discovery
+        .mockResolvedValueOnce(
+          createSlackResponse(true, {
+            channels: [
+              { id: 'C100', name: 'general' },
+              { id: 'C200', name: 'alerts' },
+            ],
+            response_metadata: { next_cursor: '' },
+          }),
+        )
+        // Init timestamps
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }))
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }));
+
+      const deps = createDeps({ channelIds: [] });
+      const channel = new SlackChannel(deps);
+      await channel.start();
+
+      // Send alert
+      fetchSpy
+        .mockResolvedValueOnce(createSlackResponse(true))
+        .mockResolvedValueOnce(createSlackResponse(true));
+
+      const alert: ProactiveAlert = {
+        type: 'deadline',
+        priority: 3,
+        title: 'Test alert',
+        details: 'Details here',
+        entityIds: [],
+        timestamp: new Date().toISOString(),
+      };
+      await channel.sendAlert(alert);
+
+      // 3 setup + 2 alert posts
+      expect(fetchSpy).toHaveBeenCalledTimes(5);
+
+      await channel.stop();
+    });
+
+    it('broadcasts to discovered channels when groupId is null', async () => {
+      fetchSpy
+        // Discovery
+        .mockResolvedValueOnce(
+          createSlackResponse(true, {
+            channels: [{ id: 'C100' }, { id: 'C200' }],
+            response_metadata: { next_cursor: '' },
+          }),
+        )
+        // Init
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }))
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }));
+
+      const deps = createDeps({ channelIds: [] });
+      const channel = new SlackChannel(deps);
+      await channel.start();
+
+      fetchSpy
+        .mockResolvedValueOnce(createSlackResponse(true))
+        .mockResolvedValueOnce(createSlackResponse(true));
+
+      await channel.sendMessage('broadcast', null);
+
+      // 3 setup + 2 sends
+      expect(fetchSpy).toHaveBeenCalledTimes(5);
+
+      await channel.stop();
+    });
+  });
+
   describe('sendMessage', () => {
     it('posts a message to a specific channel', async () => {
       fetchSpy.mockResolvedValueOnce(
@@ -81,16 +313,26 @@ describe('SlackChannel', () => {
       expect(body['text']).toBe('hello world');
     });
 
-    it('broadcasts to all channels when groupId is null', async () => {
+    it('broadcasts to all resolved channels when groupId is null', async () => {
       const deps = createDeps({ channelIds: ['C001', 'C002'] });
       fetchSpy
+        // init C001
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }))
+        // init C002
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }))
+        // send C001
         .mockResolvedValueOnce(createSlackResponse(true))
+        // send C002
         .mockResolvedValueOnce(createSlackResponse(true));
 
       const channel = new SlackChannel(deps);
+      await channel.start();
       await channel.sendMessage('broadcast', null);
 
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      // 2 init + 2 sends
+      expect(fetchSpy).toHaveBeenCalledTimes(4);
+
+      await channel.stop();
     });
 
     it('logs error when API returns ok: false', async () => {
@@ -143,11 +385,16 @@ describe('SlackChannel', () => {
   describe('sendAlert', () => {
     it('sends formatted alert to all monitored channels', async () => {
       fetchSpy
+        // init
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }))
+        .mockResolvedValueOnce(createSlackResponse(true, { messages: [] }))
+        // sends
         .mockResolvedValueOnce(createSlackResponse(true))
         .mockResolvedValueOnce(createSlackResponse(true));
 
       const deps = createDeps({ channelIds: ['C001', 'C002'] });
       const channel = new SlackChannel(deps);
+      await channel.start();
 
       const alert: ProactiveAlert = {
         type: 'deadline',
@@ -160,12 +407,15 @@ describe('SlackChannel', () => {
 
       await channel.sendAlert(alert);
 
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      // 2 init + 2 sends
+      expect(fetchSpy).toHaveBeenCalledTimes(4);
       const body = JSON.parse(
-        (fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string,
+        (fetchSpy.mock.calls[2] as [string, RequestInit])[1].body as string,
       ) as Record<string, string>;
       expect(body['text']).toContain('[!!!]');
       expect(body['text']).toContain('Payment due');
+
+      await channel.stop();
     });
 
     it('suppresses alerts when silenced', async () => {
@@ -565,9 +815,6 @@ describe('SlackChannel', () => {
       await channel.stop();
 
       const callCountAfterStop = fetchSpy.mock.calls.length;
-
-      // pollOnce should still work but no new timer-based polls should fire
-      // verify the channel is in stopped state by checking no additional fetches
       expect(fetchSpy.mock.calls.length).toBe(callCountAfterStop);
     });
 

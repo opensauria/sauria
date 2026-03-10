@@ -123,8 +123,48 @@ pub(crate) async fn finalize_connection(
         write_config(paths, &config);
     }
 
+    // Update canvas node status so get_*_status commands return fresh data
+    update_canvas_node(paths, result);
+
     daemon_manager::restart_daemon(daemon_state, paths).await;
     Ok(())
+}
+
+fn update_canvas_node(paths: &Paths, result: &ConnectionResult) {
+    if !paths.canvas.exists() {
+        return;
+    }
+    let Ok(content) = fs::read_to_string(&paths.canvas) else {
+        return;
+    };
+    let Ok(mut graph) = serde_json::from_str::<Value>(&content) else {
+        return;
+    };
+    let Some(nodes) = graph.get_mut("nodes").and_then(|n| n.as_array_mut()) else {
+        return;
+    };
+
+    // Find by deterministic node_id OR by old temp nodeId from credentials
+    let node = nodes.iter_mut().find(|n| {
+        n.get("id").and_then(|v| v.as_str()) == Some(&result.node_id)
+    });
+
+    if let Some(node) = node {
+        node["status"] = Value::String("connected".to_string());
+        node["label"] = Value::String(result.display_name.clone());
+        if let Some(extra) = result.extra.as_object() {
+            let meta = node.get("meta").cloned().unwrap_or(Value::Object(Default::default()));
+            let mut meta_obj = meta.as_object().cloned().unwrap_or_default();
+            for (k, v) in extra {
+                meta_obj.insert(k.clone(), v.clone());
+            }
+            node["meta"] = Value::Object(meta_obj);
+        }
+        let _ = fs::write(
+            &paths.canvas,
+            serde_json::to_string_pretty(&graph).unwrap_or_default(),
+        );
+    }
 }
 
 pub(crate) fn build_success_response(result: &ConnectionResult) -> Value {

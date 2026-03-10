@@ -14,7 +14,7 @@ pub(crate) async fn connect_telegram(
     let token = creds.get("token").and_then(|v| v.as_str()).unwrap_or("");
     let user_id = creds.get("userId").and_then(|v| v.as_u64()).unwrap_or(0);
     if token.is_empty() || user_id == 0 {
-        return Ok(serde_json::json!({"success": false, "error": "Invalid credentials"}));
+        return Ok(serde_json::json!({"success": false, "error": "Bot token and your user ID are required."}));
     }
 
     let client = build_http_client()?;
@@ -24,13 +24,13 @@ pub(crate) async fn connect_telegram(
         .get(format!("{tg_api}/getMe"))
         .send()
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("Could not reach Telegram API: {e}"))?
         .json()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Invalid response from Telegram: {e}"))?;
 
     if !res.get("ok").and_then(|v| v.as_bool()).unwrap_or(false) {
-        return Ok(serde_json::json!({"success": false, "error": "Invalid bot token"}));
+        return Ok(serde_json::json!({"success": false, "error": "Invalid bot token. Get a valid one from @BotFather on Telegram."}));
     }
 
     let bot_result = res.get("result").cloned().unwrap_or(Value::Null);

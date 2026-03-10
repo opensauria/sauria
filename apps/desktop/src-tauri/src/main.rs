@@ -90,6 +90,7 @@ fn main() {
             cmd_canvas::save_canvas_graph,
             cmd_canvas::execute_owner_command,
             cmd_canvas::get_telegram_status,
+            cmd_canvas::get_slack_status,
             cmd_canvas::get_owner_profile,
             // Channels
             cmd_channels::connect_channel,

@@ -3,6 +3,7 @@ import type { AuditLogger } from '../security/audit.js';
 import type { IngestPipeline } from '../ingestion/pipeline.js';
 import type { InboundMessage } from '../orchestrator/types.js';
 import { secureFetch } from '../security/url-allowlist.js';
+import { getLogger } from '../utils/logger.js';
 import { ChannelGuards, PollController, formatAlert, type Channel } from './base.js';
 import {
   processInboundMessage,
@@ -14,6 +15,11 @@ import {
 const SLACK_API_BASE = 'https://slack.com/api/';
 const POLL_INTERVAL_MS = 3_000;
 const FETCH_TIMEOUT_MS = 10_000;
+
+interface ConversationsListResponse extends SlackApiResponse {
+  readonly channels?: readonly { readonly id: string; readonly name?: string }[];
+  readonly response_metadata?: { readonly next_cursor?: string };
+}
 
 export interface SlackDeps {
   readonly token: string;
@@ -31,13 +37,22 @@ export class SlackChannel implements Channel {
   private readonly guards = new ChannelGuards('slack');
   private readonly poller = new PollController(POLL_INTERVAL_MS);
   private readonly latestTimestamps = new Map<string, string>();
+  private resolvedChannelIds: string[] = [];
 
   constructor(private readonly deps: SlackDeps) {}
 
   async start(): Promise<void> {
     const { audit, channelIds } = this.deps;
-    audit.logAction('slack:start', { channelIds: [...channelIds] });
-    for (const channelId of channelIds) {
+
+    if (channelIds.length > 0) {
+      this.resolvedChannelIds = [...channelIds];
+    } else {
+      this.resolvedChannelIds = await this.discoverBotChannels();
+    }
+
+    audit.logAction('slack:start', { channelIds: [...this.resolvedChannelIds] });
+
+    for (const channelId of this.resolvedChannelIds) {
       await this.initializeChannelTimestamp(channelId);
     }
     this.poller.start(() => this.pollAllChannels());
@@ -51,7 +66,7 @@ export class SlackChannel implements Channel {
   async sendAlert(alert: ProactiveAlert): Promise<void> {
     if (this.guards.isSilenced()) return;
     const text = formatAlert(alert);
-    for (const channelId of this.deps.channelIds) {
+    for (const channelId of this.resolvedChannelIds) {
       await this.postMessage(channelId, text);
     }
   }
@@ -61,7 +76,7 @@ export class SlackChannel implements Channel {
       await this.postMessage(groupId, content);
       return;
     }
-    for (const channelId of this.deps.channelIds) {
+    for (const channelId of this.resolvedChannelIds) {
       await this.postMessage(channelId, content);
     }
   }
@@ -74,9 +89,60 @@ export class SlackChannel implements Channel {
     this.guards.silence(hours);
   }
 
-  /** Exposed for testing -- triggers one poll cycle across all channels. */
+  /** Exposed for testing — triggers one poll cycle across all channels. */
   async pollOnce(): Promise<void> {
     await this.pollAllChannels();
+  }
+
+  private async discoverBotChannels(): Promise<string[]> {
+    const { audit } = this.deps;
+    const logger = getLogger();
+    const discovered: string[] = [];
+    let cursor = '';
+
+    try {
+      do {
+        const params: Record<string, string> = {
+          types: 'public_channel,private_channel',
+          exclude_archived: 'true',
+          limit: '200',
+        };
+        if (cursor) params['cursor'] = cursor;
+
+        const response = await this.callSlackApi<ConversationsListResponse>(
+          'users.conversations',
+          params,
+        );
+
+        if (!response.ok) {
+          audit.logAction(
+            'slack:discover_channels_error',
+            { error: response.error ?? 'unknown' },
+            { success: false },
+          );
+          return discovered;
+        }
+
+        for (const channel of response.channels ?? []) {
+          discovered.push(channel.id);
+        }
+
+        cursor = response.response_metadata?.next_cursor ?? '';
+      } while (cursor);
+
+      logger.info('Slack channels discovered', {
+        nodeId: this.deps.nodeId ?? 'none',
+        count: discovered.length,
+      });
+    } catch (error) {
+      audit.logAction(
+        'slack:discover_channels_error',
+        { error: String(error) },
+        { success: false },
+      );
+    }
+
+    return discovered;
   }
 
   private async initializeChannelTimestamp(channelId: string): Promise<void> {
@@ -107,7 +173,7 @@ export class SlackChannel implements Channel {
   }
 
   private async pollAllChannels(): Promise<void> {
-    for (const channelId of this.deps.channelIds) {
+    for (const channelId of this.resolvedChannelIds) {
       await this.pollChannel(channelId);
     }
   }

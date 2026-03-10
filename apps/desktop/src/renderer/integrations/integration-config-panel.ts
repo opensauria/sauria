@@ -8,6 +8,7 @@ import { startIntegrationOauth, startProxyOauth, getAuthProxyUrl } from './ipc.j
 import { t } from '../i18n.js';
 
 import './integration-telegram-panel.js';
+import './integration-slack-panel.js';
 
 @customElement('integration-config-panel')
 export class IntegrationConfigPanel extends LightDomElement {
@@ -25,8 +26,14 @@ export class IntegrationConfigPanel extends LightDomElement {
 
     if (this.panelId === 'telegram') {
       return html`<integration-telegram-panel
-        @telegram-status-change=${this.handleTelegramChange}
+        @telegram-status-change=${this.handleChannelChange}
       ></integration-telegram-panel>`;
+    }
+
+    if (this.panelId === 'slack') {
+      return html`<integration-slack-panel
+        @slack-status-change=${this.handleChannelChange}
+      ></integration-slack-panel>`;
     }
 
     if (!this.item) return nothing;
@@ -309,7 +316,7 @@ export class IntegrationConfigPanel extends LightDomElement {
     this.connecting = false;
   }
 
-  private handleTelegramChange() {
+  private handleChannelChange() {
     this.fireRefresh();
   }
 

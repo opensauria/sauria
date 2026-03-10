@@ -27,7 +27,7 @@ const PLATFORM_CREDENTIALS: Record<string, PlatformCredentialConfig> = {
       return { token: (form.token || '').trim(), userId: parsedId, nodeId };
     },
   },
-  slack: { fields: ['token', 'signingSecret'] },
+  slack: { fields: ['ownerId', 'token', 'signingSecret'] },
   whatsapp: { fields: ['phoneNumberId', 'accessToken'] },
   discord: { fields: ['token'] },
   teams: { fields: ['appId', 'appSecret', 'tenantId'] },
@@ -116,7 +116,7 @@ const PLATFORM_RESULTS: Record<string, PlatformResultConfig> = {
     labelKey: 'displayName',
     labelFallback: 'Slack Bot',
     photoKey: 'photo',
-    metaKeys: { botId: 'botId' },
+    metaKeys: { botId: 'botId', teamName: 'teamName' },
   },
   discord: {
     labelKey: 'displayName',

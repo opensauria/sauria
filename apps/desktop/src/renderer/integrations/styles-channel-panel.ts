@@ -1,17 +1,17 @@
 import { css } from 'lit';
 
-/* Telegram bot cards and form status styles */
+/* Shared bot card, connect form, and status styles for channel panels (Telegram, Slack, etc.) */
 
-export const telegramStyles = css`
-  /* ── Telegram Bot Cards ─────────────────────── */
+export const channelPanelStyles = css`
+  /* ── Bot Cards ────────────────────────────────── */
 
-  .tg-bot-list {
+  .ch-bot-list {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
   }
 
-  .tg-bot-card {
+  .ch-bot-card {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -21,8 +21,8 @@ export const telegramStyles = css`
     border-radius: var(--radius-sm);
   }
 
-  .tg-bot-avatar,
-  .tg-bot-avatar-placeholder {
+  .ch-bot-avatar,
+  .ch-bot-avatar-placeholder {
     width: calc(2 * var(--spacing-mld));
     height: calc(2 * var(--spacing-mld));
     border-radius: 50%;
@@ -30,28 +30,28 @@ export const telegramStyles = css`
     overflow: hidden;
   }
 
-  .tg-bot-avatar {
+  .ch-bot-avatar {
     object-fit: cover;
   }
 
-  .tg-bot-avatar-placeholder {
+  .ch-bot-avatar-placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
     background: color-mix(in srgb, var(--accent) 12%, transparent);
   }
 
-  .tg-bot-avatar-placeholder img {
+  .ch-bot-avatar-placeholder img {
     width: var(--spacing-mld);
     height: var(--spacing-mld);
   }
 
-  .tg-bot-info {
+  .ch-bot-info {
     flex: 1;
     min-width: 0;
   }
 
-  .tg-bot-name {
+  .ch-bot-name {
     font-size: var(--font-size-label);
     font-weight: 600;
     overflow: hidden;
@@ -59,7 +59,12 @@ export const telegramStyles = css`
     white-space: nowrap;
   }
 
-  .tg-bot-status {
+  .ch-bot-subtitle {
+    font-weight: 400;
+    color: var(--text-dim);
+  }
+
+  .ch-bot-status {
     font-size: var(--font-size-x-small);
     color: var(--text-dim);
     display: flex;
@@ -67,14 +72,14 @@ export const telegramStyles = css`
     gap: var(--spacing-xs);
   }
 
-  .tg-bot-dot {
+  .ch-bot-dot {
     width: var(--spacing-sm);
     height: var(--spacing-sm);
     border-radius: 50%;
     background: var(--success);
   }
 
-  .tg-bot-disconnect {
+  .ch-bot-disconnect {
     width: var(--spacing-xl);
     height: var(--spacing-xl);
     border: 1px solid var(--border);
@@ -88,26 +93,27 @@ export const telegramStyles = css`
     transition: all var(--transition-fast);
   }
 
-  .tg-bot-disconnect:hover {
+  .ch-bot-disconnect:hover {
     border-color: var(--error);
     background: color-mix(in srgb, var(--error) 8%, transparent);
   }
 
-  .tg-bot-disconnect svg {
+  .ch-bot-disconnect svg {
     color: var(--text-dim);
     transition: color var(--transition-fast);
   }
 
-  .tg-bot-disconnect:hover svg {
+  .ch-bot-disconnect:hover svg {
     color: var(--error);
   }
 
-  .tg-add-card {
+  .ch-add-card {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: var(--spacing-sm);
     width: 100%;
+    margin-top: var(--spacing-sm);
     padding: var(--spacing-sm);
     border: 1px dashed var(--border);
     border-radius: var(--radius-sm);
@@ -118,16 +124,16 @@ export const telegramStyles = css`
     transition: all var(--transition-fast);
   }
 
-  .tg-add-card:hover {
+  .ch-add-card:hover {
     border-color: var(--accent);
     color: var(--accent);
   }
 
-  .tg-add-card svg {
+  .ch-add-card svg {
     color: inherit;
   }
 
-  .tg-connect-section {
+  .ch-connect-section {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
