@@ -109,8 +109,10 @@ export class SlackChannel implements Channel {
         };
         if (cursor) params['cursor'] = cursor;
 
-        const response =
-          await this.callSlackApi<ConversationsListResponse>('users.conversations', params);
+        const response = await this.callSlackApi<ConversationsListResponse>(
+          'users.conversations',
+          params,
+        );
 
         if (!response.ok) {
           audit.logAction(

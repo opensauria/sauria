@@ -164,9 +164,7 @@ describe('SlackChannel', () => {
     });
 
     it('handles discovery API returning ok: false', async () => {
-      fetchSpy.mockResolvedValueOnce(
-        createSlackResponse(false, {}, 'missing_scope'),
-      );
+      fetchSpy.mockResolvedValueOnce(createSlackResponse(false, {}, 'missing_scope'));
 
       const deps = createDeps({ channelIds: [] });
       const channel = new SlackChannel(deps);
