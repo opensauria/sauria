@@ -12,7 +12,7 @@ The desktop app (Tauri v2) provides a visual canvas where users connect AI agent
 CLI (commander) ──► daemon-lifecycle.ts ──► ProactiveEngine
                                          ├── ModelRouter (multi-provider)
                                          ├── IngestPipeline
-                                         ├── MCP Server (7 tools)
+                                         ├── MCP Server (11 tools)
                                          ├── Orchestrator + MessageQueue
                                          │    ├── LLMRoutingBrain
                                          │    ├── AutonomyEnforcer
@@ -50,7 +50,7 @@ apps/
       db/                          # SQLite schema, world-model queries, search
       engine/                      # Proactive alerts, deadlines, pattern detection
       ingestion/                   # Pipeline, normalizer, dedup, MCP/email/calendar
-      mcp/                         # MCP server (7 tools), MCP client manager
+      mcp/                         # MCP server (11 tools), MCP client manager
       orchestrator/                # Orchestrator, LLM router, autonomy, message queue
       security/                    # Audit, rate limiter, PII scrubber, sanitize
       setup/                       # Silent setup, daemon service, MCP client detection
@@ -144,6 +144,22 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - Booleans: `is/has/should/can` prefix
 - Event handlers: `handle` prefix
 
+### Testing
+
+- Framework: Vitest (`vitest.config.ts` in `apps/daemon/`)
+- Tests in `__tests__/` directories next to source code
+- Run: `pnpm -F @sauria/cli test`
+- Coverage: `pnpm -F @sauria/cli test -- --coverage` (target: 90%+ lines)
+- Conventions:
+  - Import from `.js` extension (ESM)
+  - Factory functions for fixtures (`createTestAgent()`, `createTestWorkspace()`)
+  - `vi.fn()` for mocks, `vi.useFakeTimers()` for time
+  - In-memory `better-sqlite3` (`:memory:`) for DB tests
+  - Mock external deps only; use real crypto for vault tests
+  - Adversarial inputs for security tests
+  - No snapshot tests
+- Shared helpers: `src/__tests__/helpers/db.ts` (test DB factory), `src/__tests__/helpers/fixtures.ts` (shared fixtures)
+
 ### Error Handling
 
 - Never swallow errors silently
@@ -179,7 +195,8 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 
 - SQLite with `better-sqlite3` (synchronous reads, async-wrapped writes)
 - Schema applied on startup via `applySchema(db)`
-- Tables: `entities`, `relations`, `events`, `observations`, `agent_messages`, `agent_conversations`, `agent_memory`, `agent_tasks`
+- Tables: `entities`, `relations`, `events`, `observations`, `tasks`, `embeddings`, `agent_messages`, `agent_conversations`, `agent_tasks`, `agent_memory`
+- Dynamic tables created on first use: `budget_spend` (budget.ts), `audit_log` (audit.ts)
 - FTS5 for full-text search
 - **Embeddings**: `apps/daemon/src/ai/embeddings.ts` imports `@huggingface/transformers` but the package was removed from `package.json`. Semantic search is broken until embeddings are migrated (to local Python model or re-added as dependency).
 
@@ -206,7 +223,6 @@ pnpm-workspace.yaml  turbo.json  tsconfig.base.json  package.json
 - **Peer Messages in Routing**: `buildRoutingPrompt()` includes recent messages from other nodes in the same workspace (~100 tokens). Total additional overhead: ~350-400 tokens per routing decision (negligible vs base ~2000-4000).
 - **Graph Persistence**: owner commands (`promote`, `reassign`, `fire`, `pause`) persist mutations to `canvas.json` via `persistGraph()`.
 - **Inter-agent isolation**: `forward`, `notify`, `send_to_all`, `group_message` route via `handleInbound()` (internal). Only owner-agent communication uses `registry.sendTo()` (external channels).
-- Design details documented in the Agent Collaboration section above
 
 ### Routing Logic (CRITICAL — read before touching orchestrator or llm-router)
 
@@ -248,9 +264,9 @@ Agent received direct message (forwardDepth = 0) → reply via own channel (norm
 #### Forward Depth Protection
 
 - `forwardDepth` increments on each `forward` action
-- `MAX_FORWARD_DEPTH = 3` — `handleInbound()` drops messages at this depth
+- `MAX_FORWARD_DEPTH = 10` — `handleInbound()` drops messages at this depth
+- Soft thresholds: depth 5 (start wrapping up), depth 8 (must conclude now) via `buildDebateDepthHints()` in `prompt-sections.ts`
 - Forwarded replies preserve depth (don't increment) — only new forwards increment
-- This gives ~3 rounds of agent-to-agent debate before the chain stops
 
 #### Edge Animation: Bidirectional Matching
 
@@ -337,7 +353,7 @@ Platforms:  --platform-telegram, --platform-discord, --platform-slack, --platfor
 - Outer radius = inner radius + padding
 - Cards: 12px radius, inner elements: 8px
 - Buttons: 8px radius
-- Badges: 5px radius
+- Badges: 4px radius
 
 ### Typography
 
@@ -490,6 +506,7 @@ open /Applications/Sauria.app
 pnpm run format:check                     # Prettier must pass (includes pnpm-lock.yaml)
 pnpm -r typecheck                          # TypeScript strict mode, zero errors
 pnpm -F @sauria/cli test               # All tests green
+pnpm -F @sauria/cli test -- --coverage # Coverage must be 90%+
 pnpm -F @sauria/cli build              # Daemon build must exit 0
 ```
 
@@ -525,13 +542,9 @@ The process is fully automated:
 ### GitHub Repository Settings
 
 - **Repo**: `opensauria/sauria` (public, AGPL-3.0-or-later)
-- **Rulesets**: main (PR + CODEOWNERS review), develop (no force push), tags v\* (no delete/force push)
-- **Admin bypass**: `@teobouancheau` can bypass rulesets (solo maintainer)
 - **Merge**: squash merge only, auto-delete branches
-- **Actions**: read-only default permissions, selected actions only (GitHub-owned + verified + 5 trusted: softprops/action-gh-release, anchore/sbom-action, pnpm/action-setup, dtolnay/rust-toolchain, apple-actions/import-codesign-certs)
-- **Environment `production`**: required reviewer `@teobouancheau`, deployment restricted to `v*` tags
-- **Secrets**: npm uses OIDC trusted publishing (no token needed)
-- **CODEOWNERS**: `* @teobouancheau`
+- **Rulesets**: main requires PR, develop no force push, tags v\* protected
+- **Releases**: `production` environment restricted to `v*` tags
 
 ### Dev Workflow
 

@@ -5,10 +5,11 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    pool: 'forks',
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/__tests__/**', 'src/**/types.ts', 'src/**/index.ts'],
     },
   },
 });

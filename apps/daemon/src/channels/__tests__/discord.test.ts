@@ -251,4 +251,159 @@ describe('DiscordChannel', () => {
       { success: false },
     );
   });
+
+  it('sends alert to first resolved channel', async () => {
+    const responses = new Map<string, unknown>();
+    responses.set('/channels/ch-1/messages?limit=1', [{ id: '100' }]);
+    responses.set('/channels/ch-1/messages', {});
+    globalThis.fetch = createMockFetch(responses) as typeof fetch;
+
+    channel = new DiscordChannel({ ...baseDeps, audit, pipeline, onInbound });
+    await channel.start();
+
+    await channel.sendAlert({
+      type: 'deadline',
+      title: 'Alert Title',
+      details: 'Details here',
+      priority: 4,
+      entityIds: [],
+      timestamp: new Date().toISOString(),
+    });
+
+    expect(audit.logAction).toHaveBeenCalledWith('discord:message_sent', expect.any(Object));
+  });
+
+  it('silences alerts', async () => {
+    const responses = new Map<string, unknown>();
+    responses.set('/channels/ch-1/messages?limit=1', [{ id: '100' }]);
+    globalThis.fetch = createMockFetch(responses) as typeof fetch;
+
+    channel = new DiscordChannel({ ...baseDeps, audit, pipeline, onInbound });
+    await channel.start();
+    channel.silenceFor(1);
+
+    await channel.sendAlert({
+      type: 'deadline',
+      title: 'Silenced',
+      details: '',
+      priority: 3,
+      entityIds: [],
+      timestamp: new Date().toISOString(),
+    });
+
+    // Should not have sent any message after the start audit
+    const sentCalls = (audit.logAction as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (c: unknown[]) => c[0] === 'discord:message_sent',
+    );
+    expect(sentCalls).toHaveLength(0);
+  });
+
+  it('sends message to all channels when no groupId', async () => {
+    const responses = new Map<string, unknown>();
+    responses.set('/channels/ch-1/messages?limit=1', [{ id: '100' }]);
+    responses.set('/channels/ch-1/messages', {});
+    globalThis.fetch = createMockFetch(responses) as typeof fetch;
+
+    channel = new DiscordChannel({ ...baseDeps, audit, pipeline, onInbound });
+    await channel.start();
+    await channel.sendMessage('Broadcast', null);
+
+    expect(audit.logAction).toHaveBeenCalledWith('discord:message_sent', expect.any(Object));
+  });
+
+  it('sendToGroup posts to specific channel', async () => {
+    const responses = new Map<string, unknown>();
+    responses.set('/channels/ch-1/messages?limit=1', [{ id: '100' }]);
+    responses.set('/channels/', {});
+    globalThis.fetch = createMockFetch(responses) as typeof fetch;
+
+    channel = new DiscordChannel({ ...baseDeps, audit, pipeline, onInbound });
+    await channel.start();
+    await channel.sendToGroup('ch-1', 'Group msg');
+
+    expect(audit.logAction).toHaveBeenCalledWith('discord:message_sent', expect.any(Object));
+  });
+
+  it('handles send error gracefully', async () => {
+    const responses = new Map<string, unknown>();
+    responses.set('/channels/ch-1/messages?limit=1', [{ id: '100' }]);
+    globalThis.fetch = createMockFetch(responses) as typeof fetch;
+
+    channel = new DiscordChannel({ ...baseDeps, audit, pipeline, onInbound });
+    await channel.start();
+
+    // Override fetch for the send to fail
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Send failed')) as unknown as typeof fetch;
+    await channel.sendMessage('Fail', 'ch-1');
+
+    expect(audit.logAction).toHaveBeenCalledWith(
+      'discord:send_error',
+      expect.objectContaining({ error: expect.stringContaining('Send failed') }),
+      { success: false },
+    );
+  });
+
+  it('handles init channel timestamp error gracefully', async () => {
+    const failFetch = vi.fn().mockRejectedValue(new Error('init fail'));
+    globalThis.fetch = failFetch as unknown as typeof fetch;
+
+    channel = new DiscordChannel({ ...baseDeps, audit, pipeline, onInbound });
+    await channel.start();
+
+    expect(audit.logAction).toHaveBeenCalledWith(
+      'discord:init_channel_error',
+      expect.objectContaining({ channelId: 'ch-1' }),
+      { success: false },
+    );
+  });
+
+  it('handles Discord API non-ok response', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+    }) as unknown as typeof fetch;
+
+    channel = new DiscordChannel({ ...baseDeps, audit, pipeline, onInbound });
+    await channel.start();
+
+    // The init should have logged an error
+    expect(audit.logAction).toHaveBeenCalledWith(
+      'discord:init_channel_error',
+      expect.objectContaining({ error: expect.stringContaining('403') }),
+      { success: false },
+    );
+  });
+
+  it('handles guild channel resolution error', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('guild fail')) as unknown as typeof fetch;
+
+    channel = new DiscordChannel({
+      ...baseDeps,
+      channelIds: [],
+      audit,
+      pipeline,
+      onInbound,
+    });
+    await channel.start();
+
+    expect(audit.logAction).toHaveBeenCalledWith(
+      'discord:resolve_channels_error',
+      expect.objectContaining({ error: expect.stringContaining('guild fail') }),
+      { success: false },
+    );
+  });
+
+  it('polls with limit=20 when afterId is 0', async () => {
+    // Simulate init returning empty messages so afterId stays '0'
+    const responses = new Map<string, unknown>();
+    responses.set('/channels/ch-1/messages?limit=1', []);
+    responses.set('/channels/ch-1/messages?limit=20', mockMessages);
+    globalThis.fetch = createMockFetch(responses) as typeof fetch;
+
+    channel = new DiscordChannel({ ...baseDeps, audit, pipeline, onInbound });
+    await channel.start();
+    await channel.pollOnce();
+
+    expect(onInbound).toHaveBeenCalled();
+  });
 });
