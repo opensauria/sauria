@@ -31,5 +31,9 @@ packages/design-tokens/generated/
 # Worktrees
 .worktrees/
 
+# Workers (deploy config — owner-only)
+workers/*/wrangler.toml
+workers/*/package-lock.json
+
 # Claude Code (personal tooling)
 .claude/
