@@ -1,0 +1,14 @@
+{
+  "name": "sauria-install-worker",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260310.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.72.0"
+  }
+}
