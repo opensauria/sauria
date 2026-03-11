@@ -165,4 +165,24 @@ describe('runSecurityChecks', () => {
     });
     await expect(runSecurityChecks()).resolves.toBeUndefined();
   });
+
+  it('rethrows unexpected errors from home ownership check', async () => {
+    vi.mocked(stat).mockImplementation(async (path) => {
+      if (path === '/mock/.sauria') {
+        throw new Error('unexpected IO error');
+      }
+      return { mode: 0o100600, uid: 501, size: 0 } as never;
+    });
+    await expect(runSecurityChecks()).rejects.toThrow('unexpected IO error');
+  });
+
+  it('handles ENOENT for database file on first run', async () => {
+    vi.mocked(stat).mockImplementation(async (path) => {
+      if (String(path).endsWith('.db')) {
+        throw Object.assign(new Error('not found'), { code: 'ENOENT' });
+      }
+      return { mode: 0o100700, uid: 501, size: 0 } as never;
+    });
+    await expect(runSecurityChecks()).resolves.toBeUndefined();
+  });
 });

@@ -247,4 +247,116 @@ describe('ProactiveEngine', () => {
     await expect(vi.advanceTimersByTimeAsync(0)).resolves.not.toThrow();
     engine.stop();
   });
+
+  it('cleanupStaleKeys removes expired keys after 1 hour', async () => {
+    const deadlineAlert = {
+      type: 'deadline_approaching' as const,
+      priority: 'critical' as const,
+      numericPriority: 4,
+      title: 'Due soon: Task',
+      details: 'Due in 2h',
+      relatedEntityIds: ['ent-1'],
+      scheduledFor: '2026-03-10T14:00:00Z',
+      hoursUntil: 2,
+    };
+    mockScanDeadlines.mockReturnValue([deadlineAlert]);
+
+    const onAlert = vi.fn();
+    const engine = new ProactiveEngine(db, createMockRouter(), onAlert);
+    engine.start(60_000);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onAlert).toHaveBeenCalledTimes(1);
+
+    // Advance past cooldown (7200s = 2h) AND past cleanup interval (1h)
+    // The COOLDOWN_MS = 7200 * 1000 = 7200000ms
+    await vi.advanceTimersByTimeAsync(7_200_000 + 60_000);
+
+    // Alert should fire again since key was cleaned up and cooldown passed
+    expect(onAlert.mock.calls.length).toBeGreaterThan(1);
+    engine.stop();
+  });
+
+  it('skips insight generation when daily alert limit reached', async () => {
+    // Emit exactly MAX_ALERTS_PER_DAY (5) alerts to hit the daily limit
+    mockScanDeadlines.mockReturnValue(
+      Array.from({ length: 5 }, (_, i) => ({
+        type: 'deadline_approaching' as const,
+        priority: 'critical' as const,
+        numericPriority: 4,
+        title: `Unique task ${i}`,
+        details: 'Due soon',
+        relatedEntityIds: [`ent-${i}`],
+        scheduledFor: '2026-03-10T14:00:00Z',
+        hoursUntil: 2,
+      })),
+    );
+
+    const onAlert = vi.fn();
+    const engine = new ProactiveEngine(db, createMockRouter(), onAlert);
+    engine.start(60_000);
+    await vi.advanceTimersByTimeAsync(0);
+    engine.stop();
+
+    expect(onAlert).toHaveBeenCalledTimes(5);
+    expect(mockGenerateInsight).not.toHaveBeenCalled();
+  });
+
+  it('skips insight when buildInsightContext returns empty string', async () => {
+    mockBuildInsightContext.mockReturnValue('');
+    mockScanDeadlines.mockReturnValue([]);
+
+    const onAlert = vi.fn();
+    const engine = new ProactiveEngine(db, createMockRouter(), onAlert);
+    engine.start(60_000);
+    await vi.advanceTimersByTimeAsync(0);
+    engine.stop();
+
+    expect(mockBuildInsightContext).toHaveBeenCalled();
+    expect(mockGenerateInsight).not.toHaveBeenCalled();
+  });
+
+  it('emits no insight alert when generateInsight returns null', async () => {
+    mockBuildInsightContext.mockReturnValue('some context');
+    mockGenerateInsight.mockResolvedValue(null);
+    mockScanDeadlines.mockReturnValue([]);
+
+    const onAlert = vi.fn();
+    const engine = new ProactiveEngine(db, createMockRouter(), onAlert);
+    engine.start(60_000);
+    await vi.advanceTimersByTimeAsync(0);
+    engine.stop();
+
+    expect(mockGenerateInsight).toHaveBeenCalled();
+    const insightAlerts = onAlert.mock.calls
+      .map((c) => c[0])
+      .filter((a: { type: string }) => a.type === 'insight');
+    expect(insightAlerts).toHaveLength(0);
+  });
+
+  it('skips duplicate insight via isDuplicate', async () => {
+    const insight = {
+      id: 'ins-1',
+      content: 'Same pattern',
+      entityIds: ['ent-1'],
+      confidence: 0.8,
+      generatedAt: '2026-03-10T12:00:00Z',
+    };
+    mockBuildInsightContext.mockReturnValue('context');
+    mockGenerateInsight.mockResolvedValue(insight);
+    mockScanDeadlines.mockReturnValue([]);
+
+    const onAlert = vi.fn();
+    const engine = new ProactiveEngine(db, createMockRouter(), onAlert);
+    engine.start(60_000);
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Second tick — same insight should be deduplicated
+    await vi.advanceTimersByTimeAsync(60_000);
+    engine.stop();
+
+    const insightAlerts = onAlert.mock.calls
+      .map((c) => c[0])
+      .filter((a: { type: string }) => a.type === 'insight');
+    expect(insightAlerts).toHaveLength(1);
+  });
 });

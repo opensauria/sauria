@@ -145,4 +145,10 @@ describe('generateInsight', () => {
 
     expect(result?.content).toBe('embedded insight');
   });
+
+  it('returns null when matched JSON block has syntax errors', async () => {
+    const router = createMockRouter('Result: { key: unquoted }');
+    const result = await generateInsight(db, router, 'context');
+    expect(result).toBeNull();
+  });
 });

@@ -146,6 +146,28 @@ describe('LLMRoutingBrain', () => {
       expect(tier).toBe('deep');
     });
 
+    it('returns local for exactly 20 words without question mark', () => {
+      const router = createMockRouter('{}');
+      const brain = new LLMRoutingBrain(router, db);
+      const content = Array.from({ length: 20 }, (_, i) => `word${i}`).join(' ');
+      const message = buildMessage({ content });
+
+      const tier = brain.selectModelTier(message, false);
+
+      expect(tier).toBe('fast');
+    });
+
+    it('returns local for 19 words without question mark', () => {
+      const router = createMockRouter('{}');
+      const brain = new LLMRoutingBrain(router, db);
+      const content = Array.from({ length: 19 }, (_, i) => `word${i}`).join(' ');
+      const message = buildMessage({ content });
+
+      const tier = brain.selectModelTier(message, false);
+
+      expect(tier).toBe('local');
+    });
+
     it('returns deep for budget-related strategic messages', () => {
       const router = createMockRouter('{}');
       const brain = new LLMRoutingBrain(router, db);
@@ -157,6 +179,34 @@ describe('LLMRoutingBrain', () => {
       const tier = brain.selectModelTier(message, false);
 
       expect(tier).toBe('deep');
+    });
+  });
+
+  describe('summarizeToolResult', () => {
+    it('concatenates streamed text chunks', async () => {
+      async function* mockMultiChunkStream() {
+        yield { text: 'A ', done: false };
+        yield { text: 'B', done: true };
+      }
+
+      const router = {
+        reason: vi.fn().mockReturnValue(mockMultiChunkStream()),
+        deepAnalyze: vi.fn(),
+        extract: vi.fn(),
+        onCostIncurred: vi.fn(),
+        getProvider: vi.fn(),
+      } as unknown as ModelRouter;
+
+      const brain = new LLMRoutingBrain(router, db);
+      const result = await brain.summarizeToolResult(
+        '@bot',
+        'list files',
+        'ls',
+        '["a.txt","b.txt"]',
+      );
+
+      expect(result).toBe('A B');
+      expect(router.reason).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -376,6 +426,133 @@ describe('LLMRoutingBrain', () => {
       expect(systemPrompt).toContain('Alice');
     });
 
+    it('excludes conversation context when conversationId is null', async () => {
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({ content: 'What is the refund policy for enterprise clients?' }),
+        conversationId: null,
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).not.toContain('Recent conversation context');
+    });
+
+    it('excludes workspace knowledge when workspace is null', async () => {
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({ content: 'What do we know about team preferences?' }),
+        workspace: null,
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).not.toContain('Workspace knowledge');
+    });
+
+    it('excludes peer activity when team has single node', async () => {
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({ content: 'What is the status of the design review?' }),
+        teamNodes: [baseNode],
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).not.toContain('Recent peer activity');
+    });
+
+    it('excludes other agents section when allNodes is undefined', async () => {
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({ content: 'Who else can help with this task?' }),
+        allNodes: undefined,
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).not.toContain('workspace "unknown"');
+    });
+
+    it('shows unknown workspace when not found in allWorkspaces', async () => {
+      const otherNode: AgentNode = {
+        ...baseNode,
+        id: 'n3',
+        label: '@sales-bot',
+        workspaceId: 'ws-other',
+        role: 'specialist',
+      };
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({ content: 'Can the sales team help with this?' }),
+        allNodes: [baseNode, otherNode],
+        allWorkspaces: [baseWorkspace],
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).toContain('workspace "unknown"');
+    });
+
+    it('excludes known entities when FTS table is empty', async () => {
+      const responseJson = JSON.stringify({
+        actions: [{ type: 'reply', content: 'Noted' }],
+      });
+      const router = createMockRouter(responseJson);
+      const brain = new LLMRoutingBrain(router, db);
+      const context = buildContext({
+        message: buildMessage({ content: 'Tell me about the project status' }),
+      });
+
+      await brain.decideRouting(context);
+
+      const reasonCalls = (router.reason as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reasonCalls.length).toBeGreaterThan(0);
+      const messages = reasonCalls[0]![0] as Array<{ role: string; content: string }>;
+      const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).not.toContain('Known entities');
+    });
+
     it('includes peer messages from other workspace nodes in the routing prompt', async () => {
       const agentMemory = new AgentMemory(db);
       const peerNode: AgentNode = {
@@ -586,5 +763,42 @@ describe('parseRoutingResponse', () => {
     const decision = parseRoutingResponse('');
 
     expect(decision.actions).toHaveLength(0);
+  });
+});
+
+describe('summarizeToolResult', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    applySchema(db);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('concatenates streamed text from router.reason', async () => {
+    async function* mockStream() {
+      yield { text: 'Summary: ', done: false };
+      yield { text: 'the result is 42', done: true };
+    }
+
+    const router = {
+      reason: vi.fn().mockReturnValue(mockStream()),
+      deepAnalyze: vi.fn(),
+      extract: vi.fn(),
+      onCostIncurred: vi.fn(),
+      getProvider: vi.fn(),
+    } as unknown as ModelRouter;
+
+    const brain = new LLMRoutingBrain(router, db);
+    const result = await brain.summarizeToolResult(
+      '@bot',
+      'what is the answer?',
+      'calculator',
+      '{"answer": 42}',
+    );
+    expect(result).toBe('Summary: the result is 42');
   });
 });

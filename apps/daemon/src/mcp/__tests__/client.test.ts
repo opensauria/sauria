@@ -178,6 +178,48 @@ describe('McpClientManager', () => {
       );
     });
 
+    it('throws Unknown error when error content is not an array', async () => {
+      await manager.connect(config);
+      const entry = (
+        manager as unknown as {
+          clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }>;
+        }
+      ).clients.get('test-server');
+      entry?.client.callTool.mockResolvedValue({
+        isError: true,
+        content: 'not-an-array',
+      });
+      await expect(manager.callTool('test-server', 'my-tool', {})).rejects.toThrow('Unknown error');
+    });
+
+    it('filters non-text content items from result', async () => {
+      await manager.connect(config);
+      const entry = (
+        manager as unknown as {
+          clients: Map<string, { client: { callTool: ReturnType<typeof vi.fn> } }>;
+        }
+      ).clients.get('test-server');
+      entry?.client.callTool.mockResolvedValue({
+        content: [
+          { type: 'image', data: 'binary' },
+          { type: 'text', text: 'hello' },
+        ],
+      });
+      const result = await manager.callTool('test-server', 'my-tool', {});
+      expect(result).toBe('hello');
+    });
+
+    it('connects with env and cwd options', async () => {
+      await manager.connect({
+        name: 'env-server',
+        command: 'node',
+        args: ['srv.js'],
+        env: { MY_VAR: 'value' },
+        cwd: '/some/path',
+      });
+      expect(manager.getConnectedServers()).toContain('env-server');
+    });
+
     it('returns toolResult when content is not an array', async () => {
       await manager.connect(config);
       const entry = (

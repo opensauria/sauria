@@ -108,6 +108,23 @@ describe('scanForBannedPatterns', () => {
     const violations = await scanForBannedPatterns('/src');
     expect(violations).toHaveLength(0);
   });
+
+  it('recursively scans nested subdirectories', async () => {
+    vi.mocked(readdir).mockImplementation(async (dir) => {
+      if (String(dir) === '/src') {
+        return [makeDirEntry('sub', true)] as never;
+      }
+      if (String(dir).endsWith('/sub')) {
+        return [makeDirEntry('nested.ts', false)] as never;
+      }
+      return [] as never;
+    });
+    vi.mocked(readFile).mockResolvedValue('eval("bad")');
+
+    const violations = await scanForBannedPatterns('/src');
+    expect(violations.length).toBeGreaterThanOrEqual(1);
+    expect(violations[0]!.file).toContain('sub');
+  });
 });
 
 describe('assertNoBannedPatterns', () => {
