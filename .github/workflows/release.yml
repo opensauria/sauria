@@ -9,6 +9,9 @@ permissions:
   id-token: write
   attestations: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ── Create tag from .release-version ───────────
   release:
@@ -18,7 +21,7 @@ jobs:
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Extract tag from .release-version
         id: tag
@@ -41,11 +44,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -136,11 +139,11 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -166,7 +169,7 @@ jobs:
           subject-path: apps/daemon/dist/index.mjs
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sbom-${{ needs.release.outputs.tag }}
           path: sbom.spdx.json
@@ -194,13 +197,13 @@ jobs:
     name: Desktop (${{ matrix.platform }}-${{ matrix.arch }})
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -238,7 +241,7 @@ jobs:
         run: pnpm run build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sauria-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
@@ -278,7 +281,7 @@ jobs:
 
       - name: Upload platform updater manifest
         if: steps.updater-manifest.outputs.path != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: updater-${{ matrix.platform }}-${{ matrix.arch }}
           path: ${{ steps.updater-manifest.outputs.path }}
@@ -293,7 +296,7 @@ jobs:
       contents: write
     steps:
       - name: Download all updater manifests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: updater-*
           path: manifests
@@ -338,12 +341,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Download SBOM
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: sbom-${{ needs.release.outputs.tag }}
 
