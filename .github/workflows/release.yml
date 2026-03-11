@@ -263,11 +263,25 @@ jobs:
             apps/desktop/src-tauri/target/release/bundle/**/*.AppImage.tar.gz
             apps/desktop/src-tauri/target/release/bundle/**/*.sig
 
+      - name: Locate updater manifest
+        id: updater-manifest
+        shell: bash
+        run: |
+          MANIFEST=$(find apps/desktop/src-tauri/target/release/bundle -name 'latest.json' -type f 2>/dev/null | head -1)
+          echo "path=${MANIFEST}" >> "$GITHUB_OUTPUT"
+          if [ -n "$MANIFEST" ]; then
+            echo "Found updater manifest: $MANIFEST"
+            cat "$MANIFEST"
+          else
+            echo "No updater manifest found"
+          fi
+
       - name: Upload platform updater manifest
+        if: steps.updater-manifest.outputs.path != ''
         uses: actions/upload-artifact@v4
         with:
           name: updater-${{ matrix.platform }}-${{ matrix.arch }}
-          path: apps/desktop/src-tauri/target/release/bundle/**/latest.json
+          path: ${{ steps.updater-manifest.outputs.path }}
           if-no-files-found: warn
 
   # ── Merge updater manifests ────────────────────
@@ -283,21 +297,25 @@ jobs:
         with:
           pattern: updater-*
           path: manifests
+          merge-multiple: false
 
       - name: Merge latest.json
         run: |
-          FILES=$(find manifests -name 'latest.json' -type f)
+          mkdir -p manifests
+          FILES=$(find manifests -name 'latest.json' -type f 2>/dev/null || true)
           if [ -z "$FILES" ]; then
             echo "No updater manifests found, skipping"
             exit 0
           fi
+          echo "Found manifests:"
+          echo "$FILES"
 
           # Start with the first file as base (version, notes, pub_date)
           FIRST=$(echo "$FILES" | head -1)
           MERGED=$(cat "$FIRST")
 
-          # Merge platforms from all files into one
-          for f in $FILES; do
+          # Merge platforms from remaining files
+          for f in $(echo "$FILES" | tail -n +2); do
             MERGED=$(echo "$MERGED" | jq -s '.[0].platforms = (.[0].platforms // {} | . * (.[1].platforms // {})) | .[0]' - "$f")
           done
 
