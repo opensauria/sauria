@@ -245,4 +245,18 @@ describe('CodeModeRouter', () => {
     router.stopAll();
     expect(mockStop).toHaveBeenCalledTimes(2);
   });
+
+  it('blocks messages when terminalActive is true', async () => {
+    const node = makeNode({
+      codeMode: {
+        enabled: true,
+        projectPath: '/Users/teo/project',
+        permissionMode: 'default',
+        terminalActive: true,
+      },
+    });
+    const actions = await router.route(node, makeMessage('test'));
+    expect(actions).toHaveLength(1);
+    expect(replyContent(actions[0]!)).toContain('active terminal session');
+  });
 });

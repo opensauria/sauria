@@ -109,5 +109,23 @@ describe('McpHealthMonitor', () => {
       // Advance past interval; no errors thrown
       vi.advanceTimersByTime(10_000);
     });
+
+    it('catches errors thrown during periodic health check cycle', async () => {
+      const failAudit = {
+        logAction: vi.fn().mockImplementation(() => {
+          throw new Error('audit broken');
+        }),
+      };
+      const clients = new Map<string, ConnectedClient>();
+      clients.set('srv1', makeClient());
+      const reconnect = vi.fn();
+      const monitor = new McpHealthMonitor(clients, failAudit as never, reconnect);
+
+      monitor.start(1000);
+      await vi.advanceTimersByTimeAsync(1000);
+
+      // Should not crash — error caught by .catch()
+      monitor.stop();
+    });
   });
 });
