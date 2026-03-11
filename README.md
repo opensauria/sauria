@@ -33,7 +33,7 @@ Sauria is your AI workforce. Specialized agents that own their roles — sales, 
 
 ```bash
 # macOS / Linux
-curl -fsSL https://install.sauria.dev | sh
+curl -fsSL https://install.sauria.dev | bash
 
 # npm
 npm install -g @sauria/cli
