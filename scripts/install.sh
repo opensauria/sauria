@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Sauria — zero-friction installer
-# Usage: curl -fsSL https://sauria.dev/install.sh | bash
+# Usage: curl -fsSL https://install.sauria.dev | bash
 #
 # What happens:
 #   1. Installs the package silently

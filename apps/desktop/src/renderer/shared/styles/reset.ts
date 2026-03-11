@@ -16,6 +16,12 @@ export const resetStyles = css`
     user-select: none;
   }
 
+  input,
+  textarea,
+  [contenteditable] {
+    user-select: text;
+  }
+
   ::selection {
     background: var(--accent);
     color: var(--text-on-accent);
