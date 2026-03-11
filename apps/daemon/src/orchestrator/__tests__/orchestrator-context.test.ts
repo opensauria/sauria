@@ -39,7 +39,14 @@ import type { CanvasGraph } from '../types.js';
 
 function createMockState(overrides: Partial<OrchestratorState> = {}): OrchestratorState {
   return {
-    graph: { version: 2, nodes: [], edges: [], workspaces: [], globalInstructions: '', viewport: { x: 0, y: 0, zoom: 1 } } as CanvasGraph,
+    graph: {
+      version: 2,
+      nodes: [],
+      edges: [],
+      workspaces: [],
+      globalInstructions: '',
+      viewport: { x: 0, y: 0, zoom: 1 },
+    } as CanvasGraph,
     registry: { sendTo: vi.fn() } as never,
     ownerIdentity: { telegram: { userId: 123 } },
     brain: null,
