@@ -3,7 +3,14 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { LightDomElement } from '../shared/light-dom-element.js';
 import type { IntegrationStatus } from '../shared/types.js';
 import { escapeHtml, formatLabel } from '../shared/utils.js';
-import { integrationsConnect, integrationsDisconnect } from './ipc.js';
+import {
+  integrationsConnect,
+  integrationsDisconnect,
+  integrationsConnectInstance,
+  integrationsDisconnectInstance,
+  integrationsListInstances,
+  type ConnectedInstanceInfo,
+} from './ipc.js';
 import { startIntegrationOauth, startProxyOauth, getAuthProxyUrl } from './ipc.js';
 import { t } from '../i18n.js';
 
@@ -20,6 +27,27 @@ export class IntegrationConfigPanel extends LightDomElement {
   @state() private oauthStatus = '';
   @state() private oauthStatusClass = '';
   @state() private connectError = '';
+  @state() private instances: ConnectedInstanceInfo[] = [];
+  @state() private showAddAccount = false;
+
+  override updated(changed: Map<string, unknown>) {
+    if (changed.has('item') && this.item?.connected) {
+      void this.loadInstances();
+    }
+    if (changed.has('panelId')) {
+      this.showAddAccount = false;
+      this.instances = [];
+    }
+  }
+
+  private async loadInstances() {
+    if (!this.item) return;
+    try {
+      this.instances = await integrationsListInstances(this.item.id);
+    } catch {
+      this.instances = [];
+    }
+  }
 
   override render() {
     if (!this.panelId) return nothing;
@@ -44,6 +72,11 @@ export class IntegrationConfigPanel extends LightDomElement {
 
   private renderConnected() {
     const item = this.item!;
+
+    if (this.showAddAccount) return this.renderAddAccountForm();
+
+    if (this.instances.length > 1) return this.renderMultiInstance();
+
     const toolsList = item.tools.slice(0, 15);
     const remaining = item.tools.length - 15;
 
@@ -66,12 +99,103 @@ export class IntegrationConfigPanel extends LightDomElement {
           : nothing}
       </div>
       <div class="config-actions">
+        <button class="btn btn-secondary" @click=${() => (this.showAddAccount = true)}>
+          + ${t('integ.addAccount')}
+        </button>
         <button
           class="btn btn-secondary"
           ?disabled=${this.connecting}
           @click=${this.handleDisconnect}
         >
           ${this.connecting ? t('integ.disconnecting') : t('integ.disconnect')}
+        </button>
+      </div>
+    `;
+  }
+
+  private renderMultiInstance() {
+    const item = this.item!;
+
+    return html`
+      <div class="config-instances">
+        ${this.instances.map(
+          (inst) => html`
+            <div class="config-instance-card">
+              <div class="config-instance-header">
+                <span class="connected-account-dot"></span>
+                <span class="config-instance-label">${escapeHtml(inst.label)}</span>
+                <span class="config-instance-tools">${inst.tools.length} ${t('integ.tools')}</span>
+              </div>
+              <button
+                class="btn btn-secondary btn-sm"
+                @click=${() => this.handleDisconnectInstance(inst.instanceId)}
+              >
+                ${t('integ.disconnect')}
+              </button>
+            </div>
+          `,
+        )}
+      </div>
+      <div class="config-actions">
+        <button class="btn btn-secondary" @click=${() => (this.showAddAccount = true)}>
+          + ${t('integ.addAccount')}
+        </button>
+      </div>
+      <div class="config-tools">
+        <div class="config-tools-title">${t('integ.availableTools')} (${item.tools.length})</div>
+        ${item.tools
+          .slice(0, 15)
+          .map((tool) => html`<div class="config-tool-item">${escapeHtml(tool.name)}</div>`)}
+        ${item.tools.length > 15
+          ? html`<div class="config-tool-item" style="color:var(--text-dim)">
+              +${item.tools.length - 15} ${t('integ.more')}
+            </div>`
+          : nothing}
+      </div>
+    `;
+  }
+
+  private renderAddAccountForm() {
+    const { definition } = this.item!;
+
+    return html`
+      <div class="config-field">
+        <label class="config-label">${t('integ.accountLabel')}</label>
+        <input
+          class="config-input"
+          type="text"
+          data-key="_label"
+          placeholder="${t('integ.accountLabelPlaceholder')}"
+          autocomplete="off"
+        />
+      </div>
+      ${definition.credentialKeys.map(
+        (key) => html`
+          <div class="config-field">
+            <label class="config-label">${formatLabel(key)}</label>
+            <input
+              class="config-input"
+              type="${key.toLowerCase().includes('secret') || key.toLowerCase().includes('password')
+                ? 'password'
+                : 'text'}"
+              data-key="${key}"
+              placeholder="${t('integ.enter')} ${formatLabel(key)}"
+              autocomplete="off"
+            />
+          </div>
+        `,
+      )}
+      ${this.connectError ? html`<div class="config-error">${this.connectError}</div>` : nothing}
+      <div class="config-actions">
+        <button
+          class="btn btn-primary"
+          ?disabled=${this.connecting}
+          @click=${this.handleAddAccountConnect}
+        >
+          ${this.connecting ? t('integ.connecting') : t('integ.connect')}
+        </button>
+        <button class="btn btn-secondary" @click=${() => (this.showAddAccount = false)}>
+          ${t('integ.cancel')}
         </button>
       </div>
     `;
@@ -297,6 +421,66 @@ export class IntegrationConfigPanel extends LightDomElement {
       this.connecting = false;
       this.oauthStatus = err instanceof Error ? err.message : String(err);
       this.oauthStatusClass = 'error';
+    }
+  }
+
+  private async handleAddAccountConnect() {
+    const labelInput = this.querySelector<HTMLInputElement>('.config-input[data-key="_label"]');
+    const label = labelInput?.value.trim();
+    if (!label) {
+      if (labelInput) labelInput.style.borderColor = 'var(--error)';
+      return;
+    }
+
+    const inputs = Array.from(
+      this.querySelectorAll<HTMLInputElement>('.config-input:not([data-key="_label"])'),
+    );
+    const credentials: Record<string, string> = {};
+    for (const input of inputs) {
+      const key = input.dataset['key'];
+      if (!key || !input.value.trim()) {
+        input.style.borderColor = 'var(--error)';
+        return;
+      }
+      credentials[key] = input.value.trim();
+    }
+
+    const slug = label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    const instanceId = `${this.item!.id}:${slug}`;
+
+    this.connecting = true;
+    this.connectError = '';
+
+    try {
+      await integrationsConnectInstance({
+        instanceId,
+        integrationId: this.item!.id,
+        label,
+        credentials,
+      });
+      this.showAddAccount = false;
+      this.fireRefresh();
+    } catch (err: unknown) {
+      this.connecting = false;
+      this.connectError = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  private async handleDisconnectInstance(instanceId: string) {
+    this.connecting = true;
+    try {
+      await integrationsDisconnectInstance(instanceId);
+      await this.loadInstances();
+      if (this.instances.length === 0) {
+        this.fireRefresh();
+      } else {
+        this.connecting = false;
+      }
+    } catch {
+      this.connecting = false;
     }
   }
 

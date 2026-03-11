@@ -115,6 +115,7 @@ fn main() {
             cmd_integrations::integrations_connect,
             cmd_integrations::integrations_disconnect,
             cmd_integrations::integrations_list_tools,
+            cmd_integrations::integrations_list_instances,
             cmd_integrations::integrations_connect_instance,
             cmd_integrations::integrations_disconnect_instance,
             cmd_integrations::integrations_assign_instance,

@@ -19,18 +19,20 @@ export class TokenRefreshService {
     private readonly logger: Logger,
   ) {}
 
-  scheduleRefresh(integrationId: string, tokenUrl: string, expiresAt: number): void {
-    this.clearTimer(integrationId);
+  scheduleRefresh(instanceId: string, tokenUrl: string, expiresAt: number): void {
+    this.clearTimer(instanceId);
     const delay = Math.max(0, expiresAt - Date.now() - REFRESH_MARGIN_MS);
     const timer = setTimeout(() => {
-      void this.refresh(integrationId, tokenUrl);
+      void this.refresh(instanceId, tokenUrl);
     }, delay);
-    this.timers.set(integrationId, timer);
+    this.timers.set(instanceId, timer);
   }
 
-  private async refresh(integrationId: string, tokenUrl: string): Promise<void> {
-    const vaultKey = `integration_oauth_${integrationId}`;
-    const stored = await vaultGet(vaultKey);
+  private async refresh(instanceId: string, tokenUrl: string): Promise<void> {
+    const integrationId = instanceId.includes(':') ? instanceId.split(':')[0]! : instanceId;
+    const stored =
+      (await vaultGet(`integration_oauth_${instanceId}`)) ??
+      (await vaultGet(`integration_oauth_${integrationId}`));
     if (!stored) return;
 
     let credential: OAuthCredential;
@@ -71,28 +73,29 @@ export class TokenRefreshService {
         refreshToken: newRefreshToken,
         expiresAt: newExpiresAt,
       };
-      await vaultStore(vaultKey, JSON.stringify(newCredential));
+      const credJson = JSON.stringify(newCredential);
+      await vaultStore(`integration_oauth_${instanceId}`, credJson);
+      if (instanceId !== integrationId) {
+        await vaultStore(`integration_oauth_${integrationId}`, credJson);
+      }
 
-      // Reconnect with new token
-      const instanceId = `${integrationId}:default`;
       await this.registry.refreshRemoteConnection(instanceId, newAccessToken);
 
-      this.logger.info(`Refreshed OAuth token for ${integrationId}`);
+      this.logger.info(`Refreshed OAuth token for ${instanceId}`);
 
-      // Schedule next refresh
-      this.scheduleRefresh(integrationId, tokenUrl, newExpiresAt);
+      this.scheduleRefresh(instanceId, tokenUrl, newExpiresAt);
     } catch (err) {
-      this.logger.error(`Failed to refresh token for ${integrationId}`, {
+      this.logger.error(`Failed to refresh token for ${instanceId}`, {
         error: err instanceof Error ? err.message : String(err),
       });
     }
   }
 
-  private clearTimer(integrationId: string): void {
-    const existing = this.timers.get(integrationId);
+  private clearTimer(instanceId: string): void {
+    const existing = this.timers.get(instanceId);
     if (existing) {
       clearTimeout(existing);
-      this.timers.delete(integrationId);
+      this.timers.delete(instanceId);
     }
   }
 

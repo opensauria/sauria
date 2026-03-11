@@ -482,11 +482,12 @@ describe('startDaemonContext', () => {
   it('logs orchestrator info when bundle is present', async () => {
     const { setupOrchestrator } = await import('../orchestrator-setup.js');
     const { loadCanvasGraph } = await import('../graph-loader.js');
-    vi.mocked(loadCanvasGraph).mockReturnValueOnce({
+    const graphValue = {
       nodes: [{ id: 'n1' }, { id: 'n2' }],
       edges: [{ id: 'e1', from: 'n1', to: 'n2' }],
       workspaces: [],
-    } as never);
+    } as never;
+    vi.mocked(loadCanvasGraph).mockReturnValue(graphValue);
     vi.mocked(setupOrchestrator).mockResolvedValueOnce({
       registry: { stopAll: vi.fn() },
       orchestrator: {},
@@ -619,7 +620,7 @@ describe('startDaemonContext', () => {
   it('clears terminalActive flags on nodes at startup', async () => {
     const { loadCanvasGraph } = await import('../graph-loader.js');
     const { setupOrchestrator } = await import('../orchestrator-setup.js');
-    vi.mocked(loadCanvasGraph).mockReturnValueOnce({
+    vi.mocked(loadCanvasGraph).mockReturnValue({
       nodes: [
         { id: 'n1', codeMode: { terminalActive: true } },
         { id: 'n2' },
@@ -670,7 +671,7 @@ describe('startDaemonContext', () => {
     const ctx = await startDaemonContext();
 
     expect(mockScheduleRefresh).toHaveBeenCalledWith(
-      'test-integration',
+      'test-integration:default',
       'https://example.com/.well-known/oauth-authorization-server',
       expect.any(Number),
     );
@@ -786,7 +787,7 @@ describe('startDaemonContext', () => {
     const ctx = await startDaemonContext();
 
     expect(mockScheduleRefresh).toHaveBeenCalledWith(
-      'test',
+      'test:default',
       'https://api.example.com/.well-known/oauth-authorization-server',
       99999999999,
     );

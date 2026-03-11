@@ -120,12 +120,7 @@ export class SauriaIntegrations extends LightDomElement {
         const panel = this.querySelector<IntegrationConfigPanel>('integration-config-panel');
         panel?.setOAuthSuccess();
 
-        setTimeout(() => {
-          if (this.openPanelId) {
-            const updated = this.catalog.find((c) => c.id === this.openPanelId);
-            if (updated?.connected) this.requestUpdate();
-          }
-        }, 800);
+        this.requestUpdate();
       },
     );
   }

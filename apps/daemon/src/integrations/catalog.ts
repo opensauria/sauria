@@ -837,6 +837,21 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     },
   },
 
+  // ── Video ──────────────────────────────────────
+  {
+    id: 'tella',
+    name: 'Tella',
+    description: 'Screen recording and video creation for teams',
+    icon: 'tella',
+    category: 'content',
+    authType: 'api_key',
+    credentialKeys: ['apiKey'],
+    mcpServer: {
+      package: '@nicepkg/tella-mcp',
+      envMapping: { apiKey: 'TELLA_API_KEY' },
+    },
+  },
+
   // ── Content ────────────────────────────────────
   {
     id: 'contentful',

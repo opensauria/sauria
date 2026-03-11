@@ -22,30 +22,38 @@ export async function connectIntegrationInstance(
   mcpClients: McpClientManager,
   audit: AuditLogger,
   instances: Map<string, ConnectedInstance>,
-  _options?: { remote?: boolean; workdir?: string },
+  options?: { remote?: boolean; workdir?: string },
 ): Promise<IntegrationInstanceStatus> {
   const logger = getLogger();
   const serverName = `integration:${instanceId}`;
-  const env: Record<string, string> = {};
-
-  for (const key of definition.credentialKeys) {
-    const envVar = definition.mcpServer.envMapping[key];
-    const value = credentials[key];
-    if (!envVar || !value) {
-      throw new Error(`Missing credential: ${key}`);
-    }
-    const template = definition.mcpServer.envValueTemplate?.[key];
-    env[envVar] = template ? template.replace('{value}', value) : value;
-  }
 
   try {
-    const npxPath = resolveNpxPath();
-    await mcpClients.connect({
-      name: serverName,
-      command: npxPath,
-      args: ['-y', definition.mcpServer.package],
-      env: { ...process.env, ...env } as Record<string, string>,
-    });
+    if (options?.remote && credentials['accessToken'] && definition.mcpRemote) {
+      await mcpClients.connectRemote({
+        name: serverName,
+        url: definition.mcpRemote.url,
+        accessToken: credentials['accessToken'],
+      });
+    } else {
+      const env: Record<string, string> = {};
+      for (const key of definition.credentialKeys) {
+        const envVar = definition.mcpServer.envMapping[key];
+        const value = credentials[key];
+        if (!envVar || !value) {
+          throw new Error(`Missing credential: ${key}`);
+        }
+        const template = definition.mcpServer.envValueTemplate?.[key];
+        env[envVar] = template ? template.replace('{value}', value) : value;
+      }
+
+      const npxPath = resolveNpxPath();
+      await mcpClients.connect({
+        name: serverName,
+        command: npxPath,
+        args: ['-y', definition.mcpServer.package],
+        env: { ...process.env, ...env } as Record<string, string>,
+      });
+    }
 
     const rawTools = await mcpClients.listTools(serverName);
     const tools: IntegrationTool[] = rawTools.map((t) => ({

@@ -131,6 +131,10 @@ export class IntegrationRegistry {
     return [...this.instances.keys()];
   }
 
+  getInstancesForIntegration(integrationId: string): ConnectedInstance[] {
+    return [...this.instances.values()].filter((i) => i.integrationId === integrationId);
+  }
+
   async connectInstance(
     instanceId: string,
     integrationId: string,
