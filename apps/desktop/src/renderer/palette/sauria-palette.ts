@@ -405,7 +405,9 @@ export class SauriaPalette extends LightDomElement {
         updateCmd.hint = `<span class="status-dot connected"></span>${t('palette.noUpdateAvailable')}`;
         this.requestUpdate();
       }
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`Update check failed: ${msg}`);
       if (manual && updateCmd) {
         updateCmd.hint = `<span class="status-dot disconnected"></span>${t('palette.updateError')}`;
         this.requestUpdate();

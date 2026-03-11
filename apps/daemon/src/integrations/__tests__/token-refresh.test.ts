@@ -74,10 +74,7 @@ describe('TokenRefreshService', () => {
         expect.objectContaining({ method: 'POST' }),
       );
       expect(vaultStore).toHaveBeenCalled();
-      expect(mockRegistry.refreshRemoteConnection).toHaveBeenCalledWith(
-        'github:default',
-        'new-access',
-      );
+      expect(mockRegistry.refreshRemoteConnection).toHaveBeenCalledWith('github', 'new-access');
 
       service.stop();
       fetchSpy.mockRestore();

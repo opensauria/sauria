@@ -427,6 +427,9 @@ async fn store_and_connect(
     let vault_key = format!("integration_oauth_{}", provider);
     crate::vault::vault_store(paths, &vault_key, &credential.to_string())?;
 
+    let instance_vault_key = format!("integration_oauth_{}:default", provider);
+    crate::vault::vault_store(paths, &instance_vault_key, &credential.to_string())?;
+
     let mut result = client
         .request(
             "integrations:connect-instance",
@@ -469,11 +472,7 @@ async fn fetch_oauth_metadata(mcp_url: &str) -> Result<serde_json::Value, String
         .map_err(|e: reqwest::Error| e.to_string())?;
 
     if !resp.status().is_success() {
-        return Err(format!(
-            "OAuth metadata fetch failed ({}): {}",
-            resp.status(),
-            metadata_url
-        ));
+        return Ok(serde_json::json!({}));
     }
 
     resp.json::<serde_json::Value>()

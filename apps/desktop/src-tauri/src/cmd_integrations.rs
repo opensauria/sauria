@@ -52,6 +52,19 @@ pub async fn integrations_list_tools(
 }
 
 #[tauri::command]
+pub async fn integrations_list_instances(
+    integration_id: String,
+    client: tauri::State<'_, Arc<DaemonClient>>,
+) -> Result<Value, String> {
+    client
+        .request(
+            "integrations:list-instances",
+            serde_json::json!({ "integrationId": integration_id }),
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn integrations_connect_instance(
     instance_id: String,
     integration_id: String,

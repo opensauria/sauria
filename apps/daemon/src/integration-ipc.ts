@@ -44,9 +44,13 @@ export function registerIntegrationHandlers(deps: IntegrationIpcDeps): void {
 
     const result = await integrationRegistry.connect(id, credentials);
 
+    const defaultInstanceId = `${id}:default`;
     for (const key of def.credentialKeys) {
       const value = credentials[key];
-      if (value) await vaultStore(`integration_${id}_${key}`, value);
+      if (value) {
+        await vaultStore(`integration_${id}_${key}`, value);
+        await vaultStore(`integration_${defaultInstanceId}_${key}`, value);
+      }
     }
 
     const currentConfig = await loadConfig();
@@ -82,12 +86,16 @@ export function registerIntegrationHandlers(deps: IntegrationIpcDeps): void {
     const id = params['id'] as string;
     await integrationRegistry.disconnect(id);
 
+    const defaultInstanceId = `${id}:default`;
     const def = INTEGRATION_CATALOG.find((d) => d.id === id);
     if (def) {
       for (const key of def.credentialKeys) {
         await vaultDelete(`integration_${id}_${key}`);
+        await vaultDelete(`integration_${defaultInstanceId}_${key}`);
       }
     }
+    await vaultDelete(`integration_oauth_${id}`);
+    await vaultDelete(`integration_oauth_${defaultInstanceId}`);
 
     const currentConfig = await loadConfig();
     const updatedConfig = {
@@ -115,6 +123,11 @@ export function registerIntegrationHandlers(deps: IntegrationIpcDeps): void {
   ipcServer.registerMethod('integrations:list-tools', (_db, params) => {
     const integrationId = params['integrationId'] as string | undefined;
     return integrationRegistry.getAvailableTools(integrationId);
+  });
+
+  ipcServer.registerMethod('integrations:list-instances', (_db, params) => {
+    const integrationId = params['integrationId'] as string;
+    return integrationRegistry.getInstancesForIntegration(integrationId);
   });
 
   ipcServer.registerMethod('integrations:assign-instance', (_db, params) => {
@@ -162,12 +175,72 @@ export function registerIntegrationHandlers(deps: IntegrationIpcDeps): void {
     const integrationId = params['integrationId'] as string;
     const label = params['label'] as string;
     const credentials = params['credentials'] as Record<string, string>;
-    return integrationRegistry.connectInstance(instanceId, integrationId, label, credentials);
+
+    const result = await integrationRegistry.connectInstance(
+      instanceId,
+      integrationId,
+      label,
+      credentials,
+    );
+
+    const def = INTEGRATION_CATALOG.find((d) => d.id === integrationId);
+    if (def) {
+      for (const key of def.credentialKeys) {
+        const value = credentials[key];
+        if (value) await vaultStore(`integration_${instanceId}_${key}`, value);
+      }
+    }
+    if (credentials['accessToken']) {
+      await vaultStore(`integration_oauth_${instanceId}`, credentials['accessToken']);
+    }
+
+    const currentGraph = loadCanvasGraph();
+    const alreadyExists = (currentGraph.instances ?? []).some((i) => i.id === instanceId);
+    if (!alreadyExists) {
+      const instance: IntegrationInstance = {
+        id: instanceId,
+        integrationId,
+        label,
+        connectedAt: new Date().toISOString(),
+      };
+      const updatedGraph = {
+        ...currentGraph,
+        instances: [...(currentGraph.instances ?? []), instance],
+      };
+      writeCanvasGraph(updatedGraph);
+      const orchestrator = getOrchestrator();
+      if (orchestrator) orchestrator.updateGraph(updatedGraph);
+    }
+
+    return result;
   });
 
   ipcServer.registerMethod('integrations:disconnect-instance', async (_db, params) => {
     const instanceId = params['instanceId'] as string;
+    const integrationId = instanceId.split(':')[0] ?? '';
+
     await integrationRegistry.disconnectInstance(instanceId);
+
+    const def = INTEGRATION_CATALOG.find((d) => d.id === integrationId);
+    if (def) {
+      for (const key of def.credentialKeys) {
+        await vaultDelete(`integration_${instanceId}_${key}`);
+      }
+    }
+    await vaultDelete(`integration_oauth_${instanceId}`);
+
+    const currentGraph = loadCanvasGraph();
+    const updatedInstances = (currentGraph.instances ?? []).filter((i) => i.id !== instanceId);
+    const updatedNodes = currentGraph.nodes.map((n) => {
+      if (!n.integrations) return n;
+      const filtered = n.integrations.filter((iid) => iid !== instanceId);
+      return filtered.length === n.integrations.length ? n : { ...n, integrations: filtered };
+    });
+    const updatedGraph = { ...currentGraph, instances: updatedInstances, nodes: updatedNodes };
+    writeCanvasGraph(updatedGraph);
+    const orchestrator = getOrchestrator();
+    if (orchestrator) orchestrator.updateGraph(updatedGraph);
+
     return { success: true };
   });
 }

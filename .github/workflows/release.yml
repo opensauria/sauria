@@ -258,14 +258,65 @@ jobs:
             apps/desktop/src-tauri/target/release/bundle/**/*.exe
             apps/desktop/src-tauri/target/release/bundle/**/*.deb
             apps/desktop/src-tauri/target/release/bundle/**/*.AppImage
+            apps/desktop/src-tauri/target/release/bundle/**/*.app.tar.gz
+            apps/desktop/src-tauri/target/release/bundle/**/*.nsis.zip
+            apps/desktop/src-tauri/target/release/bundle/**/*.AppImage.tar.gz
             apps/desktop/src-tauri/target/release/bundle/**/*.sig
-            apps/desktop/src-tauri/target/release/bundle/**/latest.json
+
+      - name: Upload platform updater manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-${{ matrix.platform }}-${{ matrix.arch }}
+          path: apps/desktop/src-tauri/target/release/bundle/**/latest.json
+          if-no-files-found: warn
+
+  # ── Merge updater manifests ────────────────────
+  merge-updater:
+    name: Merge updater manifest
+    runs-on: ubuntu-latest
+    needs: [release, desktop]
+    permissions:
+      contents: write
+    steps:
+      - name: Download all updater manifests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: updater-*
+          path: manifests
+
+      - name: Merge latest.json
+        run: |
+          FILES=$(find manifests -name 'latest.json' -type f)
+          if [ -z "$FILES" ]; then
+            echo "No updater manifests found, skipping"
+            exit 0
+          fi
+
+          # Start with the first file as base (version, notes, pub_date)
+          FIRST=$(echo "$FILES" | head -1)
+          MERGED=$(cat "$FIRST")
+
+          # Merge platforms from all files into one
+          for f in $FILES; do
+            MERGED=$(echo "$MERGED" | jq -s '.[0].platforms = (.[0].platforms // {} | . * (.[1].platforms // {})) | .[0]' - "$f")
+          done
+
+          echo "$MERGED" | jq . > latest.json
+          echo "Merged latest.json:"
+          cat latest.json
+
+      - name: Upload merged manifest to release
+        if: hashFiles('latest.json') != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.tag }}
+          files: latest.json
 
   # ── GitHub Release ─────────────────────────────
   github-release:
     name: GitHub Release
     runs-on: ubuntu-latest
-    needs: [release, npm-publish, desktop]
+    needs: [release, npm-publish, desktop, merge-updater]
     permissions:
       contents: write
     steps:
