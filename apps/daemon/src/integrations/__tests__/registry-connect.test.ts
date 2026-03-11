@@ -61,20 +61,20 @@ describe('connectIntegrationInstance', () => {
     vi.mocked(existsSync).mockReturnValue(false);
   });
 
-  it('throws when a required credential is missing', async () => {
+  it('returns failure when a required credential is missing', async () => {
     const instances = new Map();
-    await expect(
-      connectIntegrationInstance(
-        'github:1',
-        'github',
-        'GitHub',
-        {},
-        fakeDef,
-        mockMcpClients as never,
-        mockAudit as never,
-        instances,
-      ),
-    ).rejects.toThrow('Missing credential: token');
+    const result = await connectIntegrationInstance(
+      'github:1',
+      'github',
+      'GitHub',
+      {},
+      fakeDef,
+      mockMcpClients as never,
+      mockAudit as never,
+      instances,
+    );
+    expect(result.connected).toBe(false);
+    expect(result.error).toBe('Missing credential: token');
   });
 
   it('connects successfully and maps tools', async () => {

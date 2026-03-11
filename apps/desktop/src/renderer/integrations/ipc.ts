@@ -34,3 +34,28 @@ export function startProxyOauth(params: {
 export function getAuthProxyUrl(): Promise<string> {
   return invoke<string>('get_auth_proxy_url');
 }
+
+export interface ConnectedInstanceInfo {
+  readonly instanceId: string;
+  readonly integrationId: string;
+  readonly label: string;
+  readonly tools: readonly { readonly name: string }[];
+  readonly connectedAt: string;
+}
+
+export function integrationsListInstances(integrationId: string): Promise<ConnectedInstanceInfo[]> {
+  return invoke<ConnectedInstanceInfo[]>('integrations_list_instances', { integrationId });
+}
+
+export function integrationsConnectInstance(params: {
+  instanceId: string;
+  integrationId: string;
+  label: string;
+  credentials: Record<string, string>;
+}): Promise<void> {
+  return invoke('integrations_connect_instance', params);
+}
+
+export function integrationsDisconnectInstance(instanceId: string): Promise<void> {
+  return invoke('integrations_disconnect_instance', { instanceId });
+}

@@ -58,12 +58,62 @@ export async function connectMcpSources(
 export async function autoConnectIntegrations(
   registry: IntegrationRegistry,
   config: SauriaConfig,
+  graph?: CanvasGraph,
 ): Promise<void> {
   const logger = getLogger();
-  const integrations = config.integrations ?? {};
+  const connectedInstanceIds = new Set<string>();
 
+  // Per-instance loading from graph (preferred path)
+  const instances = graph?.instances ?? [];
+  for (const instance of instances) {
+    const definition = INTEGRATION_CATALOG.find((d) => d.id === instance.integrationId);
+    if (!definition) continue;
+
+    try {
+      const creds: Record<string, string> = {};
+
+      for (const key of definition.credentialKeys) {
+        const instanceValue = await vaultGet(`integration_${instance.id}_${key}`);
+        const legacyValue = await vaultGet(`integration_${instance.integrationId}_${key}`);
+        const value = instanceValue ?? legacyValue;
+        if (value) creds[key] = value;
+      }
+
+      // Check for OAuth token if credentialKeys are empty (OAuth-only integrations)
+      if (definition.credentialKeys.length === 0 || Object.keys(creds).length === 0) {
+        const oauthCred =
+          (await vaultGet(`integration_oauth_${instance.id}`)) ??
+          (await vaultGet(`integration_oauth_${instance.integrationId}`));
+        if (oauthCred) {
+          try {
+            const parsed = JSON.parse(oauthCred) as { accessToken?: string };
+            if (parsed.accessToken) creds['accessToken'] = parsed.accessToken;
+          } catch {
+            if (typeof oauthCred === 'string' && oauthCred.length > 0) {
+              creds['accessToken'] = oauthCred;
+            }
+          }
+        }
+      }
+
+      if (Object.keys(creds).length < definition.credentialKeys.length && !creds['accessToken']) {
+        logger.warn(`Skipping instance ${instance.id}: missing credentials`);
+        continue;
+      }
+
+      await registry.connectInstance(instance.id, instance.integrationId, instance.label, creds);
+      connectedInstanceIds.add(instance.integrationId);
+    } catch (err: unknown) {
+      logger.error(`Failed to auto-connect instance: ${instance.id}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  // Legacy fallback: config-based integrations not covered by graph instances
+  const integrations = config.integrations ?? {};
   for (const [id, settings] of Object.entries(integrations)) {
-    if (!settings?.enabled) continue;
+    if (!settings?.enabled || connectedInstanceIds.has(id)) continue;
     try {
       const creds: Record<string, string> = {};
       const definition = INTEGRATION_CATALOG.find((d) => d.id === id);

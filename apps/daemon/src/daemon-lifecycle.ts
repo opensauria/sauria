@@ -90,16 +90,45 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   mcpClients.startHealthMonitor();
 
   const integrationRegistry = new IntegrationRegistry(mcpClients, audit, INTEGRATION_CATALOG);
-  await autoConnectIntegrations(integrationRegistry, config);
+  const earlyGraph = loadCanvasGraph();
+  await autoConnectIntegrations(integrationRegistry, config, earlyGraph);
 
   // Token refresh service for OAuth integrations
   const tokenRefreshService = new TokenRefreshService(integrationRegistry, logger);
 
-  // Schedule refreshes for any existing OAuth credentials
+  // Schedule refreshes for existing OAuth credentials (per-instance first, legacy fallback)
+  const graphInstances = earlyGraph.instances ?? [];
+  const scheduledIntegrations = new Set<string>();
+
+  for (const instance of graphInstances) {
+    const def = INTEGRATION_CATALOG.find((d) => d.id === instance.integrationId);
+    if (!def?.mcpRemote) continue;
+
+    const stored =
+      (await vaultGet(`integration_oauth_${instance.id}`)) ??
+      (await vaultGet(`integration_oauth_${instance.integrationId}`));
+    if (!stored) continue;
+
+    try {
+      const cred = JSON.parse(stored) as { expiresAt?: number };
+      if (cred.expiresAt) {
+        const base = def.mcpRemote.url
+          .replace(/\/mcp$/, '')
+          .replace(/\/sse$/, '')
+          .replace(/\/$/, '');
+        const tokenUrl = `${base}/.well-known/oauth-authorization-server`;
+        tokenRefreshService.scheduleRefresh(instance.id, tokenUrl, cred.expiresAt);
+        scheduledIntegrations.add(instance.integrationId);
+      }
+    } catch {
+      // Ignore malformed credentials
+    }
+  }
+
+  // Legacy fallback for integrations not covered by graph instances
   for (const def of INTEGRATION_CATALOG) {
-    if (!def.mcpRemote) continue;
-    const vaultKey = `integration_oauth_${def.id}`;
-    const stored = await vaultGet(vaultKey);
+    if (!def.mcpRemote || scheduledIntegrations.has(def.id)) continue;
+    const stored = await vaultGet(`integration_oauth_${def.id}`);
     if (!stored) continue;
     try {
       const cred = JSON.parse(stored) as { expiresAt?: number };
@@ -109,7 +138,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
           .replace(/\/sse$/, '')
           .replace(/\/$/, '');
         const tokenUrl = `${base}/.well-known/oauth-authorization-server`;
-        tokenRefreshService.scheduleRefresh(def.id, tokenUrl, cred.expiresAt);
+        tokenRefreshService.scheduleRefresh(`${def.id}:default`, tokenUrl, cred.expiresAt);
       }
     } catch {
       // Ignore malformed credentials
