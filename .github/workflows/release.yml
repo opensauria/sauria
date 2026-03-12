@@ -282,12 +282,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.release.outputs.tag }}
         run: |
+          set -o pipefail
+
           VERSION="${TAG#v}"
           PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          REPO="${{ github.repository }}"
-          BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+          BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
-          # Download all .sig files from the release
           mkdir -p sigs
           gh release download "$TAG" --pattern "*.sig" --dir sigs
 
@@ -296,57 +296,43 @@ jobs:
 
           PLATFORMS="{}"
 
-          # macOS — .app.tar.gz (universal binary, serve for both architectures)
+          # Adds a platform entry to PLATFORMS JSON.
+          #   $1 = Tauri platform key   $2 = asset filename   $3 = .sig file path
+          add_platform() {
+            local sig
+            sig=$(cat "$3")
+            PLATFORMS=$(echo "$PLATFORMS" | jq \
+              --arg key "$1" --arg sig "$sig" --arg url "${BASE_URL}/$2" \
+              '. + {($key): {"signature": $sig, "url": $url}}')
+          }
+
+          # Returns the first .sig file matching any of the given suffixes.
+          find_sig() {
+            for suffix in "$@"; do
+              local match
+              match=$(find sigs -maxdepth 1 -name "*${suffix}" -type f 2>/dev/null | head -1)
+              if [ -n "$match" ]; then echo "$match"; return 0; fi
+            done
+            return 1
+          }
+
+          # macOS — universal binary, register for both architectures
           if [ -f "sigs/Sauria.app.tar.gz.sig" ]; then
-            SIG=$(cat sigs/Sauria.app.tar.gz.sig)
-            URL="${BASE_URL}/Sauria.app.tar.gz"
-            PLATFORMS=$(echo "$PLATFORMS" | jq \
-              --arg sig "$SIG" --arg url "$URL" \
-              '. + {
-                "darwin-aarch64": {"signature": $sig, "url": $url},
-                "darwin-x86_64": {"signature": $sig, "url": $url}
-              }')
+            add_platform "darwin-aarch64" "Sauria.app.tar.gz" "sigs/Sauria.app.tar.gz.sig"
+            add_platform "darwin-x86_64"  "Sauria.app.tar.gz" "sigs/Sauria.app.tar.gz.sig"
           fi
 
-          # Linux — prefer .AppImage.tar.gz, fall back to .AppImage
-          LINUX_SIG=""
-          LINUX_ASSET=""
-          for pattern in "*_amd64.AppImage.tar.gz.sig" "*_amd64.AppImage.sig"; do
-            match=$(ls sigs/${pattern} 2>/dev/null | head -1)
-            if [ -n "$match" ]; then
-              LINUX_SIG="$match"
-              LINUX_ASSET=$(basename "${match%.sig}")
-              break
-            fi
-          done
-          if [ -n "$LINUX_SIG" ]; then
-            SIG=$(cat "$LINUX_SIG")
-            URL="${BASE_URL}/${LINUX_ASSET}"
-            PLATFORMS=$(echo "$PLATFORMS" | jq \
-              --arg sig "$SIG" --arg url "$URL" \
-              '. + {"linux-x86_64": {"signature": $sig, "url": $url}}')
+          # Linux — prefer .AppImage.tar.gz, fall back to raw .AppImage
+          if LINUX=$(find_sig "_amd64.AppImage.tar.gz.sig" "_amd64.AppImage.sig"); then
+            add_platform "linux-x86_64" "$(basename "${LINUX%.sig}")" "$LINUX"
           fi
 
-          # Windows — prefer .nsis.zip, fall back to .exe
-          WIN_SIG=""
-          WIN_ASSET=""
-          for pattern in "*_x64-setup.nsis.zip.sig" "*_x64-setup.exe.sig"; do
-            match=$(ls sigs/${pattern} 2>/dev/null | head -1)
-            if [ -n "$match" ]; then
-              WIN_SIG="$match"
-              WIN_ASSET=$(basename "${match%.sig}")
-              break
-            fi
-          done
-          if [ -n "$WIN_SIG" ]; then
-            SIG=$(cat "$WIN_SIG")
-            URL="${BASE_URL}/${WIN_ASSET}"
-            PLATFORMS=$(echo "$PLATFORMS" | jq \
-              --arg sig "$SIG" --arg url "$URL" \
-              '. + {"windows-x86_64": {"signature": $sig, "url": $url}}')
+          # Windows — prefer .nsis.zip, fall back to raw .exe
+          if WIN=$(find_sig "_x64-setup.nsis.zip.sig" "_x64-setup.exe.sig"); then
+            add_platform "windows-x86_64" "$(basename "${WIN%.sig}")" "$WIN"
           fi
 
-          # Construct final latest.json
+          # Assemble manifest
           jq -n \
             --arg version "$VERSION" \
             --arg pub_date "$PUB_DATE" \
@@ -358,7 +344,6 @@ jobs:
           echo "Generated latest.json:"
           cat latest.json
 
-          # Validate: must have at least one platform
           PLATFORM_COUNT=$(jq '.platforms | length' latest.json)
           if [ "$PLATFORM_COUNT" -eq 0 ]; then
             echo "::error::No platforms found in updater manifest"
