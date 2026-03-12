@@ -43,8 +43,78 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 /// Git commit hash baked in at compile time by build.rs.
 const BUILD_HASH: &str = env!("SAURIA_BUILD_HASH");
 
+/// Bundle identifier — must match `identifier` in tauri.conf.json.
+const BUNDLE_ID: &str = "ai.sauria.desktop";
+
+/// Clear WebView cache when the build hash changes between app versions.
+///
+/// macOS WKWebView (and platform equivalents) aggressively caches frontend
+/// assets. When a user replaces the .app bundle via DMG without using the
+/// updater, the WebView serves stale HTML/CSS/JS from its cache. This
+/// function detects a version change via BUILD_HASH and purges those caches
+/// before the WebView is created.
+fn clear_stale_webview_cache(sauria_home: &std::path::Path) {
+    let hash_file = sauria_home.join("last-build-hash");
+
+    // Check if hash changed
+    if let Ok(stored) = std::fs::read_to_string(&hash_file) {
+        if stored.trim() == BUILD_HASH {
+            return;
+        }
+    }
+
+    // Hash changed (or first run) — clear platform WebView caches
+    let dirs_to_clear = webview_cache_dirs();
+    for dir in &dirs_to_clear {
+        if dir.exists() {
+            if let Err(e) = std::fs::remove_dir_all(dir) {
+                log::warn!("Failed to clear WebView cache {}: {e}", dir.display());
+            } else {
+                log::info!("Cleared stale WebView cache: {}", dir.display());
+            }
+        }
+    }
+
+    // Persist current hash
+    let _ = std::fs::create_dir_all(sauria_home);
+    if let Err(e) = std::fs::write(&hash_file, BUILD_HASH) {
+        log::warn!("Failed to write build hash: {e}");
+    }
+}
+
+/// Platform-specific WebView cache directories for the bundle identifier.
+fn webview_cache_dirs() -> Vec<std::path::PathBuf> {
+    let mut dirs = Vec::new();
+
+    #[cfg(target_os = "macos")]
+    if let Some(home) = dirs::home_dir() {
+        let lib = home.join("Library");
+        dirs.push(lib.join("WebKit").join(BUNDLE_ID));
+        dirs.push(lib.join("Caches").join(BUNDLE_ID));
+    }
+
+    #[cfg(target_os = "linux")]
+    if let Some(data) = dirs::data_dir() {
+        dirs.push(data.join(BUNDLE_ID));
+    }
+    #[cfg(target_os = "linux")]
+    if let Some(cache) = dirs::cache_dir() {
+        dirs.push(cache.join(BUNDLE_ID));
+    }
+
+    #[cfg(target_os = "windows")]
+    if let Some(local) = dirs::data_local_dir() {
+        dirs.push(local.join(BUNDLE_ID).join("EBWebView"));
+    }
+
+    dirs
+}
+
 fn main() {
     let paths = Paths::resolve();
+
+    // Clear stale WebView cache before Tauri creates the WebView
+    clear_stale_webview_cache(&paths.home);
 
     // Migrate vault secrets from legacy "opensauria-vault" password (one-shot, idempotent)
     match vault::migrate_legacy_vault(&paths) {
