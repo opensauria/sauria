@@ -230,15 +230,16 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("error while building Sauria")
-        .run(|app_handle, event| {
-            if let RunEvent::Reopen { .. } = event {
+        .run(|_app_handle, _event| {
+            #[cfg(target_os = "macos")]
+            if let RunEvent::Reopen { .. } = _event {
                 // macOS reactivates the running process instead of launching the new binary.
                 // Compare our compiled-in hash with the marker file on disk (from the installed bundle).
                 // If they differ, the user installed a new version — restart to pick it up.
-                if let Ok(marker_path) = app_handle.path().resolve("build-hash.txt", BaseDirectory::Resource) {
+                if let Ok(marker_path) = _app_handle.path().resolve("build-hash.txt", BaseDirectory::Resource) {
                     if let Ok(disk_hash) = std::fs::read_to_string(&marker_path) {
                         if disk_hash.trim() != BUILD_HASH {
-                            app_handle.restart();
+                            _app_handle.restart();
                         }
                     }
                 }
