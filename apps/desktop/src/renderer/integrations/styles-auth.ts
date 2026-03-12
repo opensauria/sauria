@@ -50,33 +50,6 @@ export const authStyles = css`
     color: var(--accent);
   }
 
-  .connected-account {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: color-mix(in srgb, var(--success) 8%, transparent);
-    border: 1px solid color-mix(in srgb, var(--success) 20%, transparent);
-    border-radius: var(--radius-sm);
-  }
-
-  .connected-account-dot {
-    width: var(--spacing-sm);
-    height: var(--spacing-sm);
-    border-radius: 50%;
-    background: var(--success);
-    flex-shrink: 0;
-  }
-
-  .connected-account-label {
-    font-size: var(--font-size-label);
-    color: var(--text);
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .config-tools {
     display: flex;
     flex-direction: column;

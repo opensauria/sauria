@@ -23,7 +23,7 @@
     "resources": {
       "../../daemon/dist/": "daemon",
       "../native-deps/": "node_modules",
-      "build-hash.txt": "."
+      "build-hash.txt": "build-hash.txt"
     },
     "macOS": {
       "minimumSystemVersion": "11.0"

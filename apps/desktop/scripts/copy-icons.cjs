@@ -329,6 +329,13 @@ const twilioSvg = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 fs.writeFileSync(path.join(INTEGRATIONS_OUT, 'twilio.svg'), twilioSvg);
 integrationCount++;
 
+const tellaSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+<rect width="24" height="24" rx="4" fill="#8278FA"/>
+<path d="M9.5 7.5v9l7-4.5z" fill="#fff"/>
+</svg>`;
+fs.writeFileSync(path.join(INTEGRATIONS_OUT, 'tella.svg'), tellaSvg);
+integrationCount++;
+
 /* Also add the plug icon for palette command */
 const plugSrc = path.join(LU, 'plug.svg');
 if (fs.existsSync(plugSrc)) {

@@ -66,6 +66,11 @@ export const resetStyles = css`
     }
   }
 
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   .icon-mono {
     filter: brightness(0) invert();
   }
