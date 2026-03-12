@@ -35,10 +35,13 @@ use daemon_client::DaemonClient;
 use daemon_manager::DaemonState;
 use paths::Paths;
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{Manager, RunEvent};
 use tauri::path::BaseDirectory;
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+
+/// Git commit hash baked in at compile time by build.rs.
+const BUILD_HASH: &str = env!("SAURIA_BUILD_HASH");
 
 fn main() {
     let paths = Paths::resolve();
@@ -225,6 +228,20 @@ fn main() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running Sauria");
+        .build(tauri::generate_context!())
+        .expect("error while building Sauria")
+        .run(|app_handle, event| {
+            if let RunEvent::Reopen { .. } = event {
+                // macOS reactivates the running process instead of launching the new binary.
+                // Compare our compiled-in hash with the marker file on disk (from the installed bundle).
+                // If they differ, the user installed a new version — restart to pick it up.
+                if let Ok(marker_path) = app_handle.path().resolve("build-hash.txt", BaseDirectory::Resource) {
+                    if let Ok(disk_hash) = std::fs::read_to_string(&marker_path) {
+                        if disk_hash.trim() != BUILD_HASH {
+                            app_handle.restart();
+                        }
+                    }
+                }
+            }
+        });
 }
