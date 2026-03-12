@@ -77,16 +77,64 @@ export class IntegrationConfigPanel extends LightDomElement {
 
     if (this.instances.length > 1) return this.renderMultiInstance();
 
+    const iconPath = `/icons/integrations/${item.definition.icon}.svg`;
+    const label = this.accountLabel || item.definition.name;
     const toolsList = item.tools.slice(0, 15);
     const remaining = item.tools.length - 15;
 
     return html`
-      ${this.accountLabel
-        ? html`<div class="connected-account">
-            <span class="connected-account-dot"></span>
-            <span class="connected-account-label">${escapeHtml(this.accountLabel)}</span>
-          </div>`
-        : nothing}
+      <div class="ch-bot-list">
+        <div class="ch-bot-card">
+          <div class="ch-bot-avatar-placeholder">
+            <img src="${iconPath}" alt="" />
+          </div>
+          <div class="ch-bot-info">
+            <div class="ch-bot-name">${escapeHtml(label)}</div>
+            <div class="ch-bot-status">
+              <span class="ch-bot-dot"></span>${item.tools.length} ${t('integ.tools')}
+            </div>
+          </div>
+          <button
+            class="ch-bot-disconnect"
+            title="${t('integ.disconnect')}"
+            ?disabled=${this.connecting}
+            @click=${this.handleDisconnect}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+              <path d="M3 6h18" />
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <button class="ch-add-card" @click=${() => (this.showAddAccount = true)}>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M5 12h14" />
+          <path d="M12 5v14" />
+        </svg>
+        <span>${t('integ.addAccount')}</span>
+      </button>
       <div class="config-tools">
         <div class="config-tools-title">${t('integ.availableTools')} (${item.tools.length})</div>
         ${toolsList.map(
@@ -98,57 +146,79 @@ export class IntegrationConfigPanel extends LightDomElement {
             </div>`
           : nothing}
       </div>
-      <div class="config-actions">
-        <button class="btn btn-secondary" @click=${() => (this.showAddAccount = true)}>
-          + ${t('integ.addAccount')}
-        </button>
-        <button
-          class="btn btn-secondary"
-          ?disabled=${this.connecting}
-          @click=${this.handleDisconnect}
-        >
-          ${this.connecting ? t('integ.disconnecting') : t('integ.disconnect')}
-        </button>
-      </div>
     `;
   }
 
   private renderMultiInstance() {
     const item = this.item!;
+    const iconPath = `/icons/integrations/${item.definition.icon}.svg`;
+    const toolsList = item.tools.slice(0, 15);
+    const remaining = item.tools.length - 15;
 
     return html`
-      <div class="config-instances">
+      <div class="ch-bot-list">
         ${this.instances.map(
           (inst) => html`
-            <div class="config-instance-card">
-              <div class="config-instance-header">
-                <span class="connected-account-dot"></span>
-                <span class="config-instance-label">${escapeHtml(inst.label)}</span>
-                <span class="config-instance-tools">${inst.tools.length} ${t('integ.tools')}</span>
+            <div class="ch-bot-card">
+              <div class="ch-bot-avatar-placeholder">
+                <img src="${iconPath}" alt="" />
+              </div>
+              <div class="ch-bot-info">
+                <div class="ch-bot-name">${escapeHtml(inst.label)}</div>
+                <div class="ch-bot-status">
+                  <span class="ch-bot-dot"></span>${inst.tools.length} ${t('integ.tools')}
+                </div>
               </div>
               <button
-                class="btn btn-secondary btn-sm"
+                class="ch-bot-disconnect"
+                title="${t('integ.disconnect')}"
                 @click=${() => this.handleDisconnectInstance(inst.instanceId)}
               >
-                ${t('integ.disconnect')}
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
               </button>
             </div>
           `,
         )}
       </div>
-      <div class="config-actions">
-        <button class="btn btn-secondary" @click=${() => (this.showAddAccount = true)}>
-          + ${t('integ.addAccount')}
-        </button>
-      </div>
+      <button class="ch-add-card" @click=${() => (this.showAddAccount = true)}>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M5 12h14" />
+          <path d="M12 5v14" />
+        </svg>
+        <span>${t('integ.addAccount')}</span>
+      </button>
       <div class="config-tools">
         <div class="config-tools-title">${t('integ.availableTools')} (${item.tools.length})</div>
-        ${item.tools
-          .slice(0, 15)
-          .map((tool) => html`<div class="config-tool-item">${escapeHtml(tool.name)}</div>`)}
-        ${item.tools.length > 15
+        ${toolsList.map(
+          (tool) => html`<div class="config-tool-item">${escapeHtml(tool.name)}</div>`,
+        )}
+        ${remaining > 0
           ? html`<div class="config-tool-item" style="color:var(--text-dim)">
-              +${item.tools.length - 15} ${t('integ.more')}
+              +${remaining} ${t('integ.more')}
             </div>`
           : nothing}
       </div>

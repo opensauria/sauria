@@ -40,14 +40,9 @@ export const paletteCommandStyles = css`
     flex: 1;
     background: none;
     border: none;
-    outline: none;
     color: var(--text);
     font-size: var(--font-size-base);
     font-family: inherit;
-  }
-
-  .search-bar input:focus-visible {
-    outline: none;
   }
 
   .search-bar input::placeholder {

@@ -87,7 +87,7 @@ export const layoutStyles = css`
 
   .category-tab {
     flex-shrink: 0;
-    padding: var(--spacing-xs) var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-smd);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: none;

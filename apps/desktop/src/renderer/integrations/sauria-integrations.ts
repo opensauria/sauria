@@ -266,7 +266,10 @@ export class SauriaIntegrations extends LightDomElement {
       }
     }
 
+    const channelCatalogIds = new Set(['slack-tools']);
+
     for (const item of this.catalog) {
+      if (channelCatalogIds.has(item.id)) continue;
       if (!this.matchesFilter(item.definition.name, item.definition.category, query, category))
         continue;
       items.push({
