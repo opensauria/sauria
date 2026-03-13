@@ -138,27 +138,4 @@ export const channelPanelStyles = css`
     flex-direction: column;
     gap: var(--spacing-md);
   }
-
-  /* ── Form Status ─────────────────────────────── */
-
-  .form-status {
-    font-size: var(--font-size-small);
-    display: none;
-    padding: var(--spacing-sm);
-    border-radius: var(--radius-sm);
-  }
-
-  .form-status.visible {
-    display: block;
-  }
-
-  .form-status.error {
-    color: var(--error);
-    background: color-mix(in srgb, var(--error) 8%, transparent);
-  }
-
-  .form-status.success {
-    color: var(--success);
-    background: color-mix(in srgb, var(--success) 8%, transparent);
-  }
 `;

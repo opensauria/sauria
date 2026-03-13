@@ -31,7 +31,9 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "clean": "rm -rf .worktrees/ apps/desktop/src-tauri/target/release/bundle apps/daemon/dist packages/*/dist .turbo node_modules/.cache",
+    "clean:all": "rm -rf .worktrees/ apps/desktop/src-tauri/target apps/daemon/dist apps/desktop/dist packages/*/dist .turbo node_modules/.cache"
   },
   "devDependencies": {
     "prettier": "3.8.1",

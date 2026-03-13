@@ -113,11 +113,12 @@ export const layoutStyles = css`
 
   .integrations-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(224px, 1fr));
     align-content: start;
     gap: var(--spacing-md);
     padding: var(--spacing-lg);
     overflow-y: auto;
+    /* header 49 + tabs 47 + grid padding 16 */
     height: calc(100vh - 112px);
   }
 

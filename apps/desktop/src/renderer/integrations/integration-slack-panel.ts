@@ -3,6 +3,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { LightDomElement } from '../shared/light-dom-element.js';
 import type { ChannelBot } from '../shared/types.js';
 import { connectChannel, disconnectChannel, getSlackStatus } from '../shared/ipc.js';
+import { trashIcon, plusIcon } from '../shared/icons.js';
 import { t } from '../i18n.js';
 
 @customElement('integration-slack-panel')
@@ -29,10 +30,10 @@ export class IntegrationSlackPanel extends LightDomElement {
         class="ch-connect-section"
         style="${connected.length > 0 && !this.showForm ? 'display:none' : ''}"
       >
-        <div class="config-field">
-          <label class="config-label">${t('integ.slackOwnerId')}</label>
+        <div class="form-group">
+          <label class="form-label">${t('integ.slackOwnerId')}</label>
           <input
-            class="config-input"
+            class="form-input"
             type="text"
             id="sl-ownerid"
             placeholder="${t('integ.slackOwnerIdHint')}"
@@ -40,10 +41,10 @@ export class IntegrationSlackPanel extends LightDomElement {
             @input=${this.validate}
           />
         </div>
-        <div class="config-field">
-          <label class="config-label">${t('integ.botToken')}</label>
+        <div class="form-group">
+          <label class="form-label">${t('integ.botToken')}</label>
           <input
-            class="config-input"
+            class="form-input"
             type="password"
             id="sl-token"
             placeholder="${t('integ.slackTokenHint')}"
@@ -51,10 +52,10 @@ export class IntegrationSlackPanel extends LightDomElement {
             @input=${this.validate}
           />
         </div>
-        <div class="config-field">
-          <label class="config-label">${t('integ.slackSigningSecret')}</label>
+        <div class="form-group">
+          <label class="form-label">${t('integ.slackSigningSecret')}</label>
           <input
-            class="config-input"
+            class="form-input"
             type="password"
             id="sl-signing"
             placeholder="${t('integ.slackSigningHint')}"
@@ -65,7 +66,7 @@ export class IntegrationSlackPanel extends LightDomElement {
         ${this.statusText
           ? html`<div class="form-status visible ${this.statusClass}">${this.statusText}</div>`
           : nothing}
-        <div class="config-actions">
+        <div class="form-actions">
           <button
             class="btn btn-primary"
             ?disabled=${this.submitting || !this.isValid()}
@@ -78,19 +79,7 @@ export class IntegrationSlackPanel extends LightDomElement {
       ${connected.length > 0 && !this.showForm
         ? html`
             <button class="ch-add-card" @click=${() => (this.showForm = true)}>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
-              </svg>
+              ${plusIcon()}
               <span>${t('integ.addBot')}</span>
             </button>
           `
@@ -116,22 +105,7 @@ export class IntegrationSlackPanel extends LightDomElement {
           title="${t('integ.disconnect')}"
           @click=${(e: Event) => this.handleDisconnect(e, bot.nodeId ?? '')}
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M10 11v6" />
-            <path d="M14 11v6" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-            <path d="M3 6h18" />
-            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
+          ${trashIcon()}
         </button>
       </div>
     `;

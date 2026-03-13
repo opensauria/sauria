@@ -89,6 +89,7 @@ export const cardStyles = css`
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+    flex-wrap: wrap;
   }
 
   .card-info h3 {

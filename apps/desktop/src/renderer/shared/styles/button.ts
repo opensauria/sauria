@@ -17,6 +17,15 @@ export const buttonStyles = css`
     line-height: 1;
   }
 
+  .btn:focus {
+    outline: none;
+  }
+
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   .btn-primary {
     background: var(--accent);
     color: var(--text-on-accent);

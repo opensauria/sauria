@@ -1,6 +1,6 @@
 import { css } from 'lit';
 
-/* Config panel, form controls, auth toggle, and connected account styles */
+/* Config panel, error, and connected account styles */
 
 export const configStyles = css`
   /* ── Config Panel ────────────────────────────── */
@@ -73,46 +73,7 @@ export const configStyles = css`
     gap: var(--spacing-md);
   }
 
-  /* ── Form Controls ───────────────────────────── */
-
-  .config-field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-  }
-
-  .config-label {
-    font-size: var(--font-size-small);
-    font-weight: 500;
-    color: var(--text-dim);
-  }
-
-  .config-input {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: var(--spacing-smd) var(--spacing-sm);
-    color: var(--text);
-    font-size: var(--font-size-label);
-    outline: none;
-    transition: border-color var(--transition-fast);
-  }
-
-  .config-input:focus {
-    border-color: var(--accent);
-  }
-
-  .config-input::placeholder {
-    color: var(--text-dim);
-  }
-
-  .config-actions {
-    display: flex;
-    gap: var(--spacing-sm);
-    margin-top: var(--spacing-sm);
-  }
-
-  .config-actions .btn {
+  .form-actions .btn {
     flex: 1;
   }
 

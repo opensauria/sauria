@@ -71,6 +71,10 @@ export const resetStyles = css`
     outline-offset: 2px;
   }
 
+  button:focus:not(:focus-visible) {
+    outline: none;
+  }
+
   .icon-mono {
     filter: brightness(0) invert();
   }
