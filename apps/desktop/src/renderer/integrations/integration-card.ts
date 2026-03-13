@@ -54,6 +54,13 @@ export class IntegrationCard extends LightDomElement {
   }
 
   private handleImgError(e: Event) {
-    (e.target as HTMLElement).style.display = 'none';
+    const img = e.target as HTMLImageElement;
+    if (!img.parentElement) return;
+    const fallback = document.createElement('span');
+    fallback.className = 'card-icon-img';
+    fallback.textContent = (this.name || this.integrationId || '?').charAt(0).toUpperCase();
+    fallback.style.cssText =
+      'display:flex;align-items:center;justify-content:center;font-size:var(--font-size-heading);font-weight:600;color:var(--text-secondary);background:var(--surface);border-radius:var(--radius-sm);';
+    img.replaceWith(fallback);
   }
 }
