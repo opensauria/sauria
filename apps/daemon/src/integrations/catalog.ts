@@ -1035,4 +1035,19 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { url: 'GHOST_API_URL', apiKey: 'GHOST_API_KEY' },
     },
   },
+
+  // ── Monitoring ──────────────────────────────────
+  {
+    id: 'updown',
+    name: 'Updown.io',
+    description: 'Website monitoring, uptime checks, and status pages',
+    icon: 'updown',
+    category: 'monitoring',
+    authType: 'api_key',
+    credentialKeys: ['apiKey'],
+    mcpServer: {
+      package: '@mnicole-dev/updown-mcp-server',
+      envMapping: { apiKey: 'UPDOWN_API_KEY' },
+    },
+  },
 ] as const;
