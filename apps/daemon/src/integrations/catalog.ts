@@ -1035,4 +1035,19 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { url: 'GHOST_API_URL', apiKey: 'GHOST_API_KEY' },
     },
   },
+
+  // ── Scheduling ──────────────────────────────────
+  {
+    id: 'calcom',
+    name: 'Cal.com',
+    description: 'Scheduling, bookings, and calendar management',
+    icon: 'calcom',
+    category: 'productivity',
+    authType: 'api_key',
+    credentialKeys: ['apiKey'],
+    mcpServer: {
+      package: '@mnicole-dev/calcom-mcp-server',
+      envMapping: { apiKey: 'CAL_API_KEY' },
+    },
+  },
 ] as const;
