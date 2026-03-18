@@ -1044,10 +1044,10 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
     icon: 'calcom',
     category: 'productivity',
     authType: 'api_key',
-    credentialKeys: ['apiKey'],
+    credentialKeys: ['url', 'apiKey'],
     mcpServer: {
       package: '@mnicole-dev/calcom-mcp-server',
-      envMapping: { apiKey: 'CAL_API_KEY' },
+      envMapping: { url: 'CAL_API_URL', apiKey: 'CAL_API_KEY' },
     },
   },
 ] as const;
