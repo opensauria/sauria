@@ -47,7 +47,7 @@ export interface DaemonContext {
   readonly router: ModelRouter;
   readonly mcpClients: McpClientManager;
   readonly engine: ProactiveEngine;
-  readonly mcpServer: McpServer;
+  readonly mcpServer: McpServer | null;
   readonly refreshInterval: ReturnType<typeof setInterval>;
   readonly registry: ChannelRegistry | null;
   readonly orchestrator: AgentOrchestrator | null;
@@ -210,33 +210,57 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   const engine = new ProactiveEngine(db, router, () => {});
   logger.info('Proactive engine disabled (owner-driven mode)');
 
-  const mcpServer = await startMcpServer({
-    db,
-    router,
-    audit,
-    checkpointManager,
-    orchestrator: orchestrator ?? undefined,
-  });
-  logger.info('MCP server started on stdio');
+  // ── Status signal ──────────────────────────────────────────────────
+  // Emit BEFORE MCP server captures stdout via StdioServerTransport.
+  // Once emitted, this is a commitment: the daemon MUST stay alive.
+  // All subsequent init is wrapped in try/catch — failures degrade
+  // gracefully instead of crashing after Tauri received "ready".
+  process.stdout.write(JSON.stringify({ status: 'ready' }) + '\n');
+
+  // ── Post-signal init (non-fatal) ─────────────────────────────────
+  let mcpServer: McpServer | null = null;
+  let canvasWatcher: FSWatcher | null = null;
+  let ownerCommandWatcher: FSWatcher | null = null;
+
+  try {
+    mcpServer = await startMcpServer({
+      db,
+      router,
+      audit,
+      checkpointManager,
+      orchestrator: orchestrator ?? undefined,
+    });
+    logger.info('MCP server started on stdio');
+  } catch (err: unknown) {
+    logger.error('MCP server failed to start (degraded mode)', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   const refreshInterval = setInterval(() => {
     void refreshOAuthTokenIfNeeded('anthropic');
   }, 1_800_000);
 
-  const canvasWatcher = setupCanvasWatcher({
-    orchestrator,
-    registry,
-    queue,
-    db,
-    router,
-    audit,
-    config,
-    globalInstructions: graph.globalInstructions,
-    mcpClients,
-    integrationRegistry,
-  });
+  try {
+    canvasWatcher = setupCanvasWatcher({
+      orchestrator,
+      registry,
+      queue,
+      db,
+      router,
+      audit,
+      config,
+      globalInstructions: graph.globalInstructions,
+      mcpClients,
+      integrationRegistry,
+    });
 
-  const ownerCommandWatcher = setupOwnerCommandWatcher(orchestrator, audit);
+    ownerCommandWatcher = setupOwnerCommandWatcher(orchestrator, audit);
+  } catch (err: unknown) {
+    logger.error('Watcher setup failed (degraded mode)', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   audit.logAction('daemon:start', {
     mcpServers: Object.keys(config.mcp.servers),

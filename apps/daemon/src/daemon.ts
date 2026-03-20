@@ -44,11 +44,16 @@ export async function startDaemon(): Promise<void> {
 
   try {
     activeContext = await startDaemonContext();
-    process.stdout.write(JSON.stringify({ status: 'ready' }) + '\n');
   } catch (err: unknown) {
+    // This catch only fires for failures BEFORE the status write in
+    // startDaemonContext (db, config, security, IPC, orchestrator).
+    // At this point stdout is still clean — write error there for Tauri,
+    // and also to stderr as a reliable fallback (never captured by MCP).
     const message = err instanceof Error ? err.message : String(err);
+    const errorLine = JSON.stringify({ status: 'error', message }) + '\n';
     logger.fatal('Daemon failed to start', { error: message });
-    process.stdout.write(JSON.stringify({ status: 'error', message }) + '\n');
+    process.stdout.write(errorLine);
+    process.stderr.write(errorLine);
     process.exit(1);
   }
 }
