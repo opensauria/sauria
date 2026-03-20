@@ -17,6 +17,9 @@ tmp/
 
 # Desktop (Tauri)
 apps/desktop/src-tauri/target/
+*.dmg
+*.app
+apps/desktop/src-tauri/build-hash.txt
 apps/desktop/out/
 apps/desktop/.vite/
 apps/desktop/public/icons/

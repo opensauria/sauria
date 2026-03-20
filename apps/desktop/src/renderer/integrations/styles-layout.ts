@@ -49,11 +49,11 @@ export const layoutStyles = css`
     -webkit-app-region: no-drag;
   }
 
-  .integrations-search img {
+  .integrations-search svg {
     width: var(--spacing-md);
     height: var(--spacing-md);
-    opacity: var(--opacity-muted);
-    filter: brightness(0) invert();
+    color: var(--text-dim);
+    flex-shrink: 0;
   }
 
   .integrations-search input {
@@ -72,22 +72,21 @@ export const layoutStyles = css`
   /* ── Category Tabs ──────────────────────────── */
 
   .category-tabs {
-    display: flex;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-lg);
-    overflow-x: auto;
-    scrollbar-width: none;
+    padding: var(--spacing-smd) var(--spacing-lg);
     border-bottom: 1px solid var(--border);
     -webkit-app-region: no-drag;
   }
 
-  .category-tabs::-webkit-scrollbar {
-    display: none;
+  .category-tabs integration-category-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--spacing-sm);
+    row-gap: var(--spacing-sm);
   }
 
   .category-tab {
     flex-shrink: 0;
-    padding: var(--spacing-xs) var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-smd);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: none;
@@ -109,16 +108,66 @@ export const layoutStyles = css`
     background: color-mix(in srgb, var(--accent) 8%, transparent);
   }
 
+  /* ── Segmented Toggle ──────────────────────── */
+
+  .integrations-toggle {
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .integrations-toggle .segmented-toggle {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .integrations-toggle .seg-btn {
+    flex: 1;
+    text-align: center;
+  }
+
   /* ── Grid ────────────────────────────────────── */
 
   .integrations-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(224px, 1fr));
     align-content: start;
     gap: var(--spacing-md);
     padding: var(--spacing-lg);
     overflow-y: auto;
-    height: calc(100vh - 112px);
+    flex: 1;
+    min-height: 0;
+  }
+
+  .ch-add-card--grid {
+    flex-direction: column;
+    min-height: 120px;
+    margin-top: 0;
+    border-style: dashed;
+  }
+
+  /* ── Personal MCP Cards ──────────────────────── */
+
+  .personal-mcp-card {
+    position: relative;
+  }
+
+  .personal-mcp-card .card-footer {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
+  .personal-mcp-card .card-tool-count {
+    font-size: var(--font-size-small);
+    color: var(--text-dim);
+  }
+
+  .personal-mcp-disconnect {
+    margin-left: auto;
+    width: var(--spacing-lg);
+    height: var(--spacing-lg);
   }
 
   .integrations-loading {

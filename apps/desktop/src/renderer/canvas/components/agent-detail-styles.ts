@@ -57,6 +57,7 @@ export const agentDetailStyles = css`
   /* --- Body --- */
   .detail-body {
     padding: var(--spacing-lg);
+    padding-bottom: var(--spacing-xxl);
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -171,7 +172,7 @@ export const agentDetailStyles = css`
     font-weight: 500;
     color: var(--text-secondary);
     position: relative;
-    z-index: 1;
+    z-index: var(--z-above);
     transition: color var(--transition-fast);
     border-radius: var(--spacing-xs);
   }

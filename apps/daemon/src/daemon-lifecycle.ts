@@ -31,12 +31,14 @@ import { acquirePidLock, releasePidLock } from './pid-lock.js';
 import { loadCanvasGraph } from './graph-loader.js';
 import {
   connectMcpSources,
+  connectPersonalMcpSources,
   autoConnectIntegrations,
   setupOrchestrator,
 } from './orchestrator-setup.js';
 import { registerIntegrationHandlers } from './integration-ipc.js';
 import { setupCanvasWatcher, setupOwnerCommandWatcher } from './daemon-watchers.js';
 import { vaultGet } from './security/vault-key.js';
+import { getVersion, getBuildHash } from './utils/version.js';
 
 export interface DaemonContext {
   readonly db: BetterSqlite3.Database;
@@ -59,7 +61,7 @@ export interface DaemonContext {
 
 export async function startDaemonContext(): Promise<DaemonContext> {
   const logger = getLogger();
-  logger.info('Daemon starting');
+  logger.info('Daemon starting', { version: getVersion(), build: getBuildHash() });
 
   acquirePidLock();
 
@@ -72,7 +74,11 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   runMigrations(db, paths.home);
 
   const config = await loadConfig();
-  logger.info('Database ready, config loaded');
+  logger.info('Database ready, config loaded', {
+    reasoning: `${config.models.reasoning.provider}/${config.models.reasoning.model}`,
+    extraction: `${config.models.extraction.provider}/${config.models.extraction.model}`,
+    deep: `${config.models.deep.provider}/${config.models.deep.model}`,
+  });
 
   const audit = new AuditLogger(db);
   const router = new ModelRouter(config, resolveApiKey);
@@ -92,6 +98,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
   const integrationRegistry = new IntegrationRegistry(mcpClients, audit, INTEGRATION_CATALOG);
   const earlyGraph = loadCanvasGraph();
   await autoConnectIntegrations(integrationRegistry, config, earlyGraph);
+  await connectPersonalMcpSources(earlyGraph, mcpClients, integrationRegistry);
 
   // Token refresh service for OAuth integrations
   const tokenRefreshService = new TokenRefreshService(integrationRegistry, logger);
@@ -225,6 +232,8 @@ export async function startDaemonContext(): Promise<DaemonContext> {
     audit,
     config,
     globalInstructions: graph.globalInstructions,
+    mcpClients,
+    integrationRegistry,
   });
 
   const ownerCommandWatcher = setupOwnerCommandWatcher(orchestrator, audit);

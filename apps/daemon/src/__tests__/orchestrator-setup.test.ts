@@ -57,8 +57,18 @@ vi.mock('../orchestrator/orchestrator.js', () => {
 });
 
 vi.mock('../orchestrator/llm-router.js', () => {
-  class MockBrain {}
+  class MockBrain {
+    setCliSessionPersistCallback = vi.fn();
+  }
   return { LLMRoutingBrain: MockBrain };
+});
+
+vi.mock('../ai/providers/claude-cli.js', () => {
+  class MockCliService {
+    setSession = vi.fn();
+  }
+  Object.assign(MockCliService, { isAvailable: vi.fn().mockResolvedValue(false) });
+  return { ClaudeCliService: MockCliService };
 });
 
 vi.mock('../orchestrator/message-queue.js', () => {

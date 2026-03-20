@@ -2,7 +2,7 @@
  * Canonical Canvas Graph types — shared between daemon and desktop.
  */
 
-import type { IntegrationInstance } from './integrations.js';
+import type { IntegrationInstance, PersonalMcpEntry } from './integrations.js';
 
 // ─── Agent Roles & Autonomy ────────────────────────────────────────
 
@@ -98,6 +98,8 @@ export interface AgentNode {
   readonly description?: string;
   readonly behavior?: AgentBehavior;
   readonly integrations?: readonly string[];
+  readonly modelTier?: 'sonnet' | 'opus' | 'haiku';
+  readonly cliSessionId?: string;
   readonly codeMode?: CodeModeConfig;
 }
 
@@ -131,6 +133,7 @@ export interface CanvasGraph {
   readonly nodes: readonly AgentNode[];
   readonly edges: readonly Edge[];
   readonly instances?: readonly IntegrationInstance[];
+  readonly personalMcp?: readonly PersonalMcpEntry[];
   readonly viewport: { readonly x: number; readonly y: number; readonly zoom: number };
 }
 

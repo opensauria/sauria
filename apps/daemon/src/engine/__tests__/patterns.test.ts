@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { detectPatterns } from '../patterns.js';
 import { applySchema } from '../../db/schema.js';
@@ -57,41 +57,37 @@ function insertEntity(
 }
 
 describe('detectPatterns', () => {
+  const NOW = new Date('2026-03-10T12:00:00.000Z');
   let db: InstanceType<typeof Database>;
 
   beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-03-10T12:00:00.000Z'));
     db = createTestDb();
   });
 
   afterEach(() => {
     db.close();
-    vi.useRealTimers();
   });
 
   it('returns empty array when no events or entities exist', () => {
-    const alerts = detectPatterns(db);
+    const alerts = detectPatterns(db, NOW);
     expect(alerts).toEqual([]);
   });
 
   it('detects frequency increase when recent count is 2x+ baseline', () => {
-    const now = new Date('2026-03-10T12:00:00.000Z');
-
     // Baseline: 2 events per week over 4 weeks (8 events in days -37 to -7)
     for (let i = 0; i < 8; i++) {
       const dayOffset = 8 + Math.floor(i * 3.5);
-      const ts = new Date(now.getTime() - dayOffset * 86_400_000).toISOString();
+      const ts = new Date(NOW.getTime() - dayOffset * 86_400_000).toISOString();
       insertEvent(db, { source: 'slack', timestamp: ts });
     }
 
     // Recent: 6 events in last 7 days (3x the baseline avg of 2)
     for (let i = 0; i < 6; i++) {
-      const ts = new Date(now.getTime() - i * 86_400_000).toISOString();
+      const ts = new Date(NOW.getTime() - i * 86_400_000).toISOString();
       insertEvent(db, { source: 'slack', timestamp: ts });
     }
 
-    const alerts = detectPatterns(db);
+    const alerts = detectPatterns(db, NOW);
     const frequencyAlerts = alerts.filter((a) => a.patternKind === 'frequency_change');
     expect(frequencyAlerts.length).toBeGreaterThanOrEqual(1);
     expect(frequencyAlerts[0]?.title).toContain('slack');
@@ -99,22 +95,20 @@ describe('detectPatterns', () => {
   });
 
   it('detects frequency decrease when recent count is 0.5x or less baseline', () => {
-    const now = new Date('2026-03-10T12:00:00.000Z');
-
     // Baseline: 20 events per week over 4 weeks (80 events total in days -37 to -7)
     for (let i = 0; i < 80; i++) {
       const dayOffset = 8 + Math.floor(i * 0.375);
-      const ts = new Date(now.getTime() - dayOffset * 86_400_000).toISOString();
+      const ts = new Date(NOW.getTime() - dayOffset * 86_400_000).toISOString();
       insertEvent(db, { source: 'telegram', timestamp: ts });
     }
 
     // Recent: only 2 events in last 7 days (0.1x baseline avg of 20)
     for (let i = 0; i < 2; i++) {
-      const ts = new Date(now.getTime() - i * 86_400_000).toISOString();
+      const ts = new Date(NOW.getTime() - i * 86_400_000).toISOString();
       insertEvent(db, { source: 'telegram', timestamp: ts });
     }
 
-    const alerts = detectPatterns(db);
+    const alerts = detectPatterns(db, NOW);
     const drops = alerts.filter(
       (a) => a.patternKind === 'frequency_change' && a.title.includes('dropped'),
     );
@@ -131,7 +125,7 @@ describe('detectPatterns', () => {
       mention_count: 5,
     });
 
-    const alerts = detectPatterns(db);
+    const alerts = detectPatterns(db, NOW);
     const newConn = alerts.filter((a) => a.patternKind === 'new_connection');
     expect(newConn).toHaveLength(1);
     expect(newConn[0]?.title).toContain('Emerging Person');
@@ -146,7 +140,7 @@ describe('detectPatterns', () => {
       mention_count: 2,
     });
 
-    const alerts = detectPatterns(db);
+    const alerts = detectPatterns(db, NOW);
     const newConn = alerts.filter((a) => a.patternKind === 'new_connection');
     expect(newConn).toHaveLength(0);
   });
@@ -159,7 +153,7 @@ describe('detectPatterns', () => {
       mention_count: 15,
     });
 
-    const alerts = detectPatterns(db);
+    const alerts = detectPatterns(db, NOW);
     const hot = alerts.find((a) => a.title.includes('Hot Entity'));
     expect(hot?.priority).toBe(4);
   });
@@ -177,7 +171,7 @@ describe('detectPatterns', () => {
       mention_count: 12,
     });
 
-    const alerts = detectPatterns(db);
+    const alerts = detectPatterns(db, NOW);
     if (alerts.length >= 2) {
       expect(alerts[0]?.priority).toBeGreaterThanOrEqual(alerts[1]?.priority ?? 0);
     }

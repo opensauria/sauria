@@ -1,6 +1,7 @@
 import type BetterSqlite3 from 'better-sqlite3';
 import type { ModelRouter } from '../ai/router.js';
 import type { ChatMessage } from '../ai/providers/base.js';
+import type { ClaudeCliService } from '../ai/providers/claude-cli.js';
 import type {
   InboundMessage,
   RoutingAction,
@@ -14,6 +15,7 @@ import type { IntegrationRegistry } from '../integrations/registry.js';
 import { buildRoutingPrompt } from './routing-prompt.js';
 import { parseRoutingResponse } from './routing-parser.js';
 import { stripPromptInjection } from '../security/sanitize.js';
+import { getLogger } from '../utils/logger.js';
 
 // Re-export for backward compatibility
 export { parseRoutingResponse } from './routing-parser.js';
@@ -38,23 +40,41 @@ export interface RoutingContext {
 // ─── Constants ──────────────────────────────────────────────────────
 
 const SIMPLE_MESSAGE_WORD_THRESHOLD = 20;
+const DEFAULT_MODEL_TIER = 'sonnet' as const;
 
 // ─── LLMRoutingBrain ────────────────────────────────────────────────
+
+/**
+ * When Claude CLI is available, ALL LLM calls route through it.
+ * This bypasses the OAuth API limitation (Haiku-only) and gives
+ * access to Sonnet/Opus/Haiku via the user's subscription.
+ *
+ * Fallback: direct API via ModelRouter (only when CLI is unavailable).
+ */
+export type CliSessionPersistCallback = (nodeId: string, sessionId: string) => void;
 
 export class LLMRoutingBrain {
   private readonly cache: RoutingCache;
   private readonly memory: AgentMemory;
   readonly integrationRegistry: IntegrationRegistry | null;
+  private readonly cliService: ClaudeCliService | null;
+  private onCliSessionPersist: CliSessionPersistCallback | null = null;
 
   constructor(
     private readonly router: ModelRouter,
     private readonly db: BetterSqlite3.Database,
     cacheTtlMs?: number,
     integrationRegistry?: IntegrationRegistry,
+    cliService?: ClaudeCliService,
   ) {
     this.cache = new RoutingCache(cacheTtlMs);
     this.memory = new AgentMemory(db);
     this.integrationRegistry = integrationRegistry ?? null;
+    this.cliService = cliService ?? null;
+  }
+
+  setCliSessionPersistCallback(callback: CliSessionPersistCallback): void {
+    this.onCliSessionPersist = callback;
   }
 
   clearCache(): void {
@@ -76,7 +96,7 @@ export class LLMRoutingBrain {
     }
 
     const prompt = buildRoutingPrompt(context, this.memory, this.db, this.integrationRegistry);
-    const decision = await this.callLLM(prompt, tier);
+    const decision = await this.callLLM(prompt, tier, context.sourceNode);
 
     this.cache.set(cacheKey, decision);
 
@@ -135,6 +155,17 @@ export class LLMRoutingBrain {
       },
     ];
 
+    // Use CLI when available
+    if (this.cliService) {
+      try {
+        const combined = `${messages[0]!.content}\n\n${messages[1]!.content}`;
+        const { text } = await this.cliService.query('summarize', DEFAULT_MODEL_TIER, combined);
+        return text.trim();
+      } catch {
+        // Fall through to API
+      }
+    }
+
     let result = '';
     for await (const chunk of this.router.reason(messages)) {
       result += chunk.text;
@@ -142,7 +173,25 @@ export class LLMRoutingBrain {
     return result.trim();
   }
 
-  private async callLLM(messages: ChatMessage[], tier: ModelTier): Promise<RoutingDecision> {
+  private async callLLM(
+    messages: ChatMessage[],
+    tier: ModelTier,
+    sourceNode?: AgentNode,
+  ): Promise<RoutingDecision> {
+    // Route through Claude CLI when available
+    if (this.cliService && sourceNode) {
+      try {
+        return await this.callViaCli(messages, sourceNode);
+      } catch (error) {
+        const logger = getLogger();
+        logger.warn('Claude CLI call failed, falling back to API', {
+          nodeId: sourceNode.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    // Fallback: direct API
     const stream =
       tier === 'deep' ? this.router.deepAnalyze(messages) : this.router.reason(messages);
 
@@ -152,5 +201,28 @@ export class LLMRoutingBrain {
     }
 
     return parseRoutingResponse(result);
+  }
+
+  private async callViaCli(
+    messages: ChatMessage[],
+    sourceNode: AgentNode,
+  ): Promise<RoutingDecision> {
+    const modelTier = sourceNode.modelTier ?? DEFAULT_MODEL_TIER;
+
+    // Combine system + user messages into a single prompt for CLI
+    const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
+    const userMessages = messages
+      .filter((m) => m.role === 'user')
+      .map((m) => m.content)
+      .join('\n\n');
+    const combined = systemPrompt ? `${systemPrompt}\n\n${userMessages}` : userMessages;
+
+    const { text, sessionId } = await this.cliService!.query(sourceNode.id, modelTier, combined);
+
+    if (sessionId) {
+      this.onCliSessionPersist?.(sourceNode.id, sessionId);
+    }
+
+    return parseRoutingResponse(text);
   }
 }

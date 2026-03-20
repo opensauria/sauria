@@ -12,6 +12,7 @@ mod cmd_channels_connect;
 mod cmd_channels_disconnect;
 mod cmd_channels_email;
 mod cmd_channels_generic;
+mod cmd_personal_mcp;
 mod cmd_channels_telegram;
 mod cmd_channels_validators;
 mod cmd_commands;
@@ -35,13 +36,86 @@ use daemon_client::DaemonClient;
 use daemon_manager::DaemonState;
 use paths::Paths;
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{Manager, RunEvent};
 use tauri::path::BaseDirectory;
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
+/// Git commit hash baked in at compile time by build.rs.
+const BUILD_HASH: &str = env!("SAURIA_BUILD_HASH");
+
+/// Bundle identifier — must match `identifier` in tauri.conf.json.
+const BUNDLE_ID: &str = "ai.sauria.desktop";
+
+/// Clear WebView cache when the build hash changes between app versions.
+///
+/// macOS WKWebView (and platform equivalents) aggressively caches frontend
+/// assets. When a user replaces the .app bundle via DMG without using the
+/// updater, the WebView serves stale HTML/CSS/JS from its cache. This
+/// function detects a version change via BUILD_HASH and purges those caches
+/// before the WebView is created.
+fn clear_stale_webview_cache(sauria_home: &std::path::Path) {
+    let hash_file = sauria_home.join("last-build-hash");
+
+    // Check if hash changed
+    if let Ok(stored) = std::fs::read_to_string(&hash_file) {
+        if stored.trim() == BUILD_HASH {
+            return;
+        }
+    }
+
+    // Hash changed (or first run) — clear platform WebView caches
+    let dirs_to_clear = webview_cache_dirs();
+    for dir in &dirs_to_clear {
+        if dir.exists() {
+            if let Err(e) = std::fs::remove_dir_all(dir) {
+                log::warn!("Failed to clear WebView cache {}: {e}", dir.display());
+            } else {
+                log::info!("Cleared stale WebView cache: {}", dir.display());
+            }
+        }
+    }
+
+    // Persist current hash
+    let _ = std::fs::create_dir_all(sauria_home);
+    if let Err(e) = std::fs::write(&hash_file, BUILD_HASH) {
+        log::warn!("Failed to write build hash: {e}");
+    }
+}
+
+/// Platform-specific WebView cache directories for the bundle identifier.
+fn webview_cache_dirs() -> Vec<std::path::PathBuf> {
+    let mut dirs = Vec::new();
+
+    #[cfg(target_os = "macos")]
+    if let Some(home) = dirs::home_dir() {
+        let lib = home.join("Library");
+        dirs.push(lib.join("WebKit").join(BUNDLE_ID));
+        dirs.push(lib.join("Caches").join(BUNDLE_ID));
+    }
+
+    #[cfg(target_os = "linux")]
+    if let Some(data) = dirs::data_dir() {
+        dirs.push(data.join(BUNDLE_ID));
+    }
+    #[cfg(target_os = "linux")]
+    if let Some(cache) = dirs::cache_dir() {
+        dirs.push(cache.join(BUNDLE_ID));
+    }
+
+    #[cfg(target_os = "windows")]
+    if let Some(local) = dirs::data_local_dir() {
+        dirs.push(local.join(BUNDLE_ID).join("EBWebView"));
+    }
+
+    dirs
+}
+
 fn main() {
     let paths = Paths::resolve();
+
+    // Clear stale WebView cache before Tauri creates the WebView
+    clear_stale_webview_cache(&paths.home);
 
     // Migrate vault secrets from legacy "opensauria-vault" password (one-shot, idempotent)
     match vault::migrate_legacy_vault(&paths) {
@@ -91,6 +165,9 @@ fn main() {
             cmd_canvas::execute_owner_command,
             cmd_canvas::get_telegram_status,
             cmd_canvas::get_slack_status,
+            cmd_canvas::get_discord_status,
+            cmd_canvas::get_whatsapp_status,
+            cmd_canvas::get_email_status,
             cmd_canvas::get_owner_profile,
             // Channels
             cmd_channels::connect_channel,
@@ -120,6 +197,11 @@ fn main() {
             cmd_integrations::integrations_disconnect_instance,
             cmd_integrations::integrations_assign_instance,
             cmd_integrations::integrations_unassign_instance,
+            // Personal MCP
+            cmd_personal_mcp::personal_mcp_list,
+            cmd_personal_mcp::personal_mcp_connect,
+            cmd_personal_mcp::personal_mcp_update,
+            cmd_personal_mcp::personal_mcp_disconnect,
             // OAuth Integrations — MCP direct
             cmd_oauth_integrations::start_integration_oauth,
             cmd_oauth_integrations::complete_integration_oauth,
@@ -225,6 +307,21 @@ fn main() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running Sauria");
+        .build(tauri::generate_context!())
+        .expect("error while building Sauria")
+        .run(|_app_handle, _event| {
+            #[cfg(target_os = "macos")]
+            if let RunEvent::Reopen { .. } = _event {
+                // macOS reactivates the running process instead of launching the new binary.
+                // Compare our compiled-in hash with the marker file on disk (from the installed bundle).
+                // If they differ, the user installed a new version — restart to pick it up.
+                if let Ok(marker_path) = _app_handle.path().resolve("build-hash.txt", BaseDirectory::Resource) {
+                    if let Ok(disk_hash) = std::fs::read_to_string(&marker_path) {
+                        if disk_hash.trim() != BUILD_HASH {
+                            _app_handle.restart();
+                        }
+                    }
+                }
+            }
+        });
 }
