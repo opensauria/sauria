@@ -30,6 +30,13 @@ interface BotCardData {
   readonly onDisconnect: () => void;
 }
 
+interface BotCardData {
+  readonly iconPath: string;
+  readonly label: string;
+  readonly toolCount: number;
+  readonly onDisconnect: () => void;
+}
+
 @customElement('integration-config-panel')
 export class IntegrationConfigPanel extends LightDomElement {
   @property({ attribute: false }) item: IntegrationStatus | null = null;
