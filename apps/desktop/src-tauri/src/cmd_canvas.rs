@@ -180,6 +180,54 @@ pub fn get_slack_status(paths: tauri::State<'_, Paths>) -> ChannelStatus {
     ChannelStatus { connected, bots }
 }
 
+fn channel_status(paths: &Paths, platform: &str, default_label: &str) -> ChannelStatus {
+    let canvas_nodes: Vec<Value> = if paths.canvas.exists() {
+        fs::read_to_string(&paths.canvas)
+            .ok()
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+            .and_then(|c| c.get("nodes").cloned())
+            .and_then(|n| serde_json::from_value::<Vec<Value>>(n).ok())
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|n| n.get("platform").and_then(|p| p.as_str()) == Some(platform))
+            .collect()
+    } else {
+        vec![]
+    };
+
+    let mut bots = Vec::new();
+    for node in &canvas_nodes {
+        let nid = node.get("id").and_then(|v| v.as_str()).unwrap_or("");
+        let status = node.get("status").and_then(|v| v.as_str()).unwrap_or("setup");
+        let has_token = crate::vault::vault_exists(paths, &format!("channel_token_{nid}"));
+
+        bots.push(serde_json::json!({
+            "nodeId": nid,
+            "connected": status == "connected" && has_token,
+            "label": node.get("label").and_then(|v| v.as_str()).unwrap_or(default_label),
+        }));
+    }
+
+    let connected = bots.iter().any(|b| b.get("connected").and_then(|v| v.as_bool()).unwrap_or(false));
+
+    ChannelStatus { connected, bots }
+}
+
+#[tauri::command]
+pub fn get_discord_status(paths: tauri::State<'_, Paths>) -> ChannelStatus {
+    channel_status(&paths, "discord", "Discord Bot")
+}
+
+#[tauri::command]
+pub fn get_whatsapp_status(paths: tauri::State<'_, Paths>) -> ChannelStatus {
+    channel_status(&paths, "whatsapp", "WhatsApp Bot")
+}
+
+#[tauri::command]
+pub fn get_email_status(paths: tauri::State<'_, Paths>) -> ChannelStatus {
+    channel_status(&paths, "email", "Email")
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OwnerProfile {
