@@ -12,7 +12,7 @@ export const searchStyles = css`
     transition: border-color var(--transition-fast);
   }
 
-  .search-bar:focus-within {
+  .search-bar:focus-within:has(input:focus-visible) {
     border-color: var(--accent);
   }
 

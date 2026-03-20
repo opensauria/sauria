@@ -5,6 +5,7 @@ import type {
   ChannelStatus,
   StatusResult,
   IntegrationStatus,
+  PersonalMcpEntry,
 } from './types.js';
 
 export function connectChannel(
@@ -24,6 +25,54 @@ export function getTelegramStatus(): Promise<TelegramStatus> {
 
 export function getSlackStatus(): Promise<ChannelStatus> {
   return invoke<ChannelStatus>('get_slack_status');
+}
+
+export function getDiscordStatus(): Promise<ChannelStatus> {
+  return invoke<ChannelStatus>('get_discord_status');
+}
+
+export function getWhatsappStatus(): Promise<ChannelStatus> {
+  return invoke<ChannelStatus>('get_whatsapp_status');
+}
+
+export function getEmailStatus(): Promise<ChannelStatus> {
+  return invoke<ChannelStatus>('get_email_status');
+}
+
+export function personalMcpList(): Promise<PersonalMcpEntry[]> {
+  return invoke<PersonalMcpEntry[]>('personal_mcp_list');
+}
+
+export interface PersonalMcpConnectPayload {
+  readonly name: string;
+  readonly transport: 'stdio' | 'remote';
+  readonly command?: string;
+  readonly args?: string[];
+  readonly env?: Record<string, string>;
+  readonly url?: string;
+  readonly accessToken?: string;
+}
+
+export function personalMcpConnect(payload: PersonalMcpConnectPayload): Promise<PersonalMcpEntry> {
+  return invoke<PersonalMcpEntry>('personal_mcp_connect', { payload });
+}
+
+export interface PersonalMcpUpdatePayload {
+  readonly id: string;
+  readonly name?: string;
+  readonly command?: string;
+  readonly args?: string[];
+  readonly env?: Record<string, string>;
+  readonly url?: string;
+  readonly accessToken?: string;
+}
+
+export function personalMcpUpdate(payload: PersonalMcpUpdatePayload): Promise<PersonalMcpEntry> {
+  return invoke<PersonalMcpEntry>('personal_mcp_update', { payload });
+}
+
+export function personalMcpDisconnect(id: string): Promise<void> {
+  return invoke('personal_mcp_disconnect', { id });
 }
 
 export function navigateBack(): Promise<void> {

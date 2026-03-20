@@ -66,13 +66,14 @@ export const resetStyles = css`
     }
   }
 
-  :focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+  *:focus {
+    outline: none !important;
+    -webkit-focus-ring-color: transparent;
   }
 
-  button:focus:not(:focus-visible) {
-    outline: none;
+  *:focus-visible {
+    outline: 2px solid var(--accent) !important;
+    outline-offset: 2px;
   }
 
   .icon-mono {

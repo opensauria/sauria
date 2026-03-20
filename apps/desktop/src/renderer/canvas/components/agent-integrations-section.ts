@@ -3,10 +3,19 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { t } from '../../i18n.js';
 import type { AgentNode, CanvasGraph, IntegrationDef } from '../types.js';
 import { fire } from '../fire.js';
+import { capitalize } from '../helpers.js';
 import { assignIntegration, unassignIntegration } from '../ipc.js';
 import { LightDomElement } from '../light-dom-element.js';
 import { adoptStyles } from '../../shared/styles/inject.js';
 import { agentIntegrationsStyles } from './agent-integrations-styles.js';
+
+/** Format integration label: "youtube-knowledge-mcp" → "YouTube Knowledge Mcp" */
+function formatIntegrationLabel(label: string): string {
+  return label
+    .split(/[-_]/)
+    .map((w) => capitalize(w))
+    .join(' ');
+}
 
 adoptStyles(agentIntegrationsStyles);
 
@@ -25,7 +34,16 @@ export class AgentIntegrationsSection extends LightDomElement {
   }
 
   private renderIntegrations(node: AgentNode) {
-    const instances = this.graph?.instances ?? [];
+    const catalogInstances = (this.graph?.instances ?? []).filter(
+      (i) => i.integrationId !== 'personal-mcp',
+    );
+    const personalEntries = (this.graph?.personalMcp ?? []).map((p) => ({
+      id: `personal:${p.id}`,
+      integrationId: 'personal-mcp',
+      label: p.name,
+      connectedAt: p.connectedAt,
+    }));
+    const instances = [...catalogInstances, ...personalEntries];
     const assigned = node.integrations ?? [];
 
     return html`
@@ -36,12 +54,13 @@ export class AgentIntegrationsSection extends LightDomElement {
             const inst = instances.find((i) => i.id === aid);
             if (!inst) return nothing;
             const def = this.catalogMap.get(inst.integrationId);
+            const chipLabel = def?.name || formatIntegrationLabel(inst.label);
             return html`
-              <div class="int-chip">
+              <div class="int-chip" title=${chipLabel}>
                 ${def?.icon
                   ? html`<img src="/icons/integrations/${def.icon}.svg" alt="" />`
                   : nothing}
-                <span>${def?.name ?? inst.label}</span>
+                <span>${chipLabel}</span>
                 <button
                   class="int-chip-remove"
                   @click=${() => this.handleRemoveIntegration(node.id, inst.id)}
@@ -73,7 +92,7 @@ export class AgentIntegrationsSection extends LightDomElement {
     const unassigned = instances.filter((inst) => !assigned.includes(inst.id));
     const filtered = this.intSearchFilter
       ? unassigned.filter((inst) => {
-          const label = this.catalogMap.get(inst.integrationId)?.name ?? inst.label;
+          const label = this.catalogMap.get(inst.integrationId)?.name || inst.label;
           return label.toLowerCase().includes(this.intSearchFilter.toLowerCase());
         })
       : unassigned;
@@ -93,7 +112,7 @@ export class AgentIntegrationsSection extends LightDomElement {
                     ${def?.icon
                       ? html`<img src="/icons/integrations/${def.icon}.svg" alt="" />`
                       : html`<div class="int-dropdown-item-placeholder"></div>`}
-                    ${def?.name ?? inst.label}
+                    ${def?.name || formatIntegrationLabel(inst.label)}
                   </div>
                 `;
               })}

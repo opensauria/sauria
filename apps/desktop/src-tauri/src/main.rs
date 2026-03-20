@@ -12,6 +12,7 @@ mod cmd_channels_connect;
 mod cmd_channels_disconnect;
 mod cmd_channels_email;
 mod cmd_channels_generic;
+mod cmd_personal_mcp;
 mod cmd_channels_telegram;
 mod cmd_channels_validators;
 mod cmd_commands;
@@ -164,6 +165,9 @@ fn main() {
             cmd_canvas::execute_owner_command,
             cmd_canvas::get_telegram_status,
             cmd_canvas::get_slack_status,
+            cmd_canvas::get_discord_status,
+            cmd_canvas::get_whatsapp_status,
+            cmd_canvas::get_email_status,
             cmd_canvas::get_owner_profile,
             // Channels
             cmd_channels::connect_channel,
@@ -193,6 +197,11 @@ fn main() {
             cmd_integrations::integrations_disconnect_instance,
             cmd_integrations::integrations_assign_instance,
             cmd_integrations::integrations_unassign_instance,
+            // Personal MCP
+            cmd_personal_mcp::personal_mcp_list,
+            cmd_personal_mcp::personal_mcp_connect,
+            cmd_personal_mcp::personal_mcp_update,
+            cmd_personal_mcp::personal_mcp_disconnect,
             // OAuth Integrations — MCP direct
             cmd_oauth_integrations::start_integration_oauth,
             cmd_oauth_integrations::complete_integration_oauth,

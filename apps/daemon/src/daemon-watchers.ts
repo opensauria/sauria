@@ -7,7 +7,10 @@ import type { ChannelRegistry } from './channels/registry.js';
 import type { AgentOrchestrator } from './orchestrator/orchestrator.js';
 import type { MessageQueue } from './orchestrator/message-queue.js';
 import type { InboundMessage, OwnerCommand } from './orchestrator/types.js';
+import type { IntegrationRegistry } from './integrations/registry.js';
+import type { McpClientManager } from './mcp/client.js';
 import { OwnerCommandSchema } from './orchestrator/types.js';
+import { connectPersonalMcpSources } from './orchestrator-setup.js';
 import { getLogger } from './utils/logger.js';
 import { paths } from './config/paths.js';
 import { loadCanvasGraph } from './graph-loader.js';
@@ -22,12 +25,21 @@ export interface CanvasWatcherDeps {
   readonly audit: AuditLogger;
   readonly config: SauriaConfig;
   readonly globalInstructions: string;
+  readonly mcpClients?: McpClientManager;
+  readonly integrationRegistry?: IntegrationRegistry;
 }
 
 export function setupCanvasWatcher(deps: CanvasWatcherDeps): FSWatcher | null {
-  const { orchestrator, registry, queue } = deps;
+  const { orchestrator, registry, queue, mcpClients, integrationRegistry } = deps;
   const logger = getLogger();
   let canvasDebounce: ReturnType<typeof setTimeout> | null = null;
+  const connectedPersonalMcpIds = new Set<string>();
+
+  // Seed with already-connected personal MCPs
+  const initialGraph = loadCanvasGraph();
+  for (const entry of initialGraph.personalMcp ?? []) {
+    connectedPersonalMcpIds.add(entry.id);
+  }
   const channelDeps = {
     db: deps.db,
     router: deps.router,
@@ -98,6 +110,21 @@ export function setupCanvasWatcher(deps: CanvasWatcherDeps): FSWatcher | null {
     } else if (orchestrator) {
       orchestrator.updateGraph(newGraph);
       logger.info('Canvas graph reloaded (no registry)', { nodes: newGraph.nodes.length });
+    }
+
+    // Hot-connect new personal MCP sources added via the UI
+    if (mcpClients && integrationRegistry) {
+      const newEntries = (newGraph.personalMcp ?? []).filter(
+        (e) => !connectedPersonalMcpIds.has(e.id),
+      );
+      if (newEntries.length > 0) {
+        const subset = { ...newGraph, personalMcp: newEntries };
+        void connectPersonalMcpSources(subset, mcpClients, integrationRegistry).then(() => {
+          for (const entry of newEntries) {
+            connectedPersonalMcpIds.add(entry.id);
+          }
+        });
+      }
     }
   };
 

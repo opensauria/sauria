@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { LightDomElement } from '../shared/light-dom-element.js';
-import type { IntegrationStatus } from '../shared/types.js';
+import type { IntegrationStatus, PersonalMcpEntry } from '../shared/types.js';
 import { escapeHtml, formatLabel } from '../shared/utils.js';
 import { trashIcon, plusIcon, loginIcon } from '../shared/icons.js';
 import {
@@ -17,6 +17,11 @@ import { t } from '../i18n.js';
 
 import './integration-telegram-panel.js';
 import './integration-slack-panel.js';
+import './integration-discord-panel.js';
+import './integration-whatsapp-panel.js';
+import './integration-email-panel.js';
+import './integration-personal-mcp-form.js';
+import './integration-personal-mcp-edit.js';
 
 interface BotCardData {
   readonly iconPath: string;
@@ -30,6 +35,7 @@ export class IntegrationConfigPanel extends LightDomElement {
   @property({ attribute: false }) item: IntegrationStatus | null = null;
   @property() panelId: string | null = null;
   @property() accountLabel = '';
+  @property({ attribute: false }) personalEntries: PersonalMcpEntry[] = [];
   @state() private authMode: 'oauth' | 'apikey' = 'oauth';
   @state() private connecting = false;
   @state() private oauthStatus = '';
@@ -70,6 +76,40 @@ export class IntegrationConfigPanel extends LightDomElement {
       return html`<integration-slack-panel
         @slack-status-change=${this.handleChannelChange}
       ></integration-slack-panel>`;
+    }
+
+    if (this.panelId === 'discord') {
+      return html`<integration-discord-panel
+        @discord-status-change=${this.handleChannelChange}
+      ></integration-discord-panel>`;
+    }
+
+    if (this.panelId === 'whatsapp') {
+      return html`<integration-whatsapp-panel
+        @whatsapp-status-change=${this.handleChannelChange}
+      ></integration-whatsapp-panel>`;
+    }
+
+    if (this.panelId === 'email') {
+      return html`<integration-email-panel
+        @email-status-change=${this.handleChannelChange}
+      ></integration-email-panel>`;
+    }
+
+    if (this.panelId === 'personal-mcp-add') {
+      return html`<integration-personal-mcp-form
+        @personal-mcp-connected=${this.handleChannelChange}
+      ></integration-personal-mcp-form>`;
+    }
+
+    if (this.panelId?.startsWith('personal-mcp-edit:')) {
+      const entryId = this.panelId.slice('personal-mcp-edit:'.length);
+      const entry = this.personalEntries.find((e) => e.id === entryId) ?? null;
+      return html`<integration-personal-mcp-edit
+        .entry=${entry}
+        @personal-mcp-updated=${this.handleChannelChange}
+        @personal-mcp-disconnected=${this.handleChannelChange}
+      ></integration-personal-mcp-edit>`;
     }
 
     if (!this.item) return nothing;

@@ -70,6 +70,7 @@ interface RawGraph {
   readonly edges?: readonly RawEdge[];
   readonly workspaces?: readonly RawWorkspace[];
   readonly instances?: readonly IntegrationInstance[];
+  readonly personalMcp?: CanvasGraph['personalMcp'];
   readonly viewport?: { readonly x: number; readonly y: number; readonly zoom: number };
 }
 
@@ -159,6 +160,7 @@ export function loadCanvasGraph(): CanvasGraph {
       edges: (parsed.edges ?? []).map(normalizeEdge),
       workspaces: (parsed.workspaces ?? []).map(normalizeWorkspace),
       instances: parsed.instances ?? [],
+      personalMcp: parsed.personalMcp ?? [],
       viewport: parsed.viewport ?? { x: 0, y: 0, zoom: 1 },
     };
   } catch (error: unknown) {

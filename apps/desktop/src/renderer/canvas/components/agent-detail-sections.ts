@@ -116,6 +116,43 @@ export function renderBehavior(panel: AgentDetailPanel, node: AgentNode) {
   `;
 }
 
+// ─── Model Tier ───────────────────────────────────────────────────
+
+const MODEL_TIERS = [
+  { value: 'haiku', labelKey: 'canvas.tierHaiku' },
+  { value: 'sonnet', labelKey: 'canvas.tierSonnet' },
+  { value: 'opus', labelKey: 'canvas.tierOpus' },
+] as const;
+
+export function renderModelTier(panel: AgentDetailPanel, node: AgentNode) {
+  const activeTier = node.modelTier ?? 'sonnet';
+  const tierCount = MODEL_TIERS.length;
+  const activeIndex = MODEL_TIERS.findIndex((m) => m.value === activeTier);
+  const idx = activeIndex >= 0 ? activeIndex : 1; // default to sonnet (index 1)
+
+  return html`
+    <div class="detail-section">
+      <span class="detail-label">${t('canvas.modelTier')}</span>
+      <div class="detail-autonomy-bar">
+        <div
+          class="detail-autonomy-highlight"
+          style="left:calc(var(--spacing-xs) + ${idx} * (100% - 2 * var(--spacing-xs)) / ${tierCount});width:calc((100% - 2 * var(--spacing-xs)) / ${tierCount})"
+        ></div>
+        ${MODEL_TIERS.map(
+          (m) => html`
+            <div
+              class="detail-autonomy-seg ${activeTier === m.value ? 'active' : ''}"
+              @click=${() => panel.fireUpdate({ modelTier: m.value })}
+            >
+              ${t(m.labelKey)}
+            </div>
+          `,
+        )}
+      </div>
+    </div>
+  `;
+}
+
 const CODE_PERMISSION_MODES = [
   { value: 'plan', labelKey: 'canvas.permissionPlan' },
   { value: 'acceptEdits', labelKey: 'canvas.permissionAcceptEdits' },
