@@ -422,6 +422,20 @@ export class SauriaPalette extends LightDomElement {
   private async handleInstallUpdate() {
     if (!this.updateBanner) return;
     this.installing = true;
-    await this.updateBanner.downloadAndInstall();
+
+    try {
+      await this.updateBanner.downloadAndInstall();
+      const { relaunch } = await import('@tauri-apps/plugin-process');
+      await relaunch();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Update install failed: ${msg}`);
+      this.installing = false;
+      const updateCmd = MAIN_COMMANDS.find((c) => c.id === 'update');
+      if (updateCmd) {
+        updateCmd.hint = `<span class="status-dot disconnected"></span>${t('palette.updateError')}`;
+        this.requestUpdate();
+      }
+    }
   }
 }

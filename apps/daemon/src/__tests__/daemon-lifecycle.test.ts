@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { DaemonContext } from '../daemon-lifecycle.js';
 import { stopDaemonContext, startDaemonContext } from '../daemon-lifecycle.js';
 
@@ -379,8 +379,16 @@ describe('additional coverage — stopDaemonContext ordering', () => {
 });
 
 describe('startDaemonContext', () => {
+  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    // Capture status writes so they don't pollute test output
+    stdoutSpy = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    stdoutSpy.mockRestore();
   });
 
   it('returns a DaemonContext with all required fields', async () => {
@@ -828,5 +836,56 @@ describe('startDaemonContext', () => {
     expect(matchingCall).toBeDefined();
     clearInterval(ctx.refreshInterval);
     spy.mockRestore();
+  });
+
+  it('emits ready status to stdout before starting MCP server', async () => {
+    const { startMcpServer } = await import('../mcp/server.js');
+    let stdoutCalledBeforeMcp = false;
+
+    vi.mocked(startMcpServer).mockImplementationOnce(async () => {
+      // By the time MCP server starts, stdout should already have the status
+      const calls = stdoutSpy.mock.calls.map((c: [unknown, ...unknown[]]) => c[0] as string);
+      stdoutCalledBeforeMcp = calls.some((s: string) => s.includes('"ready"'));
+      return {} as never;
+    });
+
+    const ctx = await startDaemonContext();
+
+    expect(stdoutCalledBeforeMcp).toBe(true);
+    expect(stdoutSpy).toHaveBeenCalledWith('{"status":"ready"}\n');
+    clearInterval(ctx.refreshInterval);
+  });
+
+  it('continues in degraded mode when MCP server fails', async () => {
+    const { startMcpServer } = await import('../mcp/server.js');
+    vi.mocked(startMcpServer).mockRejectedValueOnce(new Error('MCP init crash'));
+
+    const ctx = await startDaemonContext();
+
+    // Daemon stays alive — mcpServer is null but everything else works
+    expect(ctx.mcpServer).toBeNull();
+    expect(ctx.db).toBeDefined();
+    expect(ctx.ipcServer).toBeDefined();
+    expect(ctx.integrationRegistry).toBeDefined();
+    expect(mockLogger.error).toHaveBeenCalledWith('MCP server failed to start (degraded mode)', {
+      error: 'MCP init crash',
+    });
+    clearInterval(ctx.refreshInterval);
+  });
+
+  it('continues in degraded mode when watcher setup fails', async () => {
+    const { setupCanvasWatcher } = await import('../daemon-watchers.js');
+    vi.mocked(setupCanvasWatcher).mockImplementationOnce(() => {
+      throw new Error('watcher crash');
+    });
+
+    const ctx = await startDaemonContext();
+
+    expect(ctx.canvasWatcher).toBeNull();
+    expect(ctx.db).toBeDefined();
+    expect(mockLogger.error).toHaveBeenCalledWith('Watcher setup failed (degraded mode)', {
+      error: 'watcher crash',
+    });
+    clearInterval(ctx.refreshInterval);
   });
 });
