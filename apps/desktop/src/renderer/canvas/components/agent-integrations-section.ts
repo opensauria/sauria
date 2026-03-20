@@ -3,10 +3,26 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { t } from '../../i18n.js';
 import type { AgentNode, CanvasGraph, IntegrationDef } from '../types.js';
 import { fire } from '../fire.js';
+import { capitalize } from '../helpers.js';
 import { assignIntegration, unassignIntegration } from '../ipc.js';
 import { LightDomElement } from '../light-dom-element.js';
 import { adoptStyles } from '../../shared/styles/inject.js';
 import { agentIntegrationsStyles } from './agent-integrations-styles.js';
+
+/** Format integration label: "youtube-knowledge-mcp" → "YouTube Knowledge Mcp" */
+function formatIntegrationLabel(label: string): string {
+  return label
+    .split(/[-_]/)
+    .map((w) => capitalize(w))
+    .join(' ');
+}
+
+/** Resolve icon path: catalog icon → personal MCP fallback → null */
+function resolveIconPath(integrationId: string, def: IntegrationDef | undefined): string | null {
+  if (def?.icon) return `/icons/integrations/${def.icon}.svg`;
+  if (integrationId === 'personal-mcp') return '/icons/integrations/mcp.svg';
+  return null;
+}
 
 adoptStyles(agentIntegrationsStyles);
 
@@ -25,7 +41,16 @@ export class AgentIntegrationsSection extends LightDomElement {
   }
 
   private renderIntegrations(node: AgentNode) {
-    const instances = this.graph?.instances ?? [];
+    const catalogInstances = (this.graph?.instances ?? []).filter(
+      (i) => i.integrationId !== 'personal-mcp',
+    );
+    const personalEntries = (this.graph?.personalMcp ?? []).map((p) => ({
+      id: `personal:${p.id}`,
+      integrationId: 'personal-mcp',
+      label: p.name,
+      connectedAt: p.connectedAt,
+    }));
+    const instances = [...catalogInstances, ...personalEntries];
     const assigned = node.integrations ?? [];
 
     return html`
@@ -36,12 +61,12 @@ export class AgentIntegrationsSection extends LightDomElement {
             const inst = instances.find((i) => i.id === aid);
             if (!inst) return nothing;
             const def = this.catalogMap.get(inst.integrationId);
+            const chipLabel = def?.name || formatIntegrationLabel(inst.label);
+            const iconPath = resolveIconPath(inst.integrationId, def);
             return html`
-              <div class="int-chip">
-                ${def?.icon
-                  ? html`<img src="/icons/integrations/${def.icon}.svg" alt="" />`
-                  : nothing}
-                <span>${def?.name ?? inst.label}</span>
+              <div class="int-chip" title=${chipLabel}>
+                ${iconPath ? html`<img src=${iconPath} alt="" />` : nothing}
+                <span>${chipLabel}</span>
                 <button
                   class="int-chip-remove"
                   @click=${() => this.handleRemoveIntegration(node.id, inst.id)}
@@ -73,7 +98,7 @@ export class AgentIntegrationsSection extends LightDomElement {
     const unassigned = instances.filter((inst) => !assigned.includes(inst.id));
     const filtered = this.intSearchFilter
       ? unassigned.filter((inst) => {
-          const label = this.catalogMap.get(inst.integrationId)?.name ?? inst.label;
+          const label = this.catalogMap.get(inst.integrationId)?.name || inst.label;
           return label.toLowerCase().includes(this.intSearchFilter.toLowerCase());
         })
       : unassigned;
@@ -85,15 +110,16 @@ export class AgentIntegrationsSection extends LightDomElement {
             ? html`<div class="int-dropdown-empty">${t('canvas.noIntegrations')}</div>`
             : filtered.map((inst) => {
                 const def = this.catalogMap.get(inst.integrationId);
+                const iconPath = resolveIconPath(inst.integrationId, def);
                 return html`
                   <div
                     class="int-dropdown-item"
                     @click=${() => this.handleAssignIntegration(node.id, inst.id)}
                   >
-                    ${def?.icon
-                      ? html`<img src="/icons/integrations/${def.icon}.svg" alt="" />`
+                    ${iconPath
+                      ? html`<img src=${iconPath} alt="" />`
                       : html`<div class="int-dropdown-item-placeholder"></div>`}
-                    ${def?.name ?? inst.label}
+                    ${def?.name || formatIntegrationLabel(inst.label)}
                   </div>
                 `;
               })}

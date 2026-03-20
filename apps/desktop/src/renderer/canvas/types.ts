@@ -29,6 +29,17 @@ export interface AgentNode {
   _animateIn?: boolean;
   _editing?: boolean;
   integrations?: string[];
+  aiProvider?: {
+    type: 'claude' | 'openai' | 'local';
+    model?: string;
+    modelTier?: 'sonnet' | 'opus' | 'haiku';
+    baseUrl?: string;
+    sessionId?: string;
+  };
+  /** @deprecated Use `aiProvider.modelTier` */
+  modelTier?: 'sonnet' | 'opus' | 'haiku';
+  /** @deprecated Use `aiProvider.sessionId` */
+  cliSessionId?: string;
   codeMode?: {
     enabled?: boolean;
     projectPath?: string;
@@ -73,11 +84,19 @@ export interface IntegrationDef {
   icon: string;
 }
 
+export interface PersonalMcpEntry {
+  id: string;
+  name: string;
+  transport: 'stdio' | 'remote';
+  connectedAt: string;
+}
+
 export interface CanvasGraph {
   nodes: AgentNode[];
   edges: Edge[];
   workspaces: Workspace[];
   instances?: IntegrationInstance[];
+  personalMcp?: PersonalMcpEntry[];
   globalInstructions: string;
   language?: string;
   viewport: Viewport;

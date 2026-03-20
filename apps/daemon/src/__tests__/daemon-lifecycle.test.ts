@@ -8,6 +8,11 @@ vi.mock('../utils/logger.js', () => ({
   getLogger: () => mockLogger,
 }));
 
+vi.mock('../utils/version.js', () => ({
+  getVersion: () => '0.0.0-test',
+  getBuildHash: () => 'abc123',
+}));
+
 vi.mock('../db/connection.js', () => ({
   openDatabase: vi.fn(() => ({ pragma: vi.fn() })),
   closeDatabase: vi.fn(),
@@ -26,6 +31,12 @@ vi.mock('../config/loader.js', () => ({
   loadConfig: vi.fn().mockResolvedValue({
     mcp: { servers: {} },
     budget: { dailyLimitUsd: 10 },
+    models: {
+      extraction: { provider: 'google', model: 'gemini-2.5-flash' },
+      reasoning: { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+      deep: { provider: 'anthropic', model: 'claude-opus-4-6' },
+      embeddings: { provider: 'local', model: 'all-MiniLM-L6-v2' },
+    },
   }),
   saveConfig: vi.fn(),
 }));
@@ -135,6 +146,7 @@ vi.mock('../graph-loader.js', () => ({
 
 vi.mock('../orchestrator-setup.js', () => ({
   connectMcpSources: vi.fn().mockResolvedValue(undefined),
+  connectPersonalMcpSources: vi.fn().mockResolvedValue(undefined),
   autoConnectIntegrations: vi.fn().mockResolvedValue(undefined),
   setupOrchestrator: vi.fn().mockResolvedValue(null),
 }));

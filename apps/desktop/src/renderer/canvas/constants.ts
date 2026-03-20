@@ -334,7 +334,19 @@ const PLATFORM_FIELDS: Record<string, PlatformField[]> = {
   ],
 };
 
+export const AI_PROVIDERS = [
+  { value: 'claude', labelKey: 'canvas.providerClaude' },
+  { value: 'openai', labelKey: 'canvas.providerOpenai' },
+  { value: 'local', labelKey: 'canvas.providerLocal' },
+] as const;
+
+export const DEFAULT_OPENAI_MODEL = 'gpt-4o';
+export const DEFAULT_LOCAL_MODEL = 'llama3.2';
+export const DEFAULT_LOCAL_BASE_URL = 'http://localhost:11434';
+
 export const ROLES = ['lead', 'specialist', 'observer', 'coordinator', 'assistant'] as const;
+export const AUTONOMY_VALUES = ['manual', 'supervised', 'approval', 'full'] as const;
+
 export const AUTONOMY_LEVELS = [
   { level: 0, label: 'Manual' },
   { level: 1, label: 'Supervised' },

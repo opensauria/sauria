@@ -239,6 +239,10 @@ export class IntegrationRegistry {
     }));
   }
 
+  registerExternalInstance(instanceId: string, instance: ConnectedInstance): void {
+    this.instances.set(instanceId, instance);
+  }
+
   private findDefaultInstance(integrationId: string): ConnectedInstance | undefined {
     return this.instances.get(`${integrationId}:default`);
   }

@@ -8,6 +8,7 @@ import { AgentMemory } from './orchestrator/agent-memory.js';
 import { KPITracker } from './orchestrator/kpi-tracker.js';
 import type { CheckpointManager } from './orchestrator/checkpoint.js';
 import type { IntegrationRegistry } from './integrations/registry.js';
+import type { McpClientManager } from './mcp/client.js';
 import { INTEGRATION_CATALOG } from './integrations/catalog.js';
 import { vaultGet } from './security/vault-key.js';
 import { getLogger } from './utils/logger.js';
@@ -19,8 +20,10 @@ import type { AuditLogger } from './security/audit.js';
 import type { SauriaConfig } from './config/schema.js';
 import type { CanvasGraph, InboundMessage } from './orchestrator/types.js';
 import { CodeModeRouter } from './orchestrator/code-mode-router.js';
+import { ClaudeCliService } from './ai/providers/claude-cli.js';
 import { persistCanvasGraph } from './graph-persistence.js';
 import { loadCanvasGraph } from './graph-loader.js';
+import { resolveAgentProvider } from '@sauria/types';
 
 export interface OrchestratorBundle {
   readonly registry: ChannelRegistry;
@@ -49,6 +52,65 @@ export async function connectMcpSources(
       logger.info(`MCP client connected: ${name}`);
     } catch (err: unknown) {
       logger.error(`Failed to connect MCP client: ${name}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+}
+
+export async function connectPersonalMcpSources(
+  graph: CanvasGraph,
+  mcpClients: McpClientManager,
+  integrationRegistry: IntegrationRegistry,
+): Promise<void> {
+  const logger = getLogger();
+  const entries = graph.personalMcp ?? [];
+
+  if (entries.length === 0) return;
+
+  for (const entry of entries) {
+    const instanceId = `personal:${entry.id}`;
+    const serverName = `integration:${instanceId}`;
+
+    try {
+      if (entry.transport === 'stdio') {
+        await mcpClients.connect({
+          name: serverName,
+          command: entry.command,
+          args: [...entry.args],
+          env: entry.env ? ({ ...process.env, ...entry.env } as Record<string, string>) : undefined,
+        });
+      } else {
+        await mcpClients.connectRemote({
+          name: serverName,
+          url: entry.url,
+          accessToken: entry.accessToken ?? '',
+        });
+      }
+
+      // Get tool count and register as synthetic ConnectedInstance
+      const rawTools = await mcpClients.listTools(serverName);
+      const tools = rawTools.map((tool) => ({
+        instanceId: instanceId,
+        integrationId: 'personal-mcp',
+        integrationName: entry.name,
+        name: `${instanceId}/${tool.name}`,
+        description: tool.description,
+      }));
+
+      integrationRegistry.registerExternalInstance(instanceId, {
+        instanceId: instanceId,
+        integrationId: 'personal-mcp',
+        label: entry.name,
+        tools,
+        connectedAt: entry.connectedAt,
+      });
+
+      logger.info(
+        `Personal MCP connected: ${entry.name} (${entry.transport}, ${rawTools.length} tools)`,
+      );
+    } catch (err: unknown) {
+      logger.error(`Failed to connect personal MCP: ${entry.name}`, {
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -165,12 +227,44 @@ export async function setupOrchestrator(
   const agentMemory = new AgentMemory(deps.db);
   const kpiTracker = new KPITracker(deps.db);
 
+  // Initialize Claude CLI service if binary is available
+  const cliAvailable = await ClaudeCliService.isAvailable();
+  const cliService = cliAvailable ? new ClaudeCliService() : null;
+
+  if (cliService) {
+    // Restore persisted CLI sessions from canvas graph
+    for (const node of connectedNodes) {
+      const provider = resolveAgentProvider(node);
+      if (provider.sessionId) {
+        cliService.setSession(node.id, provider.sessionId);
+      }
+    }
+    logger.info('Claude CLI available — routing Anthropic agents through CLI');
+  }
+
   const brain = new LLMRoutingBrain(
     deps.router,
     deps.db,
     deps.config.orchestrator.routingCacheTtlMs,
     integrationRegistry,
+    cliService ?? undefined,
   );
+
+  // Persist CLI session IDs to canvas.json via aiProvider
+  brain.setCliSessionPersistCallback((nodeId: string, sessionId: string) => {
+    const currentGraph = loadCanvasGraph();
+    const node = currentGraph.nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+
+    const provider = resolveAgentProvider(node);
+    const updatedGraph: CanvasGraph = {
+      ...currentGraph,
+      nodes: currentGraph.nodes.map((n) =>
+        n.id === nodeId ? { ...n, aiProvider: { ...provider, sessionId } } : n,
+      ),
+    };
+    persistCanvasGraph(paths.canvas, updatedGraph);
+  });
 
   const codeModeRouter = new CodeModeRouter(deps.audit, deps.resolveAnthropicKey);
   codeModeRouter.setSessionPersistCallback((nodeId: string, sessionId: string) => {

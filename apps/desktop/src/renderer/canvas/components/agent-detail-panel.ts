@@ -14,6 +14,7 @@ import {
   renderAutonomy,
   renderLanguage,
   renderBehavior,
+  renderAiProvider,
   renderCodeMode,
   renderKpis,
   type KpiData,
@@ -124,6 +125,7 @@ export class AgentDetailPanel extends LightDomElement {
         ${this.renderInstructions(node, isOwner)}
         ${isOwner ? renderLanguage(this, this.graph?.language || 'auto') : nothing}
         ${!isOwner ? renderBehavior(this, node) : nothing}
+        ${!isOwner ? renderAiProvider(this, node) : nothing}
         ${!isOwner ? renderCodeMode(this, node) : nothing}
         ${!isOwner ? renderKpis(this.kpis) : nothing}
         ${!isOwner

@@ -66,8 +66,13 @@ export const resetStyles = css`
     }
   }
 
-  :focus-visible {
-    outline: 2px solid var(--accent);
+  *:focus {
+    outline: none !important;
+    -webkit-focus-ring-color: transparent;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--accent) !important;
     outline-offset: 2px;
   }
 

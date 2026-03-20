@@ -73,3 +73,25 @@ export interface IntegrationStatus {
   readonly tools: readonly IntegrationTool[];
   readonly error?: string;
 }
+
+interface PersonalMcpBase {
+  readonly id: string;
+  readonly name: string;
+  readonly connectedAt: string;
+  readonly toolCount?: number;
+}
+
+export interface PersonalMcpStdio extends PersonalMcpBase {
+  readonly transport: 'stdio';
+  readonly command: string;
+  readonly args: readonly string[];
+  readonly env?: Readonly<Record<string, string>>;
+}
+
+export interface PersonalMcpRemote extends PersonalMcpBase {
+  readonly transport: 'remote';
+  readonly url: string;
+  readonly accessToken?: string;
+}
+
+export type PersonalMcpEntry = PersonalMcpStdio | PersonalMcpRemote;

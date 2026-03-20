@@ -2,7 +2,19 @@
  * Canonical Canvas Graph types — shared between daemon and desktop.
  */
 
-import type { IntegrationInstance } from './integrations.js';
+import type { IntegrationInstance, PersonalMcpEntry } from './integrations.js';
+
+// ─── AI Provider ─────────────────────────────────────────────────
+
+export type AgentProviderType = 'claude' | 'openai' | 'local';
+
+export interface AgentAiProvider {
+  readonly type: AgentProviderType;
+  readonly model?: string;
+  readonly modelTier?: 'sonnet' | 'opus' | 'haiku';
+  readonly baseUrl?: string;
+  readonly sessionId?: string;
+}
 
 // ─── Agent Roles & Autonomy ────────────────────────────────────────
 
@@ -98,6 +110,11 @@ export interface AgentNode {
   readonly description?: string;
   readonly behavior?: AgentBehavior;
   readonly integrations?: readonly string[];
+  readonly aiProvider?: AgentAiProvider;
+  /** @deprecated Use `aiProvider.modelTier` instead */
+  readonly modelTier?: 'sonnet' | 'opus' | 'haiku';
+  /** @deprecated Use `aiProvider.sessionId` instead */
+  readonly cliSessionId?: string;
   readonly codeMode?: CodeModeConfig;
 }
 
@@ -131,10 +148,21 @@ export interface CanvasGraph {
   readonly nodes: readonly AgentNode[];
   readonly edges: readonly Edge[];
   readonly instances?: readonly IntegrationInstance[];
+  readonly personalMcp?: readonly PersonalMcpEntry[];
   readonly viewport: { readonly x: number; readonly y: number; readonly zoom: number };
 }
 
 // ─── Default Factories ─────────────────────────────────────────────
+
+/** Resolve `aiProvider` from new field or legacy `modelTier`/`cliSessionId`. */
+export function resolveAgentProvider(node: AgentNode): AgentAiProvider {
+  if (node.aiProvider) return node.aiProvider;
+  return {
+    type: 'claude',
+    modelTier: node.modelTier ?? 'sonnet',
+    sessionId: node.cliSessionId,
+  };
+}
 
 export function createEmptyGraph(): CanvasGraph {
   return {
