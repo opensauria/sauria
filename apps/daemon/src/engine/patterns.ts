@@ -121,7 +121,10 @@ function buildNewConnectionAlerts(db: BetterSqlite3.Database, nowIso: string): P
 
 /** Format Date as SQLite-compatible `YYYY-MM-DD HH:MM:SS` (no T, no ms, no Z). */
 function toSqliteDate(d: Date): string {
-  return d.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+  return d
+    .toISOString()
+    .replace('T', ' ')
+    .replace(/\.\d{3}Z$/, '');
 }
 
 export function detectPatterns(db: BetterSqlite3.Database, now?: Date): PatternAlert[] {
