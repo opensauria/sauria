@@ -1,7 +1,16 @@
 import { html, nothing } from 'lit';
 import { t } from '../../i18n.js';
 import type { AgentNode } from '../types.js';
-import { ROLES, AUTONOMY_LEVELS, RESPONSE_LANGUAGES } from '../constants.js';
+import {
+  ROLES,
+  AUTONOMY_LEVELS,
+  AUTONOMY_VALUES,
+  RESPONSE_LANGUAGES,
+  AI_PROVIDERS,
+  DEFAULT_OPENAI_MODEL,
+  DEFAULT_LOCAL_MODEL,
+  DEFAULT_LOCAL_BASE_URL,
+} from '../constants.js';
 import { capitalize } from '../helpers.js';
 import { fire } from '../fire.js';
 import type { AgentDetailPanel } from './agent-detail-panel.js';
@@ -34,8 +43,17 @@ export function renderRolePills(panel: AgentDetailPanel, node: AgentNode) {
   `;
 }
 
+function autonomyToIndex(autonomy: AgentNode['autonomy']): number {
+  if (typeof autonomy === 'number') return autonomy;
+  if (typeof autonomy === 'string') {
+    const idx = AUTONOMY_VALUES.indexOf(autonomy as (typeof AUTONOMY_VALUES)[number]);
+    return idx >= 0 ? idx : 1;
+  }
+  return 1;
+}
+
 export function renderAutonomy(panel: AgentDetailPanel, node: AgentNode) {
-  const level = typeof node.autonomy === 'number' ? node.autonomy : 1;
+  const level = autonomyToIndex(node.autonomy);
   return html`
     <div class="detail-section">
       <span class="detail-label">${t('canvas.autonomy')}</span>
@@ -48,7 +66,7 @@ export function renderAutonomy(panel: AgentDetailPanel, node: AgentNode) {
           (a) => html`
             <div
               class="detail-autonomy-seg ${level === a.level ? 'active' : ''}"
-              @click=${() => panel.fireUpdate({ autonomy: a.level })}
+              @click=${() => panel.fireUpdate({ autonomy: AUTONOMY_VALUES[a.level] })}
             >
               ${a.label}
             </div>
@@ -116,7 +134,7 @@ export function renderBehavior(panel: AgentDetailPanel, node: AgentNode) {
   `;
 }
 
-// ─── Model Tier ───────────────────────────────────────────────────
+// ─── AI Provider ──────────────────────────────────────────────────
 
 const MODEL_TIERS = [
   { value: 'haiku', labelKey: 'canvas.tierHaiku' },
@@ -124,14 +142,64 @@ const MODEL_TIERS = [
   { value: 'opus', labelKey: 'canvas.tierOpus' },
 ] as const;
 
-export function renderModelTier(panel: AgentDetailPanel, node: AgentNode) {
-  const activeTier = node.modelTier ?? 'sonnet';
-  const tierCount = MODEL_TIERS.length;
-  const activeIndex = MODEL_TIERS.findIndex((m) => m.value === activeTier);
-  const idx = activeIndex >= 0 ? activeIndex : 1; // default to sonnet (index 1)
+function resolveProvider(node: AgentNode) {
+  if (node.aiProvider) return node.aiProvider;
+  return { type: 'claude' as const, modelTier: node.modelTier ?? ('sonnet' as const) };
+}
+
+function fireProviderUpdate(
+  panel: AgentDetailPanel,
+  patch: Partial<AgentNode['aiProvider'] & object>,
+  current: ReturnType<typeof resolveProvider>,
+) {
+  panel.fireUpdate({ aiProvider: { ...current, ...patch } });
+}
+
+export function renderAiProvider(panel: AgentDetailPanel, node: AgentNode) {
+  const provider = resolveProvider(node);
+  const providerCount = AI_PROVIDERS.length;
+  const activeIdx = AI_PROVIDERS.findIndex((p) => p.value === provider.type);
+  const idx = activeIdx >= 0 ? activeIdx : 0;
 
   return html`
     <div class="detail-section">
+      <span class="detail-label">${t('canvas.aiProvider')}</span>
+      <div class="detail-autonomy-bar">
+        <div
+          class="detail-autonomy-highlight"
+          style="left:calc(var(--spacing-xs) + ${idx} * (100% - 2 * var(--spacing-xs)) / ${providerCount});width:calc((100% - 2 * var(--spacing-xs)) / ${providerCount})"
+        ></div>
+        ${AI_PROVIDERS.map(
+          (p) => html`
+            <div
+              class="detail-autonomy-seg ${provider.type === p.value ? 'active' : ''}"
+              @click=${() => fireProviderUpdate(panel, { type: p.value }, provider)}
+            >
+              ${t(p.labelKey)}
+            </div>
+          `,
+        )}
+      </div>
+      ${provider.type === 'claude' ? renderClaudeOptions(panel, provider) : nothing}
+      ${provider.type === 'openai'
+        ? renderModelInput(panel, provider, DEFAULT_OPENAI_MODEL)
+        : nothing}
+      ${provider.type === 'local' ? renderLocalOptions(panel, provider) : nothing}
+    </div>
+  `;
+}
+
+function renderClaudeOptions(
+  panel: AgentDetailPanel,
+  provider: ReturnType<typeof resolveProvider>,
+) {
+  const activeTier = provider.modelTier ?? 'sonnet';
+  const tierCount = MODEL_TIERS.length;
+  const tierIdx = MODEL_TIERS.findIndex((m) => m.value === activeTier);
+  const idx = tierIdx >= 0 ? tierIdx : 1;
+
+  return html`
+    <div class="detail-section" style="gap: var(--spacing-smd)">
       <span class="detail-label">${t('canvas.modelTier')}</span>
       <div class="detail-autonomy-bar">
         <div
@@ -142,13 +210,48 @@ export function renderModelTier(panel: AgentDetailPanel, node: AgentNode) {
           (m) => html`
             <div
               class="detail-autonomy-seg ${activeTier === m.value ? 'active' : ''}"
-              @click=${() => panel.fireUpdate({ modelTier: m.value })}
+              @click=${() => fireProviderUpdate(panel, { modelTier: m.value }, provider)}
             >
               ${t(m.labelKey)}
             </div>
           `,
         )}
       </div>
+    </div>
+  `;
+}
+
+function renderModelInput(
+  panel: AgentDetailPanel,
+  provider: ReturnType<typeof resolveProvider>,
+  defaultModel: string,
+) {
+  return html`
+    <div class="detail-section" style="gap: var(--spacing-smd)">
+      <span class="detail-label">${t('canvas.providerModel')}</span>
+      <input
+        type="text"
+        .value=${provider.model ?? defaultModel}
+        @change=${(e: Event) =>
+          fireProviderUpdate(panel, { model: (e.target as HTMLInputElement).value }, provider)}
+        placeholder=${t('canvas.providerModelPlaceholder')}
+      />
+    </div>
+  `;
+}
+
+function renderLocalOptions(panel: AgentDetailPanel, provider: ReturnType<typeof resolveProvider>) {
+  return html`
+    ${renderModelInput(panel, provider, DEFAULT_LOCAL_MODEL)}
+    <div class="detail-section" style="gap: var(--spacing-smd)">
+      <span class="detail-label">${t('canvas.providerBaseUrl')}</span>
+      <input
+        type="text"
+        .value=${provider.baseUrl ?? DEFAULT_LOCAL_BASE_URL}
+        @change=${(e: Event) =>
+          fireProviderUpdate(panel, { baseUrl: (e.target as HTMLInputElement).value }, provider)}
+        placeholder=${t('canvas.providerBaseUrlPlaceholder')}
+      />
     </div>
   `;
 }

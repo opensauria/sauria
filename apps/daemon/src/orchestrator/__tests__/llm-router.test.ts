@@ -4,6 +4,7 @@ import { applySchema } from '../../db/schema.js';
 import { LLMRoutingBrain, parseRoutingResponse } from '../llm-router.js';
 import type { RoutingContext } from '../llm-router.js';
 import type { InboundMessage, AgentNode, Workspace } from '../types.js';
+import { resolveAgentProvider } from '../types.js';
 import type { ModelRouter } from '../../ai/router.js';
 import { AgentMemory } from '../agent-memory.js';
 
@@ -75,6 +76,7 @@ function createMockRouter(responseText: string): ModelRouter {
     extract: vi.fn(),
     onCostIncurred: vi.fn(),
     getProvider: vi.fn(),
+    getApiKeyForProvider: vi.fn().mockResolvedValue('test-key'),
   } as unknown as ModelRouter;
 }
 
@@ -195,6 +197,7 @@ describe('LLMRoutingBrain', () => {
         extract: vi.fn(),
         onCostIncurred: vi.fn(),
         getProvider: vi.fn(),
+        getApiKeyForProvider: vi.fn().mockResolvedValue('test-key'),
       } as unknown as ModelRouter;
 
       const brain = new LLMRoutingBrain(router, db);
@@ -790,6 +793,7 @@ describe('summarizeToolResult', () => {
       extract: vi.fn(),
       onCostIncurred: vi.fn(),
       getProvider: vi.fn(),
+      getApiKeyForProvider: vi.fn().mockResolvedValue('test-key'),
     } as unknown as ModelRouter;
 
     const brain = new LLMRoutingBrain(router, db);
@@ -800,5 +804,60 @@ describe('summarizeToolResult', () => {
       '{"answer": 42}',
     );
     expect(result).toBe('Summary: the result is 42');
+  });
+});
+
+describe('resolveAgentProvider', () => {
+  it('returns aiProvider when set on node', () => {
+    const node: AgentNode = {
+      ...baseNode,
+      aiProvider: { type: 'openai', model: 'gpt-4o' },
+    };
+    const provider = resolveAgentProvider(node);
+
+    expect(provider).toEqual({ type: 'openai', model: 'gpt-4o' });
+  });
+
+  it('migrates legacy modelTier to claude provider', () => {
+    const node: AgentNode = {
+      ...baseNode,
+      modelTier: 'opus',
+    };
+    const provider = resolveAgentProvider(node);
+
+    expect(provider.type).toBe('claude');
+    expect(provider.modelTier).toBe('opus');
+  });
+
+  it('migrates legacy cliSessionId to sessionId', () => {
+    const node: AgentNode = {
+      ...baseNode,
+      cliSessionId: 'session-abc',
+    };
+    const provider = resolveAgentProvider(node);
+
+    expect(provider.type).toBe('claude');
+    expect(provider.sessionId).toBe('session-abc');
+  });
+
+  it('defaults to claude/sonnet when no provider fields set', () => {
+    const provider = resolveAgentProvider(baseNode);
+
+    expect(provider.type).toBe('claude');
+    expect(provider.modelTier).toBe('sonnet');
+  });
+
+  it('prefers aiProvider over legacy fields', () => {
+    const node: AgentNode = {
+      ...baseNode,
+      aiProvider: { type: 'local', model: 'llama3.2', baseUrl: 'http://localhost:11434' },
+      modelTier: 'opus',
+      cliSessionId: 'old-session',
+    };
+    const provider = resolveAgentProvider(node);
+
+    expect(provider.type).toBe('local');
+    expect(provider.model).toBe('llama3.2');
+    expect(provider.modelTier).toBeUndefined();
   });
 });

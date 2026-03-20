@@ -7,8 +7,10 @@ import type {
   RoutingAction,
   RoutingDecision,
   AgentNode,
+  AgentAiProvider,
   Workspace,
 } from './types.js';
+import { resolveAgentProvider } from './types.js';
 import { RoutingCache, buildCacheKey } from './routing-cache.js';
 import { AgentMemory } from './agent-memory.js';
 import type { IntegrationRegistry } from '../integrations/registry.js';
@@ -178,10 +180,18 @@ export class LLMRoutingBrain {
     tier: ModelTier,
     sourceNode?: AgentNode,
   ): Promise<RoutingDecision> {
-    // Route through Claude CLI when available
+    const provider = sourceNode ? resolveAgentProvider(sourceNode) : undefined;
+    const providerType = provider?.type ?? 'claude';
+
+    // Route based on per-agent provider setting
+    if (providerType === 'openai' || providerType === 'local') {
+      return this.callViaApi(messages, provider!);
+    }
+
+    // Claude: prefer CLI, fall back to API
     if (this.cliService && sourceNode) {
       try {
-        return await this.callViaCli(messages, sourceNode);
+        return await this.callViaCli(messages, sourceNode, provider!);
       } catch (error) {
         const logger = getLogger();
         logger.warn('Claude CLI call failed, falling back to API', {
@@ -191,7 +201,7 @@ export class LLMRoutingBrain {
       }
     }
 
-    // Fallback: direct API
+    // Fallback: direct API via ModelRouter
     const stream =
       tier === 'deep' ? this.router.deepAnalyze(messages) : this.router.reason(messages);
 
@@ -203,11 +213,36 @@ export class LLMRoutingBrain {
     return parseRoutingResponse(result);
   }
 
+  private async callViaApi(
+    messages: ChatMessage[],
+    provider: AgentAiProvider,
+  ): Promise<RoutingDecision> {
+    const isLocal = provider.type === 'local';
+    const providerName = isLocal ? 'ollama' : 'openai';
+    const model = provider.model ?? (isLocal ? 'llama3.2' : 'gpt-4o');
+    const baseUrl = isLocal ? (provider.baseUrl ?? 'http://localhost:11434') : undefined;
+
+    const apiKey = isLocal ? '' : await this.router.getApiKeyForProvider(providerName);
+    const llmProvider = this.router.getProvider(providerName, apiKey, baseUrl);
+
+    let result = '';
+    for await (const chunk of llmProvider.chat(messages, {
+      model,
+      temperature: 0.7,
+      maxTokens: 4096,
+    })) {
+      result += chunk.text;
+    }
+
+    return parseRoutingResponse(result);
+  }
+
   private async callViaCli(
     messages: ChatMessage[],
     sourceNode: AgentNode,
+    provider: AgentAiProvider,
   ): Promise<RoutingDecision> {
-    const modelTier = sourceNode.modelTier ?? DEFAULT_MODEL_TIER;
+    const modelTier = provider.modelTier ?? DEFAULT_MODEL_TIER;
 
     // Combine system + user messages into a single prompt for CLI
     const systemPrompt = messages.find((m) => m.role === 'system')?.content ?? '';
