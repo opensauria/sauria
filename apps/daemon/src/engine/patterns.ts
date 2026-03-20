@@ -29,34 +29,38 @@ function isFrequencyRow(value: unknown): value is FrequencyRow {
   );
 }
 
-const FREQUENCY_SQL = `
+function frequencySql(nowIso: string): string {
+  return `
   SELECT
     source,
     (SELECT COUNT(*) FROM events e2
      WHERE e2.source = e1.source
-       AND e2.timestamp >= datetime('now', '-7 days')) AS recent_count,
+       AND e2.timestamp >= datetime('${nowIso}', '-7 days')) AS recent_count,
     (SELECT COUNT(*) FROM events e3
      WHERE e3.source = e1.source
-       AND e3.timestamp >= datetime('now', '-37 days')
-       AND e3.timestamp < datetime('now', '-7 days')) / 4.0 AS baseline_avg
+       AND e3.timestamp >= datetime('${nowIso}', '-37 days')
+       AND e3.timestamp < datetime('${nowIso}', '-7 days')) / 4.0 AS baseline_avg
   FROM events e1
   GROUP BY source
   HAVING baseline_avg > 0
-`;
+  `;
+}
 
-const NEW_ENTITIES_SQL = `
+function newEntitiesSql(nowIso: string): string {
+  return `
   SELECT * FROM entities
-  WHERE first_seen_at >= datetime('now', '-7 days')
+  WHERE first_seen_at >= datetime('${nowIso}', '-7 days')
     AND mention_count >= 3
   ORDER BY mention_count DESC
-`;
+  `;
+}
 
 const INCREASE_THRESHOLD = 2.0;
 const DECREASE_THRESHOLD = 0.5;
 
-function buildFrequencyAlerts(db: BetterSqlite3.Database): PatternAlert[] {
+function buildFrequencyAlerts(db: BetterSqlite3.Database, nowIso: string): PatternAlert[] {
   const alerts: PatternAlert[] = [];
-  const rows: unknown[] = db.prepare(FREQUENCY_SQL).all();
+  const rows: unknown[] = db.prepare(frequencySql(nowIso)).all();
 
   for (const raw of rows) {
     if (!isFrequencyRow(raw)) continue;
@@ -93,9 +97,9 @@ function buildFrequencyAlerts(db: BetterSqlite3.Database): PatternAlert[] {
   return alerts;
 }
 
-function buildNewConnectionAlerts(db: BetterSqlite3.Database): PatternAlert[] {
+function buildNewConnectionAlerts(db: BetterSqlite3.Database, nowIso: string): PatternAlert[] {
   const alerts: PatternAlert[] = [];
-  const rows: unknown[] = db.prepare(NEW_ENTITIES_SQL).all();
+  const rows: unknown[] = db.prepare(newEntitiesSql(nowIso)).all();
 
   for (const raw of rows) {
     if (!isEntityRow(raw)) continue;
@@ -115,9 +119,10 @@ function buildNewConnectionAlerts(db: BetterSqlite3.Database): PatternAlert[] {
   return alerts;
 }
 
-export function detectPatterns(db: BetterSqlite3.Database): PatternAlert[] {
-  const frequencyAlerts = buildFrequencyAlerts(db);
-  const newConnectionAlerts = buildNewConnectionAlerts(db);
+export function detectPatterns(db: BetterSqlite3.Database, now?: Date): PatternAlert[] {
+  const nowIso = (now ?? new Date()).toISOString();
+  const frequencyAlerts = buildFrequencyAlerts(db, nowIso);
+  const newConnectionAlerts = buildNewConnectionAlerts(db, nowIso);
 
   return [...frequencyAlerts, ...newConnectionAlerts].sort((a, b) => b.priority - a.priority);
 }
