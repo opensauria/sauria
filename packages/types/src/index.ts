@@ -1,4 +1,6 @@
 export type {
+  AgentProviderType,
+  AgentAiProvider,
   AgentRole,
   AutonomyLevel,
   Platform,
@@ -18,7 +20,7 @@ export type {
   CanvasGraph,
 } from './canvas.js';
 
-export { createEmptyGraph } from './canvas.js';
+export { createEmptyGraph, resolveAgentProvider } from './canvas.js';
 
 export { SUPPORTED_LANGUAGES } from './languages.js';
 export type { LanguageCode } from './languages.js';

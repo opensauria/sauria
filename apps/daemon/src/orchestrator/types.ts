@@ -1,6 +1,8 @@
 // Re-export all types from canonical packages.
 
 export type {
+  AgentProviderType,
+  AgentAiProvider,
   AgentRole,
   AutonomyLevel,
   Platform,
@@ -27,6 +29,6 @@ export type {
   OwnerCommand,
 } from '@sauria/types';
 
-export { createEmptyGraph } from '@sauria/types';
+export { createEmptyGraph, resolveAgentProvider } from '@sauria/types';
 
 export { OwnerCommandSchema } from '@sauria/ipc-protocol';

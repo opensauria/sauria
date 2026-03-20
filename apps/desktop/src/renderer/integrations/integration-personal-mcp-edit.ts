@@ -1,7 +1,7 @@
 import { html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { LightDomElement } from '../shared/light-dom-element.js';
-import { personalMcpUpdate, personalMcpDisconnect } from '../shared/ipc.js';
+import { personalMcpUpdate, personalMcpDisconnect, personalMcpConnect } from '../shared/ipc.js';
 import type { PersonalMcpEntry } from '../shared/types.js';
 import { t } from '../i18n.js';
 
@@ -12,6 +12,7 @@ export class IntegrationPersonalMcpEdit extends LightDomElement {
   @state() private nameInput = '';
   @state() private commandInput = '';
   @state() private saving = false;
+  @state() private refreshing = false;
   @state() private statusText = '';
   @state() private statusClass = '';
 
@@ -75,12 +76,31 @@ export class IntegrationPersonalMcpEdit extends LightDomElement {
           <button
             class="btn btn-primary"
             style="flex:1"
-            ?disabled=${this.saving || !this.isValid()}
+            ?disabled=${this.saving || this.refreshing || !this.isValid()}
             @click=${this.handleSave}
           >
             ${this.saving ? t('integ.saving') : t('integ.save')}
           </button>
-          <button class="btn btn-danger" @click=${this.handleDisconnect}>
+          <button
+            class="btn btn-secondary"
+            ?disabled=${this.refreshing || this.saving}
+            @click=${this.handleRefresh}
+            title="${t('integ.refresh')}"
+          >
+            ${this.refreshing
+              ? html`<span class="spinner-inline"></span>`
+              : html`<img
+                  class="icon-mono"
+                  src="/icons/refresh-cw.svg"
+                  alt=""
+                  style="width:var(--spacing-md);height:var(--spacing-md)"
+                />`}
+          </button>
+          <button
+            class="btn btn-danger"
+            ?disabled=${this.refreshing}
+            @click=${this.handleDisconnect}
+          >
             ${t('integ.disconnect')}
           </button>
         </div>
@@ -116,6 +136,43 @@ export class IntegrationPersonalMcpEdit extends LightDomElement {
       this.statusText = err instanceof Error ? err.message : t('integ.saveFailed');
       this.statusClass = 'error';
       this.saving = false;
+    }
+  }
+
+  private async handleRefresh() {
+    if (!this.entry) return;
+    this.refreshing = true;
+    this.statusText = '';
+
+    const { entry } = this;
+    try {
+      await personalMcpDisconnect(entry.id);
+
+      const payload =
+        entry.transport === 'stdio'
+          ? {
+              name: entry.name,
+              transport: entry.transport,
+              command: entry.command,
+              args: [...entry.args],
+              ...(entry.env ? { env: { ...entry.env } } : {}),
+            }
+          : {
+              name: entry.name,
+              transport: entry.transport,
+              url: entry.url,
+              ...(entry.accessToken ? { accessToken: entry.accessToken } : {}),
+            };
+
+      await personalMcpConnect(payload);
+      this.statusText = t('integ.refresh');
+      this.statusClass = 'success';
+      this.dispatchEvent(new CustomEvent('personal-mcp-updated', { bubbles: true }));
+    } catch (err: unknown) {
+      this.statusText = err instanceof Error ? err.message : t('integ.saveFailed');
+      this.statusClass = 'error';
+    } finally {
+      this.refreshing = false;
     }
   }
 

@@ -117,6 +117,10 @@ export class ModelRouter {
     return provider;
   }
 
+  async getApiKeyForProvider(providerName: string): Promise<string> {
+    return this.getApiKey(providerName);
+  }
+
   isProviderAvailable(providerName: string): boolean {
     const breaker = this.breakers.get(providerName);
     return !breaker || breaker.getState() !== 'open';

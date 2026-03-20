@@ -111,7 +111,7 @@ export class OrbitalBubbles extends LightDomElement {
     for (let i = 0; i < bubbleData.length; i++) {
       const b = bubbleData[i];
       const def = this.catalogMap.get(b.integrationId);
-      const iconName = def?.icon ?? '';
+      const iconName = def?.icon ?? (b.integrationId === 'personal-mcp' ? 'mcp' : '');
 
       const isRightSide = bubbleData.length <= 4 || i < Math.ceil(bubbleData.length / 2);
       const sideIndex = isRightSide ? i : i - Math.ceil(bubbleData.length / 2);

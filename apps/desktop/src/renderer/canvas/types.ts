@@ -29,7 +29,16 @@ export interface AgentNode {
   _animateIn?: boolean;
   _editing?: boolean;
   integrations?: string[];
+  aiProvider?: {
+    type: 'claude' | 'openai' | 'local';
+    model?: string;
+    modelTier?: 'sonnet' | 'opus' | 'haiku';
+    baseUrl?: string;
+    sessionId?: string;
+  };
+  /** @deprecated Use `aiProvider.modelTier` */
   modelTier?: 'sonnet' | 'opus' | 'haiku';
+  /** @deprecated Use `aiProvider.sessionId` */
   cliSessionId?: string;
   codeMode?: {
     enabled?: boolean;

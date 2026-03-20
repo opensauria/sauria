@@ -17,6 +17,13 @@ function formatIntegrationLabel(label: string): string {
     .join(' ');
 }
 
+/** Resolve icon path: catalog icon → personal MCP fallback → null */
+function resolveIconPath(integrationId: string, def: IntegrationDef | undefined): string | null {
+  if (def?.icon) return `/icons/integrations/${def.icon}.svg`;
+  if (integrationId === 'personal-mcp') return '/icons/integrations/mcp.svg';
+  return null;
+}
+
 adoptStyles(agentIntegrationsStyles);
 
 @customElement('agent-integrations-section')
@@ -55,11 +62,10 @@ export class AgentIntegrationsSection extends LightDomElement {
             if (!inst) return nothing;
             const def = this.catalogMap.get(inst.integrationId);
             const chipLabel = def?.name || formatIntegrationLabel(inst.label);
+            const iconPath = resolveIconPath(inst.integrationId, def);
             return html`
               <div class="int-chip" title=${chipLabel}>
-                ${def?.icon
-                  ? html`<img src="/icons/integrations/${def.icon}.svg" alt="" />`
-                  : nothing}
+                ${iconPath ? html`<img src=${iconPath} alt="" />` : nothing}
                 <span>${chipLabel}</span>
                 <button
                   class="int-chip-remove"
@@ -104,13 +110,14 @@ export class AgentIntegrationsSection extends LightDomElement {
             ? html`<div class="int-dropdown-empty">${t('canvas.noIntegrations')}</div>`
             : filtered.map((inst) => {
                 const def = this.catalogMap.get(inst.integrationId);
+                const iconPath = resolveIconPath(inst.integrationId, def);
                 return html`
                   <div
                     class="int-dropdown-item"
                     @click=${() => this.handleAssignIntegration(node.id, inst.id)}
                   >
-                    ${def?.icon
-                      ? html`<img src="/icons/integrations/${def.icon}.svg" alt="" />`
+                    ${iconPath
+                      ? html`<img src=${iconPath} alt="" />`
                       : html`<div class="int-dropdown-item-placeholder"></div>`}
                     ${def?.name || formatIntegrationLabel(inst.label)}
                   </div>

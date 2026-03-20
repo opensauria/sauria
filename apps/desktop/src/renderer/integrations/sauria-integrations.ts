@@ -21,7 +21,6 @@ import {
   navigateBack,
   personalMcpList,
   personalMcpConnect,
-  personalMcpDisconnect,
 } from '../shared/ipc.js';
 import { ACRONYMS } from '../shared/utils.js';
 import { searchIcon } from '../shared/icons.js';
@@ -501,20 +500,6 @@ export class SauriaIntegrations extends LightDomElement {
           ${entry.toolCount != null
             ? html`<span class="badge badge-dim">${entry.toolCount} ${t('integ.tools')}</span>`
             : nothing}
-          <button
-            class="personal-mcp-disconnect"
-            title="${t('integ.disconnect')}"
-            @click=${(e: Event) => {
-              e.stopPropagation();
-              this.handleDisconnectPersonalMcp(entry.id);
-            }}
-          >
-            <img
-              src="/icons/x.svg"
-              alt=""
-              style="width:var(--spacing-md);height:var(--spacing-md);filter:brightness(0) invert();opacity:var(--opacity-muted)"
-            />
-          </button>
         </div>
       </div>
     `;
@@ -522,11 +507,6 @@ export class SauriaIntegrations extends LightDomElement {
 
   private handleAddPersonalMcp() {
     this.openPanelId = 'personal-mcp-add';
-  }
-
-  private async handleDisconnectPersonalMcp(id: string) {
-    await personalMcpDisconnect(id);
-    this.personalEntries = this.personalEntries.filter((e) => e.id !== id);
   }
 
   private handleCardClick(e: CustomEvent<{ id: string }>) {

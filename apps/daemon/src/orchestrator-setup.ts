@@ -23,6 +23,7 @@ import { CodeModeRouter } from './orchestrator/code-mode-router.js';
 import { ClaudeCliService } from './ai/providers/claude-cli.js';
 import { persistCanvasGraph } from './graph-persistence.js';
 import { loadCanvasGraph } from './graph-loader.js';
+import { resolveAgentProvider } from '@sauria/types';
 
 export interface OrchestratorBundle {
   readonly registry: ChannelRegistry;
@@ -233,8 +234,9 @@ export async function setupOrchestrator(
   if (cliService) {
     // Restore persisted CLI sessions from canvas graph
     for (const node of connectedNodes) {
-      if (node.cliSessionId) {
-        cliService.setSession(node.id, node.cliSessionId);
+      const provider = resolveAgentProvider(node);
+      if (provider.sessionId) {
+        cliService.setSession(node.id, provider.sessionId);
       }
     }
     logger.info('Claude CLI available — routing Anthropic agents through CLI');
@@ -248,16 +250,17 @@ export async function setupOrchestrator(
     cliService ?? undefined,
   );
 
-  // Persist CLI session IDs to canvas.json
+  // Persist CLI session IDs to canvas.json via aiProvider
   brain.setCliSessionPersistCallback((nodeId: string, sessionId: string) => {
     const currentGraph = loadCanvasGraph();
     const node = currentGraph.nodes.find((n) => n.id === nodeId);
     if (!node) return;
 
+    const provider = resolveAgentProvider(node);
     const updatedGraph: CanvasGraph = {
       ...currentGraph,
       nodes: currentGraph.nodes.map((n) =>
-        n.id === nodeId ? { ...n, cliSessionId: sessionId } : n,
+        n.id === nodeId ? { ...n, aiProvider: { ...provider, sessionId } } : n,
       ),
     };
     persistCanvasGraph(paths.canvas, updatedGraph);
