@@ -184,7 +184,11 @@ describe('ClaudeCliService', () => {
         stdout: Readable;
         stderr: Readable;
       };
-      child.stdin = new Writable({ write(_c, _e, cb) { cb(); } });
+      child.stdin = new Writable({
+        write(_c, _e, cb) {
+          cb();
+        },
+      });
       child.stdout = new Readable({ read() {} });
       child.stderr = new Readable({ read() {} });
       child.stdin.on('finish', () => {
@@ -248,7 +252,8 @@ describe('ClaudeCliService', () => {
     });
 
     it('handles large multiline prompts via stdin', async () => {
-      const largePrompt = 'System prompt\n'.repeat(500) + 'User message with "quotes" and special chars: <>&';
+      const largePrompt =
+        'System prompt\n'.repeat(500) + 'User message with "quotes" and special chars: <>&';
       const jsonResult = JSON.stringify({ type: 'result', result: 'OK' });
       const { child, stdinChunks } = createMockChild(jsonResult);
       mockSpawn.mockReturnValue(child);
