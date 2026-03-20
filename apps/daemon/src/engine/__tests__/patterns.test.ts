@@ -11,7 +11,10 @@ function createTestDb(): InstanceType<typeof Database> {
 
 /** Format Date as SQLite-compatible `YYYY-MM-DD HH:MM:SS`. */
 function sqlDate(d: Date): string {
-  return d.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+  return d
+    .toISOString()
+    .replace('T', ' ')
+    .replace(/\.\d{3}Z$/, '');
 }
 
 function insertEvent(
