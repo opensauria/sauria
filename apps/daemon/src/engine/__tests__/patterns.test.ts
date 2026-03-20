@@ -9,6 +9,11 @@ function createTestDb(): InstanceType<typeof Database> {
   return db;
 }
 
+/** Format Date as SQLite-compatible `YYYY-MM-DD HH:MM:SS`. */
+function sqlDate(d: Date): string {
+  return d.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+}
+
 function insertEvent(
   db: InstanceType<typeof Database>,
   overrides: Partial<{
@@ -22,7 +27,7 @@ function insertEvent(
     id: `evt-${Math.random().toString(36).slice(2, 8)}`,
     source: 'email',
     event_type: 'message',
-    timestamp: new Date().toISOString(),
+    timestamp: sqlDate(new Date()),
   };
   const evt = { ...defaults, ...overrides };
   db.prepare('INSERT INTO events (id, source, event_type, timestamp) VALUES (?, ?, ?, ?)').run(
@@ -47,7 +52,7 @@ function insertEntity(
     id: `ent-${Math.random().toString(36).slice(2, 8)}`,
     name: 'Test Entity',
     type: 'person',
-    first_seen_at: new Date().toISOString(),
+    first_seen_at: sqlDate(new Date()),
     mention_count: 1,
   };
   const ent = { ...defaults, ...overrides };
@@ -77,13 +82,13 @@ describe('detectPatterns', () => {
     // Baseline: 2 events per week over 4 weeks (8 events in days -37 to -7)
     for (let i = 0; i < 8; i++) {
       const dayOffset = 8 + Math.floor(i * 3.5);
-      const ts = new Date(NOW.getTime() - dayOffset * 86_400_000).toISOString();
+      const ts = sqlDate(new Date(NOW.getTime() - dayOffset * 86_400_000));
       insertEvent(db, { source: 'slack', timestamp: ts });
     }
 
     // Recent: 6 events in last 7 days (3x the baseline avg of 2)
     for (let i = 0; i < 6; i++) {
-      const ts = new Date(NOW.getTime() - i * 86_400_000).toISOString();
+      const ts = sqlDate(new Date(NOW.getTime() - i * 86_400_000));
       insertEvent(db, { source: 'slack', timestamp: ts });
     }
 
@@ -98,13 +103,13 @@ describe('detectPatterns', () => {
     // Baseline: 20 events per week over 4 weeks (80 events total in days -37 to -7)
     for (let i = 0; i < 80; i++) {
       const dayOffset = 8 + Math.floor(i * 0.375);
-      const ts = new Date(NOW.getTime() - dayOffset * 86_400_000).toISOString();
+      const ts = sqlDate(new Date(NOW.getTime() - dayOffset * 86_400_000));
       insertEvent(db, { source: 'telegram', timestamp: ts });
     }
 
     // Recent: only 2 events in last 7 days (0.1x baseline avg of 20)
     for (let i = 0; i < 2; i++) {
-      const ts = new Date(NOW.getTime() - i * 86_400_000).toISOString();
+      const ts = sqlDate(new Date(NOW.getTime() - i * 86_400_000));
       insertEvent(db, { source: 'telegram', timestamp: ts });
     }
 
@@ -116,7 +121,7 @@ describe('detectPatterns', () => {
   });
 
   it('detects new notable entities with 3+ mentions in the last 7 days', () => {
-    const recentDate = new Date('2026-03-08T12:00:00.000Z').toISOString();
+    const recentDate = sqlDate(new Date('2026-03-08T12:00:00.000Z'));
     insertEntity(db, {
       id: 'ent-new',
       name: 'Emerging Person',
@@ -133,7 +138,7 @@ describe('detectPatterns', () => {
   });
 
   it('ignores new entities with fewer than 3 mentions', () => {
-    const recentDate = new Date('2026-03-08T12:00:00.000Z').toISOString();
+    const recentDate = sqlDate(new Date('2026-03-08T12:00:00.000Z'));
     insertEntity(db, {
       name: 'Minor Entity',
       first_seen_at: recentDate,
@@ -146,7 +151,7 @@ describe('detectPatterns', () => {
   });
 
   it('assigns priority 4 for entities with 10+ mentions', () => {
-    const recentDate = new Date('2026-03-08T12:00:00.000Z').toISOString();
+    const recentDate = sqlDate(new Date('2026-03-08T12:00:00.000Z'));
     insertEntity(db, {
       name: 'Hot Entity',
       first_seen_at: recentDate,
@@ -159,7 +164,7 @@ describe('detectPatterns', () => {
   });
 
   it('sorts alerts by priority descending', () => {
-    const recentDate = new Date('2026-03-08T12:00:00.000Z').toISOString();
+    const recentDate = sqlDate(new Date('2026-03-08T12:00:00.000Z'));
     insertEntity(db, {
       name: 'Low priority',
       first_seen_at: recentDate,
