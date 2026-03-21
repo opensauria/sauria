@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../security/url-allowlist.js', () => ({
   secureFetch: vi.fn(),
+  LLM_TIMEOUT_MS: 120_000,
 }));
 vi.mock('../../security/url-allowlist.js', () => ({
   secureFetch: vi.fn(),
+  LLM_TIMEOUT_MS: 120_000,
 }));
 
 import { GoogleProvider } from '../providers/google.js';
