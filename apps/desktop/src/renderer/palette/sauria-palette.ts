@@ -10,6 +10,7 @@ import type { TelegramBot } from '../shared/types.js';
 import { getStatus, getTelegramStatus } from '../shared/ipc.js';
 import { t, getLocale, initLocale, applyTranslations, UI_LANGUAGES } from '../i18n.js';
 import { executeCommand, hidePalette } from './ipc.js';
+import sauriaLogoUrl from '../shared/assets/sauria-logo-40.png';
 
 /** Map command id → icon file in /icons/ and whether it needs mono filter */
 const COMMAND_ICONS: Record<string, { src: string; mono: boolean }> = {
@@ -209,7 +210,7 @@ export class SauriaPalette extends LightDomElement {
         <div class="footer">
           <span style="flex:1">
             <img
-              src="/icons/sauria-logo-40.png"
+              src=${sauriaLogoUrl}
               alt=""
               style="width:28px;height:28px;border-radius:var(--spacing-xs)"
             />
