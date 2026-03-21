@@ -2,6 +2,14 @@ import { getLogger } from './utils/logger.js';
 import { startDaemonContext, stopDaemonContext } from './daemon-lifecycle.js';
 import type { DaemonContext } from './daemon-lifecycle.js';
 
+// Prevent EPIPE crash when parent drops stdout pipe.
+// Tauri reads only the first status line then drops the reader;
+// MCP StdioServerTransport writes to stdout afterwards → EPIPE.
+process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') return;
+  throw err;
+});
+
 let activeContext: DaemonContext | null = null;
 let isShuttingDown = false;
 

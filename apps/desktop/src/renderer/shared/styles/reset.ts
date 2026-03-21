@@ -67,17 +67,8 @@ export const resetStyles = css`
   }
 
   *:focus {
-    outline: none !important;
-    -webkit-focus-ring-color: transparent;
-  }
-
-  *:focus-visible {
-    outline: 2px solid var(--accent) !important;
-    outline-offset: 2px;
-  }
-
-  button:focus:not(:focus-visible) {
     outline: none;
+    -webkit-focus-ring-color: transparent;
   }
 
   .icon-mono {
