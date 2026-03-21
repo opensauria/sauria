@@ -13,6 +13,13 @@ function resolveNpxPath(): string {
   return 'npx';
 }
 
+function enrichedPath(): string {
+  const nodeDir = dirname(process.execPath);
+  const currentPath = process.env['PATH'] ?? '';
+  if (currentPath.includes(nodeDir)) return currentPath;
+  return `${nodeDir}:${currentPath}`;
+}
+
 export async function connectIntegrationInstance(
   instanceId: string,
   integrationId: string,
@@ -51,7 +58,7 @@ export async function connectIntegrationInstance(
         name: serverName,
         command: npxPath,
         args: ['-y', definition.mcpServer.package],
-        env: { ...process.env, ...env } as Record<string, string>,
+        env: { ...process.env, PATH: enrichedPath(), ...env } as Record<string, string>,
       });
     }
 

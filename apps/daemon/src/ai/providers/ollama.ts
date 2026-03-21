@@ -1,4 +1,4 @@
-import { secureFetch } from '../../security/url-allowlist.js';
+import { secureFetch, LLM_TIMEOUT_MS } from '../../security/url-allowlist.js';
 import type { ChatMessage, ChatOptions, LLMProvider, StreamChunk } from './base.js';
 
 const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
@@ -104,11 +104,15 @@ export class OllamaProvider implements LLMProvider {
       },
     });
 
-    const response = await secureFetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-    });
+    const response = await secureFetch(
+      url,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      },
+      LLM_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       const errorText = await response.text();

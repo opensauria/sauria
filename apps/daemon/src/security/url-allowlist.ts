@@ -30,14 +30,23 @@ function isAllowedHostname(hostname: string): boolean {
   return OUTBOUND_ALLOWLIST.has(hostname);
 }
 
-export async function secureFetch(url: string, options?: RequestInit): Promise<Response> {
+const DEFAULT_TIMEOUT_MS = 30_000;
+const LLM_TIMEOUT_MS = 120_000;
+
+export { LLM_TIMEOUT_MS };
+
+export async function secureFetch(
+  url: string,
+  options?: RequestInit,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
   const parsed = new URL(url);
 
   if (!isAllowedHostname(parsed.hostname)) {
     throw new BlockedDomainError(parsed.hostname);
   }
 
-  const timeoutSignal = AbortSignal.timeout(30_000);
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
   const mergedSignal = options?.signal
     ? AbortSignal.any([timeoutSignal, options.signal])
     : timeoutSignal;

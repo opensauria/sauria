@@ -1,4 +1,4 @@
-import { secureFetch } from '../../security/url-allowlist.js';
+import { secureFetch, LLM_TIMEOUT_MS } from '../../security/url-allowlist.js';
 import type { ChatMessage, ChatOptions, LLMProvider, StreamChunk } from './base.js';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -117,11 +117,15 @@ export class GoogleProvider implements LLMProvider {
       },
     });
 
-    const response = await secureFetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-    });
+    const response = await secureFetch(
+      url,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      },
+      LLM_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
