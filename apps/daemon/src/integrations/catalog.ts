@@ -1035,4 +1035,22 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { url: 'GHOST_API_URL', apiKey: 'GHOST_API_KEY' },
     },
   },
+
+  // ── Email ────────────────────────────────────────
+  {
+    id: 'mailjet',
+    name: 'Mailjet',
+    description: 'Transactional email, contacts, lists, and campaign analytics',
+    icon: 'mailjet',
+    category: 'marketing',
+    authType: 'api_key',
+    credentialKeys: ['apiKey', 'secretKey'],
+    mcpServer: {
+      package: '@mnicole-dev/mailjet-mcp-server',
+      envMapping: {
+        apiKey: 'MJ_APIKEY_PUBLIC',
+        secretKey: 'MJ_APIKEY_PRIVATE',
+      },
+    },
+  },
 ] as const;
