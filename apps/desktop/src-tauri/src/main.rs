@@ -170,6 +170,7 @@ fn main() {
             cmd_canvas::get_whatsapp_status,
             cmd_canvas::get_email_status,
             cmd_canvas::get_owner_profile,
+            cmd_canvas::refresh_bot_profiles,
             // Channels
             cmd_channels::connect_channel,
             cmd_channels::disconnect_channel,

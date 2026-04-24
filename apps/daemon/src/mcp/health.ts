@@ -1,6 +1,6 @@
 import type { AuditLogger } from '../security/audit.js';
 import { getLogger } from '../utils/logger.js';
-import type { ConnectedClient, HealthCheckResult, McpServerConfig } from './types.js';
+import type { ConnectedClient, HealthCheckResult } from './types.js';
 
 export type { HealthCheckResult };
 
@@ -12,7 +12,7 @@ export class McpHealthMonitor {
   constructor(
     private readonly clients: Map<string, ConnectedClient>,
     private readonly audit: AuditLogger,
-    private readonly reconnect: (config: McpServerConfig) => Promise<void>,
+    private readonly reconnect: (entry: ConnectedClient) => Promise<void>,
   ) {}
 
   async healthCheck(): Promise<HealthCheckResult[]> {
@@ -31,7 +31,7 @@ export class McpHealthMonitor {
         });
 
         try {
-          await this.reconnect(entry.config);
+          await this.reconnect(entry);
           results.push({ name, status: 'reconnected' });
           logger.info(`MCP server ${name} reconnected successfully`);
         } catch (reconnectError: unknown) {

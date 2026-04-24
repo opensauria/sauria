@@ -87,6 +87,7 @@ function extractLanguageDirective(instructions: string): string | null {
 export function buildToolsSection(
   integrationRegistry?: IntegrationRegistry | null,
   agentInstanceIds?: readonly string[],
+  maxTools = 50,
 ): string[] {
   if (!integrationRegistry) return [];
 
@@ -97,11 +98,15 @@ export function buildToolsSection(
 
   if (tools.length === 0) return [];
 
-  const toolLines = tools.slice(0, 20).map((t) => {
+  const toolLines = tools.slice(0, maxTools).map((t) => {
     const desc = t.description ? t.description.slice(0, 80) : 'no description';
     return `- integration="${t.instanceId}" tool="${t.name}": ${desc}`;
   });
-  return ['Available tools (use "use_tool" action to invoke):', ...toolLines, ''];
+  const truncated =
+    tools.length > maxTools
+      ? [`(${tools.length - maxTools} more tools available, showing top ${maxTools})`]
+      : [];
+  return ['Available tools (use "use_tool" action to invoke):', ...toolLines, ...truncated, ''];
 }
 
 // ─── Prompt Template Assembly ───────────────────────────────────────
@@ -121,6 +126,7 @@ export interface PromptPartsInput {
   readonly ruleActionsText: string;
   readonly globalInstructions: string;
   readonly forwardDepth: number;
+  readonly maxToolsInPrompt?: number;
 }
 
 export function buildPromptParts(input: PromptPartsInput): string[] {
@@ -156,7 +162,7 @@ export function buildPromptParts(input: PromptPartsInput): string[] {
     ...(agentFactsText ? [agentFactsText, ''] : []),
     ...(knowledgeGraphText ? [knowledgeGraphText, ''] : []),
     ...(peerMessagesText ? [peerMessagesText, ''] : []),
-    ...buildToolsSection(integrationRegistry, sourceNode.integrations),
+    ...buildToolsSection(integrationRegistry, sourceNode.integrations, input.maxToolsInPrompt),
     ruleActionsText,
     '',
     `IDENTITY: Your name is ${sourceNode.meta?.['firstName'] || sourceNode.label.replace(/^@/, '')}. You are ${sourceNode.role ?? 'assistant'}. Never use any other name. Never mention being Claude, an AI model, or a language model.`,

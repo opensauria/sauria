@@ -92,7 +92,7 @@ fn apply_node_mappings(canvas: &mut Value, mappings: &HashMap<String, String>) {
     }
 }
 
-fn apply_edge_mappings(canvas: &mut Value, mappings: &HashMap<String, String>) {
+pub(crate) fn apply_edge_mappings(canvas: &mut Value, mappings: &HashMap<String, String>) {
     if let Some(edges) = canvas.get_mut("edges").and_then(|n| n.as_array_mut()) {
         for edge in edges.iter_mut() {
             if let Some(from) = edge.get("from").and_then(|v| v.as_str()) {

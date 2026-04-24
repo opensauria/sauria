@@ -248,6 +248,7 @@ export async function setupOrchestrator(
     deps.config.orchestrator.routingCacheTtlMs,
     integrationRegistry,
     cliService ?? undefined,
+    deps.config.orchestrator.maxToolsInPrompt,
   );
 
   // Persist CLI session IDs to canvas.json via aiProvider

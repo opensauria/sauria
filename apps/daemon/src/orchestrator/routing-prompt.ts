@@ -20,6 +20,7 @@ export function buildRoutingPrompt(
   memory: AgentMemory,
   db: BetterSqlite3.Database,
   integrationRegistry?: IntegrationRegistry | null,
+  maxToolsInPrompt?: number,
 ): ChatMessage[] {
   const {
     message,
@@ -64,6 +65,7 @@ export function buildRoutingPrompt(
     ruleActionsText,
     globalInstructions,
     forwardDepth: message.forwardDepth ?? 0,
+    maxToolsInPrompt,
   });
 
   appendBehaviorToggles(promptParts, sourceNode);

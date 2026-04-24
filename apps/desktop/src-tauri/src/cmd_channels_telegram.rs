@@ -74,7 +74,7 @@ pub(crate) async fn connect_telegram(
     Ok(build_success_response(&result))
 }
 
-async fn fetch_photo(
+pub(crate) async fn fetch_photo(
     client: &reqwest::Client,
     tg_api: &str,
     token: &str,

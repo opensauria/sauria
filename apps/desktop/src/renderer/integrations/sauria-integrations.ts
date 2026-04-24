@@ -111,6 +111,7 @@ export class SauriaIntegrations extends LightDomElement {
   @state() private activeTab: 'native' | 'personal' = 'native';
   @state() private personalEntries: PersonalMcpEntry[] = [];
   @state() private openPanelId: string | null = null;
+  @state() private loadError = false;
   @state() private ready = false;
 
   private unlistenOauth?: UnlistenFn;
@@ -132,9 +133,11 @@ export class SauriaIntegrations extends LightDomElement {
     const emptyBots = { bots: [] as ChannelBot[] };
     const [mcpCatalog, tgStatus, slStatus, dcStatus, waStatus, emStatus, labels, personal] =
       await Promise.all([
-        invokeWithRetry<IntegrationStatus[]>('integrations_list_catalog').catch(
-          () => [] as IntegrationStatus[],
-        ),
+        invokeWithRetry<IntegrationStatus[]>('integrations_list_catalog').catch((err) => {
+          console.warn('[sauria] Failed to load integration catalog:', err);
+          this.loadError = true;
+          return [] as IntegrationStatus[];
+        }),
         invokeWithRetry<{ bots: TelegramBot[] }>('get_telegram_status').catch(() => ({
           bots: [] as TelegramBot[],
         })),
@@ -221,6 +224,21 @@ export class SauriaIntegrations extends LightDomElement {
           />
         </div>
       </header>
+
+      ${this.loadError && this.catalog.length === 0
+        ? html`<div class="integrations-error">
+            <span>${t('integ.loadError')}</span>
+            <button
+              class="btn btn-secondary"
+              @click=${() => {
+                this.loadError = false;
+                this.init();
+              }}
+            >
+              ${t('common.retry')}
+            </button>
+          </div>`
+        : nothing}
 
       <div class="integrations-toggle">
         <div class="segmented-toggle">

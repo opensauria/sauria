@@ -40,6 +40,7 @@ describe('SauriaConfigSchema', () => {
       expect(result.orchestrator.maxConcurrentWorkspaces).toBe(4);
       expect(result.orchestrator.maxMessagesPerSecond).toBe(10);
       expect(result.orchestrator.routingCacheTtlMs).toBe(300_000);
+      expect(result.orchestrator.maxToolsInPrompt).toBe(50);
     });
 
     it('applies default auth proxy URL', () => {
@@ -85,6 +86,7 @@ describe('SauriaConfigSchema', () => {
           maxConcurrentWorkspaces: 8,
           maxMessagesPerSecond: 20,
           routingCacheTtlMs: 60_000,
+          maxToolsInPrompt: 100,
         },
         integrations: {},
         authProxyUrl: 'https://custom-auth.example.com',

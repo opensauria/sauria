@@ -209,4 +209,14 @@ export const layoutStyles = css`
     color: var(--text-dim);
     font-size: var(--font-size-base);
   }
+
+  .integrations-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    color: var(--warning);
+    font-size: var(--font-size-small);
+  }
 `;

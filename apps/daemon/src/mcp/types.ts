@@ -2,6 +2,7 @@ import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import type { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import type { RemoteMcpConfig } from './remote-client.js';
 
 export type McpTransport =
   | StdioClientTransport
@@ -21,6 +22,7 @@ export interface ConnectedClient {
   readonly client: Client;
   readonly transport: McpTransport;
   readonly config: McpServerConfig;
+  readonly remoteConfig?: RemoteMcpConfig;
 }
 
 export interface HealthCheckResult {
