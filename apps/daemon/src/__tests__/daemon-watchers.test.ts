@@ -483,6 +483,244 @@ describe('additional coverage — setupCanvasWatcher reload logic', () => {
   });
 });
 
+describe('lazy orchestrator init', () => {
+  let setupCanvasWatcher: typeof import('../daemon-watchers.js').setupCanvasWatcher;
+  let loadCanvasGraph: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const graphMod = await import('../graph-loader.js');
+    loadCanvasGraph = graphMod.loadCanvasGraph as ReturnType<typeof vi.fn>;
+    const mod = await import('../daemon-watchers.js');
+    setupCanvasWatcher = mod.setupCanvasWatcher;
+  });
+
+  function triggerWatchCallback(): void {
+    const cb = mockWatch.mock.calls[0]?.[2] as (() => void) | undefined;
+    if (cb) cb();
+  }
+
+  it('calls setupOrchestrator when orchestrator is null and connected nodes appear', async () => {
+    const fakeWatcher = { close: vi.fn() };
+    mockWatch.mockReturnValue(fakeWatcher);
+
+    const mockBundle = {
+      orchestrator: { updateGraph: vi.fn() },
+      registry: { getAll: vi.fn().mockReturnValue([]) },
+      queue: { enqueue: vi.fn() },
+      startedChannels: [{ nodeId: 'tg-1', channel: {} }],
+    };
+    const setupOrchestratorFn = vi.fn().mockResolvedValue(mockBundle);
+
+    loadCanvasGraph.mockReturnValue({
+      nodes: [{ id: 'tg-1', status: 'connected', platform: 'telegram', label: 'Bot' }],
+      edges: [],
+      workspaces: [],
+      globalInstructions: '',
+    });
+
+    const deps: import('../daemon-watchers.js').CanvasWatcherDeps = {
+      orchestrator: null,
+      registry: null,
+      queue: null,
+      db: {} as never,
+      router: {} as never,
+      audit: {} as never,
+      config: {} as never,
+      globalInstructions: '',
+      setupOrchestrator: setupOrchestratorFn,
+    };
+
+    setupCanvasWatcher(deps);
+    triggerWatchCallback();
+
+    await new Promise((r) => setTimeout(r, 150));
+
+    expect(setupOrchestratorFn).toHaveBeenCalled();
+  });
+
+  it('does not call setupOrchestrator when no connected nodes', async () => {
+    const fakeWatcher = { close: vi.fn() };
+    mockWatch.mockReturnValue(fakeWatcher);
+
+    const setupOrchestratorFn = vi.fn();
+
+    loadCanvasGraph.mockReturnValue({
+      nodes: [{ id: 'tmp_1', status: 'setup', platform: 'telegram', label: 'Bot' }],
+      edges: [],
+      workspaces: [],
+      globalInstructions: '',
+    });
+
+    const deps: import('../daemon-watchers.js').CanvasWatcherDeps = {
+      orchestrator: null,
+      registry: null,
+      queue: null,
+      db: {} as never,
+      router: {} as never,
+      audit: {} as never,
+      config: {} as never,
+      globalInstructions: '',
+      setupOrchestrator: setupOrchestratorFn,
+    };
+
+    setupCanvasWatcher(deps);
+    triggerWatchCallback();
+
+    await new Promise((r) => setTimeout(r, 150));
+
+    expect(setupOrchestratorFn).not.toHaveBeenCalled();
+  });
+
+  it('does not call setupOrchestrator without the callback', async () => {
+    const fakeWatcher = { close: vi.fn() };
+    mockWatch.mockReturnValue(fakeWatcher);
+
+    loadCanvasGraph.mockReturnValue({
+      nodes: [{ id: 'tg-1', status: 'connected', platform: 'telegram', label: 'Bot' }],
+      edges: [],
+      workspaces: [],
+      globalInstructions: '',
+    });
+
+    const deps: import('../daemon-watchers.js').CanvasWatcherDeps = {
+      orchestrator: null,
+      registry: null,
+      queue: null,
+      db: {} as never,
+      router: {} as never,
+      audit: {} as never,
+      config: {} as never,
+      globalInstructions: '',
+    };
+
+    setupCanvasWatcher(deps);
+    triggerWatchCallback();
+
+    await new Promise((r) => setTimeout(r, 150));
+    // No crash, silent no-op
+  });
+
+  it('ignores owner nodes in connected check', async () => {
+    const fakeWatcher = { close: vi.fn() };
+    mockWatch.mockReturnValue(fakeWatcher);
+
+    const setupOrchestratorFn = vi.fn();
+
+    loadCanvasGraph.mockReturnValue({
+      nodes: [{ id: 'owner', status: 'connected', platform: 'owner', label: 'Owner' }],
+      edges: [],
+      workspaces: [],
+      globalInstructions: '',
+    });
+
+    const deps: import('../daemon-watchers.js').CanvasWatcherDeps = {
+      orchestrator: null,
+      registry: null,
+      queue: null,
+      db: {} as never,
+      router: {} as never,
+      audit: {} as never,
+      config: {} as never,
+      globalInstructions: '',
+      setupOrchestrator: setupOrchestratorFn,
+    };
+
+    setupCanvasWatcher(deps);
+    triggerWatchCallback();
+
+    await new Promise((r) => setTimeout(r, 150));
+
+    expect(setupOrchestratorFn).not.toHaveBeenCalled();
+  });
+
+  it('does not call setupOrchestrator twice while init is in flight', async () => {
+    const fakeWatcher = { close: vi.fn() };
+    mockWatch.mockReturnValue(fakeWatcher);
+
+    let resolveSetup: ((v: unknown) => void) | null = null;
+    const setupOrchestratorFn = vi.fn().mockImplementation(
+      () =>
+        new Promise((r) => {
+          resolveSetup = r;
+        }),
+    );
+
+    loadCanvasGraph.mockReturnValue({
+      nodes: [{ id: 'tg-1', status: 'connected', platform: 'telegram', label: 'Bot' }],
+      edges: [],
+      workspaces: [],
+      globalInstructions: '',
+    });
+
+    const deps: import('../daemon-watchers.js').CanvasWatcherDeps = {
+      orchestrator: null,
+      registry: null,
+      queue: null,
+      db: {} as never,
+      router: {} as never,
+      audit: {} as never,
+      config: {} as never,
+      globalInstructions: '',
+      setupOrchestrator: setupOrchestratorFn,
+    };
+
+    setupCanvasWatcher(deps);
+
+    // First trigger
+    triggerWatchCallback();
+    await new Promise((r) => setTimeout(r, 150));
+    expect(setupOrchestratorFn).toHaveBeenCalledTimes(1);
+
+    // Second trigger while first is still in flight
+    triggerWatchCallback();
+    await new Promise((r) => setTimeout(r, 150));
+    expect(setupOrchestratorFn).toHaveBeenCalledTimes(1); // still 1, not 2
+
+    // Resolve the first init
+    resolveSetup!({
+      orchestrator: { updateGraph: vi.fn() },
+      registry: { getAll: vi.fn().mockReturnValue([]) },
+      queue: { enqueue: vi.fn() },
+      startedChannels: [],
+    });
+    await new Promise((r) => setTimeout(r, 50));
+  });
+
+  it('handles setupOrchestrator failure gracefully', async () => {
+    const fakeWatcher = { close: vi.fn() };
+    mockWatch.mockReturnValue(fakeWatcher);
+
+    const setupOrchestratorFn = vi.fn().mockRejectedValue(new Error('init failed'));
+
+    loadCanvasGraph.mockReturnValue({
+      nodes: [{ id: 'tg-1', status: 'connected', platform: 'telegram', label: 'Bot' }],
+      edges: [],
+      workspaces: [],
+      globalInstructions: '',
+    });
+
+    const deps: import('../daemon-watchers.js').CanvasWatcherDeps = {
+      orchestrator: null,
+      registry: null,
+      queue: null,
+      db: {} as never,
+      router: {} as never,
+      audit: {} as never,
+      config: {} as never,
+      globalInstructions: '',
+      setupOrchestrator: setupOrchestratorFn,
+    };
+
+    setupCanvasWatcher(deps);
+    triggerWatchCallback();
+
+    await new Promise((r) => setTimeout(r, 150));
+    // Should not throw
+    expect(setupOrchestratorFn).toHaveBeenCalled();
+  });
+});
+
 describe('additional coverage — setupOwnerCommandWatcher processing', () => {
   let setupOwnerCommandWatcher: typeof import('../daemon-watchers.js').setupOwnerCommandWatcher;
 

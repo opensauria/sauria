@@ -4,8 +4,11 @@ use std::fs;
 use std::io::Write;
 
 use crate::cmd_canvas_helpers;
+use crate::cmd_channels;
+use crate::cmd_channels_telegram;
 use crate::daemon_manager;
 use crate::paths::Paths;
+use crate::vault;
 
 #[tauri::command]
 pub fn get_canvas_graph(paths: tauri::State<'_, Paths>) -> Value {
@@ -252,4 +255,103 @@ pub fn get_owner_profile() -> OwnerProfile {
         photo,
         custom_instructions,
     }
+}
+
+async fn fetch_bot_description(client: &reqwest::Client, tg_api: &str) -> Option<String> {
+    let res: Value = client
+        .get(format!("{tg_api}/getMyDescription"))
+        .send()
+        .await
+        .ok()?
+        .json()
+        .await
+        .ok()?;
+    res.get("result")?
+        .get("description")?
+        .as_str()
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+}
+
+#[tauri::command]
+pub async fn refresh_bot_profiles(paths: tauri::State<'_, Paths>) -> Result<Value, String> {
+    let client = cmd_channels::build_http_client()?;
+
+    let canvas_nodes: Vec<Value> = if paths.canvas.exists() {
+        fs::read_to_string(&paths.canvas)
+            .ok()
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+            .and_then(|c| c.get("nodes").cloned())
+            .and_then(|n| serde_json::from_value::<Vec<Value>>(n).ok())
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|n| {
+                n.get("platform").and_then(|p| p.as_str()) == Some("telegram")
+                    && n.get("status").and_then(|s| s.as_str()) == Some("connected")
+            })
+            .collect()
+    } else {
+        return Ok(serde_json::json!({}));
+    };
+
+    let mut updated: serde_json::Map<String, Value> = serde_json::Map::new();
+    let mut profiles = cmd_channels::read_profiles(&paths);
+
+    for node in &canvas_nodes {
+        let nid = match node.get("id").and_then(|v| v.as_str()) {
+            Some(id) => id,
+            None => continue,
+        };
+        let token = match vault::vault_read(&paths, &format!("channel_token_{nid}")) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        let bot_id = nid.strip_prefix("telegram_").and_then(|s| s.parse::<u64>().ok()).unwrap_or(0);
+        if bot_id == 0 { continue; }
+
+        let tg_api = format!("https://api.telegram.org/bot{token}");
+        let mut node_patch = serde_json::Map::new();
+
+        if let Some(photo) = cmd_channels_telegram::fetch_photo(&client, &tg_api, &token, bot_id).await {
+            node_patch.insert("photo".to_string(), Value::String(photo.clone()));
+            if let Some(obj) = profiles.as_object_mut() {
+                if let Some(profile) = obj.get_mut(nid) {
+                    profile["photo"] = Value::String(photo);
+                }
+            }
+        }
+
+        let desc = fetch_bot_description(&client, &tg_api).await;
+        if let Some(ref d) = desc {
+            node_patch.insert("description".to_string(), Value::String(d.clone()));
+        }
+
+        eprintln!("[refresh] {nid}: photo={}, desc={:?}", node_patch.contains_key("photo"), desc);
+
+        if !node_patch.is_empty() {
+            updated.insert(nid.to_string(), Value::Object(node_patch));
+        }
+    }
+
+    // Update canvas nodes with refreshed data
+    if !updated.is_empty() {
+        if let Ok(content) = fs::read_to_string(&paths.canvas) {
+            if let Ok(mut graph) = serde_json::from_str::<Value>(&content) {
+                if let Some(nodes) = graph.get_mut("nodes").and_then(|n| n.as_array_mut()) {
+                    for node in nodes.iter_mut() {
+                        let nid = node.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                        if let Some(Value::Object(patch)) = updated.get(nid) {
+                            for (key, value) in patch {
+                                node[key] = value.clone();
+                            }
+                        }
+                    }
+                    let _ = fs::write(&paths.canvas, serde_json::to_string_pretty(&graph).unwrap_or_default());
+                }
+            }
+        }
+        cmd_channels::write_profiles(&paths, &profiles);
+    }
+
+    Ok(Value::Object(updated))
 }

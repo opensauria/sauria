@@ -62,17 +62,21 @@ export class LLMRoutingBrain {
   private readonly cliService: ClaudeCliService | null;
   private onCliSessionPersist: CliSessionPersistCallback | null = null;
 
+  readonly maxToolsInPrompt: number;
+
   constructor(
     private readonly router: ModelRouter,
     private readonly db: BetterSqlite3.Database,
     cacheTtlMs?: number,
     integrationRegistry?: IntegrationRegistry,
     cliService?: ClaudeCliService,
+    maxToolsInPrompt?: number,
   ) {
     this.cache = new RoutingCache(cacheTtlMs);
     this.memory = new AgentMemory(db);
     this.integrationRegistry = integrationRegistry ?? null;
     this.cliService = cliService ?? null;
+    this.maxToolsInPrompt = maxToolsInPrompt ?? 50;
   }
 
   setCliSessionPersistCallback(callback: CliSessionPersistCallback): void {
@@ -97,7 +101,13 @@ export class LLMRoutingBrain {
       return cached;
     }
 
-    const prompt = buildRoutingPrompt(context, this.memory, this.db, this.integrationRegistry);
+    const prompt = buildRoutingPrompt(
+      context,
+      this.memory,
+      this.db,
+      this.integrationRegistry,
+      this.maxToolsInPrompt,
+    );
     const decision = await this.callLLM(prompt, tier, context.sourceNode);
 
     this.cache.set(cacheKey, decision);

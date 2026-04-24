@@ -1,5 +1,6 @@
 import { html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { LightDomElement } from './light-dom-element.js';
 import { adoptGlobalStyles, adoptStyles } from '../shared/styles/inject.js';
@@ -73,6 +74,7 @@ export class SauriaCanvas extends LightDomElement {
   @state() private catalogMap = new Map<string, IntegrationDef>();
   @state() private hoveredEdgeId: string | null = null;
   @state() private codeTerminalNode: AgentNode | null = null;
+  @state() private refreshing = false;
 
   confirmCallback: (() => void) | null = null;
   private unlistenOauth?: UnlistenFn;
@@ -362,6 +364,7 @@ export class SauriaCanvas extends LightDomElement {
       <canvas-toolbar
         .zoom=${zoom}
         .unreadCount=${this.activity.unreadCount}
+        .refreshing=${this.refreshing}
         @zoom-in=${() => this.viewport.setZoom(zoom + 0.25)}
         @zoom-out=${() => this.viewport.setZoom(zoom - 0.25)}
         @zoom-reset=${() => {
@@ -373,6 +376,7 @@ export class SauriaCanvas extends LightDomElement {
         @add-workspace=${() => {
           this.wsDialogOpen = true;
         }}
+        @refresh-profiles=${() => this.handleRefreshProfiles()}
       >
       </canvas-toolbar>
       <workspace-dialog
@@ -520,6 +524,20 @@ export class SauriaCanvas extends LightDomElement {
         this.catalogMap = updated;
       })
       .catch(() => {});
+  }
+
+  private async handleRefreshProfiles(): Promise<void> {
+    this.refreshing = true;
+    try {
+      const patches = await invoke<Record<string, Record<string, unknown>>>('refresh_bot_profiles');
+      for (const [nodeId, patch] of Object.entries(patches)) {
+        handleNodeUpdate(this, nodeId, patch);
+      }
+    } catch (err: unknown) {
+      console.warn('[sauria] refresh_bot_profiles failed:', err);
+    } finally {
+      this.refreshing = false;
+    }
   }
 
   private scheduleEdgeHide(): void {

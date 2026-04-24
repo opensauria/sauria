@@ -505,6 +505,14 @@ export const canvasPanelStyles = css`
     color: var(--text-dim);
     font-variant-numeric: tabular-nums;
   }
+  .toolbar-btn.spinning img {
+    animation: toolbar-spin 1s linear infinite;
+  }
+  @keyframes toolbar-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
   .activity-btn {
     position: relative;
   }

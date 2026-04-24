@@ -10,6 +10,7 @@ export class CanvasToolbar extends LightDomElement {
   @property({ type: Boolean }) dockHidden = true;
   @property({ type: Number }) unreadCount = 0;
   @property({ type: Boolean }) feedActive = false;
+  @property({ type: Boolean }) refreshing = false;
 
   render() {
     const zoomPct = Math.round(this.zoom * 100) + '%';
@@ -39,6 +40,13 @@ export class CanvasToolbar extends LightDomElement {
             <img src="/icons/maximize.svg" alt="Reset" />
           </button>
         </div>
+        <button
+          class="toolbar-btn ${this.refreshing ? 'spinning' : ''}"
+          title=${t('canvas.refreshProfiles')}
+          @click=${() => fire(this, 'refresh-profiles')}
+        >
+          <img src="/icons/refresh-cw.svg" alt="Refresh" />
+        </button>
         <button
           class="toolbar-btn activity-btn ${this.feedActive ? 'active' : ''}"
           title=${t('canvas.activityFeed')}

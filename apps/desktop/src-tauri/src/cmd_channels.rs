@@ -1,8 +1,10 @@
 use serde_json::Value;
+use std::collections::HashMap;
 use std::fs;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::cmd_canvas_migrate;
 use crate::cmd_channels_connect;
 use crate::cmd_channels_disconnect;
 use crate::cmd_channels_email;
@@ -124,13 +126,13 @@ pub(crate) async fn finalize_connection(
     }
 
     // Update canvas node status so get_*_status commands return fresh data
-    update_canvas_node(paths, result);
+    update_canvas_node(paths, result, old_node_id);
 
     daemon_manager::restart_daemon(daemon_state, paths).await;
     Ok(())
 }
 
-fn update_canvas_node(paths: &Paths, result: &ConnectionResult) {
+fn update_canvas_node(paths: &Paths, result: &ConnectionResult, old_node_id: &str) {
     if !paths.canvas.exists() {
         return;
     }
@@ -146,10 +148,18 @@ fn update_canvas_node(paths: &Paths, result: &ConnectionResult) {
 
     // Find by deterministic node_id OR by old temp nodeId from credentials
     let node = nodes.iter_mut().find(|n| {
-        n.get("id").and_then(|v| v.as_str()) == Some(&result.node_id)
+        let id = n.get("id").and_then(|v| v.as_str()).unwrap_or("");
+        id == result.node_id || (!old_node_id.is_empty() && id == old_node_id)
     });
 
     if let Some(node) = node {
+        // Migrate ID if found via old temp nodeId
+        let found_id = node.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        if found_id != result.node_id {
+            node["id"] = Value::String(result.node_id.clone());
+            node["credentials"] = Value::String(format!("channel_token_{}", result.node_id));
+        }
+
         node["status"] = Value::String("connected".to_string());
         node["label"] = Value::String(result.display_name.clone());
         if let Some(extra) = result.extra.as_object() {
@@ -160,6 +170,13 @@ fn update_canvas_node(paths: &Paths, result: &ConnectionResult) {
             }
             node["meta"] = Value::Object(meta_obj);
         }
+
+        // Migrate edges referencing old temp nodeId
+        if found_id != result.node_id {
+            let mappings = HashMap::from([(found_id, result.node_id.clone())]);
+            cmd_canvas_migrate::apply_edge_mappings(&mut graph, &mappings);
+        }
+
         let _ = fs::write(
             &paths.canvas,
             serde_json::to_string_pretty(&graph).unwrap_or_default(),

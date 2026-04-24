@@ -6,9 +6,10 @@ import type { SauriaConfig } from './config/schema.js';
 import type { ChannelRegistry } from './channels/registry.js';
 import type { AgentOrchestrator } from './orchestrator/orchestrator.js';
 import type { MessageQueue } from './orchestrator/message-queue.js';
-import type { InboundMessage, OwnerCommand } from './orchestrator/types.js';
+import type { CanvasGraph, InboundMessage, OwnerCommand } from './orchestrator/types.js';
 import type { IntegrationRegistry } from './integrations/registry.js';
 import type { McpClientManager } from './mcp/client.js';
+import type { OrchestratorBundle } from './orchestrator-setup.js';
 import { OwnerCommandSchema } from './orchestrator/types.js';
 import { connectPersonalMcpSources } from './orchestrator-setup.js';
 import { getLogger } from './utils/logger.js';
@@ -27,10 +28,14 @@ export interface CanvasWatcherDeps {
   readonly globalInstructions: string;
   readonly mcpClients?: McpClientManager;
   readonly integrationRegistry?: IntegrationRegistry;
+  readonly setupOrchestrator?: (graph: CanvasGraph) => Promise<OrchestratorBundle | null>;
 }
 
 export function setupCanvasWatcher(deps: CanvasWatcherDeps): FSWatcher | null {
-  const { orchestrator, registry, queue, mcpClients, integrationRegistry } = deps;
+  const { mcpClients, integrationRegistry } = deps;
+  let currentOrchestrator = deps.orchestrator;
+  let currentRegistry = deps.registry;
+  let currentQueue = deps.queue;
   const logger = getLogger();
   let canvasDebounce: ReturnType<typeof setTimeout> | null = null;
   const connectedPersonalMcpIds = new Set<string>();
@@ -48,11 +53,43 @@ export function setupCanvasWatcher(deps: CanvasWatcherDeps): FSWatcher | null {
     globalInstructions: deps.globalInstructions,
   };
 
+  let orchestratorInitInFlight = false;
+
   const reloadCanvas = (): void => {
     const newGraph = loadCanvasGraph();
 
-    if (orchestrator && registry) {
-      const currentNodeIds = new Set(registry.getAll().map((c) => c.nodeId));
+    // Lazy orchestrator init: if null but canvas now has connected nodes, create it
+    if (!currentOrchestrator && !orchestratorInitInFlight && deps.setupOrchestrator) {
+      const hasConnected = newGraph.nodes.some(
+        (n) => n.status === 'connected' && n.platform !== 'owner',
+      );
+      if (hasConnected) {
+        orchestratorInitInFlight = true;
+        void (async () => {
+          try {
+            const bundle = await deps.setupOrchestrator!(newGraph);
+            if (bundle) {
+              currentOrchestrator = bundle.orchestrator;
+              currentRegistry = bundle.registry;
+              currentQueue = bundle.queue;
+              logger.info('Orchestrator initialized on canvas change', {
+                channels: bundle.startedChannels.length,
+              });
+            }
+          } catch (error) {
+            logger.error('Failed to initialize orchestrator on canvas change', {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          } finally {
+            orchestratorInitInFlight = false;
+          }
+        })();
+      }
+      return;
+    }
+
+    if (currentOrchestrator && currentRegistry) {
+      const currentNodeIds = new Set(currentRegistry.getAll().map((c) => c.nodeId));
       const newConnectedNodes = newGraph.nodes.filter(
         (n) => n.status === 'connected' && n.platform !== 'owner',
       );
@@ -62,8 +99,8 @@ export function setupCanvasWatcher(deps: CanvasWatcherDeps): FSWatcher | null {
         if (!newNodeIds.has(existingId)) {
           void (async () => {
             try {
-              await registry.stop(existingId);
-              registry.unregister(existingId);
+              await currentRegistry!.stop(existingId);
+              currentRegistry!.unregister(existingId);
               logger.info('Channel removed on canvas change', { nodeId: existingId });
             } catch (error) {
               logger.warn('Error removing channel', {
@@ -76,7 +113,7 @@ export function setupCanvasWatcher(deps: CanvasWatcherDeps): FSWatcher | null {
       }
 
       const onInbound = (msg: InboundMessage): void => {
-        if (queue) queue.enqueue(msg);
+        if (currentQueue) currentQueue.enqueue(msg);
       };
       for (const node of newConnectedNodes) {
         if (!currentNodeIds.has(node.id)) {
@@ -88,7 +125,7 @@ export function setupCanvasWatcher(deps: CanvasWatcherDeps): FSWatcher | null {
                 globalInstructions: newGraph.globalInstructions,
               });
               if (channel) {
-                registry.register(node.id, channel);
+                currentRegistry!.register(node.id, channel);
                 await channel.start();
                 logger.info('Channel added on canvas change', {
                   nodeId: node.id,
@@ -105,10 +142,10 @@ export function setupCanvasWatcher(deps: CanvasWatcherDeps): FSWatcher | null {
         }
       }
 
-      orchestrator.updateGraph(newGraph);
+      currentOrchestrator.updateGraph(newGraph);
       logger.info('Canvas graph reloaded', { nodes: newGraph.nodes.length });
-    } else if (orchestrator) {
-      orchestrator.updateGraph(newGraph);
+    } else if (currentOrchestrator) {
+      currentOrchestrator.updateGraph(newGraph);
       logger.info('Canvas graph reloaded (no registry)', { nodes: newGraph.nodes.length });
     }
 

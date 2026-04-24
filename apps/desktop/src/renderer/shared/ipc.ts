@@ -92,9 +92,13 @@ export function getIntegrationAccounts(): Promise<Record<string, string>> {
 }
 
 export async function invokeWithRetry<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  try {
-    return await invoke<T>(cmd, args);
-  } catch {
-    return invoke<T>(cmd, args);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await invoke<T>(cmd, args);
+    } catch (err: unknown) {
+      if (attempt === 2) throw err;
+      await new Promise<void>((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
   }
+  throw new Error('unreachable');
 }

@@ -98,11 +98,13 @@ const OrchestratorConfigSchema = z
     maxConcurrentWorkspaces: z.number().int().min(1).max(32).default(4),
     maxMessagesPerSecond: z.number().int().min(1).max(100).default(10),
     routingCacheTtlMs: z.number().int().min(0).max(600_000).default(300_000),
+    maxToolsInPrompt: z.number().int().min(1).max(200).default(50),
   })
   .default({
     maxConcurrentWorkspaces: 4,
     maxMessagesPerSecond: 10,
     routingCacheTtlMs: 300_000,
+    maxToolsInPrompt: 50,
   });
 
 const ChannelsConfigSchema = z.object({

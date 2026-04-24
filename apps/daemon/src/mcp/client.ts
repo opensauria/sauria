@@ -31,8 +31,8 @@ export class McpClientManager {
   private readonly healthMonitor: McpHealthMonitor;
 
   constructor(private readonly audit: AuditLogger) {
-    this.healthMonitor = new McpHealthMonitor(this.clients, this.audit, (config) =>
-      this.reconnect(config),
+    this.healthMonitor = new McpHealthMonitor(this.clients, this.audit, (entry) =>
+      this.reconnect(entry),
     );
   }
 
@@ -80,6 +80,7 @@ export class McpClientManager {
       client,
       transport,
       config: { name: config.name, command: '', args: [] },
+      remoteConfig: config,
     });
     this.audit.logAction('mcp:client_connect', { server: config.name, remote: true });
   }
@@ -176,9 +177,13 @@ export class McpClientManager {
     this.healthMonitor.stop();
   }
 
-  private async reconnect(config: McpServerConfig): Promise<void> {
-    this.clients.delete(config.name);
-    await this.connect(config);
+  private async reconnect(entry: ConnectedClient): Promise<void> {
+    this.clients.delete(entry.name);
+    if (entry.remoteConfig) {
+      await this.connectRemote(entry.remoteConfig);
+    } else {
+      await this.connect(entry.config);
+    }
   }
 
   getConnectedServers(): string[] {

@@ -8,7 +8,9 @@ use tokio::time::{timeout, Duration};
 use crate::daemon_ipc;
 use crate::paths::Paths;
 
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+const CONNECT_RETRIES: usize = 3;
+const CONNECT_RETRY_DELAY: Duration = Duration::from_secs(1);
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -53,6 +55,29 @@ impl DaemonClient {
     }
 
     async fn ensure_connected(&self) -> Result<(), String> {
+        {
+            let tx_guard = self.tx.lock().await;
+            if tx_guard.is_some() {
+                return Ok(());
+            }
+        }
+
+        let mut last_err = String::new();
+        for attempt in 0..CONNECT_RETRIES {
+            match self.try_connect().await {
+                Ok(()) => return Ok(()),
+                Err(e) => {
+                    last_err = e;
+                    if attempt + 1 < CONNECT_RETRIES {
+                        tokio::time::sleep(CONNECT_RETRY_DELAY).await;
+                    }
+                }
+            }
+        }
+        Err(last_err)
+    }
+
+    async fn try_connect(&self) -> Result<(), String> {
         let mut tx_guard = self.tx.lock().await;
         if tx_guard.is_some() {
             return Ok(());

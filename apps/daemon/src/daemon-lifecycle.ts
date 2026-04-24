@@ -167,25 +167,24 @@ export async function startDaemonContext(): Promise<DaemonContext> {
 
   const checkpointManager = new CheckpointManager(db);
 
-  const bundle = await setupOrchestrator(
-    graph,
-    {
-      db,
-      router,
-      audit,
-      config,
-      resolveAnthropicKey: async () => {
-        try {
-          return await resolveApiKey('anthropic');
-        } catch {
-          return null;
-        }
-      },
-    },
-    checkpointManager,
-    ipcServer.broadcast.bind(ipcServer),
-    integrationRegistry,
-  );
+  const resolveAnthropicKey = async (): Promise<string | null> => {
+    try {
+      return await resolveApiKey('anthropic');
+    } catch {
+      return null;
+    }
+  };
+
+  const createOrchestrator = (g: typeof graph) =>
+    setupOrchestrator(
+      g,
+      { db, router, audit, config, resolveAnthropicKey },
+      checkpointManager,
+      ipcServer.broadcast.bind(ipcServer),
+      integrationRegistry,
+    );
+
+  const bundle = await createOrchestrator(graph);
   const registry: ChannelRegistry | null = bundle?.registry ?? null;
   const orchestrator: AgentOrchestrator | null = bundle?.orchestrator ?? null;
   const queue: MessageQueue | null = bundle?.queue ?? null;
@@ -253,6 +252,7 @@ export async function startDaemonContext(): Promise<DaemonContext> {
       globalInstructions: graph.globalInstructions,
       mcpClients,
       integrationRegistry,
+      setupOrchestrator: createOrchestrator,
     });
 
     ownerCommandWatcher = setupOwnerCommandWatcher(orchestrator, audit);
