@@ -3,6 +3,7 @@ import { canvasLayoutStyles } from './canvas-layout.js';
 import { canvasEdgeStyles } from './canvas-edges.js';
 import { canvasEffectStyles } from './canvas-effects.js';
 import { canvasPanelStyles } from './canvas-panels.js';
+import { canvasOfficeStyles } from './canvas-office.js';
 
 export const canvasViewStyles = [
   canvasCardStyles,
@@ -10,6 +11,7 @@ export const canvasViewStyles = [
   canvasEdgeStyles,
   canvasEffectStyles,
   canvasPanelStyles,
+  canvasOfficeStyles,
 ];
 
 export {
@@ -18,4 +20,5 @@ export {
   canvasEdgeStyles,
   canvasEffectStyles,
   canvasPanelStyles,
+  canvasOfficeStyles,
 };

@@ -4,6 +4,7 @@
 mod cmd_brain;
 mod cmd_code;
 mod cmd_brain_types;
+mod cmd_voice;
 mod cmd_canvas;
 mod cmd_canvas_helpers;
 mod cmd_canvas_migrate;
@@ -29,6 +30,7 @@ mod daemon_manager;
 mod daemon_process;
 mod paths;
 mod vault;
+mod voice_sidecar;
 mod windows;
 mod windows_nav;
 
@@ -36,7 +38,7 @@ use daemon_client::DaemonClient;
 use daemon_manager::DaemonState;
 use paths::Paths;
 use std::sync::Arc;
-use tauri::{Manager, RunEvent};
+use tauri::{Emitter, Manager, RunEvent};
 use tauri::path::BaseDirectory;
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
@@ -127,6 +129,7 @@ fn main() {
     let daemon_state = Arc::new(tokio::sync::Mutex::new(DaemonState::new()));
     let daemon_client = Arc::new(DaemonClient::new(&paths));
     let code_terminal_state = Arc::new(tokio::sync::Mutex::new(cmd_code::CodeTerminalState::new()));
+    let voice_sidecar_state = Arc::new(tokio::sync::Mutex::new(voice_sidecar::VoiceSidecarState::new()));
 
     // Clone for health check
     let health_state = daemon_state.clone();
@@ -143,6 +146,7 @@ fn main() {
         .manage(daemon_state.clone())
         .manage(daemon_client)
         .manage(code_terminal_state)
+        .manage(voice_sidecar_state.clone())
         .invoke_handler(tauri::generate_handler![
             // Setup
             cmd_setup::get_status,
@@ -220,6 +224,11 @@ fn main() {
             cmd_code::detach_code_terminal,
             cmd_code::attach_code_terminal,
             cmd_code::discover_code_session_id,
+            // Voice
+            cmd_voice::voice_get_config,
+            cmd_voice::voice_start,
+            cmd_voice::voice_stop,
+            cmd_voice::voice_restart,
         ])
         .setup(move |app| {
             // Hide dock icon on macOS
@@ -247,6 +256,22 @@ fn main() {
                 move |_app, _shortcut, event| {
                     if event.state == ShortcutState::Pressed {
                         let _ = windows::show_palette(&app_handle);
+                    }
+                },
+            )?;
+
+            // Register voice toggle shortcut
+            let voice_handle = app.handle().clone();
+            let voice_shortcut = if cfg!(target_os = "macos") {
+                "Option+Space"
+            } else {
+                "Alt+Space"
+            };
+            app.global_shortcut().on_shortcut(
+                voice_shortcut,
+                move |_app, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        let _ = windows::toggle_voice_window(&voice_handle);
                     }
                 },
             )?;

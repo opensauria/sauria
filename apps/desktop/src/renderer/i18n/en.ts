@@ -73,6 +73,8 @@ const catalog: Translations = {
   'canvas.proactive': 'Proactive messages',
   'canvas.ownerResponse': 'Respond to owner',
   'canvas.peer': 'Peer collaboration',
+  'canvas.viewGraph': 'Graph',
+  'canvas.viewOffice': 'Office',
   'canvas.activityFeed': 'Activity Feed',
   'canvas.convEmpty': 'Messages will appear here when agents communicate on this edge.',
   'canvas.processing': 'Processing...',
@@ -330,6 +332,15 @@ const catalog: Translations = {
   'brain.detailPlatform': 'Platform',
   'brain.detailMessages': 'Messages',
   'brain.detailLastMessage': 'Last Message',
+  'voice.listening': 'Listening...',
+  'voice.processing': 'Thinking...',
+  'voice.connectionFailed': 'Connection failed',
+  'voice.noAudio': 'No speech detected',
+  'voice.captureError': 'Failed to capture audio',
+  'voice.micRequired': 'Microphone access required',
+  'voice.clearHistory': 'Clear conversation',
+  'voice.settings': 'Settings',
+  'voice.paused': 'Paused',
 };
 
 export default catalog;

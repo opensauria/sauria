@@ -71,6 +71,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': 'Mensagens proativas',
   'canvas.respondToOwner': 'Responder ao proprietário',
   'canvas.peerCollaboration': 'Colaboração entre pares',
+  'canvas.viewGraph': 'Grafo',
+  'canvas.viewOffice': 'Escritório',
   'canvas.kpis': 'KPIs',
   'canvas.integrations': 'Integrações',
   'canvas.addIntegration': 'Adicionar integração',
@@ -239,6 +241,15 @@ const catalog: Translations = {
   'brain.detailPlatform': 'Plataforma',
   'brain.detailMessages': 'Mensagens',
   'brain.detailLastMessage': 'Última mensagem',
+  'voice.listening': 'Ouvindo...',
+  'voice.processing': 'Pensando...',
+  'voice.connectionFailed': 'Falha na conexão',
+  'voice.noAudio': 'Nenhuma fala detectada',
+  'voice.captureError': 'Falha ao capturar áudio',
+  'voice.micRequired': 'Acesso ao microfone necessário',
+  'voice.clearHistory': 'Limpar conversa',
+  'voice.settings': 'Configurações',
+  'voice.paused': 'Pausado',
 };
 
 export default catalog;

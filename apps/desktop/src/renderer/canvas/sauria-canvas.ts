@@ -10,10 +10,10 @@ import { ViewportController } from './controllers/viewport-controller.js';
 import { NodeDragHandler } from './controllers/node-drag-handler.js';
 import { WorkspaceDragHandler } from './controllers/workspace-drag-handler.js';
 import { ActivityController } from './controllers/activity-controller.js';
-import type { AgentNode, IntegrationDef, Workspace } from './types.js';
+import type { AgentNode, IntegrationDef, ViewMode, Workspace } from './types.js';
 import { computeEdgeGeometry, generateId } from './helpers.js';
 import { listIntegrationCatalog, navigateBack } from './ipc.js';
-import { initLocale } from '../i18n.js';
+import { initLocale, t } from '../i18n.js';
 import {
   handleCardAction,
   handleNodeUpdate,
@@ -53,6 +53,7 @@ import './components/agent-detail-panel.js';
 import './components/conversation-panel.js';
 import './components/orbital-bubbles.js';
 import './components/code-terminal-panel.js';
+import './office/office-canvas.js';
 
 @customElement('sauria-canvas')
 export class SauriaCanvas extends LightDomElement {
@@ -62,6 +63,7 @@ export class SauriaCanvas extends LightDomElement {
   readonly wsDrag: WorkspaceDragHandler;
   private activity: ActivityController;
 
+  @state() viewMode: ViewMode = 'graph';
   @state() selectedNodeId: string | null = null;
   @state() selectedWorkspaceId: string | null = null;
   @state() detailNode: AgentNode | null = null;
@@ -137,6 +139,11 @@ export class SauriaCanvas extends LightDomElement {
           | (HTMLElement & { animateEdgeTravel: (f: string, t: string, p: string) => void })
           | null;
         ea?.animateEdgeTravel(from, to, preview);
+        // Notify office canvas of interaction for speech bubbles + walk
+        const oc = this.querySelector('office-canvas') as
+          | (HTMLElement & { notifyInteraction: (f: string, t: string, p: string) => void })
+          | null;
+        oc?.notifyInteraction(from, to, preview);
       },
       onNodeActivity: () => this.requestUpdate(),
       onMessageReceived: () => {
@@ -154,6 +161,9 @@ export class SauriaCanvas extends LightDomElement {
     super.connectedCallback();
     await initLocale();
     await this.graphSync.init();
+    if (this.graphSync.graph.viewport.viewMode) {
+      this.viewMode = this.graphSync.graph.viewport.viewMode;
+    }
     this.activity.start().catch(() => {});
     document.addEventListener('keydown', this.onKeydown);
     document.addEventListener('mousemove', this.onMouseMove);
@@ -199,6 +209,12 @@ export class SauriaCanvas extends LightDomElement {
     this.nodeDrag.handleUp(e);
     this.wsDrag.handleUp();
   };
+
+  private setViewMode(mode: ViewMode): void {
+    this.viewMode = mode;
+    this.graphSync.graph.viewport.viewMode = mode;
+    this.graphSync.save();
+  }
 
   private closeConvPanel(): void {
     const panel = this.querySelector('conversation-panel') as
@@ -284,6 +300,29 @@ export class SauriaCanvas extends LightDomElement {
   }
 
   private renderViewport() {
+    return this.viewMode === 'graph' ? this.renderGraphView() : this.renderOfficeView();
+  }
+
+  private renderOfficeView() {
+    const { graph } = this.graphSync;
+    return html`
+      <office-canvas
+        .graph=${graph}
+        .activeNodeIds=${this.activity.activeNodeIds}
+        .selectedNodeId=${this.selectedNodeId}
+        .viewportController=${this.viewport}
+        @agent-select=${(e: CustomEvent) => {
+          this.selectedNodeId = e.detail.agentId;
+          const found = graph.nodes.find((n: AgentNode) => n.id === e.detail.agentId);
+          this.detailWorkspaceId = null;
+          this.closeConvPanel();
+          this.detailNode = found ? { ...found } : null;
+        }}
+      ></office-canvas>
+    `;
+  }
+
+  private renderGraphView() {
     const { graph } = this.graphSync;
     return html`
       <div
@@ -361,6 +400,21 @@ export class SauriaCanvas extends LightDomElement {
     const { zoom } = this.viewport;
     return html`
       <canvas-empty-state .nodeCount=${graph.nodes.length}></canvas-empty-state>
+      <div class="canvas-view-toggle" data-active=${this.viewMode}>
+        <div class="canvas-view-highlight"></div>
+        <button
+          class="canvas-view-seg ${this.viewMode === 'graph' ? 'active' : ''}"
+          @click=${() => this.setViewMode('graph')}
+        >
+          ${t('canvas.viewGraph')}
+        </button>
+        <button
+          class="canvas-view-seg ${this.viewMode === 'office' ? 'active' : ''}"
+          @click=${() => this.setViewMode('office')}
+        >
+          ${t('canvas.viewOffice')}
+        </button>
+      </div>
       <canvas-toolbar
         .zoom=${zoom}
         .unreadCount=${this.activity.unreadCount}
@@ -548,6 +602,7 @@ export class SauriaCanvas extends LightDomElement {
   }
 
   updated(): void {
+    if (this.viewMode !== 'graph') return;
     const world = this.querySelector('.canvas-world') as HTMLElement | null;
     if (world) {
       this.viewport.applyTransform(world);

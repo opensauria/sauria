@@ -70,6 +70,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': 'رسائل استباقية',
   'canvas.respondToOwner': 'الرد على المالك',
   'canvas.peerCollaboration': 'التعاون بين الأقران',
+  'canvas.viewGraph': 'رسم بياني',
+  'canvas.viewOffice': 'مكتب',
   'canvas.kpis': 'مؤشرات الأداء',
   'canvas.integrations': 'التكاملات',
   'canvas.addIntegration': 'إضافة تكامل',
@@ -236,6 +238,15 @@ const catalog: Translations = {
   'brain.detailPlatform': 'المنصة',
   'brain.detailMessages': 'الرسائل',
   'brain.detailLastMessage': 'آخر رسالة',
+  'voice.listening': 'جارٍ الاستماع...',
+  'voice.processing': 'جارٍ التفكير...',
+  'voice.connectionFailed': 'فشل الاتصال',
+  'voice.noAudio': 'لم يتم اكتشاف كلام',
+  'voice.captureError': 'فشل التقاط الصوت',
+  'voice.micRequired': 'يلزم الوصول إلى الميكروفون',
+  'voice.clearHistory': 'مسح المحادثة',
+  'voice.settings': 'الإعدادات',
+  'voice.paused': 'متوقف مؤقتاً',
 };
 
 export default catalog;

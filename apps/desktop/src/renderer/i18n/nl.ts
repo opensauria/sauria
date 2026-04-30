@@ -70,6 +70,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': 'Proactieve berichten',
   'canvas.respondToOwner': 'Reageer op eigenaar',
   'canvas.peerCollaboration': 'Samenwerking',
+  'canvas.viewGraph': 'Grafiek',
+  'canvas.viewOffice': 'Kantoor',
   'canvas.kpis': "KPI's",
   'canvas.integrations': 'Integraties',
   'canvas.addIntegration': 'Integratie toevoegen',
@@ -237,6 +239,15 @@ const catalog: Translations = {
   'brain.detailPlatform': 'Platform',
   'brain.detailMessages': 'Berichten',
   'brain.detailLastMessage': 'Laatste bericht',
+  'voice.listening': 'Luistert...',
+  'voice.processing': 'Denkt na...',
+  'voice.connectionFailed': 'Verbinding mislukt',
+  'voice.noAudio': 'Geen spraak gedetecteerd',
+  'voice.captureError': 'Audio-opname mislukt',
+  'voice.micRequired': 'Microfoontoegang vereist',
+  'voice.clearHistory': 'Gesprek wissen',
+  'voice.settings': 'Instellingen',
+  'voice.paused': 'Gepauzeerd',
 };
 
 export default catalog;

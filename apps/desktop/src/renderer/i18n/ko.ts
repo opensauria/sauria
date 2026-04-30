@@ -70,6 +70,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': '능동적 메시지',
   'canvas.respondToOwner': '소유자에게 응답',
   'canvas.peerCollaboration': '동료 협업',
+  'canvas.viewGraph': '그래프',
+  'canvas.viewOffice': '사무실',
   'canvas.kpis': 'KPI',
   'canvas.integrations': '연동',
   'canvas.addIntegration': '연동 추가',
@@ -236,6 +238,15 @@ const catalog: Translations = {
   'brain.detailPlatform': '플랫폼',
   'brain.detailMessages': '메시지',
   'brain.detailLastMessage': '마지막 메시지',
+  'voice.listening': '듣는 중...',
+  'voice.processing': '생각하는 중...',
+  'voice.connectionFailed': '연결 실패',
+  'voice.noAudio': '음성이 감지되지 않음',
+  'voice.captureError': '오디오 캡처 실패',
+  'voice.micRequired': '마이크 접근 권한 필요',
+  'voice.clearHistory': '대화 지우기',
+  'voice.settings': '설정',
+  'voice.paused': '일시 정지',
 };
 
 export default catalog;

@@ -70,6 +70,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': 'Proaktif mesajlar',
   'canvas.respondToOwner': 'Sahibe yanıt ver',
   'canvas.peerCollaboration': 'Eş iş birliği',
+  'canvas.viewGraph': 'Grafik',
+  'canvas.viewOffice': 'Ofis',
   'canvas.kpis': 'KPI',
   'canvas.integrations': 'Entegrasyonlar',
   'canvas.addIntegration': 'Entegrasyon ekle',
@@ -237,6 +239,15 @@ const catalog: Translations = {
   'brain.detailPlatform': 'Platform',
   'brain.detailMessages': 'Mesajlar',
   'brain.detailLastMessage': 'Son mesaj',
+  'voice.listening': 'Dinliyor...',
+  'voice.processing': 'Düşünüyor...',
+  'voice.connectionFailed': 'Bağlantı başarısız',
+  'voice.noAudio': 'Konuşma algılanmadı',
+  'voice.captureError': 'Ses yakalama başarısız',
+  'voice.micRequired': 'Mikrofon erişimi gerekli',
+  'voice.clearHistory': 'Sohbeti temizle',
+  'voice.settings': 'Ayarlar',
+  'voice.paused': 'Duraklatıldı',
 };
 
 export default catalog;

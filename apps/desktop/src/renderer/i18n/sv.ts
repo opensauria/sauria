@@ -70,6 +70,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': 'Proaktiva meddelanden',
   'canvas.respondToOwner': 'Svara ägaren',
   'canvas.peerCollaboration': 'Samarbete',
+  'canvas.viewGraph': 'Graf',
+  'canvas.viewOffice': 'Kontor',
   'canvas.kpis': 'KPI:er',
   'canvas.integrations': 'Integrationer',
   'canvas.addIntegration': 'Lägg till integration',
@@ -237,6 +239,15 @@ const catalog: Translations = {
   'brain.detailPlatform': 'Plattform',
   'brain.detailMessages': 'Meddelanden',
   'brain.detailLastMessage': 'Senaste meddelande',
+  'voice.listening': 'Lyssnar...',
+  'voice.processing': 'Tänker...',
+  'voice.connectionFailed': 'Anslutningen misslyckades',
+  'voice.noAudio': 'Inget tal detekterat',
+  'voice.captureError': 'Ljudinspelning misslyckades',
+  'voice.micRequired': 'Mikrofonåtkomst krävs',
+  'voice.clearHistory': 'Rensa konversation',
+  'voice.settings': 'Inställningar',
+  'voice.paused': 'Pausad',
 };
 
 export default catalog;

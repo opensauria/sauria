@@ -118,6 +118,13 @@ export const platformColors = {
   email: '#EA4335',
 } as const;
 
+export const voiceColors = {
+  orbIdle: 'rgb(0, 209, 199)',
+  orbRecording: 'rgb(255, 82, 64)',
+  orbProcessing: 'rgb(242, 184, 46)',
+  orbPlaying: 'rgb(38, 191, 255)',
+} as const;
+
 export type Colors = typeof colors;
 export type Radii = typeof radii;
 export type Spacing = typeof spacing;
@@ -129,3 +136,4 @@ export type Shadows = typeof shadows;
 export type ZIndex = typeof zIndex;
 export type ObservationColors = typeof observationColors;
 export type PlatformColors = typeof platformColors;
+export type VoiceColors = typeof voiceColors;

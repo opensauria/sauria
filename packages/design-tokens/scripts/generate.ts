@@ -21,6 +21,7 @@ import {
   zIndex,
   observationColors,
   platformColors,
+  voiceColors,
 } from '../src/tokens.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -75,6 +76,8 @@ const lines: string[] = [
   '',
   ...generateCssProperties('platform', platformColors),
   '',
+  ...generateCssProperties('voice', voiceColors),
+  '',
   ...generateCssProperties('opacity', opacity),
   '}',
   '',
@@ -124,6 +127,9 @@ for (const [key, value] of Object.entries(observationColors)) {
 }
 for (const [key, value] of Object.entries(platformColors)) {
   jsonTokens[`platform.${key}`] = value;
+}
+for (const [key, value] of Object.entries(voiceColors)) {
+  jsonTokens[`voice.${camelToKebab(key)}`] = value;
 }
 for (const [key, value] of Object.entries(opacity)) {
   jsonTokens[`opacity.${key}`] = value;
