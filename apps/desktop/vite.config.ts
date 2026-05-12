@@ -6,7 +6,10 @@ export default defineConfig({
   publicDir: resolve(__dirname, 'public'),
   build: {
     rollupOptions: {
-      input: resolve(__dirname, 'src/renderer/index.html'),
+      input: {
+        main: resolve(__dirname, 'src/renderer/index.html'),
+        voice: resolve(__dirname, 'src/renderer/voice.html'),
+      },
     },
     outDir: 'dist',
     emptyOutDir: true,

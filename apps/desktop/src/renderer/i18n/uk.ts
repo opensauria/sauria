@@ -70,6 +70,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': 'Проактивні повідомлення',
   'canvas.respondToOwner': 'Відповідати власнику',
   'canvas.peerCollaboration': 'Співпраця',
+  'canvas.viewGraph': 'Граф',
+  'canvas.viewOffice': 'Офіс',
   'canvas.kpis': 'KPI',
   'canvas.integrations': 'Інтеграції',
   'canvas.addIntegration': 'Додати інтеграцію',
@@ -237,6 +239,15 @@ const catalog: Translations = {
   'brain.detailPlatform': 'Платформа',
   'brain.detailMessages': 'Повідомлення',
   'brain.detailLastMessage': 'Останнє повідомлення',
+  'voice.listening': 'Слухаю...',
+  'voice.processing': 'Думаю...',
+  'voice.connectionFailed': 'Помилка підключення',
+  'voice.noAudio': 'Мовлення не виявлено',
+  'voice.captureError': 'Не вдалося захопити аудіо',
+  'voice.micRequired': 'Потрібен доступ до мікрофона',
+  'voice.clearHistory': 'Очистити розмову',
+  'voice.settings': 'Налаштування',
+  'voice.paused': 'Призупинено',
 };
 
 export default catalog;

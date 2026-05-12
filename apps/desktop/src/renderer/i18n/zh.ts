@@ -70,6 +70,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': '主动消息',
   'canvas.respondToOwner': '回复所有者',
   'canvas.peerCollaboration': '同伴协作',
+  'canvas.viewGraph': '图谱',
+  'canvas.viewOffice': '办公室',
   'canvas.kpis': 'KPI',
   'canvas.integrations': '集成',
   'canvas.addIntegration': '添加集成',
@@ -235,6 +237,15 @@ const catalog: Translations = {
   'brain.detailPlatform': '平台',
   'brain.detailMessages': '消息',
   'brain.detailLastMessage': '最新消息',
+  'voice.listening': '正在聆听...',
+  'voice.processing': '正在思考...',
+  'voice.connectionFailed': '连接失败',
+  'voice.noAudio': '未检测到语音',
+  'voice.captureError': '音频捕获失败',
+  'voice.micRequired': '需要麦克风权限',
+  'voice.clearHistory': '清除对话',
+  'voice.settings': '设置',
+  'voice.paused': '已暂停',
 };
 
 export default catalog;

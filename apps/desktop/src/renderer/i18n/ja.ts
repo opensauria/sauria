@@ -70,6 +70,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': 'プロアクティブメッセージ',
   'canvas.respondToOwner': 'オーナーに応答',
   'canvas.peerCollaboration': 'ピア連携',
+  'canvas.viewGraph': 'グラフ',
+  'canvas.viewOffice': 'オフィス',
   'canvas.kpis': 'KPI',
   'canvas.integrations': '連携',
   'canvas.addIntegration': '連携を追加',
@@ -236,6 +238,15 @@ const catalog: Translations = {
   'brain.detailPlatform': 'プラットフォーム',
   'brain.detailMessages': 'メッセージ',
   'brain.detailLastMessage': '最新メッセージ',
+  'voice.listening': '聞いています...',
+  'voice.processing': '考えています...',
+  'voice.connectionFailed': '接続に失敗しました',
+  'voice.noAudio': '音声が検出されませんでした',
+  'voice.captureError': '音声の取得に失敗しました',
+  'voice.micRequired': 'マイクへのアクセスが必要です',
+  'voice.clearHistory': '会話を消去',
+  'voice.settings': '設定',
+  'voice.paused': '一時停止',
 };
 
 export default catalog;

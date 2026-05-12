@@ -98,6 +98,9 @@ const lucideIcons = [
   'check',
   'code-xml',
   'terminal',
+  'mic',
+  'mic-off',
+  'square',
 ];
 
 for (const name of lucideIcons) {

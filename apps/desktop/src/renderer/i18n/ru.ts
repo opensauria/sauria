@@ -70,6 +70,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': 'Проактивные сообщения',
   'canvas.respondToOwner': 'Отвечать владельцу',
   'canvas.peerCollaboration': 'Сотрудничество',
+  'canvas.viewGraph': 'Граф',
+  'canvas.viewOffice': 'Офис',
   'canvas.kpis': 'KPI',
   'canvas.integrations': 'Интеграции',
   'canvas.addIntegration': 'Добавить интеграцию',
@@ -237,6 +239,15 @@ const catalog: Translations = {
   'brain.detailPlatform': 'Платформа',
   'brain.detailMessages': 'Сообщения',
   'brain.detailLastMessage': 'Последнее сообщение',
+  'voice.listening': 'Слушаю...',
+  'voice.processing': 'Думаю...',
+  'voice.connectionFailed': 'Ошибка подключения',
+  'voice.noAudio': 'Речь не обнаружена',
+  'voice.captureError': 'Не удалось записать аудио',
+  'voice.micRequired': 'Требуется доступ к микрофону',
+  'voice.clearHistory': 'Очистить разговор',
+  'voice.settings': 'Настройки',
+  'voice.paused': 'Пауза',
 };
 
 export default catalog;

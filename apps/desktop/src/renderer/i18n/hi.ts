@@ -70,6 +70,8 @@ const catalog: Translations = {
   'canvas.proactiveMessages': 'सक्रिय संदेश',
   'canvas.respondToOwner': 'स्वामी को उत्तर दें',
   'canvas.peerCollaboration': 'सहयोग',
+  'canvas.viewGraph': 'ग्राफ़',
+  'canvas.viewOffice': 'कार्यालय',
   'canvas.kpis': 'KPI',
   'canvas.integrations': 'एकीकरण',
   'canvas.addIntegration': 'एकीकरण जोड़ें',
@@ -236,6 +238,15 @@ const catalog: Translations = {
   'brain.detailPlatform': 'प्लेटफ़ॉर्म',
   'brain.detailMessages': 'संदेश',
   'brain.detailLastMessage': 'अंतिम संदेश',
+  'voice.listening': 'सुन रहा है...',
+  'voice.processing': 'सोच रहा है...',
+  'voice.connectionFailed': 'कनेक्शन विफल',
+  'voice.noAudio': 'कोई आवाज़ नहीं मिली',
+  'voice.captureError': 'ऑडियो कैप्चर विफल',
+  'voice.micRequired': 'माइक्रोफ़ोन एक्सेस आवश्यक',
+  'voice.clearHistory': 'बातचीत साफ़ करें',
+  'voice.settings': 'सेटिंग्स',
+  'voice.paused': 'रुका हुआ',
 };
 
 export default catalog;

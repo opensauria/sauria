@@ -1,4 +1,4 @@
-import type { AgentNode, CanvasGraph, Workspace } from './types.js';
+import type { AgentNode, CanvasGraph, ViewMode, Workspace } from './types.js';
 import { generateId, capitalize } from './helpers.js';
 import { disconnectChannel } from './ipc.js';
 import { handleConnect, applyConnectResult } from './connect-handler.js';
@@ -30,6 +30,7 @@ export interface CanvasEventHost {
   detailNode: AgentNode | null;
   detailWorkspaceId: string | null;
   wsDialogOpen: boolean;
+  viewMode: ViewMode;
   dockCollapsed: boolean;
   confirmOpen: boolean;
   confirmMessage: string;
@@ -285,6 +286,11 @@ export function handleKeydown(host: CanvasEventHost, e: KeyboardEvent): void {
   } else if (isMod && e.key === 'l') {
     e.preventDefault();
     host.dockCollapsed = !host.dockCollapsed;
+  } else if (isMod && e.shiftKey && (e.key === 'o' || e.key === 'O')) {
+    e.preventDefault();
+    host.viewMode = host.viewMode === 'graph' ? 'office' : 'graph';
+    host.graphSync.graph.viewport.viewMode = host.viewMode;
+    host.graphSync.save();
   }
   if ((e.key === 'Delete' || e.key === 'Backspace') && host.selectedNodeId && !isInputFocused()) {
     e.preventDefault();

@@ -1,7 +1,10 @@
+export type ViewMode = 'graph' | 'office';
+
 export interface Viewport {
   x: number;
   y: number;
   zoom: number;
+  viewMode?: ViewMode;
 }
 
 export interface AgentNode {
