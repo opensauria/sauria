@@ -46,7 +46,7 @@
     "imapflow": "1.2.13",
     "json5": "2.2.3",
     "nanoid": "5.1.6",
-    "nodemailer": "8.0.2",
+    "nodemailer": "8.0.5",
     "openai": "6.27.0",
     "tsdown": "0.21.1",
     "tsx": "4.21.0",
