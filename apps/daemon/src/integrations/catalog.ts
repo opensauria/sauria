@@ -1035,4 +1035,19 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { url: 'GHOST_API_URL', apiKey: 'GHOST_API_KEY' },
     },
   },
+
+  // ── Presentations ────────────────────────────────
+  {
+    id: 'gamma',
+    name: 'Gamma',
+    description: 'AI-powered presentation and slide generation',
+    icon: 'gamma',
+    category: 'content',
+    authType: 'api_key',
+    credentialKeys: ['apiKey'],
+    mcpServer: {
+      package: '@mnicole-dev/gamma-mcp-server',
+      envMapping: { apiKey: 'GAMMA_API_KEY' },
+    },
+  },
 ] as const;
