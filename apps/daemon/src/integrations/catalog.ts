@@ -1035,4 +1035,22 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { url: 'GHOST_API_URL', apiKey: 'GHOST_API_KEY' },
     },
   },
+
+  // ── Time Tracking ────────────────────────────────
+  {
+    id: 'harvest',
+    name: 'Harvest',
+    description: 'Time tracking, projects, and team management',
+    icon: 'harvest',
+    category: 'productivity',
+    authType: 'api_key',
+    credentialKeys: ['accessToken', 'accountId'],
+    mcpServer: {
+      package: '@mnicole-dev/harvest-mcp-server',
+      envMapping: {
+        accessToken: 'HARVEST_ACCESS_TOKEN',
+        accountId: 'HARVEST_ACCOUNT_ID',
+      },
+    },
+  },
 ] as const;
