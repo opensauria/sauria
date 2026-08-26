@@ -1035,4 +1035,19 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { url: 'GHOST_API_URL', apiKey: 'GHOST_API_KEY' },
     },
   },
+
+  // ── Time Tracking ────────────────────────────────
+  {
+    id: 'rize',
+    name: 'Rize',
+    description: 'AI-powered time tracking, focus sessions, and productivity analytics',
+    icon: 'rize',
+    category: 'productivity',
+    authType: 'api_key',
+    credentialKeys: ['apiKey'],
+    mcpServer: {
+      package: '@mnicole-dev/rize-mcp-server',
+      envMapping: { apiKey: 'RIZE_API_KEY' },
+    },
+  },
 ] as const;
