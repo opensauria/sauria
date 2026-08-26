@@ -1035,4 +1035,19 @@ export const INTEGRATION_CATALOG: readonly IntegrationDefinition[] = [
       envMapping: { url: 'GHOST_API_URL', apiKey: 'GHOST_API_KEY' },
     },
   },
+
+  // ── Video ────────────────────────────────────────
+  {
+    id: 'heygen',
+    name: 'HeyGen',
+    description: 'AI video generation with avatars, templates, and translation',
+    icon: 'heygen',
+    category: 'content',
+    authType: 'api_key',
+    credentialKeys: ['apiKey'],
+    mcpServer: {
+      package: '@mnicole-dev/heygen-mcp-server',
+      envMapping: { apiKey: 'HEYGEN_API_KEY' },
+    },
+  },
 ] as const;
